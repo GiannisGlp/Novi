@@ -42,14 +42,116 @@ The system should be able to run first on a development Mac, then in simulation,
 
 1. **Autonomous first** — Novi continuously observes and evaluates its environment rather than waiting for prompts.
 2. **One primary general reasoning model initially** — NVIDIA Nemotron 3 Nano 30B-A3B is the primary candidate; specialized models remain separate for perception, speech, embeddings, and other modality-specific tasks.
-3. **Vendor-neutral core** — NVIDIA is the reference deployment platform, but the cognitive core is not hard-coded to NVIDIA APIs.
-4. **Specialized systems for specialized work** — perception, speech, navigation, hardware control, and safety do not become LLM responsibilities.
-5. **Memory is not just RAG** — Novi maintains episodic, semantic, spatial, temporal, procedural, and verified knowledge with provenance.
-6. **Learning is evidence-driven** — observations, hypotheses, facts, and owner-verified knowledge remain distinguishable.
-7. **Schema evolution is controlled** — Novi may create new data structures when necessary, but through a governed Data/Knowledge capability layer.
-8. **Safety is outside adaptive intelligence** — the immutable safety boundary cannot be modified by the AI.
-9. **Simulation before hardware** — the same logical interfaces should work with simulated and physical sensors and actuators.
-10. **Everything is observable and auditable** — autonomous decisions, data changes, model calls, tool calls, and physical actions have traceable records.
+3. **Open-source and local first** — the default solution must be open source, locally runnable, and suitable for offline/private operation.
+4. **Best existing solution first** — before implementing a subsystem ourselves, evaluate mature existing open-source local solutions from NVIDIA, TensorFlow, PyTorch, OpenCV, ROS, Hugging Face, or other relevant ecosystems. Do not reinvent a capability that already meets our requirements.
+5. **Vendor-neutral core** — NVIDIA is the reference deployment platform, but the cognitive core is not hard-coded to NVIDIA APIs. A different vendor or framework can be selected when it is objectively better for the specific requirement.
+6. **NVIDIA-preferred where appropriate** — when an NVIDIA component is the best fit for the target Jetson/robotics workload, use it rather than creating an unnecessary replacement.
+7. **Specialized systems for specialized work** — perception, speech, navigation, hardware control, and safety do not become LLM responsibilities.
+8. **Memory is not just RAG** — Novi maintains episodic, semantic, spatial, temporal, procedural, and verified knowledge with provenance.
+9. **Learning is evidence-driven** — observations, hypotheses, facts, and owner-verified knowledge remain distinguishable.
+10. **Schema evolution is controlled** — Novi may create new data structures when necessary, but through a governed Data/Knowledge capability layer.
+11. **Safety is outside adaptive intelligence** — the immutable safety boundary cannot be modified by the AI.
+12. **Simulation before hardware** — the same logical interfaces should work with simulated and physical sensors and actuators.
+13. **Everything is observable and auditable** — autonomous decisions, data changes, model calls, tool calls, and physical actions have traceable records.
+
+## Solution Selection Policy
+
+Novi follows a **local-first, open-source-first, existing-solution-first** policy.
+
+For every significant technical capability, the engineering process should first ask:
+
+```text
+Does a mature solution already exist?
+        ↓
+Is it open source with an acceptable license?
+        ↓
+Can it run locally on our target environment?
+        ↓
+Does it meet our accuracy / latency / memory / power requirements?
+        ↓
+Is it maintained and sufficiently mature?
+        ↓
+Does it integrate cleanly with Novi's interfaces?
+        ↓
+YES → adopt / integrate / wrap it
+NO  → evaluate alternatives
+        ↓
+Still no suitable local solution?
+        ↓
+Consider a cloud service only as an explicit exception
+```
+
+Examples of capabilities that must be evaluated this way include:
+
+- face detection and recognition
+- face anti-spoofing / liveness detection
+- object detection and tracking
+- pose and gesture recognition
+- speech recognition
+- speaker identification
+- text-to-speech
+- vision-language models
+- embeddings and reranking
+- OCR
+- depth estimation
+- SLAM / visual odometry
+- navigation
+- mapping
+- audio event detection
+- anomaly detection
+- image/video processing
+- simulation
+- GPU inference
+- synthetic data generation
+
+The example of TensorFlow/OpenCV/PyTorch ecosystems is representative: if an existing local open-source model or library is demonstrably better suited to a particular perception task than an NVIDIA-specific option, Novi should use the better solution behind a stable interface.
+
+## Cloud Exception Policy
+
+Cloud services are **not the default architecture**.
+
+A cloud dependency may be considered only when:
+
+1. no suitable local open-source solution exists;
+2. the capability is genuinely impractical to run locally with available hardware;
+3. the cloud service provides a materially necessary capability;
+4. privacy and security requirements permit the data transfer;
+5. the dependency is explicitly documented;
+6. a local fallback or graceful degradation strategy exists where practical;
+7. cost, latency, availability, vendor lock-in, and data-retention implications have been evaluated.
+
+Cloud use must never silently become mandatory for core autonomous operation if local operation is technically feasible.
+
+## Development Environments
+
+### Mac development
+
+The Mac is the primary early development environment. It should support the majority of the cognitive system, knowledge system, personality, autonomy loop, camera/microphone experimentation, UI, simulation adapters, and automated tests.
+
+### Simulation
+
+NVIDIA Isaac Sim and ROS 2 are the reference robotics simulation path. Simulation must expose the same logical contracts used by the physical robot. Other simulation technologies should be considered when they provide a better fit for a specific workload.
+
+### Jetson
+
+The target edge platform is NVIDIA Jetson AGX Orin 64GB. NVIDIA CUDA, TensorRT, Isaac ROS, JetPack, and related tooling are used where they provide measurable benefits. Alternative local frameworks remain acceptable when they better satisfy a specific requirement.
+
+### Physical robot
+
+The physical body is introduced only after the software can operate against simulated hardware and has passed the required safety and integration tests.
+
+## Repository Rules
+
+- Do not add a feature without identifying its architectural domain.
+- Do not bypass subsystem interfaces to access another subsystem's implementation directly.
+- Do not let LLM code directly control motors, safety-critical hardware, or protected storage.
+- Do not silently change an architectural contract; document the decision.
+- Do not treat an observation as a verified fact without provenance and appropriate validation.
+- Do not allow autonomous schema evolution to modify immutable system/safety data.
+- Prefer existing mature open-source local solutions over custom implementations when they satisfy requirements.
+- Compare NVIDIA and non-NVIDIA alternatives for important infrastructure decisions instead of assuming NVIDIA is always best.
+- Prefer small, independently testable changes.
+- Every significant subsystem must have unit, integration, and failure-mode tests appropriate to its risk.
 
 ## Documentation Structure
 
@@ -115,35 +217,6 @@ Defines packages, modules, classes, functions, configuration, runtime dependenci
 ### Validation
 
 Defines how the subsystem is tested on Mac, simulation, Jetson, and physical hardware where applicable.
-
-## Development Environments
-
-### Mac development
-
-The Mac is the primary early development environment. It should support the majority of the cognitive system, knowledge system, personality, autonomy loop, camera/microphone experimentation, UI, simulation adapters, and automated tests.
-
-### Simulation
-
-NVIDIA Isaac Sim and ROS 2 are the reference robotics simulation path. Simulation must expose the same logical contracts used by the physical robot.
-
-### Jetson
-
-The target edge platform is NVIDIA Jetson AGX Orin 64GB. NVIDIA CUDA, TensorRT, Isaac ROS, JetPack, and related tooling are used where they provide measurable benefits.
-
-### Physical robot
-
-The physical body is introduced only after the software can operate against simulated hardware and has passed the required safety and integration tests.
-
-## Repository Rules
-
-- Do not add a feature without identifying its architectural domain.
-- Do not bypass subsystem interfaces to access another subsystem's implementation directly.
-- Do not let LLM code directly control motors, safety-critical hardware, or protected storage.
-- Do not silently change an architectural contract; document the decision.
-- Do not treat an observation as a verified fact without provenance and appropriate validation.
-- Do not allow autonomous schema evolution to modify immutable system/safety data.
-- Prefer small, independently testable changes.
-- Every significant subsystem must have unit, integration, and failure-mode tests appropriate to its risk.
 
 ## Current Status
 
