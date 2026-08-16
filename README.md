@@ -53,6 +53,33 @@ The system should be able to run first on a development Mac, then in simulation,
 11. **Safety is outside adaptive intelligence** — the immutable safety boundary cannot be modified by the AI.
 12. **Simulation before hardware** — the same logical interfaces should work with simulated and physical sensors and actuators.
 13. **Everything is observable and auditable** — autonomous decisions, data changes, model calls, tool calls, and physical actions have traceable records.
+14. **Connectivity is optional** — Wi-Fi and Bluetooth extend Novi's capabilities but are never prerequisites for core cognition, perception, autonomy, memory, personality, safety, local interaction, or hardware operation.
+15. **Offline-first core** — Novi must remain fully functional in an isolated environment with no Wi-Fi, no Bluetooth, and no external network access. Connectivity-dependent features must degrade gracefully and recover through controlled synchronization when connectivity returns.
+
+## Formal Connectivity Architecture Rule
+
+> **Novi must be fully operational without Wi-Fi, Bluetooth, or external network access. Connectivity may extend Novi's capabilities but must never be a mandatory dependency for core perception, cognition, autonomy, memory, personality, safety, local interaction, diagnostics, or physical operation.**
+
+The connectivity state may change what optional capabilities are available, but it must not determine whether the core system can operate.
+
+```text
+                         NOVI CORE
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+      Perception         Cognition          Memory
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            │
+                    Local capabilities
+                            │
+               ┌────────────┴────────────┐
+               │                         │
+             Wi-Fi                 Bluetooth
+            OPTIONAL                OPTIONAL
+```
+
+When connectivity is unavailable, Novi continues local operation. Network-dependent tasks may queue, defer, expire, or be disabled according to their capability contract. Reconnection must not bypass privacy, authorization, provenance, deletion, or safety policies.
 
 ## Solution Selection Policy
 
@@ -81,44 +108,9 @@ Still no suitable local solution?
 Consider a cloud service only as an explicit exception
 ```
 
-Examples of capabilities that must be evaluated this way include:
-
-- face detection and recognition
-- face anti-spoofing / liveness detection
-- object detection and tracking
-- pose and gesture recognition
-- speech recognition
-- speaker identification
-- text-to-speech
-- vision-language models
-- embeddings and reranking
-- OCR
-- depth estimation
-- SLAM / visual odometry
-- navigation
-- mapping
-- audio event detection
-- anomaly detection
-- image/video processing
-- simulation
-- GPU inference
-- synthetic data generation
-
-The example of TensorFlow/OpenCV/PyTorch ecosystems is representative: if an existing local open-source model or library is demonstrably better suited to a particular perception task than an NVIDIA-specific option, Novi should use the better solution behind a stable interface.
-
 ## Cloud Exception Policy
 
-Cloud services are **not the default architecture**.
-
-A cloud dependency may be considered only when:
-
-1. no suitable local open-source solution exists;
-2. the capability is genuinely impractical to run locally with available hardware;
-3. the cloud service provides a materially necessary capability;
-4. privacy and security requirements permit the data transfer;
-5. the dependency is explicitly documented;
-6. a local fallback or graceful degradation strategy exists where practical;
-7. cost, latency, availability, vendor lock-in, and data-retention implications have been evaluated.
+Cloud services are **not the default architecture**. A cloud dependency may be considered only when no suitable local open-source solution exists or the capability is genuinely impractical locally, and only after privacy, security, latency, cost, availability, vendor lock-in, retention, and graceful-degradation implications are documented.
 
 Cloud use must never silently become mandatory for core autonomous operation if local operation is technically feasible.
 
@@ -152,18 +144,13 @@ The physical body is introduced only after the software can operate against simu
 - Compare NVIDIA and non-NVIDIA alternatives for important infrastructure decisions instead of assuming NVIDIA is always best.
 - Prefer small, independently testable changes.
 - Every significant subsystem must have unit, integration, and failure-mode tests appropriate to its risk.
+- No subsystem may introduce an implicit network dependency into the offline-capable core.
 
 ## Documentation Structure
 
 Documentation is organized by system domain. Every domain folder must contain a `README.md` that provides the high-level purpose, scope, terminology, dependencies, and document map. Detailed engineering specifications are stored in separate documents beneath the domain.
 
-The first domain is:
-
-```text
-01-system-architecture/
-```
-
-It defines the system-wide architecture and the boundaries that all later domains must follow.
+The first domain is `01-system-architecture/`. It defines the system-wide architecture and the boundaries that all later domains must follow.
 
 Planned domains include:
 
@@ -195,8 +182,6 @@ Planned domains include:
 25-privacy-and-governance/
 26-development-process/
 ```
-
-The exact list may evolve, but new domains must preserve the documentation rules defined by `01-system-architecture`.
 
 ## Documentation Levels
 
