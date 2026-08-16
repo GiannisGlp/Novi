@@ -101,3 +101,30 @@ Implementation changes should be incremental, testable, reviewable, and reversib
 ## 25. Documentation Is Part of the System
 
 Every significant subsystem must have a high-level document, detailed specification, interface definition, implementation plan, and validation strategy.
+
+## 26. Connectivity Independence — Mandatory
+
+**Novi must be fully operational without Wi-Fi, Bluetooth, or external network access.** Connectivity may extend Novi's capabilities but must never be a mandatory dependency for core perception, cognition, autonomy, memory, personality, safety, local interaction, diagnostics, or physical operation.
+
+Wi-Fi and Bluetooth are optional capability providers. Connectivity state may change which optional functions are available, but it must never determine whether the core system is alive or able to perform its fundamental local functions.
+
+Offline operation must be a supported and tested runtime profile, not merely a theoretical fallback.
+
+Network-dependent operations must define one of the following behaviors when connectivity is unavailable:
+
+- continue locally;
+- queue for later;
+- retry with bounded backoff;
+- expire safely;
+- degrade to a local implementation;
+- explicitly report unavailable capability.
+
+When connectivity returns, synchronization must remain subject to privacy, authorization, provenance, deletion, conflict-resolution, and safety policies. Reconnection must never automatically upload all local data or overwrite newer local state.
+
+No subsystem may introduce an implicit network dependency into the offline-capable core.
+
+---
+
+## Principle Enforcement
+
+These principles are architecture constraints. A proposed implementation that violates one must either be redesigned or documented through an explicit Architecture Decision Record with the reason, scope, alternatives considered, risks, migration plan, and approval status.
