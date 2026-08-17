@@ -43,66 +43,79 @@ A source may only be marked `SUPERSEDED` after its unique requirements have been
 | 17 | `17_INTEGRATION_AND_REFERENCE_MODEL.md` | Cross-document integration and end-to-end reference model |
 | 18 | `18_FINAL_ARCHITECTURE_AUDIT_AND_TRACEABILITY.md` | Final architecture completeness and traceability |
 
-## Initial source mapping
+## Source dispositions
 
-The first pass establishes the source families and their likely canonical destinations. Section-level verification remains required before final supersession.
+The table below contains the initial 00–40 mapping plus the completed 41–50 content-level review. Final supersession still requires section-level cross-reference repair.
 
-| Source family | Current status | Canonical destination | Action |
+| Source | Status | Canonical destination | Action |
 |---|---|---|---|
-| `00_HIGH_LEVEL_MEMORY_ARCHITECTURE.md` | MERGED | 01, 17 | Verify high-level invariants and integration boundaries |
-| `01_MEMORY_TAXONOMY.md` | MERGED | 01 | Verify taxonomy terminology against canonical ontology |
-| `02_MEMORY_LIFECYCLE.md` | MERGED | 02 | Verify lifecycle states and transitions |
-| `03_MEMORY_WRITE_AND_ADMISSION_POLICY.md` | MERGED | 02, 15 | Separate semantic admission from governance enforcement |
-| `04_MEMORY_CONSOLIDATION_AND_FORGETTING.md` | MERGED | 02, 04, 14 | Verify forgetting/privacy boundaries |
-| `05_MEMORY_RETRIEVAL_AND_RANKING.md` | MERGED | 04 | Verify retrieval/ranking requirements |
-| `06_MEMORY_PROVENANCE_AND_TRUST.md` | MERGED | 03 | Verify evidence independence, provenance and trust requirements |
-| `07_MEMORY_SCHEMA_AND_STORAGE.md` | SPLIT / MOVED | 12 + `01-system-architecture` | Keep semantic schema in 12; move physical storage concerns out of 04 |
-| `08_MEMORY_INDEXING_AND_EMBEDDINGS.md` | SPLIT / MOVED | 04 + `01-system-architecture` | Keep retrieval semantics in 04; infrastructure/index implementation elsewhere |
-| `09_MEMORY_KNOWLEDGE_GRAPH_AND_RELATIONSHIPS.md` | MERGED | 05 | Verify graph and relationship semantics |
-| `10_MEMORY_SCHEMA_EVOLUTION_AND_DYNAMIC_DATA.md` | MERGED | 12 | Verify evolution and compatibility requirements |
-| `11_MEMORY_KNOWLEDGE_CONFLICT_RESOLUTION.md` | MERGED | 05, 03 | Semantic conflict in 05; evidence/trust implications in 03 |
-| `12_MEMORY_SECURITY_AND_ACCESS_CONTROL.md` | SPLIT / MOVED | 14, 15 + `01-system-architecture` | Retain memory governance; move infrastructure security |
-| `13_MEMORY_PRIVACY_AND_RETENTION.md` | MERGED | 14 | Verify retention and deletion requirements |
-| `14_MEMORY_DISTRIBUTED_SYNCHRONIZATION.md` | MOVED | `01-system-architecture/109` | Distributed consistency is not memory semantics |
-| `15_MEMORY_CONSISTENCY_AND_CONCURRENCY.md` | MOVED | `01-system-architecture/108` | Transaction/consistency semantics belong to system architecture |
-| `16_MEMORY_EVENT_SOURCING_AND_REPLAY.md` | MOVED / MERGED | 02, 17 + `01-system-architecture/107/110` | Semantic lifecycle retained; durable replay infrastructure moved |
-| `17_MEMORY_VERSIONING_AND_TEMPORAL_HISTORY.md` | MERGED | 07, 12 | Verify temporal validity and schema/version semantics |
-| `18_MEMORY_DECAY_AND_FORGETTING.md` | MERGED | 02, 14 | Separate lifecycle decay from privacy deletion |
-| `19_MEMORY_RECONSOLIDATION.md` | MERGED | 04, 05 | Verify retrieval-driven reconsolidation and belief revision boundaries |
-| `20_MEMORY_CONTEXT_ASSEMBLY.md` | MERGED | 04 | Verify context construction and provenance requirements |
-| `21_MEMORY_EPISODIC_ARCHITECTURE.md` | MERGED | 01, 02, 04 | Verify episodic semantics against taxonomy/lifecycle |
-| `22_MEMORY_SEMANTIC_ARCHITECTURE.md` | MERGED | 01, 05 | Verify semantic memory and knowledge graph boundary |
-| `23_MEMORY_SPATIAL_ARCHITECTURE.md` | MERGED | 08 | Verify spatial state and temporal coupling |
-| `24_MEMORY_PROCEDURAL_ARCHITECTURE.md` | MERGED | 11 | Verify skill/competence semantics |
-| `25_MEMORY_WORKING_CONTEXT_ARCHITECTURE.md` | MERGED | 04 | Verify working-context semantics and ephemeral-state boundary |
-| `26_MEMORY_AUTOBIOGRAPHICAL_ARCHITECTURE.md` | MERGED | 01, 02, 05, 06 | Verify identity and self-model requirements |
-| `27_MEMORY_EMOTIONAL_AFFECTIVE_ARCHITECTURE.md` | MERGED | 01, 05 | Verify affective representation without conflating it with truth/identity |
-| `28_MEMORY_SOCIAL_ARCHITECTURE.md` | MERGED | 05, 06 | Verify relationship and entity semantics |
-| `29_MEMORY_GOAL_ARCHITECTURE.md` | MERGED | 01, 11, 17 | Verify goal-memory boundary and integration |
-| `30_MEMORY_NARRATIVE_ARCHITECTURE.md` | MERGED | 04, 05 | Verify narrative views remain derived rather than authoritative |
+| `00_HIGH_LEVEL_MEMORY_ARCHITECTURE.md` | MERGED | 01, 17 | Verify high-level invariants |
+| `01_MEMORY_TAXONOMY.md` | MERGED | 01 | Verify terminology |
+| `02_MEMORY_LIFECYCLE.md` | MERGED | 02 | Verify lifecycle states |
+| `03_MEMORY_WRITE_AND_ADMISSION_POLICY.md` | MERGED | 02, 15 | Separate admission from governance |
+| `04_MEMORY_CONSOLIDATION_AND_FORGETTING.md` | MERGED | 02, 04, 14 | Verify forgetting/privacy boundary |
+| `05_MEMORY_RETRIEVAL_AND_RANKING.md` | MERGED | 04 | Verify retrieval requirements |
+| `06_MEMORY_PROVENANCE_AND_TRUST.md` | MERGED | 03 | Verify evidence independence and provenance |
+| `07_MEMORY_SCHEMA_AND_STORAGE.md` | SPLIT / MOVED | 12 + system architecture | Keep semantic schema; move physical storage |
+| `08_MEMORY_INDEXING_AND_EMBEDDINGS.md` | SPLIT / MOVED | 04 + system architecture | Keep semantic retrieval; move index infrastructure |
+| `09_MEMORY_KNOWLEDGE_GRAPH_AND_RELATIONSHIPS.md` | MERGED | 05 | Verify graph semantics |
+| `10_MEMORY_SCHEMA_EVOLUTION_AND_DYNAMIC_DATA.md` | MERGED | 12 | Verify evolution requirements |
+| `11_MEMORY_KNOWLEDGE_CONFLICT_RESOLUTION.md` | MERGED | 05, 03 | Semantic conflict vs evidence/trust |
+| `12_MEMORY_SECURITY_AND_ACCESS_CONTROL.md` | SPLIT / MOVED | 14, 15 + system architecture | Keep governance; move infrastructure security |
+| `13_MEMORY_PRIVACY_AND_RETENTION.md` | MERGED | 14 | Verify retention/deletion |
+| `14_MEMORY_DISTRIBUTED_SYNCHRONIZATION.md` | MOVED | system architecture/109 | Distributed consistency is infrastructure |
+| `15_MEMORY_CONSISTENCY_AND_CONCURRENCY.md` | MOVED | system architecture/108 | Transaction semantics are infrastructure |
+| `16_MEMORY_EVENT_SOURCING_AND_REPLAY.md` | MOVED / MERGED | 02, 17 + system architecture/107/110 | Keep semantic lifecycle; move durable replay |
+| `17_MEMORY_VERSIONING_AND_TEMPORAL_HISTORY.md` | MERGED | 07, 12 | Verify temporal/schema semantics |
+| `18_MEMORY_DECAY_AND_FORGETTING.md` | MERGED | 02, 14 | Separate decay from privacy deletion |
+| `19_MEMORY_RECONSOLIDATION.md` | MERGED | 04, 05 | Retrieval reconsolidation vs belief revision |
+| `20_MEMORY_CONTEXT_ASSEMBLY.md` | MERGED | 04 | Verify context/provenance |
+| `21_MEMORY_EPISODIC_ARCHITECTURE.md` | MERGED | 01, 02, 04 | Verify episodic semantics |
+| `22_MEMORY_SEMANTIC_ARCHITECTURE.md` | MERGED | 01, 05 | Verify semantic/graph boundary |
+| `23_MEMORY_SPATIAL_ARCHITECTURE.md` | MERGED | 08 | Verify spatial state |
+| `24_MEMORY_PROCEDURAL_ARCHITECTURE.md` | MERGED | 11 | Verify skill semantics |
+| `25_MEMORY_WORKING_CONTEXT_ARCHITECTURE.md` | MERGED | 04 | Verify ephemeral context boundary |
+| `26_MEMORY_AUTOBIOGRAPHICAL_ARCHITECTURE.md` | MERGED | 01, 02, 05, 06 | Verify identity/self-model requirements |
+| `27_MEMORY_EMOTIONAL_AFFECTIVE_ARCHITECTURE.md` | MERGED | 01, 05 | Verify affect representation |
+| `28_MEMORY_SOCIAL_ARCHITECTURE.md` | MERGED | 05, 06 | Verify relationships/entities |
+| `29_MEMORY_GOAL_ARCHITECTURE.md` | MERGED | 01, 11, 17 | Verify goal-memory boundary |
+| `30_MEMORY_NARRATIVE_ARCHITECTURE.md` | MERGED | 04, 05 | Keep narratives derived |
 | `31_MEMORY_SCHEMA_DESIGN.md` | MERGED | 12 | Verify schema requirements |
-| `32_MEMORY_INDEX_DESIGN.md` | SPLIT / MOVED | 04 + `01-system-architecture` | Semantic retrieval contract vs physical index implementation |
-| `33_MEMORY_QUERY_ARCHITECTURE.md` | MERGED | 04 | Verify retrieval/query semantics |
-| `34_MEMORY_CACHE_ARCHITECTURE.md` | MOVED | `01-system-architecture` | Cache infrastructure is not semantic memory authority |
-| `35_MEMORY_OBSERVABILITY.md` | MOVED | `01-system-architecture/112` | Runtime observability belongs to system architecture |
-| `36_MEMORY_EVALUATION.md` | MERGED | 18, 03, 04 | Preserve evaluation invariants and evidence requirements |
-| `37_MEMORY_TESTING.md` | MOVED / MERGED | 18 + testing architecture | Keep semantic invariants; implementation testing elsewhere |
-| `38_MEMORY_FAILURE_MODES.md` | MOVED / MERGED | 18 + `01-system-architecture/110` | Semantic failure classes vs disaster recovery |
-| `39_MEMORY_BACKUP_AND_RESTORE.md` | MOVED | `01-system-architecture/110` | Infrastructure recovery |
-| `40_MEMORY_AUDITABILITY.md` | MERGED | 03, 15, 16, 18 | Provenance, governance and auditability |
-| `41–94 legacy semantic series` | PENDING | 01–18 | Review individually; do not supersede by filename similarity alone |
-| `95_MEMORY_KNOWLEDGE_MEMORY_ARCHITECTURE_INTEGRATION_AND_REFERENCE_MODEL.md` | TRANSITIONAL | 17 | Keep as validation authority until absorbed completely |
-| `96_MEMORY_KNOWLEDGE_ARCHITECTURE_AUDIT_TRACEABILITY_AND_GAP_REGISTER.md` | TRANSITIONAL | 18 | Keep until all identified gaps are dispositioned |
-| `97_MEMORY_KNOWLEDGE_IDENTITY_AND_ENTITY_RESOLUTION_ARCHITECTURE.md` | TRANSITIONAL | 06 | Validate canonical 06 against its detailed requirements |
-| `98_MEMORY_KNOWLEDGE_TEMPORAL_REASONING_AND_TEMPORAL_MEMORY_ARCHITECTURE.md` | TRANSITIONAL | 07 | Validate canonical 07 against its detailed requirements |
-| `99_MEMORY_KNOWLEDGE_SPATIAL_MEMORY_AND_SPATIAL_STATE_ARCHITECTURE.md` | TRANSITIONAL | 08 | Validate canonical 08 against its detailed requirements |
-| `100_MEMORY_KNOWLEDGE_CAUSAL_WORLD_MODELING_AND_CAUSAL_MEMORY_ARCHITECTURE.md` | TRANSITIONAL | 09 | Validate canonical 09 against its detailed requirements |
-| `101_MEMORY_KNOWLEDGE_CROSS_MODAL_MEMORY_ARCHITECTURE.md` | TRANSITIONAL | 10 | Validate canonical 10 against its detailed requirements |
-| `102_MEMORY_KNOWLEDGE_SKILL_AND_COMPETENCE_VERIFICATION_ARCHITECTURE.md` | TRANSITIONAL | 11 | Validate canonical 11 against its detailed requirements |
-| `103_MEMORY_KNOWLEDGE_SCHEMA_MIGRATION_COMPATIBILITY_AND_EVOLUTION_ARCHITECTURE.md` | TRANSITIONAL | 12 | Validate canonical 12 against its detailed requirements |
-| `104_MEMORY_KNOWLEDGE_MODEL_MEMORY_CO_EVOLUTION_ARCHITECTURE.md` | TRANSITIONAL | 13 | Validate canonical 13 against its detailed requirements |
-| `105_MACHINE_VERIFIABLE_GOVERNANCE_AND_POLICY_ENGINE_ARCHITECTURE.md` | TRANSITIONAL | 15 | Validate canonical 15 against its detailed requirements |
-| `106_MEMORY_KNOWLEDGE_HUMAN_OVERSIGHT_INTERVENTION_ACCOUNTABILITY_AND_GOVERNANCE_ARCHITECTURE.md` | TRANSITIONAL | 16 | Validate canonical 16 against its detailed requirements |
+| `32_MEMORY_INDEX_DESIGN.md` | SPLIT / MOVED | 04 + system architecture | Semantic retrieval vs physical index |
+| `33_MEMORY_QUERY_ARCHITECTURE.md` | MERGED | 04 | Verify query semantics |
+| `34_MEMORY_CACHE_ARCHITECTURE.md` | MOVED | system architecture | Cache infrastructure |
+| `35_MEMORY_OBSERVABILITY.md` | MOVED | system architecture | Runtime observability |
+| `36_MEMORY_EVALUATION.md` | MERGED | 18, 03, 04 | Preserve evaluation invariants |
+| `37_MEMORY_TESTING.md` | MOVED / MERGED | 18 + testing architecture | Keep semantic invariants |
+| `38_MEMORY_FAILURE_MODES.md` | MOVED / MERGED | 18 + system architecture/110 | Semantic failures vs recovery |
+| `39_MEMORY_BACKUP_AND_RESTORE.md` | MOVED | system architecture/110 | Infrastructure recovery |
+| `40_MEMORY_AUDITABILITY.md` | MERGED | 03, 15, 16, 18 | Provenance/governance/auditability |
+| `41_MEMORY_LANGUAGE_AND_SEMANTIC_UNDERSTANDING.md` | SPLIT / MOVED | 03, 04, 06, 07, 08, 10 + `03-cognition` | Keep language-as-evidence, grounding, ambiguity and admission boundaries; move primary language pipeline to cognition |
+| `42_MEMORY_MULTIMODAL_GROUNDING_AND_SENSOR_FUSION.md` | SPLIT / MOVED | 03, 07, 08, 10 + system architecture | Keep multimodal evidence/alignment; move calibration/time-sync/fusion runtime |
+| `43_MEMORY_SPATIAL_WORLD_MODEL_AND_PLACE_MEMORY.md` | MERGED | 08, 07, 03, 06 | Preserve layered spatial/place memory, frames, provenance and uncertainty |
+| `44_MEMORY_SPATIAL_TEMPORAL_REASONING_AND_TRAJECTORY_MEMORY.md` | MERGED | 07, 08, 04, 03 | Preserve time-aware trajectories, duration and provenance |
+| `45_MEMORY_ENVIRONMENTAL_CONTEXT_AND_PHYSICAL_WORLD_STATE.md` | SPLIT / MOVED | 03, 08, 10 + system architecture | Preserve environmental-state memory semantics; move sensor/runtime implementation |
+| `46_MEMORY_OBJECT_AND_ENTITY_LIFECYCLE.md` | MERGED | 01, 02, 06, 03 | Preserve observation→detection→track→identity→entity lifecycle |
+| `47_MEMORY_EVENT_CAUSALITY_AND_EPISODE_LINKING.md` | MERGED | 09, 04, 07, 03 | Preserve causal/temporal distinction, event links and episodic traceability |
+| `48_MEMORY_COUNTERFACTUAL_REASONING_AND_CAUSAL_LEARNING.md` | MERGED | 09, 13, 04, 03 | Preserve actual/counterfactual separation and intervention provenance |
+| `49_MEMORY_LEARNING_FROM_ACTION_OUTCOMES_AND_FEEDBACK.md` | MERGED | 13, 11, 02, 03, 17 | Preserve outcome/feedback evidence and controlled learning updates |
+| `50_MEMORY_KNOWLEDGE_CONFLICTS_AND_BELIEF_REVISION.md` | MERGED | 05, 03, 07, 17 | Preserve evidence-vs-belief, historical/current truth and semantic revision |
+| `51–94 legacy semantic series` | PENDING | 01–18 | Individual content review required |
+| `95–106 transitional authorities` | TRANSITIONAL | 06–18 | Keep until their detailed requirements are fully absorbed |
+
+## Batch verification: 41–50
+
+**Result: content-level review completed.** The batch does not justify additional top-level Memory & Knowledge documents.
+
+Key findings:
+
+- **41:** Language understanding is primarily cognition. Memory-specific requirements are provenance, grounding, ambiguity preservation, identity/temporal/spatial grounding, multimodal grounding, and controlled memory admission. Language must remain evidence, not automatic world truth.
+- **42:** Multimodal fusion is an evidence problem. Raw sensor calibration, synchronization and fusion runtime belong outside semantic memory; provenance, uncertainty, modality alignment and grounded memory belong in 03/10 and spatial/temporal authorities.
+- **43–45:** Spatial and environmental documents reinforce the separation of geometry, pose, semantic place, historical memory, environmental observation, estimate and prediction. No new spatial/environmental memory document is warranted.
+- **46:** Observation, detection, tracking, identity hypothesis, established entity and durable knowledge are distinct states. This validates the 01/02/03/06 boundary.
+- **47–48:** Temporal order, correlation, causal hypothesis, supported causality and counterfactual branches must remain distinct. Counterfactuals are not memories or facts.
+- **49:** Action learning requires expected-vs-observed outcome comparison, feedback evaluation and controlled promotion into learning/behavior. One experience must not silently rewrite protected behavior.
+- **50:** Semantic conflict handling must preserve evidence, distinguish historical from current truth, evaluate source authority and revise beliefs only when justified. Distributed consistency remains a system-architecture concern.
 
 ## Verification protocol
 
@@ -119,4 +132,4 @@ For each source, reviewers must check:
 
 ## Current conclusion
 
-The matrix is **started, not closed**. The 00–40 family has an initial disposition; 41–94 require individual verification; 95–106 remain transitional authorities. No source should be treated as fully superseded solely from this first-pass table.
+The matrix is **actively progressing**. 00–40 have initial dispositions; **41–50 have now been content-reviewed**; 51–94 remain pending; 95–106 remain transitional authorities. No source is marked fully `SUPERSEDED` until final section-level verification and cross-reference repair are complete.
