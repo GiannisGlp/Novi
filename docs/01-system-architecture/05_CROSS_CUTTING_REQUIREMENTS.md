@@ -1,14 +1,12 @@
 # 05 — Cross-Cutting Requirements
 
-## Purpose
+**Status:** P0 normative requirements
 
-These requirements apply across Novi rather than to one subsystem.
+These requirements apply across Novi rather than to one subsystem. Every implementation specification must either satisfy them or document an approved exception through an ADR.
 
-## 1. Reliability
+## 1. Reliability and Health
 
-Services must expose health state and recoverable failure behavior. A failed optional capability must not automatically crash the whole robot.
-
-Required states:
+Every service/capability exposes health and lifecycle state:
 
 ```text
 STARTING
@@ -21,29 +19,29 @@ STOPPING
 STOPPED
 ```
 
-## 2. Time
+Health must be queryable without the primary reasoning model.
 
-All events use synchronized timestamps. The system must distinguish event time from processing time.
+## 2. Time Semantics
 
-Required fields:
+Events distinguish:
 
 ```text
-event_time
+event_time / occurred_at
 received_time
-processed_time
+processed_time / recorded_at
 ```
 
-Temporal reasoning must use event time wherever possible.
+Temporal reasoning must use event time where possible. Clock source, synchronization and uncertainty must be documented by the relevant hardware/robotics domain.
 
 ## 3. Identity
 
-Identity results must include confidence and source. Face/voice recognition must not automatically imply authorization.
+Identity results include confidence, source, timestamp and verification status. Identity does not imply authentication or authorization.
 
 ## 4. Provenance
 
-Durable knowledge and important decisions must preserve source information.
+Important state, knowledge and decisions retain source information and transformation lineage.
 
-Minimum provenance categories:
+Minimum provenance classes include:
 
 ```text
 sensor_observation
@@ -53,33 +51,36 @@ owner_verification
 external_document
 system_generated
 simulation
+human_decision
 ```
 
-## 5. Confidence
+## 5. Uncertainty
 
-Confidence must be explicit when information is uncertain. The system must not use a confidence score as a substitute for verification where verification is required.
+Uncertainty must be explicit where material. A confidence score is not a substitute for required verification.
 
 ## 6. Auditability
 
-At minimum, audit:
+At minimum audit:
 
-- model invocation;
-- tool invocation;
-- knowledge creation/update;
+- model invocations;
+- tool invocations;
+- important knowledge/memory changes;
 - schema changes;
 - privileged actions;
-- safety decisions;
+- policy/safety decisions;
 - configuration changes;
-- authentication/authorization events;
-- hardware diagnostics.
+- authentication/authorization;
+- hardware diagnostics;
+- recovery operations;
+- data deletion/retention actions.
 
 ## 7. Privacy
 
-Sensitive data should be classified before storage. The system should support retention, deletion, access control, and local-only storage policies.
+Sensitive information is classified before storage or processing where practical. Retention, deletion, access and replication behavior are policy-controlled.
 
 ## 8. Resource Limits
 
-Every autonomous subsystem must have configurable limits for:
+Every autonomous subsystem has configurable limits for:
 
 - CPU;
 - GPU;
@@ -89,103 +90,199 @@ Every autonomous subsystem must have configurable limits for:
 - queue depth;
 - network usage;
 - model context;
-- action duration.
+- action duration;
+- retry budget.
 
 ## 9. Backpressure
 
-High-frequency sensor streams must not be allowed to overwhelm cognitive processing. Queues, sampling, prioritization, and aggregation must be used where necessary.
+High-frequency streams must not overwhelm cognitive processing. Use queues, sampling, prioritization, aggregation and explicit drop policies.
+
+Dropped data must be observable where it affects correctness.
 
 ## 10. Cancellation
 
-Long-running model and tool requests must support cancellation. A stale request must not remain capable of triggering a physical action after its context is invalid.
+Long-running model/tool operations support cancellation. A cancelled/stale operation must not later execute a physical action without fresh authorization and state validation.
 
 ## 11. Idempotency
 
-Where possible, tools that change external state must accept an operation ID and safely handle duplicate requests.
+State-changing operations use stable operation IDs where retries are possible. Non-idempotent physical actions require reconciliation/compensation semantics.
 
 ## 12. Configuration
 
-Configuration should be typed, validated at startup, versioned, and environment-specific. Secrets must not be committed to source control.
+Configuration is:
+
+- typed;
+- validated;
+- versioned;
+- environment-specific;
+- observable;
+- protected from unauthorized mutation.
+
+Secrets must not be committed to source control.
 
 ## 13. Schema Versioning
 
-Persistent data structures require schema versions and migration strategy. Generated schemas are still governed schemas.
+Persistent schemas have explicit versions and migrations. Event history is immutable; migrations preserve historical meaning.
 
-## 14. Compatibility
+## 14. API Compatibility
 
-Interfaces should use explicit versions when breaking changes are possible.
+Cross-domain APIs define compatibility rules and versioning before breaking changes are introduced.
 
 ## 15. Testing
 
-Every cross-cutting requirement must have automated validation where practical.
+Cross-cutting requirements require automated validation wherever practical, plus failure-injection tests for critical paths.
 
 ## 16. Performance
 
-Measure rather than assume:
+Measure:
 
 - sensor-to-event latency;
 - event-to-attention latency;
 - retrieval latency;
-- model TTFT;
-- model throughput;
+- model TTFT/throughput;
 - tool latency;
-- action planning latency;
-- end-to-end response latency.
+- planning latency;
+- action latency;
+- end-to-end latency;
+- recovery time;
+- queue depth;
+- resource utilization;
+- power/thermal behavior on edge hardware.
 
-## 17. Determinism
+NVIDIA's DeepStream documentation provides component-level latency measurement guidance, reinforcing component-level instrumentation rather than only end-to-end timing. citeturn0search10
 
-Tests must be able to reproduce important behavior by controlling clocks, random seeds, simulated sensor data, model settings, and event ordering where feasible.
+## 17. Determinism and Reproducibility
+
+Tests should control or record:
+
+- clocks;
+- random seeds;
+- event ordering;
+- model versions/settings;
+- tool responses;
+- simulator version;
+- world/asset version;
+- feature flags;
+- configuration.
 
 ## 18. Security
 
-Never treat model-generated content as trusted input. Validate all model outputs before using them as commands, SQL, file paths, configuration, or tool parameters.
+Never treat model-generated content as trusted input. Validate outputs before use as:
 
-## 19. Explainability
+- commands;
+- SQL;
+- file paths;
+- configuration;
+- tool parameters;
+- network requests.
 
-The system should be able to expose an operational explanation such as:
+## 19. Operational Explanation
+
+Novi must expose operational evidence such as:
 
 ```text
 Observed X
-→ retrieved Y
-→ attention increased because Z
-→ selected tool A
-→ policy allowed A
-→ safety allowed A
-→ action completed
+→ evidence Y
+→ retrieved Z
+→ selected capability A
+→ policy result B
+→ safety result C
+→ execution result D
 ```
 
-This is an audit trail, not a requirement to expose hidden chain-of-thought.
+This is an audit/explanation record, not a requirement to expose hidden chain-of-thought.
 
 ## 20. Upgradeability
 
-Models, runtimes, JetPack versions, ROS 2 distributions, and hardware adapters must be version-pinned and tested before promotion.
+Models, runtimes, ROS 2 distributions, JetPack, CUDA/TensorRT, NVIDIA components and hardware adapters are version-pinned and tested before promotion.
+
+NVIDIA's current documentation demonstrates why this is necessary: DeepStream 9.1's Jetson package is tied to JetPack 7.2/L4T r39.2 and uses a specific TensorRT 10.x line. citeturn0search1turn0search9
 
 ## 21. Local-First Requirement
 
-Core operation should not require an external API. Cloud integrations may be optional tools rather than foundational dependencies.
+Core operation must not require an external API. Cloud integrations are optional capabilities.
 
 ## 22. Data Integrity
 
-Database and file writes must be transactional or atomic where appropriate. Corrupted or partially written data must not silently become authoritative knowledge.
+Critical writes are transactional/atomic as appropriate. Corrupt or partially written data cannot silently become authoritative state.
 
 ## 23. Graceful Degradation
 
-Example:
+Examples:
 
 ```text
 VLM unavailable
-  → basic detector continues
+ → lower-cost/local perception continues if safe
 
-Nemotron unavailable
-  → deterministic functions continue
+Reasoner unavailable
+ → deterministic capabilities continue
 
-Knowledge DB unavailable
-  → temporary event buffer + safe degradation
+Knowledge store unavailable
+ → bounded local buffer / degraded mode
 
 Navigation unavailable
-  → no movement; report degraded state
+ → no autonomous movement
+
+Network unavailable
+ → offline core continues
 ```
 
 ## 24. Safety Priority
 
-When requirements conflict, safety takes precedence over task completion, personality, curiosity, latency, and convenience.
+Safety takes precedence over task completion, personality, curiosity, latency and convenience.
+
+## 25. Resource/Power/Thermal Coupling
+
+On edge hardware, compute scheduling must consider thermal and power state. A capability may be throttled, deferred or disabled when resource constraints threaten system stability.
+
+## 26. Observability Integrity
+
+Telemetry must distinguish:
+
+```text
+MEASURED
+DERIVED
+ESTIMATED
+SIMULATED
+PREDICTED
+```
+
+A simulated or predicted metric must not be reported as measured physical performance.
+
+## 27. Failure Semantics
+
+Every critical interface defines:
+
+```text
+success
+failure
+unknown
+partial
+cancelled
+rejected
+reconciling
+```
+
+Unknown is a first-class state after uncertain external effects.
+
+## 28. Security/Privacy Boundary
+
+Diagnostic and observability systems must not become an uncontrolled side channel for sensitive audio, video, location, identity or memory data.
+
+## 29. Documentation Requirement
+
+Each cross-cutting requirement must map to:
+
+```text
+requirement ID
+ ↓
+architecture document
+ ↓
+implementation owner
+ ↓
+test
+ ↓
+evidence
+```
+
+The architecture validation document is authoritative for this traceability.
