@@ -2,7 +2,7 @@
 
 ## Status
 
-**CANONICAL ARCHITECTURE ACTIVE — HISTORICAL CONSOLIDATION COMPLETE**
+**CANONICAL ARCHITECTURE ACTIVE — V1.1 ENRICHMENT COMPLETE**
 
 This directory contains Novi's current semantic Memory and Knowledge architecture. The active normative architecture is the canonical `01`–`18` set. Historical and transitional material is preserved under `archive/` for provenance and traceability.
 
@@ -12,7 +12,7 @@ This directory contains Novi's current semantic Memory and Knowledge architectur
 2. `01`–`18` — current canonical semantic architecture.
 3. `SOURCE_MATERIAL_STATUS.md` — source disposition registry.
 4. `SOURCE_TRACEABILITY_MATRIX.md` — source-to-canonical mapping.
-5. `FINAL_CONSOLIDATION_AUDIT.md` — final cleanup status.
+5. `FINAL_CONSOLIDATION_AUDIT.md` — consolidation and V1.1 enrichment status.
 
 ## Authority rule
 
@@ -40,6 +40,8 @@ trust ≠ authorization
 historical state ≠ current authoritative state
 model output ≠ independent evidence
 derived data ≠ source evidence
+uncertainty ≠ failure
+abstention ≠ system failure
 ```
 
 ## Canonical processing flow
@@ -61,7 +63,7 @@ provenance + relationship graph
   ↓
 retrieval + arbitration
   ↓
-minimum sufficient context
+minimum sufficient trustworthy context
   ↓
 reasoning
   ↓
@@ -79,7 +81,7 @@ evaluation / revision
 ```text
 semantic memory              → docs/04-memory-and-knowledge
 physical storage             → 01-system-architecture
-transactions / concurrency  → 01-system-architecture
+transactions / concurrency   → 01-system-architecture
 replication                  → 01-system-architecture
 recovery                     → 01-system-architecture
 runtime scheduling           → 01-system-architecture
@@ -90,4 +92,4 @@ human governance             → 16
 
 ## Completion rule
 
-The active directory is clean when one canonical authority exists per substantive semantic topic, historical material is clearly non-normative, cross-references use canonical names, and infrastructure implementation authority is not duplicated here.
+The active directory is clean when one canonical authority exists per substantive semantic topic, historical material is clearly non-normative, cross-references use canonical ownership, infrastructure implementation authority is not duplicated here, and the V1.1 audit gate in document 18 is satisfied.
