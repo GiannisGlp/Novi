@@ -4,17 +4,21 @@
 
 **DESIGN** — roadmap and acceptance gates.
 
+This roadmap describes the **Autonomy workstream**. It does not replace the Brain, Cognition, Memory/Knowledge, policy/safety, or hardware roadmaps.
+
 ## Phase 0 — Contracts
 
-Implement:
+Implement and validate:
 
-- event schemas;
-- world-state interfaces;
+- autonomy event schemas;
+- world-state consumption interfaces;
 - goal/plan/action contracts;
 - capability interfaces;
 - policy interfaces;
-- model interface;
-- audit events.
+- cognition request/response interfaces;
+- memory/knowledge request interfaces;
+- autonomy state machine;
+- behavioral audit events.
 
 **Exit:** all contracts have unit/contract tests and no component requires direct cross-layer access.
 
@@ -22,47 +26,48 @@ Implement:
 
 Implement:
 
-- event bus;
+- event integration;
 - autonomy state machine;
-- attention;
+- behavioral attention;
 - goals;
-- deterministic planner;
-- capability gateway;
-- local camera/microphone adapters;
+- deterministic behavioral planner;
+- capability gateway interface;
+- local camera/microphone adapters through Brain/runtime;
 - simulated robot adapter;
-- basic memory/knowledge integration.
+- basic memory/knowledge integration;
+- bounded continuous operation.
 
-**Exit:** Novi can run continuously on the Mac, observe the user/environment, remain silent when appropriate, and perform safe simulated actions.
+**Exit:** Novi can run continuously on the Mac, consume current cognitive state, remain silent when appropriate, manage goals, and perform safe simulated actions.
 
 ## Phase 2 — Reasoning Integration
 
-Add Nemotron behind the reasoning contract.
+Integrate the selected reasoning capability behind the Cognition contract.
 
 Implement:
 
-- context builder;
+- bounded context requests;
 - structured outputs;
-- tool selection;
-- plan generation;
+- candidate strategy/plan handling;
 - uncertainty;
 - model timeouts;
 - model failure fallback.
 
-**Exit:** model-generated plans pass deterministic validation and cannot bypass capability/safety boundaries.
+**Exit:** model-generated proposals pass deterministic validation, Autonomy can commit/replan tasks, and no model can bypass capability/safety boundaries.
 
 ## Phase 3 — Learning and Curiosity
 
 Add:
 
-- unknown detection;
+- unknown detection through Cognition;
+- curiosity goals;
 - learning candidates;
-- source/provenance;
+- source/provenance references;
 - validation questions;
 - routine discovery;
 - contradiction handling;
-- controlled schema/data evolution.
+- controlled memory/knowledge integration.
 
-**Exit:** Novi can learn a new fact from an interaction and retain it with provenance without modifying protected software.
+**Exit:** Novi can investigate a meaningful unknown, learn a new fact through an authorized interaction, and request persistence with provenance without modifying protected software.
 
 ## Phase 4 — Simulation
 
@@ -75,22 +80,23 @@ Implement:
 - robot state;
 - navigation scenarios;
 - obstacle scenarios;
-- autonomy replay.
+- autonomy replay;
+- deterministic scenario seeds.
 
-**Exit:** continuous autonomy scenarios can be executed repeatedly with deterministic test seeds.
+**Exit:** continuous autonomy scenarios can be executed repeatedly with reproducible results and explicit policy/safety outcomes.
 
 ## Phase 5 — NVIDIA Edge Runtime
 
-Target Jetson AGX Orin 64GB.
+Target Jetson hardware only after the Mac/simulation behavioral gates pass.
 
-Integrate and benchmark:
+Integrate and benchmark through the appropriate Brain/robotics contracts:
 
 - JetPack;
 - CUDA;
 - TensorRT;
 - Isaac ROS;
 - selected camera/perception acceleration;
-- Nemotron runtime;
+- selected reasoning runtime;
 - ROS 2/Nav2.
 
 Use NVIDIA components wherever they are the best supported solution for the specific workload, not automatically.
@@ -104,15 +110,16 @@ Connect physical sensors while keeping actuators safely isolated. Validate:
 - perception;
 - localization;
 - event timing;
-- navigation requests;
+- behavioral task requests;
 - safety reactions;
-- diagnostics.
+- diagnostics;
+- recovery behavior.
 
 **Exit:** all critical scenarios pass without uncontrolled actuator behavior.
 
-## Phase 7 — Physical Wheely
+## Phase 7 — Physical Novi
 
-Enable:
+Enable physical capabilities progressively:
 
 - motors;
 - head/display;
@@ -121,7 +128,7 @@ Enable:
 - IMU;
 - LiDAR/depth where selected;
 - battery/charging;
-- IoT integrations.
+- approved IoT integrations.
 
 Start with restricted autonomy and expand only after measured validation.
 
@@ -149,21 +156,23 @@ No phase advances solely because a demo works. Required evidence includes:
 - resource measurements;
 - audit traces;
 - safety tests;
-- documentation updates.
+- documentation updates;
+- verified cross-domain contract behavior.
 
 ## Definition of Done for 02-autonomy
 
 The autonomy domain is complete for V1 when:
 
-1. the continuous loop runs reliably;
+1. the behavioral loop runs reliably;
 2. attention controls interaction;
-3. goals and plans are explicit;
-4. actions use capability contracts;
-5. safety is independent;
-6. outcomes feed back into state;
-7. learning is controlled;
-8. events are replayable;
-9. the system is observable/auditable;
-10. Mac, simulation, and Jetson profiles share the same autonomy contracts;
-11. NVIDIA components are used wherever they are the demonstrably appropriate solution;
-12. no NVIDIA dependency leaks unnecessarily into vendor-neutral cognition.
+3. goals and tasks are explicit;
+4. candidate reasoning and plans are separated from behavioral commitment;
+5. actions use capability contracts;
+6. safety is independent;
+7. outcomes feed back into task state;
+8. learning is controlled and persisted through Memory/Knowledge;
+9. events are replayable;
+10. the system is observable/auditable;
+11. Mac, simulation, and physical profiles share the same autonomy contracts;
+12. NVIDIA components are used wherever they are demonstrably appropriate;
+13. no NVIDIA dependency leaks unnecessarily into vendor-neutral cognition or autonomy semantics.
