@@ -1,130 +1,194 @@
 # 02 — Architectural Principles
 
-These principles are mandatory constraints for Novi. When implementation pressure conflicts with a principle, the conflict must be documented as an Architecture Decision Record rather than silently bypassing the rule.
+**Status:** P0 normative architecture constraints
+
+These principles are mandatory. If implementation pressure conflicts with a principle, the conflict requires an explicit ADR rather than a silent exception.
 
 ## 1. Autonomous, Not Prompt-Driven
 
-Novi continuously processes environmental events. A user prompt is one input to the system, not the system's primary lifecycle trigger.
+Novi continuously processes environmental and internal events. User prompts are one event source, not the system lifecycle trigger.
 
 ## 2. Intelligence Is Layered
 
-General reasoning, perception, memory, world modelling, attention, policy, and robotics are separate responsibilities.
+Perception, world modeling, memory, knowledge, attention, planning, policy, models and robotics have separate responsibilities.
 
-## 3. One Primary General-Purpose LLM Initially
+## 3. Models Are Replaceable
 
-NVIDIA Nemotron 3 Nano 30B-A3B is the initial primary reasoning candidate. Additional general-purpose models are introduced only when measurements show a real requirement.
+No core subsystem may depend on a specific model's private API, hidden output quirks or weight format. Model access is through versioned capability interfaces.
 
 ## 4. Specialized AI Remains Specialized
 
-Object detection, face recognition, speech recognition, embeddings, navigation, and low-level control use specialized systems where that is more efficient or reliable.
+Object detection, speech, embeddings, tracking, localization, navigation and low-level control use specialized systems where that provides better correctness, latency or resource behavior.
 
-## 5. Models Are Replaceable
+## 5. Vendor-Neutral Cognitive Core
 
-No core subsystem may depend on a specific model's internal API or output quirks without an adapter.
+NVIDIA is an important reference ecosystem, but Novi's semantic contracts must not depend on NVIDIA-specific APIs or product names.
 
-## 6. Vendor-Neutral Cognitive Core
+## 6. Evidence Before Knowledge
 
-NVIDIA is the reference hardware/software platform. Core cognitive contracts must remain independent of NVIDIA-specific implementations.
+Observations are not automatically facts. Durable knowledge requires provenance, confidence and verification appropriate to the claim.
 
-## 7. Evidence Before Knowledge
+## 7. Memory Is Structured
 
-Observations are not automatically facts. All durable knowledge should have provenance and confidence appropriate to its source.
+Memory is not a single vector index. Episodic, semantic, spatial, temporal, procedural, relational and media representations have distinct semantics.
 
-## 8. Memory Is Structured
+## 8. Context Is Retrieved, Not Dumped
 
-Memory is not a single vector index. Structured facts, relationships, temporal events, spatial state, episodes, embeddings, and media have distinct representations.
+The complete memory store is never inserted into every model context. Retrieval is purpose-, authorization- and relevance-aware.
 
-## 9. Context Is Retrieved, Not Dumped
+## 9. Attention Controls Interaction
 
-The complete memory/database is never inserted into every model context. Retrieval selects relevant information.
+Novi may observe without speaking. Detection does not imply interaction.
 
-## 10. Attention Controls Interaction
+## 10. Personality Is Persistent
 
-Novi may observe without speaking. The decision to interact is independent of whether something was detected.
+Personality is represented as governed state, not merely a prompt template.
 
-## 11. Personality Is Persistent
+## 11. Relationships Matter
 
-Personality is represented as stable traits plus dynamic state and relationship context. It must not depend solely on a prompt template.
+Behavior may depend on identity, familiarity, relationship, history and current social state, subject to privacy and authorization.
 
-## 12. Relationships Matter
+## 12. Curiosity Is Controlled
 
-Interaction behavior may vary according to identity, familiarity, relationship, history, and current social state.
+Curiosity may create learning candidates, but cannot bypass safety, privacy, authorization or resource limits.
 
-## 13. Curiosity Is Controlled
+## 13. Learning Is Not Unrestricted Self-Modification
 
-Unknown concepts can become questions or learning candidates. Curiosity cannot bypass privacy, safety, authorization, or resource limits.
+Learning changes governed data, memories, knowledge, routines, skills and approved model/configuration versions. It does not grant unrestricted source-code or safety-policy modification.
 
-## 14. Learning Is Not Self-Modifying Code
+## 14. Schema Evolution Is Governed
 
-Continuous evolution primarily changes managed data, memory, knowledge, preferences, learned routines, and approved model/configuration versions. It does not grant the AI unrestricted ability to rewrite source code or safety controls.
+New structures require validation, compatibility analysis, migration, authorization and audit.
 
-## 15. Schema Evolution Is Governed
+## 15. Safety Is Outside the Model
 
-Novi may create new data structures when existing structures are insufficient, but schema proposals pass through validation, policy, migration, and audit.
+No model output is trusted as a safety decision. Physical actions require deterministic policy/safety enforcement outside the model.
 
-## 16. Safety Is Outside the Model
+## 16. Fail Closed for Unsafe Ambiguity
 
-No LLM output is trusted as a safety decision. Physical action requires policy and safety validation.
+When authorization, safety state, hardware state or action validity is uncertain, Novi refuses or safely degrades rather than guessing.
 
-## 17. Fail Closed for Unsafe Ambiguity
+## 17. Hardware Abstraction
 
-When safety state, authorization, hardware state, or action validity is uncertain, the system should refuse or safely degrade rather than guess.
+The same logical capability must be implementable across development, simulation, edge and physical runtimes.
 
-## 18. Hardware Abstraction
+## 18. Simulation Before Physical Risk
 
-The same logical capability should work against Mac, simulation, and Jetson implementations.
+New robotics behaviors should be validated in simulation/HIL before physical deployment whenever practical.
 
-## 19. Simulation Before Physical Risk
+## 19. Observability Is a Feature
 
-New robotics behaviors should be validated in simulation before physical deployment whenever practical.
+Consequential autonomous decisions must be traceable through operational events and audit records without exposing hidden chain-of-thought.
 
-## 20. Observability Is a Feature
+## 20. Data Minimization
 
-Every significant autonomous decision must be explainable through traceable events and audit records without requiring hidden model reasoning.
+Only information required for a defined purpose should be retained. Privacy applies to source data and material derivatives.
 
-## 21. Data Minimization
+## 21. Local-First Operation
 
-Only the data required for a defined purpose should be retained. Sensitive data needs explicit retention, access, and deletion policies.
+Core perception, cognition, memory, personality, diagnostics and safety must remain functional without mandatory external network access.
 
-## 22. Local-First Operation
+## 22. Deterministic Foundations
 
-Core autonomy, memory, personality, and safety should function without mandatory cloud connectivity.
+Safety, storage integrity, authorization, lifecycle management and hardware limits must be deterministic wherever practical.
 
-## 23. Deterministic Foundations
+## 23. Small, Reversible Changes
 
-Safety, storage integrity, lifecycle management, hardware limits, and other foundational controls should be deterministic wherever possible.
+Architecture and implementation changes should be incremental, testable, reviewable and reversible where possible.
 
-## 24. Small Changes
+## 24. Documentation Is Part of the System
 
-Implementation changes should be incremental, testable, reviewable, and reversible.
+Every significant subsystem requires:
 
-## 25. Documentation Is Part of the System
+- purpose;
+- scope;
+- responsibilities;
+- inputs/outputs;
+- interfaces;
+- dependencies;
+- state ownership;
+- failure modes;
+- security/privacy impact;
+- performance/resource requirements;
+- implementation candidates;
+- validation strategy;
+- acceptance criteria.
 
-Every significant subsystem must have a high-level document, detailed specification, interface definition, implementation plan, and validation strategy.
+## 25. Connectivity Independence — Mandatory
 
-## 26. Connectivity Independence — Mandatory
+**Novi must operate without Wi-Fi, Bluetooth or external network access.** Connectivity can extend capabilities but is never a mandatory dependency for core perception, cognition, autonomy, memory, personality, local interaction, diagnostics or safe physical operation.
 
-**Novi must be fully operational without Wi-Fi, Bluetooth, or external network access.** Connectivity may extend Novi's capabilities but must never be a mandatory dependency for core perception, cognition, autonomy, memory, personality, safety, local interaction, diagnostics, or physical operation.
+Offline operation must be a tested runtime profile.
 
-Wi-Fi and Bluetooth are optional capability providers. Connectivity state may change which optional functions are available, but it must never determine whether the core system is alive or able to perform its fundamental local functions.
-
-Offline operation must be a supported and tested runtime profile, not merely a theoretical fallback.
-
-Network-dependent operations must define one of the following behaviors when connectivity is unavailable:
+Network-dependent operations must explicitly define one of:
 
 - continue locally;
 - queue for later;
 - retry with bounded backoff;
 - expire safely;
 - degrade to a local implementation;
-- explicitly report unavailable capability.
+- report unavailable capability.
 
-When connectivity returns, synchronization must remain subject to privacy, authorization, provenance, deletion, conflict-resolution, and safety policies. Reconnection must never automatically upload all local data or overwrite newer local state.
+When connectivity returns, synchronization remains subject to privacy, authorization, provenance, deletion, conflict and safety policies. Reconnection must never automatically upload all local data or overwrite newer local state.
 
-No subsystem may introduce an implicit network dependency into the offline-capable core.
+## 26. Resource-Bounded Intelligence
 
----
+Adaptive components must operate within explicit CPU/GPU/memory/storage/concurrency/context/action budgets. A model may be unavailable without making the entire robot unsafe.
 
-## Principle Enforcement
+## 27. Versioned Contracts
 
-These principles are architecture constraints. A proposed implementation that violates one must either be redesigned or documented through an explicit Architecture Decision Record with the reason, scope, alternatives considered, risks, migration plan, and approval status.
+Cross-domain contracts must have explicit schema/API versions where compatibility can break. Implementations must declare the contract version they support.
+
+## 28. Provenance Is End-to-End
+
+When data is transformed from observation to evidence to memory, knowledge, decision or action, the provenance chain must remain addressable.
+
+## 29. Authority Is Explicit
+
+Identity, authentication, authorization, model identity, device identity and node identity are separate concepts. A model cannot manufacture authority through generated content.
+
+## 30. No Silent Semantic Loss
+
+Compression, summarization, indexing, caching, replication or migration must not silently turn authoritative state into an unverifiable approximation.
+
+## 31. Recovery Is a First-Class Requirement
+
+Every critical state transition must have defined crash, restart, replay, reconciliation and recovery semantics.
+
+## 32. Privacy Survives Derivation
+
+Deleting or restricting source data must trigger dependency analysis for memories, summaries, embeddings, indexes, replicas, backups and other material derivatives.
+
+## 33. Technology Requires Evidence
+
+No major technology becomes architecturally adopted because it is popular or vendor-recommended. Adoption requires:
+
+```text
+requirement
+ ↓
+authoritative documentation
+ ↓
+compatibility review
+ ↓
+benchmark / test
+ ↓
+security/license review
+ ↓
+ADR
+```
+
+For NVIDIA technologies, current NVIDIA documentation is the primary vendor source. For ROS 2, use official ROS documentation plus NVIDIA compatibility documentation where NVIDIA products are involved.
+
+## 34. Principle Enforcement
+
+A violation requires an ADR containing:
+
+- violated principle;
+- reason;
+- scope;
+- alternatives;
+- risks;
+- security/privacy impact;
+- migration/reversal plan;
+- validation evidence;
+- approval.
