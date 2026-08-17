@@ -1,6 +1,6 @@
 # 02 — Memory Lifecycle and Admission
 
-**Status:** CANONICAL — CONSOLIDATED V1
+**Status:** CANONICAL — CONSOLIDATED V1.1
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Define the canonical lifecycle from observation to durable memory, including adm
 
 > Perception is continuous; persistence is selective.
 
-The Memory Manager is the authoritative orchestration layer for admission, persistence, retrieval coordination, consolidation, deduplication, correction, expiration, deletion, provenance and policy enforcement. The model may propose typed memory operations but cannot bypass the manager. fileciteturn203file0
+The Memory Manager is the authoritative orchestration layer for admission, persistence, retrieval coordination, consolidation, deduplication, correction, expiration, deletion, provenance and policy enforcement. The model may propose typed memory operations but cannot bypass the manager.
 
 ## Canonical lifecycle
 
@@ -44,26 +44,9 @@ discard transient   durable candidate
                               delete
 ```
 
-This replaces competing lifecycle state machines from older documents. fileciteturn202file0 fileciteturn205file0
-
 ## Write targets
 
-Novi distinguishes at least:
-
-1. observation;
-2. event;
-3. episode;
-4. memory candidate;
-5. semantic knowledge claim;
-6. relationship update;
-7. preference candidate;
-8. routine candidate;
-9. procedural candidate;
-10. prediction;
-11. schema proposal;
-12. artifact.
-
-Each target has its own admission requirements. Predictions and model-generated hypotheses are never silently treated as observations.
+Novi distinguishes at least observation, event, episode, memory candidate, semantic knowledge claim, relationship update, preference candidate, routine candidate, procedural candidate, prediction, schema proposal and artifact. Predictions and model-generated hypotheses are never silently treated as observations.
 
 ## Memory write gate
 
@@ -89,26 +72,11 @@ Memory Manager
 storage adapter
 ```
 
-No ordinary durable memory may bypass this gate. External text, webpages, documents, emails, tool outputs and agent messages are untrusted inputs until validated. fileciteturn214file0
+No ordinary durable memory may bypass this gate. External text, webpages, documents, emails, tool outputs and agent messages are untrusted inputs until validated.
 
 ## Admission decision
 
-Admission evaluates:
-
-```text
-relevance
-novelty
-future usefulness
-evidence
-confidence
-verification
-consequence
-privacy
-recurrence
-contradiction
-retention cost
-user intent
-```
+Admission evaluates relevance, novelty, future usefulness, evidence, confidence, verification, consequence, privacy, recurrence, contradiction, retention cost and user intent.
 
 Possible outcomes:
 
@@ -124,7 +92,7 @@ DEFER_TO_CONSOLIDATION
 CREATE_SCHEMA_PROPOSAL
 ```
 
-High confidence is not sufficient for admission; a model can be confidently wrong. Source reliability is contextual to the claim type. fileciteturn203file0
+High confidence is not sufficient for admission; a model can be confidently wrong. Source reliability is contextual to the claim type.
 
 ## Fast path and background path
 
@@ -136,11 +104,9 @@ Used when memory is needed immediately: explicit remember requests, user correct
 
 Used for expensive work: routine discovery, summarization, large-scale duplicate detection, embeddings, relationship analysis, schema proposals and consolidation.
 
-Background processing must yield to safety-critical perception, navigation, interaction and control. fileciteturn203file0
+Background processing must yield to safety-critical perception, navigation, interaction and control.
 
 ## Explicit remember requests
-
-An explicit request to remember something receives priority admission handling, subject to privacy and policy.
 
 ```text
 request
@@ -158,33 +124,40 @@ store/update
 confirm persistence
 ```
 
-## Deduplication and conflict
+The confirmation must distinguish **accepted for persistence** from **verified as true**.
 
-Before durable admission, compare candidates using exact matching, normalized text, semantic similarity, entity identity, temporal validity, claim identity, relationship identity and provenance.
+## Formal lifecycle transition contract
 
-A conflict must not silently overwrite the existing claim. Preserve competing claims and resolve them using source relevance, recency, evidence, verification, claim type and temporal validity.
-
-## Correction and supersession
-
-For important claims, prefer:
+Every material lifecycle transition should be modeled as:
 
 ```text
-old claim
+CURRENT_STATE
    ↓
-superseded by
+transition request
    ↓
-new claim
+precondition checks
+   ↓
+policy / authorization
+   ↓
+evidence / validation checks
+   ↓
+STATE TRANSITION
+   ↓
+side effects
+   ↓
+audit event
 ```
 
-rather than destructive replacement. Historical evidence remains traceable even when the current interpretation changes. fileciteturn202file0
+A transition must define its actor, preconditions, postconditions, side effects, failure state and audit event. A transition that cannot establish its postconditions must not be reported as successful.
 
 ## Lifecycle states and failure states
 
-The canonical lifecycle must support explicit states relevant to implementation, including:
+Canonical states:
 
 ```text
 CAPTURED
 CLASSIFIED
+ADMISSION_PENDING
 ADMITTED
 TRANSIENT
 INDEXED
@@ -201,7 +174,6 @@ Failure/degradation states remain separate:
 ```text
 UNKNOWN
 UNAVAILABLE
-STALE
 CONFLICTED
 QUARANTINED
 BLOCKED
@@ -212,15 +184,47 @@ ERASURE_PENDING
 PARTIALLY_ERASED
 ```
 
-An unavailable or uncertain state must never be silently converted into confidence. fileciteturn215file0
+An unavailable or uncertain state must never be silently converted into confidence.
+
+## Idempotency
+
+Material admission, consolidation and deletion operations should be idempotent where feasible.
+
+```text
+same operation + same authoritative input
+            ↓
+      same semantic result
+```
+
+Retries must not create duplicate memories, duplicate evidence, repeated promotions or contradictory deletion outcomes. Non-idempotent operations require explicit operation identifiers and deduplication semantics.
+
+## Deduplication and conflict
+
+Before durable admission, compare candidates using exact matching, normalized text, semantic similarity, entity identity, temporal validity, claim identity, relationship identity and provenance.
+
+A conflict must not silently overwrite the existing claim. Preserve competing claims and resolve them using source relevance, evidence, verification, claim type and temporal validity.
+
+## Correction and supersession
+
+For important claims, prefer:
+
+```text
+old claim
+   ↓
+superseded by
+   ↓
+new claim
+```
+
+rather than destructive replacement. Historical evidence remains traceable even when the current interpretation changes.
 
 ## Staleness
 
-A memory may remain historically useful after its validity expires. Stale information must not be presented as current state when the query requires current truth.
+A memory may remain historically useful after its validity expires. Stale information must not be presented as current state when the query requires current truth. Freshness requirements should be claim- and consequence-specific.
 
 ## Retention and deletion
 
-Deletion is a policy-controlled lifecycle operation. It must account for derived indexes and artifacts, not merely the primary row.
+Deletion is a policy-controlled lifecycle operation. It must account for derived indexes and artifacts, not merely the primary record.
 
 ```text
 source
@@ -230,15 +234,17 @@ dependency graph
 summaries / embeddings / indexes / derivatives
  ↓
 delete / sanitize / recompute
+ ↓
+erasure verification
 ```
 
-If required erasure cannot be verified, the state remains `ERASURE_PENDING`, not `ERASURE_COMPLETE`. fileciteturn214file0
+If required erasure cannot be verified, the state remains `ERASURE_PENDING`, not `ERASURE_COMPLETE`.
 
 ## Resource controls
 
 Admission and background processing must be resource-aware. Controls may cover records/event, bytes/episode, embeddings/hour, generated artifacts, database growth, compute budget and background processing rate.
 
-A memory subsystem that exhausts compute or storage is a system failure. fileciteturn203file0
+A memory subsystem that exhausts compute or storage is a system failure.
 
 ## Auditability
 
@@ -260,14 +266,27 @@ actor
 created_at
 ```
 
-Do not persist hidden model chain-of-thought. Store structured policy and decision metadata instead. fileciteturn203file0
+Do not persist hidden model chain-of-thought. Store structured policy and decision metadata instead.
+
+## Evaluation requirements
+
+Lifecycle testing must include:
+
+- duplicate admission;
+- retry after timeout;
+- conflicting evidence;
+- stale-memory admission;
+- failed validation;
+- quarantine and release;
+- partial deletion;
+- dependency-aware erasure;
+- crash/restart during transition;
+- concurrent update proposals;
+- rollback/recovery;
+- policy-version changes.
+
+Key metrics include duplicate-admission rate, false-admission rate, stale-current-state rate, failed-transition rate, idempotency failures and verified-erasure success rate.
 
 ## Source consolidation
 
-Merged into this canonical document:
-
-- `02_MEMORY_LIFECYCLE.md`
-- `03_MEMORY_WRITE_AND_ADMISSION_POLICY.md`
-- lifecycle/admission requirements from Documents 95–96.
-
-Historical source documents remain preserved until final audit and supersession. fileciteturn202file0 fileciteturn203file0
+The historical corpus remains preserved in `archive/`. The active authority is this document and the other canonical 01–18 documents.
