@@ -439,7 +439,7 @@ The edge runtime must measure:
 
 - CPU;
 - GPU;
-- RAM/VRAM/unified memory;
+- RAM/unified memory;
 - model load time;
 - time to first token;
 - model throughput;
@@ -449,7 +449,7 @@ The edge runtime must measure:
 - power;
 - storage I/O.
 
-NVIDIA's DeepStream documentation also recommends component-level latency measurement when diagnosing pipeline performance, reinforcing the requirement for component-level observability. citeturn0search10
+Component-level latency must be observable so pipeline bottlenecks can be isolated rather than inferred from end-to-end latency alone.
 
 ## 22. Mac-to-Edge Contract
 
@@ -488,7 +488,9 @@ position/state events
 world model updates
 ```
 
-NVIDIA Isaac Sim provides a ROS 2 bridge and currently documents Jazzy as an officially tested/recommended distribution. citeturn0search4turn0search7
+NVIDIA Isaac Sim provides a ROS 2 bridge and recommends/test supports ROS 2 Jazzy and Humble:
+
+https://docs.isaacsim.omniverse.nvidia.com/6.0.0/ros2_tutorials/ros2_landing_page.html
 
 ## 24. Security Boundary
 
