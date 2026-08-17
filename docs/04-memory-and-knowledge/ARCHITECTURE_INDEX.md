@@ -1,19 +1,19 @@
 # 04 — Memory and Knowledge Architecture Index
 
-**Status:** CANONICAL SET CONSOLIDATION IN PROGRESS
+**Status:** CONSOLIDATION AUDIT COMPLETE — HISTORICAL CLEANUP GATED
 
 ## Authority hierarchy
 
 | Authority | Document | Role |
 |---|---|---|
-| CANONICAL | `01`–`18` below | Current consolidated semantic architecture |
-| CANONICAL | `95`–`106` | Normative integration/governance authorities retained during migration |
-| CANONICAL | `CONSOLIDATION_TARGET_ARCHITECTURE.md` | Responsibility boundaries |
-| CANONICAL | `SOURCE_MATERIAL_STATUS.md` | Source classification and traceability registry |
-| AUDIT | `ARCHITECTURE_CONTENT_AUDIT.md` | Detailed consolidation findings |
-| HISTORICAL | `00`–`94` not yet superseded | Source material; not independent authority |
+| CANONICAL | `01`–`18` | Current canonical semantic architecture |
+| TRANSITIONAL AUTHORITY | `95`–`106` | Earlier integrated specialist authorities retained until source traceability and cross-reference migration are complete |
+| CANONICAL REGISTRY | `SOURCE_MATERIAL_STATUS.md` | Source classification and traceability registry |
+| AUDIT | `ARCHITECTURE_CONTENT_AUDIT.md` | Consolidation audit |
+| FINAL AUDIT | `FINAL_CONSOLIDATION_AUDIT.md` | Exit criteria and cleanup gate |
+| SOURCE / HISTORICAL | `00`–`94` | Earlier material; non-normative and retained until disposition gates pass |
 
-## Canonical set
+## Canonical semantic architecture
 
 ```text
 01 Memory Taxonomy and Core Model
@@ -28,67 +28,64 @@
 10 Cross-Modal Memory
 11 Skill and Competence Verification
 12 Schema and Knowledge Evolution
-13 Model and Memory Co-Evolution
+13 Model / Memory Co-Evolution
 14 Privacy and Memory Data Governance
 15 Machine Governance Interface
 16 Human Oversight and Accountability
 17 Integration and Reference Model
-18 Final Architecture Audit and Traceability
+18 Architecture Audit and Traceability
 ```
-
-## Current consolidated documents
-
-- `01`–`05` — consolidated in the first content pass.
-- `06`–`11` — consolidated in the current specialist pass.
-- `12` — consolidated previously.
-- `13`–`18` — consolidated in the current specialist pass.
 
 ## Responsibility boundaries
 
 ```text
-semantic memory → docs/04-memory-and-knowledge
-physical storage → 01-system-architecture
-transactions/concurrency → 01-system-architecture
-replication → 01-system-architecture
-recovery → 01-system-architecture
-runtime scheduling → 01-system-architecture
-observability → 01-system-architecture
-machine authorization → 105 / 15
-human governance → 106 / 16
+semantic memory              → docs/04-memory-and-knowledge
+physical storage             → 01-system-architecture
+transactions / concurrency   → 01-system-architecture
+replication                  → 01-system-architecture
+recovery                     → 01-system-architecture
+runtime scheduling           → 01-system-architecture
+observability implementation → 01-system-architecture
+machine authorization        → 15 / 105
+human governance             → 16 / 106
 ```
 
 Semantic conflicts belong to `05`; distributed state conflicts belong to `108/109`.
 
-## Consolidation rules
+## Consolidation status
 
-1. Preserve unique technical content.
-2. Merge by responsibility, not filename.
-3. Maintain source-to-destination traceability.
-4. Resolve contradictory normative rules before supersession.
-5. Keep research findings distinct from requirements.
-6. Keep semantic contracts distinct from physical implementation.
-7. Preserve provenance through derived representations.
-8. Never treat retrieval as truth or authorization.
-9. Never treat generated derivatives as independent evidence.
-10. Preserve historical evidence while revising interpretations.
-11. Make deletion dependency-aware and verifiable.
-12. Preserve Git history.
+### Phase 1 — Authority
+- [x] Audit directory.
+- [x] Establish canonical spine.
+- [x] Create consolidation target.
+- [x] Create source-material registry.
+- [x] Update README.
 
-## Remaining gates
+### Phase 2 — Content
+- [x] Create and populate canonical 01–18 documents.
+- [x] Merge the major identified source clusters.
+- [x] Establish semantic/infrastructure responsibility boundaries.
+- [ ] Complete section-level traceability for every historical file.
+- [ ] Resolve remaining contradictory requirements found during source-by-source review.
 
-### Content
-- [x] Canonical specialist documents created for 01–18.
-- [ ] Complete section-level traceability for every legacy source.
-- [ ] Resolve any remaining contradictions found by source-level review.
-
-### Naming / archival
-- [ ] Update all cross-references to canonical names.
-- [ ] Mark fully incorporated sources `SUPERSEDED`.
+### Phase 3 — Naming and historical cleanup
+- [x] Final canonical 01–18 names created.
+- [ ] Redirect all remaining cross-references to historical authorities.
 - [ ] Move infrastructure-only material to system architecture.
+- [ ] Mark fully incorporated sources `SUPERSEDED`.
+- [ ] Remove duplicate active navigation entries.
 
-### Final audit
-- [ ] Verify every source has a disposition.
-- [ ] Verify one canonical home per substantive topic.
-- [ ] Verify no competing state machines.
-- [ ] Re-run architecture audit.
-- [ ] Only then close `04-memory-and-knowledge` and continue to the next architecture task.
+### Phase 4 — Final audit
+- [x] Verify the 01–18 canonical spine exists.
+- [x] Verify major responsibility boundaries.
+- [x] Publish final consolidation audit.
+- [ ] Verify every source has an explicit disposition.
+- [ ] Verify one canonical home per substantive topic at section level.
+- [ ] Verify no competing state machines remain.
+- [ ] Re-run audit after historical cleanup.
+
+## Cleanup rule
+
+**Do not delete historical documents yet.** The corpus remains preserved as source material until every file has an explicit disposition and its unique architectural requirements have been traced into the canonical destination. Git history is not a substitute for architectural traceability.
+
+Only after the final audit gates pass may historical sources be marked `SUPERSEDED`, moved, or deleted.
