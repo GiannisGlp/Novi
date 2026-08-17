@@ -1,73 +1,70 @@
-# 02 — Novi Cognitive Architecture
+# 02 — Novi Brain Cognitive Runtime Boundary
 
-**Status:** P0 — critical
+**Status:** BOUNDARY REFERENCE — NOT CANONICAL COGNITIVE ARCHITECTURE
+**Canonical cognitive architecture:** `docs/03-cognition/01_COGNITIVE_ARCHITECTURE.md`
+**Owner:** `02-novi-brain`
 
-## Purpose
+> This document must not redefine what Cognition is. It records the Brain runtime implications and interfaces required to execute the canonical Cognition architecture.
 
-Novi must continuously exist as an embodied agent. A user request is one stimulus, not the event that starts the brain.
+## Runtime purpose
+
+Novi must continuously exist as an embodied agent. A user request is one stimulus, not the event that starts the brain. The Brain runtime coordinates the concurrent execution of perception, cognition, memory, autonomy, governance and robotics.
 
 ```text
-WORLD → SENSE → PERCEIVE → INTERPRET → STATE → ATTENTION
-→ REACT / THINK / WAIT → GOAL → PLAN/SKILL → ACTION
-→ GOVERNANCE → SAFETY → ROBOTICS → WORLD
+WORLD → SENSE → PERCEIVE → COGNITION → STATE → AUTONOMY
+→ ACTION PROPOSAL → GOVERNANCE → ROBOTICS → WORLD
 ```
 
-## Concurrent loops
+## Concurrent runtime loops
 
-### Reactive loop
+### Reactive execution
 
-Handles fast bounded responses: obstacle changes, contact, name detection, sudden events, local navigation and other time-sensitive events. It must not depend on an LLM.
+Provides fast bounded execution for time-sensitive events such as obstacle changes, contact, name detection, sudden events and local navigation. Reactive safety/control paths must not depend on an LLM.
 
-### Deliberative loop
+### Deliberative execution
 
-Handles ambiguity, long-horizon goals, planning, social reasoning, conflicting evidence and complex tasks.
+Provides scheduling and resource support for the canonical Cognition and Autonomy components handling ambiguity, long-horizon goals, planning and complex tasks.
 
-### Background loop
+### Background execution
 
-Handles memory consolidation, map maintenance, diagnostics, model health, curiosity candidates and resource optimization. It must be interruptible and bounded.
+Provides bounded, interruptible execution for memory consolidation, diagnostics, model health, map maintenance and resource optimization. The semantic ownership of these activities remains with their canonical domains.
 
-## Event-driven cognition
+## Event-driven runtime
 
-Continuous awareness is combined with event-driven execution. Important events include person entry/exit, speech, obstacles, goal changes, task outcomes, sensor degradation, battery/thermal warnings and model failures. Events carry timestamp, provenance and confidence.
+The Brain runtime transports and schedules events such as person entry/exit, speech, obstacles, goal changes, task outcomes, sensor degradation, battery/thermal warnings and model failures. Events carry timestamp, provenance and confidence according to system contracts.
 
-## Attention
+## Attention boundary
 
-Attention allocates computation using urgency, relevance, novelty, goal relevance, social relevance, risk, uncertainty, proximity, persistence and resource cost. Safety interrupts use the protected safety path rather than ordinary attention.
+Cognition/Autonomy define the semantic and behavioral meaning of attention. Brain provides the runtime mechanisms for prioritization, scheduling, interruption, resource allocation and protected safety interrupts.
 
-## World model
+## World-model boundary
 
-The world model represents entities, places, relationships, activities, environmental state, uncertainty and provenance. It distinguishes OBSERVED, INFERRED, REMEMBERED, PREDICTED, SIMULATED and COUNTERFACTUAL information.
+The semantic World Model is owned by `03-cognition`. Brain may maintain runtime state, transport evidence and cache/execute model outputs, but it must not create a competing semantic World Model.
 
-## Self model
+## Self-model boundary
 
-The self model contains identity, location, physical configuration, sensor/actuator health, capabilities, active goals/tasks, limitations, software/model versions, resource state, privacy state and safety state. It is grounded in authoritative telemetry rather than generated prose.
+Brain owns authoritative runtime/telemetry facts such as current physical configuration, sensor/actuator health, resource state and software/model versions. Cognition owns semantic self-modeling; Memory owns autobiographical history; Autonomy owns current task/goal state.
 
-## Reasoning
+## Reasoning boundary
 
-Novi supports fast reasoning, deliberative reasoning, tool-assisted reasoning and predictive reasoning. No single neural model is required to perform all reasoning modes.
+Cognition owns reasoning semantics and cognitive model selection. Brain owns model execution infrastructure, scheduling, placement, batching, resource management and runtime fallback.
 
-## Perception
+## Perception runtime
 
-Raw RGB, depth, LiDAR, IMU, audio, thermal, touch and proprioceptive inputs are transformed through acquisition, timestamping, calibration, preprocessing, neural/classical perception, tracking/fusion and structured evidence.
+Raw RGB, depth, LiDAR, IMU, audio, thermal, touch and proprioceptive inputs are handled through acquisition, timestamping, calibration, preprocessing, model execution, tracking/fusion and structured evidence pipelines. The semantic interpretation of that evidence belongs to Cognition and other domain owners.
 
-NVIDIA Isaac ROS is a strong candidate backend for accelerated ROS 2 perception and navigation. NVIDIA documents components including localization/mapping, 3D reconstruction, pose estimation and trajectory planning. citeturn0search0turn0search6
+## Autonomous movement boundary
 
-## Proactive behavior
+Cognitive/autonomy intent flows through navigation/skills, governance, safety and ROS 2/control. Brain runtime infrastructure must never allow cognitive models to directly command motors outside the governed capability interface.
 
-Novi may initiate bounded behavior because of active goals, safety, appropriate social opportunity, environmental change, curiosity, maintenance or continuation of an existing plan. Proactive behavior is constrained by authorization, safety, privacy, context, confidence and resources.
+## Interaction runtime
 
-## Autonomous movement
+Brain provides execution infrastructure for presence detection, speech/audio, vision, dialogue transport, expression and movement interfaces. Interaction semantics, identity, relationships and social cognition remain owned by Cognition/Memory/Autonomy.
 
-Cognitive intention flows through navigation/skills, action proposal, governance, safety and ROS 2/control. Cognitive models never directly command motors.
+## Failure boundary
 
-## Interaction
-
-Novi should continuously combine presence detection, social context, body orientation, hearing, dialogue, expression and movement. Interaction is stateful and connected to memory and relationships.
-
-## Failure
-
-Missing/stale/contradictory evidence, model timeouts, memory failure, planner failure, skill failure, sensor failure and resource exhaustion produce explicit degraded states rather than silent hallucination.
+Runtime failures such as model timeouts, memory-service failure, sensor failure, resource exhaustion and network loss must produce explicit degraded states and trigger fallback. Domain-specific semantic responses remain owned by the relevant canonical domain.
 
 ## Acceptance
 
-Implementation must demonstrate continuous perception, meaningful attention, appropriate reaction/deliberation, bounded action, consequence observation, memory/learning and continued operation without a human prompt restarting the cycle.
+The Brain runtime is acceptable when it can continuously execute and coordinate the canonical Cognition, Memory, Autonomy, Governance and Hardware components without a user prompt restarting the system, while maintaining bounded latency, interruption, recovery and observability.
