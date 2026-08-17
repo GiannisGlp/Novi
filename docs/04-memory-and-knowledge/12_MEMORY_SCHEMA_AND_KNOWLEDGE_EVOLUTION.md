@@ -1,6 +1,6 @@
 # 12 — Schema and Knowledge Evolution
 
-**Status:** CANONICAL — CONSOLIDATED V1
+**Status:** CANONICAL — CONSOLIDATED V1.1
 
 ## Purpose
 
@@ -34,8 +34,6 @@ controlled execution
 verification
 ```
 
-A new fact normally requires no schema change. fileciteturn212file0
-
 ## Existing-schema-first rule
 
 Before proposing a new structure, evaluate in order:
@@ -53,32 +51,54 @@ This prevents schema explosion.
 ## Evolution levels
 
 ### Level 0 — Runtime state
-
 Autonomous within resource/policy limits: current state, hypotheses, active attention and transient conversation state.
 
 ### Level 1 — Memory content
-
 Autonomous admission subject to the memory write gate.
 
 ### Level 2 — Knowledge content
-
 Controlled promotion to durable semantic knowledge.
 
 ### Level 3 — Non-structural metadata
-
 Tags, labels, annotations, confidence metadata, embedding references and learned categories within quotas.
 
 ### Level 4 — Schema extension
-
 Requires proposal, validation and controlled migration: new entity types, relationship predicates, columns, indexes, extension tables or schema versions.
 
 ### Level 5 — Runtime/software changes
-
 Not autonomous: executable code, safety logic, authorization logic, migration engine, arbitrary package installation, model router or startup behavior.
 
 ### Level 6 — Protected core
+Forbidden to autonomous Novi. Administrator/developer-controlled processes only.
 
-Forbidden to autonomous Novi. Administrator/developer-controlled processes only. fileciteturn212file0
+## Compatibility matrix
+
+Every schema change must classify compatibility at least as:
+
+```text
+COMPATIBLE
+CONDITIONALLY_COMPATIBLE
+MIGRATION_REQUIRED
+REBUILD_REQUIRED
+ROLLBACK_REQUIRED
+FORBIDDEN
+```
+
+Evaluate the change against:
+
+| Surface | Required check |
+|---|---|
+| semantic meaning | unchanged or explicitly migrated |
+| provenance | preserved |
+| identity | preserved |
+| temporal validity | preserved |
+| privacy | preserved/strengthened |
+| authorization | preserved/strengthened |
+| retrieval/indexes | compatible or rebuilt |
+| embeddings | re-derived if representation changed |
+| replicas | migration compatibility verified |
+| deletion dependencies | preserved |
+| audit history | retained |
 
 ## Model role
 
@@ -104,18 +124,27 @@ commit / rollback
 
 ## Migration invariants
 
-A migration is invalid if it preserves values but loses:
+A migration is invalid if it preserves values but loses provenance, identity, validity intervals, privacy classification, retention/deletion semantics, security policy, derivation lineage or compatibility with indexes/replicas.
 
-- provenance;
-- identity;
-- validity intervals;
-- privacy classification;
-- retention/deletion semantics;
-- security policy;
-- derivation lineage;
-- compatibility with replicas/indexes.
+## Rollback and dual-read safety
 
-This follows the architecture audit's requirement that schema evolution preserve the semantics of the entire memory state, not only stored values. fileciteturn215file0
+For consequential migrations, prefer staged rollout where feasible:
+
+```text
+old schema + new schema
+        ↓
+backfill / validate
+        ↓
+shadow read comparison
+        ↓
+controlled cutover
+        ↓
+verification
+        ↓
+retire old representation
+```
+
+Rollback must preserve the semantic history and must not reintroduce deleted/prohibited data.
 
 ## Protected core
 
@@ -131,20 +160,14 @@ protected executable control plane
 signing material
 ```
 
-A model-generated proposal cannot grant itself permission to modify these assets.
+## Evaluation
 
-## Dynamic data versus schema change
+Schema evolution must be tested for backward/forward compatibility where applicable, provenance preservation, privacy preservation, retrieval correctness, deletion correctness, migration idempotency, rollback and historical reconstruction.
 
-Flexible metadata should be used where it is sufficient. Structural schema changes should be rare, justified and observable.
+## Integration
 
-The system should record proposal reason, affected objects, compatibility impact, policy decision, migration version, execution result and verification result.
+`01–11` define semantic structures being evolved. `13` governs model/memory compatibility. `14–16` govern privacy and authorization. Physical migration and distributed execution belong to system architecture.
 
 ## Source consolidation
 
-Merged into this canonical document:
-
-- `07_MEMORY_SCHEMA_AND_STORAGE.md` — semantic schema aspects;
-- `10_MEMORY_SCHEMA_EVOLUTION_AND_DYNAMIC_DATA.md`;
-- schema evolution requirements identified by Document 96.
-
-Physical database migration mechanics belong to the system/implementation architecture rather than this semantic contract. fileciteturn212file0
+The historical corpus remains preserved in `archive/`. The active authority is this document and the other canonical 01–18 documents.
