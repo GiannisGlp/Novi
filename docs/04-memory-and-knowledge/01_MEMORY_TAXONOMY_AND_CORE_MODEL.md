@@ -1,12 +1,12 @@
 # 01 — Memory Taxonomy and Core Model
 
-**Status:** CANONICAL — CONSOLIDATED V1
+**Status:** CANONICAL — CONSOLIDATED V1.1
 
 ## Purpose
 
 Define Novi's semantic memory model, memory classes, ownership boundaries, and the distinction between active context and durable memory.
 
-The canonical architecture treats memory as a governed, evidence-linked state system. Experience is not automatically memory; memory is not automatically knowledge; knowledge is not automatically truth. fileciteturn214file0
+The canonical architecture treats memory as a governed, evidence-linked state system. Experience is not automatically memory; memory is not automatically knowledge; knowledge is not automatically truth.
 
 ## Core architecture
 
@@ -26,7 +26,7 @@ Perception / User / Tools / Other Agents
        Context / Cognition
 ```
 
-The Memory Manager owns persistence and memory lifecycle. Cognition interprets retrieved information. Memory cannot directly authorize an action. fileciteturn214file0
+The Memory Manager owns persistence and memory lifecycle. Cognition interprets retrieved information. Memory cannot directly authorize an action.
 
 ## Memory classes
 
@@ -76,7 +76,7 @@ Validated information about Novi's own devices, software, capabilities, sensors,
 
 ### Metamemory
 
-Information about memory availability, reliability, completeness and limitations. Retrievable, known, true, current and verified are separate properties. fileciteturn214file0
+Information about memory availability, reliability, completeness and limitations. Retrievable, known, true, current and verified are separate properties.
 
 ## Typed memory over embeddings
 
@@ -89,6 +89,36 @@ Episode
  ├── routine candidate
  └── episodic record
 ```
+
+## Canonical MemoryRecord contract
+
+Every durable memory object should be representable by a stable, typed semantic record. The exact physical schema may vary by implementation, but the semantic contract must remain stable.
+
+```text
+MemoryRecord
+├── memory_id
+├── memory_type
+├── subject_refs
+├── content_or_claim
+├── source_refs
+├── evidence_refs
+├── provenance_ref
+├── epistemic_status
+├── confidence
+├── verification_state
+├── temporal_scope
+├── spatial_scope
+├── privacy_class
+├── access_policy_ref
+├── retention_policy_ref
+├── dependency_refs
+├── derivation_refs
+├── lifecycle_state
+├── version
+└── integrity_metadata
+```
+
+Required fields must not be fabricated. Unknown values are represented explicitly as unknown/unavailable where the schema permits.
 
 ## Common metadata
 
@@ -115,11 +145,20 @@ DERIVATIONS
 INTEGRITY_METADATA
 ```
 
-Optional fields must not be fabricated when unavailable. fileciteturn214file0
+## Memory authority matrix
+
+Memory is evidence-bearing state, not an authority mechanism.
+
+| State/source | May inform reasoning | May authorize action | May override current authoritative state |
+|---|---:|---:|---:|
+| Historical memory | Yes | No | No |
+| Verified knowledge | Yes | No | No |
+| Current authoritative telemetry | Yes | No | Only within its defined domain |
+| Policy/governance decision | Yes | Yes | Within policy scope |
+| Authenticated human authorization | Yes | Yes | Policy-dependent |
+| Model-generated hypothesis | Only as labeled hypothesis | No | No |
 
 ## Epistemic separation
-
-The architecture preserves these distinctions:
 
 ```text
 Observation ≠ Evidence
@@ -151,7 +190,22 @@ The model context window is not the durable memory store.
 
 ## Current-state precedence
 
-Historical memory cannot override current authoritative state where current truth matters. Current telemetry, authorization, location, device state and safety conditions take precedence over historical memory. fileciteturn214file0
+Historical memory cannot override current authoritative state where current truth matters. Current telemetry, authorization, location, device state and safety conditions take precedence over historical memory.
+
+## Abstention and insufficient knowledge
+
+Memory consumers must support explicit epistemic outcomes rather than forcing every request into an answer:
+
+```text
+ANSWER
+ANSWER_WITH_UNCERTAINTY
+REQUEST_CLARIFICATION
+REVALIDATE
+ABSTAIN
+ESCALATE_TO_HUMAN
+```
+
+A memory subsystem must prefer abstention or revalidation when evidence is insufficient for the consequence of the requested operation.
 
 ## Canonical boundaries
 
@@ -162,12 +216,10 @@ Historical memory cannot override current authoritative state where current trut
 - Human escalation and accountability belong to the human-oversight layer.
 - Retrieval is a capability, not a memory type.
 
+## Research and validation basis
+
+The architecture follows current agent-memory research that treats memory as a distinct subsystem requiring explicit design and evaluation, rather than merely an embedding store or prompt extension. Retrieval-augmented systems also require separate evaluation of retrieval relevance, generation accuracy/faithfulness and trustworthiness characteristics.
+
 ## Source consolidation
 
-Merged into this canonical document:
-
-- `00_HIGH_LEVEL_MEMORY_ARCHITECTURE.md`
-- `01_MEMORY_TAXONOMY.md`
-- relevant taxonomy/integration requirements from `95_MEMORY_KNOWLEDGE_MEMORY_ARCHITECTURE_INTEGRATION_AND_REFERENCE_MODEL.md`.
-
-The historical documents remain source material until the final consolidation pass marks them superseded. fileciteturn200file0 fileciteturn201file0
+The historical corpus remains preserved in `archive/`. The active authority is this document and the other canonical 01–18 documents.
