@@ -2,11 +2,21 @@
 
 ## Status
 
-**DESIGN**
+**DESIGN — HIGH-LEVEL ENTRY POINT**
 
 ## Objective
 
 Provide Novi with durable, queryable, provenance-aware memory and knowledge that can grow through experience while remaining local, auditable, secure and bounded.
+
+## Normative Integration Reference
+
+**Document 95 — Memory Knowledge Memory Architecture Integration and Reference Model** is the normative integration point for the memory-and-knowledge architecture.
+
+Documents 70–94 define specialized capabilities and controls. Document 95 defines how those capabilities compose, their system-wide boundaries, interfaces, dependencies and invariants.
+
+Any new memory/knowledge architecture document should be reviewed against Document 95. If a new capability changes an existing invariant, dependency, lifecycle rule, provenance requirement, privacy rule, erasure semantic, security boundary or evaluation requirement, Document 95 and the affected specialized documents must be updated together.
+
+See: [95 — Memory Knowledge Memory Architecture Integration and Reference Model](95_MEMORY_KNOWLEDGE_MEMORY_ARCHITECTURE_INTEGRATION_AND_REFERENCE_MODEL.md)
 
 ## Architectural Separation
 
