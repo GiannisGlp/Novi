@@ -1,4 +1,4 @@
-# 11 — Autonomy Runtime
+# 11 — Autonomy Runtime Requirements
 
 ## Status
 
@@ -6,17 +6,36 @@
 
 ## Purpose
 
-The runtime manages lifecycle, concurrency, scheduling, resource budgets, service health, model invocation, cancellation, and graceful degradation.
+This document defines the runtime guarantees Autonomy requires. It does **not** define the canonical implementation of Novi's system/Brain runtime.
 
-## Processes
+Brain/system architecture owns process lifecycle, scheduling infrastructure, model execution, service orchestration and resource-management implementation. Autonomy defines the behavioral requirements that those runtime services must satisfy.
 
-A reference deployment may contain:
+## Required Runtime Guarantees
+
+Autonomy requires:
+
+- bounded scheduling latency for consequential tasks;
+- asynchronous execution;
+- cancellation;
+- deadlines/timeouts;
+- priority-aware preemption;
+- resource-aware admission/degradation;
+- service health visibility;
+- deterministic autonomy-state transitions;
+- graceful degradation;
+- startup/shutdown safety;
+- reproducible behavioral diagnostics.
+
+## Reference Logical Components
+
+A deployment may expose services such as:
 
 ```text
-wheely-runtime
+Novi Brain / System Runtime
 ├── autonomy engine
-├── event bus
-├── world model service
+├── event transport
+├── cognition services
+├── world-state service
 ├── memory/knowledge service
 ├── model runtime
 ├── capability gateway
@@ -25,49 +44,66 @@ wheely-runtime
 └── API/UI gateway
 ```
 
-The exact process split may change after profiling.
+This is a logical architecture, not a mandated process decomposition. Exact process boundaries are determined by profiling, reliability and deployment constraints.
 
 ## Concurrency
 
-Independent work should execute concurrently:
+Autonomy must support concurrent:
 
-- perception ingestion;
-- audio processing;
-- world-state updates;
-- active plan execution;
-- background learning;
+- perception-driven events;
+- cognitive requests;
+- active behavioral tasks;
+- outcome monitoring;
+- background learning triggers;
 - diagnostics.
 
-Shared state requires explicit synchronization or message-based ownership.
+Shared state requires explicit ownership, synchronization, or message-based contracts.
 
 ## Cancellation
 
-Every long-running operation supports cancellation or an explicit statement that cancellation is impossible. Safety cancellation has priority.
+Every long-running autonomy operation supports cancellation or explicitly declares why cancellation is impossible. Safety cancellation has priority over ordinary task cancellation.
 
 ## Resource Budgets
 
-The runtime tracks:
+The Brain/runtime provides telemetry for:
 
 - CPU;
 - GPU;
-- unified memory;
+- memory;
 - storage;
 - battery;
 - thermal headroom;
 - network;
-- model availability.
+- model/service availability.
 
-Tasks can be admitted, delayed, downgraded, or cancelled based on budgets.
+Autonomy uses these signals to admit, delay, downgrade, pause, or cancel behavioral work.
 
-## Model Runtime
+## Model Execution Boundary
 
-The model runtime should support model health, warm/cold start, timeouts, structured output validation, batching where beneficial, and resource-aware scheduling.
+Autonomy does not implement model execution.
 
-On Jetson, NVIDIA-specific inference optimization should be evaluated using TensorRT and appropriate Jetson/JetPack-supported runtimes. Do not assume every model benefits equally from conversion.
+```text
+Autonomy
+  → requests cognitive capability
+
+Cognition
+  → selects capability/model
+
+Brain/runtime
+  → executes selected implementation
+
+Cognition
+  → validates/interprets result
+
+Autonomy
+  → uses result for behavioral task management
+```
+
+On Jetson, NVIDIA-specific inference optimization may use TensorRT and supported Jetson/JetPack runtimes after benchmark validation. The Autonomy contract remains vendor-neutral.
 
 ## Health States
 
-Services expose:
+Runtime services expose:
 
 - healthy;
 - degraded;
@@ -75,58 +111,62 @@ Services expose:
 - restarting;
 - failed.
 
-The autonomy engine chooses safe behavior based on health state.
+Autonomy selects safe behavioral degradation based on these states but cannot override safety controls.
 
 ## Watchdogs
 
-Critical services have watchdogs. A watchdog detects liveness failure but cannot itself bypass safety controls.
+Critical services may have watchdogs. A watchdog detects liveness failure; it does not bypass safety or become a second safety authority.
 
 ## Startup
 
-Startup order should verify dependencies before enabling autonomous action:
+The system must establish dependencies before enabling autonomous behavior:
 
 ```text
-OS/hardware
-→ core services
+OS / hardware
+→ system runtime
 → safety
 → sensors
-→ world model
+→ cognition/world state
+→ memory/knowledge
 → models
 → capabilities
 → autonomy
 → external interaction
 ```
 
+The exact sequence is deployment-specific, but no autonomous consequential action may occur before required safety and capability prerequisites are validated.
+
 ## Shutdown
 
 Shutdown should:
 
-1. stop new goals;
-2. safely cancel/complete actions;
-3. park/stop physical systems;
-4. persist critical state;
-5. flush audit records;
+1. stop new autonomous goals;
+2. safely cancel or complete active tasks;
+3. stop/park physical systems through the appropriate controller;
+4. persist required state through Memory/system services;
+5. flush behavioral audit records;
 6. release resources.
 
 ## Mac Profile
 
-The Mac runtime uses hardware adapters for camera/microphone/audio and simulated adapters for robot hardware. It must support the same autonomy API contracts.
+Mac development must implement the same autonomy contracts while using virtual/simulated robot capabilities and available Mac camera/microphone adapters.
 
 ## Simulation Profile
 
-The simulation profile uses ROS 2 and NVIDIA Isaac Sim where available to provide simulated sensors, robot state, environment events, and physical constraints.
+The simulation profile may use ROS 2 and NVIDIA Isaac Sim to provide simulated sensors, robot state, environments and physical constraints. Simulation must preserve the same autonomy contracts as other profiles.
 
 ## Jetson Profile
 
-The Jetson profile enables hardware-specific acceleration and physical interfaces. NVIDIA JetPack, CUDA, TensorRT and Isaac ROS should be treated as platform services rather than embedded into core cognition.
+The Jetson profile enables physical sensors/actuators and hardware acceleration through selected platform services. JetPack, CUDA, TensorRT and Isaac ROS remain behind Brain/robotics adapters rather than becoming embedded in autonomy semantics.
 
 ## Acceptance Criteria
 
-- clean startup/shutdown;
-- service isolation;
-- bounded resource use;
-- cancellation;
-- graceful degradation;
+- bounded task scheduling;
+- cancellation and deadlines;
+- priority-aware interruption;
+- resource-aware degradation;
 - health monitoring;
-- Mac/simulation/Jetson profile parity;
-- reproducible runtime diagnostics.
+- safe startup/shutdown;
+- Mac/simulation/Jetson contract parity;
+- reproducible autonomy diagnostics;
+- no duplicate system-runtime authority inside Autonomy.
