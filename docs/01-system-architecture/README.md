@@ -172,6 +172,27 @@ Only platform adapters and performance-specific implementations should change.
 - `03_COMPONENT_BOUNDARIES.md` — ownership and dependency boundaries between subsystems.
 - `04_RUNTIME_PROFILES.md` — Mac, simulation, Jetson, and physical deployment profiles.
 - `05_CROSS_CUTTING_REQUIREMENTS.md` — observability, configuration, audit, performance, reliability, and testing requirements.
+- `06_107_DURABLE_STATE_EVENT_LOG_EXECUTION_SEMANTICS.md` — P1 durable-state substrate, event semantics, versioning, provenance, checkpoints, and execution/recovery contracts.
+
+### P1 architecture sequence
+
+```text
+107 Durable State / Event Log / Execution Semantics
+  ↓
+108 Transactions / Concurrency / Consistency / Conflicts
+  ↓
+109 Replication / Synchronization / Distributed Memory
+  ↓
+110 Recovery / Checkpointing / Disaster Resilience
+  ↓
+111 Privacy / Retention / Dependency-Aware Erasure
+  ↓
+112 Observability / Evaluation / Lifespan Reliability
+  ↓
+113 Resource Governance / Scheduling / Budgets
+  ↓
+114 Multi-Agent Coordination / Delegation / Shared Memory
+```
 
 ## Status
 
