@@ -1,6 +1,6 @@
 # 23 — Architecture Boundary & Ownership Audit
 
-**Status:** CRITICAL — CANONICAL BOUNDARY DECISION  
+**Status:** PASS — CANONICAL BOUNDARY DECISION  
 **Scope:** `02-novi-brain`, `03-cognition`, `04-memory-and-knowledge`, `02-autonomy`  
 
 ## 1. Executive decision
@@ -70,46 +70,64 @@ hardware / controllers
 | Resource telemetry | Brain/runtime + hardware | Cognition/Autonomy consume |
 | Durable semantic storage | System architecture + Memory semantics | Memory defines requirements |
 
-## 4. Critical current overlaps
+## 4. Critical overlaps and resolution
 
 The repository already has a mature canonical Cognition architecture covering world model, multimodal cognition, reasoning, uncertainty, identity, relationships, temporal/causal reasoning, context, prediction, model routing, APIs, failures, testing and observability. `04-memory-and-knowledge` likewise declares its active `01–18` set the normative semantic memory/knowledge architecture.
 
-Therefore the newer Brain documents must not become a competing semantic architecture.
+Therefore the Brain semantic documents were consolidated rather than allowed to become competing authorities.
 
 ### Brain `18_WORLD_MODEL.md`
 
 Canonical semantic ownership: **`03-cognition/02_WORLD_MODEL.md`**.
 
-Keep useful embodied/runtime material only in Brain; merge unique semantic material into Cognition; then mark the Brain document superseded or replace it with a boundary/interface document.
+The Brain document is now explicitly superseded. Unique requirements around epistemic state, prediction, active perception, imagination boundaries and action-outcome grounding were consolidated into the canonical World Model.
 
 ### Brain `19_SPATIAL_COGNITION.md`
 
-Split by meaning:
+The document is now explicitly superseded.
 
-- live localization/body state → Brain/runtime authority;
-- current semantic spatial reasoning → Cognition;
-- historical spatial experience → Memory/Knowledge.
+Ownership is split by meaning:
+
+- live localization/body state → Brain/runtime + robotics authority;
+- current semantic spatial reasoning → Cognition/World Model;
+- historical spatial experience → Memory/Knowledge;
+- route generation/control → navigation/robotics authority.
 
 ### Brain `20_TEMPORAL_COGNITION.md`
 
-Split by meaning:
+The document is now explicitly superseded.
 
-- clocks/timestamps/runtime synchronization → Brain/system;
+Ownership is split by meaning:
+
+- clocks/timestamps/runtime synchronization → System Architecture;
+- runtime timing/deadlines/scheduling → Brain/runtime;
 - current temporal and causal reasoning → Cognition;
 - historical temporal memory → Memory/Knowledge.
 
 ### Brain `21_SITUATION_MODEL.md`
 
-Canonical semantic ownership: **Cognition**. Brain may define runtime lifecycle/interfaces but not a second situation interpretation system.
+The document is now explicitly superseded.
+
+Canonical semantic ownership is Cognition, with the architecture defined through `03-cognition/01_COGNITIVE_ARCHITECTURE.md` and context construction through `03-cognition/09_CONTEXT_ENGINE.md`.
 
 ### Brain `22_SELF_MODEL.md`
 
-Treat as a cross-domain specification:
+The document is now explicitly superseded as a single-owner Brain specification.
 
-- embodied self-state → Brain/runtime;
+Self representation is intentionally distributed:
+
+- embodied self-state → Brain/runtime + hardware;
 - semantic self-knowledge and self/other reasoning → Cognition;
 - autobiographical/self-history → Memory;
-- behavioral goals/tasks → Autonomy.
+- current goals/tasks/behavioral state → Autonomy.
+
+### Brain `01`, `02`, `05`
+
+These were already converted to runtime/boundary references in the previous consolidation pass:
+
+- `01_BRAIN_NORTH_STAR_AND_BEHAVIORAL_CONTRACT.md`
+- `02_COGNITIVE_ARCHITECTURE.md`
+- `05_COGNITIVE_CYCLE.md`
 
 ### Future Brain memory documents
 
@@ -173,20 +191,26 @@ Autonomy decides whether and when to pursue them, manages task lifecycle and beh
 Policy/safety retains final authority over consequential actions.
 Hardware/control executes permitted low-level commands.
 
-## 10. Required consolidation sequence
+## 10. Consolidation result
 
-1. Freeze creation of overlapping semantic Brain documents.
-2. Audit Brain `18–22` against canonical Cognition/Memory owners.
-3. Merge unique content into canonical owners.
-4. Mark superseded documents explicitly instead of deleting provenance.
-5. Audit `02-autonomy` against Brain/Cognition boundaries.
-6. Update READMEs, indexes and cross-references.
-7. Run a final duplicate-topic search.
-8. Resume Brain documentation only after the boundary audit passes.
+The consolidation gate is **PASS** for the current documented architecture.
+
+Completed:
+
+1. Canonical owners were assigned.
+2. Duplicate Brain semantic documents were converted to explicit superseded/boundary references.
+3. Unique World Model requirements were consolidated into Cognition.
+4. Temporal/causal reasoning requirements were consolidated into Cognition.
+5. Situation Model ownership was consolidated into Cognition/Context Engine.
+6. Self Model ownership was split explicitly across Brain, Cognition, Memory and Autonomy.
+7. Autonomy was separated from Brain runtime and Cognition semantics.
+8. Solution Selection Policy was moved to System Architecture as a cross-cutting policy.
+9. Master documentation authority was updated.
+10. Historical specifications remain recoverable through Git history.
 
 ## 11. Definition of done
 
-The boundary audit passes when:
+The boundary audit passes because:
 
 - every major concept has exactly one canonical owner;
 - live physical state cannot be overridden by memory;
@@ -200,3 +224,9 @@ The boundary audit passes when:
 - safety remains authoritative outside probabilistic cognition;
 - superseded documents are explicitly marked;
 - all indexes/cross-references point to canonical owners.
+
+## 12. Freeze rule
+
+Until a new architecture review explicitly changes this decision:
+
+> **Do not create a new document when an existing canonical document can own the requirement. Extend the canonical owner instead.**

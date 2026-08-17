@@ -1,8 +1,9 @@
 # Novi Brain Architecture
 
-**Status:** P0 — critical architecture workstream
+**Status:** P0 — critical architecture workstream  
+**Owner:** `02-novi-brain`
 
-This directory defines the **embodied brain runtime and integration layer** of Novi: perception pipelines, model execution, embodied state coordination, cognitive-cycle orchestration, continuous runtime behavior, and protected interfaces to cognition, autonomy, policy and hardware.
+This directory defines the **embodied brain runtime and integration layer** of Novi: perception pipelines, model execution, embodied state coordination, runtime orchestration, continuous execution, and protected interfaces to cognition, autonomy, policy and hardware.
 
 **Important boundary:** this directory is **not** the canonical owner of semantic cognition, long-term memory/knowledge, autonomy policy, or safety authority. Those responsibilities live in their canonical domains.
 
@@ -21,13 +22,7 @@ hardware / controllers  → executes physical control
 
 The complete boundary decision is recorded in `23_ARCHITECTURE_BOUNDARY_AND_OWNERSHIP_AUDIT.md`.
 
-## North-star question
-
-> What computational system must exist for Novi to continuously perceive, understand, remember, decide, act, interact, learn and adapt as one coherent embodied agent?
-
-The answer is distributed across the canonical domains above. The Brain directory coordinates those capabilities; it must not duplicate their semantic authority.
-
-## Core loop
+## Core runtime contract
 
 ```text
 SENSE → PERCEIVE → INTERPRET → UPDATE STATE → ATTEND
@@ -36,7 +31,7 @@ SENSE → PERCEIVE → INTERPRET → UPDATE STATE → ATTEND
 → OBSERVE RESULT → LEARN / REMEMBER → CONTINUE
 ```
 
-The loop is continuous and multi-rate. User prompts are only one source of stimuli.
+The loop is continuous and multi-rate. User prompts are only one source of stimuli. The behavioral semantics of the loop are owned by Autonomy/Cognition; Brain owns runtime execution and coordination.
 
 ## Brain responsibilities
 
@@ -44,9 +39,9 @@ The Brain directory owns or coordinates:
 
 - brain lifecycle;
 - cognitive-cycle execution;
-- model runtime and execution routing;
+- model runtime and execution placement/routing;
 - perception runtime and sensor/model pipelines;
-- embodied state integration;
+- embodied runtime state integration;
 - synchronization and runtime health;
 - interfaces to Cognition, Memory, Autonomy, Policy and Hardware;
 - runtime-level degradation, fallback and resource coordination;
@@ -54,20 +49,24 @@ The Brain directory owns or coordinates:
 
 It does **not** create competing canonical versions of:
 
-- the semantic World Model;
+- the North Star;
+- semantic World Model;
 - Situation Model;
 - temporal/causal reasoning;
-- spatial reasoning semantics;
+- semantic spatial reasoning;
 - long-term memory/knowledge;
 - behavioral goal authority;
 - safety authority;
 - motor-control authority.
 
-## Current consolidation status
+## Consolidation completed
 
-The following Brain documents were created before the cross-domain ownership audit and require consolidation rather than independent semantic authority:
+The previous Brain semantic specifications have now been converted to explicit boundary/source documents:
 
 ```text
+01_BRAIN_NORTH_STAR_AND_BEHAVIORAL_CONTRACT.md
+02_COGNITIVE_ARCHITECTURE.md
+05_COGNITIVE_CYCLE.md
 18_WORLD_MODEL.md
 19_SPATIAL_COGNITION.md
 20_TEMPORAL_COGNITION.md
@@ -75,13 +74,42 @@ The following Brain documents were created before the cross-domain ownership aud
 22_SELF_MODEL.md
 ```
 
-Their useful material must be merged into the canonical owners defined by `23_ARCHITECTURE_BOUNDARY_AND_OWNERSHIP_AUDIT.md`, then the documents should be explicitly marked superseded/boundary-only. **Do not create further overlapping semantic documents until this consolidation is complete.**
+Their canonical information now lives in the correct owners:
+
+```text
+North Star
+  → 00-strategy/NOVI_NORTH_STAR.md
+
+World Model
+  → 03-cognition/02_WORLD_MODEL.md
+
+Temporal + causal reasoning
+  → 03-cognition/08_TEMPORAL_AND_CAUSAL_REASONING.md
+
+Situation Model
+  → 03-cognition/01_COGNITIVE_ARCHITECTURE.md
+  → 03-cognition/09_CONTEXT_ENGINE.md
+
+Semantic Self Model
+  → 03-cognition/01_COGNITIVE_ARCHITECTURE.md
+
+Historical self/spatial/temporal memory
+  → 04-memory-and-knowledge
+
+Behavioral cognitive loop
+  → 02-autonomy
+
+Runtime execution of these capabilities
+  → 02-novi-brain
+```
+
+The former full specifications remain available through Git history for provenance and recovery. They are no longer active semantic authorities.
+
+**Do not create replacement semantic Brain documents for these concepts. Extend the canonical owner instead.**
 
 ## NVIDIA alignment
 
 NVIDIA technologies are candidate implementation building blocks, not Novi semantic authorities. Relevant ecosystems include Isaac ROS, Isaac Sim, Isaac Lab, GR00T, Cosmos, Riva, CUDA/TensorRT and Jetson. Each adoption requires official-source validation, Novi-specific benchmarks and an ADR.
-
-NVIDIA documents Isaac ROS as CUDA-accelerated ROS 2 packages for perception, navigation and related robotics workloads.
 
 ## Evidence standard
 
