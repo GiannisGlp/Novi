@@ -1,6 +1,6 @@
 # Novi Brain Architecture
 
-**Status:** P0 — critical architecture workstream
+**Status:** P0 — critical architecture workstream  
 **Owner:** `02-novi-brain`
 
 This directory defines the **embodied brain runtime and integration layer** of Novi: perception pipelines, model execution, embodied state coordination, runtime orchestration, continuous execution, and protected interfaces to cognition, autonomy, policy and hardware.
@@ -59,21 +59,14 @@ It does **not** create competing canonical versions of:
 - safety authority;
 - motor-control authority.
 
-## Consolidation completed in this pass
+## Consolidation completed
 
-These documents have been converted from competing semantic specifications into Brain runtime/boundary references:
+The previous Brain semantic specifications have now been converted to explicit boundary/source documents:
 
 ```text
 01_BRAIN_NORTH_STAR_AND_BEHAVIORAL_CONTRACT.md
 02_COGNITIVE_ARCHITECTURE.md
 05_COGNITIVE_CYCLE.md
-```
-
-Their canonical semantic authorities are now explicitly referenced inside the documents and in `docs/00-strategy/NOVI_DOCUMENTATION_MASTER_INDEX.md`.
-
-## Remaining Brain semantic documents requiring consolidation
-
-```text
 18_WORLD_MODEL.md
 19_SPATIAL_COGNITION.md
 20_TEMPORAL_COGNITION.md
@@ -81,7 +74,38 @@ Their canonical semantic authorities are now explicitly referenced inside the do
 22_SELF_MODEL.md
 ```
 
-Their useful runtime material must be merged into the canonical owners defined by `23_ARCHITECTURE_BOUNDARY_AND_OWNERSHIP_AUDIT.md`, then the documents should be explicitly marked superseded/boundary-only. **Do not create replacement semantic documents.**
+Their canonical information now lives in the correct owners:
+
+```text
+North Star
+  → 00-strategy/NOVI_NORTH_STAR.md
+
+World Model
+  → 03-cognition/02_WORLD_MODEL.md
+
+Temporal + causal reasoning
+  → 03-cognition/08_TEMPORAL_AND_CAUSAL_REASONING.md
+
+Situation Model
+  → 03-cognition/01_COGNITIVE_ARCHITECTURE.md
+  → 03-cognition/09_CONTEXT_ENGINE.md
+
+Semantic Self Model
+  → 03-cognition/01_COGNITIVE_ARCHITECTURE.md
+
+Historical self/spatial/temporal memory
+  → 04-memory-and-knowledge
+
+Behavioral cognitive loop
+  → 02-autonomy
+
+Runtime execution of these capabilities
+  → 02-novi-brain
+```
+
+The former full specifications remain available through Git history for provenance and recovery. They are no longer active semantic authorities.
+
+**Do not create replacement semantic Brain documents for these concepts. Extend the canonical owner instead.**
 
 ## NVIDIA alignment
 
