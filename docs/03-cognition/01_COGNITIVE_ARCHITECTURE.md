@@ -2,7 +2,9 @@
 
 ## Status
 
-**DESIGN**
+**DESIGN — CANONICAL COGNITION AUTHORITY**
+
+**Ownership:** `03-cognition`
 
 ## Purpose
 
@@ -35,7 +37,7 @@ Define the component boundaries that turn observations and stored experience int
 
 ## World Model
 
-Authoritative representation of current and recent physical/social state:
+Authoritative semantic representation of current physical/social state:
 
 - entities;
 - locations;
@@ -45,11 +47,15 @@ Authoritative representation of current and recent physical/social state:
 - spatial relations;
 - occupancy;
 - state transitions;
-- current uncertainty.
+- current uncertainty;
+- epistemic status;
+- predictions and their provenance.
+
+The detailed canonical specification is `03-cognition/02_WORLD_MODEL.md`.
 
 ## Situation Model
 
-Interprets world state into meaningful contexts such as:
+Interprets world state into meaningful current contexts such as:
 
 - person is arriving home;
 - conversation is occurring;
@@ -57,11 +63,60 @@ Interprets world state into meaningful contexts such as:
 - navigation is blocked;
 - an unfamiliar object is present.
 
-Situations can overlap and have confidence and evidence.
+Situations can overlap and have confidence, evidence, freshness and expiration. A situation is an interpretation of current context, not a replacement for the underlying World Model.
+
+The Situation Model should expose at least:
+
+```text
+situation_id
+world_state_version
+active_entities
+active_events
+active_activities
+relationships
+Novi_state
+current_place
+active_goals/tasks
+attention_targets
+hazards/opportunities
+social/interaction context
+recent_changes
+predictions
+uncertainties
+provenance
+freshness
+```
+
+`02-novi-brain/21_SITUATION_MODEL.md` is legacy source material; it is not a competing canonical situation authority.
 
 ## Identity System
 
 Resolves observations to known or unknown entities. Identity is probabilistic and can remain unresolved. Face recognition alone must not be treated as absolute identity.
+
+## Self Model Boundary
+
+Cognition owns Novi's **semantic self-model**:
+
+- what Novi believes it can do;
+- capability interpretation;
+- self/other distinction;
+- self-related reasoning;
+- self-related prediction;
+- semantic interpretation of current embodied state;
+- capability confidence and limitations.
+
+Brain/runtime and hardware remain authoritative for physical telemetry, configuration and actuator state. Memory owns autobiographical history. Autonomy owns current goals/tasks.
+
+`02-novi-brain/22_SELF_MODEL.md` is legacy cross-domain source material, not a competing single-owner self-model.
+
+The critical invariant is:
+
+```text
+language capability ≠ physical capability
+physical capability ≠ authorization
+authorization ≠ safe-now capability
+commanded action ≠ executed action
+```
 
 ## Memory Interface
 
@@ -116,8 +171,8 @@ Model output is parsed into typed structures. Invalid, incomplete, unsafe, or co
 
 | Component | Owns | Does not own |
 |---|---|---|
-| World Model | current interpreted state | raw sensor data |
-| Situation Model | active situations | motor commands |
+| World Model | current semantic interpreted state | raw sensor data, durable memory |
+| Situation Model | active semantic situations | motor commands, goal authority |
 | Identity | entity resolution | authorization |
 | Memory | experience persistence | current action policy |
 | Knowledge | verified facts/schema | hidden model state |
