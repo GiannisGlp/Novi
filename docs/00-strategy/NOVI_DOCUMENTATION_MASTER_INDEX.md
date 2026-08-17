@@ -1,13 +1,14 @@
 # Novi — Master Documentation Index & Authority Map
 
 **Date:** 2026-08-17  
-**Status:** P0 documentation control baseline
+**Status:** P0 — documentation control baseline  
+**Owner:** `00-strategy`
 
 ## Purpose
 
-This document defines how Novi documentation is organized and which document wins when multiple documents discuss the same subject.
+This document defines how Novi documentation is organized, which document wins when multiple documents discuss the same subject, and where semantic ownership stops at domain boundaries.
 
-Novi currently has a substantial amount of architecture material. Without an authority map, the project risks implementing contradictory assumptions from different documents.
+Novi already contains substantial architecture material. **This index is a consolidation control document, not a reason to create more architecture documents.** When a concept already has an authoritative owner, new material must be merged into that owner or recorded as an implementation/reference document.
 
 ---
 
@@ -18,7 +19,7 @@ When documents conflict, use this order:
 ```text
 North Star
    ↓
-Project-level strategy
+Project strategy
    ↓
 System architecture
    ↓
@@ -37,54 +38,25 @@ A validation result can invalidate an implementation assumption and trigger a ne
 
 ---
 
-# 2. Strategy authority
+# 2. Canonical domain ownership
 
-## `00-strategy/NOVI_NORTH_STAR.md`
+## Strategy — `00-strategy/`
 
-Defines:
+Owns:
 
-- ultimate product goal;
-- meaning of the brain;
-- required cognitive properties;
-- success criteria;
-- permanent architectural principles.
+- product North Star;
+- permanent architectural principles;
+- development strategy and sequencing;
+- readiness gates;
+- master data/artifact planning.
 
-## `00-strategy/NOVI_DEVELOPMENT_STRATEGY_AND_IMPLEMENTATION_PLAN.md`
+**North Star authority:** `NOVI_NORTH_STAR.md`.
 
-Defines:
+There must be exactly one Novi North Star. Brain documents may define runtime contracts derived from it but must not redefine the product North Star.
 
-- staged implementation approach;
-- hybrid AI strategy;
-- mind-before-body strategy;
-- technology-selection philosophy;
-- development sequence.
+## System architecture — `01-system-architecture/`
 
-## `00-strategy/NOVI_PRE_IMPLEMENTATION_READINESS_AUDIT.md`
-
-Defines:
-
-- current readiness;
-- discovered gaps;
-- P0 decisions;
-- implementation gate.
-
-## `00-strategy/NOVI_DATA_AND_ARTIFACTS_MASTER_CATALOG.md`
-
-Defines:
-
-- required data;
-- datasets;
-- schemas;
-- models;
-- simulation assets;
-- deployment artifacts;
-- validation evidence.
-
----
-
-# 3. System architecture authority
-
-`01-system-architecture/` is authoritative for:
+Owns:
 
 - system boundaries;
 - dependency direction;
@@ -93,186 +65,208 @@ Defines:
 - event semantics;
 - concurrency;
 - recovery;
-- privacy;
-- cross-cutting requirements.
+- privacy/security cross-cutting requirements;
+- architecture governance;
+- technology/solution selection policy;
+- cross-domain contracts.
 
-The domain README explicitly states that it is the system-level architecture authority. fileciteturn12file0L2-L2
+`16_SOLUTION_SELECTION_POLICY.md` is the canonical project-wide solution-selection policy. It is not an Autonomy responsibility.
 
----
+## Brain — `02-novi-brain/`
 
-# 4. Autonomy authority
+Owns the **embodied brain runtime and integration layer**:
 
-`02-autonomy/` is authoritative for:
+- brain lifecycle;
+- cognitive-cycle execution/orchestration;
+- model execution infrastructure;
+- perception runtime/pipelines;
+- embodied state integration;
+- runtime synchronization and health;
+- interfaces between cognition, memory, autonomy, policy and hardware;
+- runtime degradation/fallback/resource coordination;
+- speech/audio/vision execution infrastructure.
 
-- continuous cognitive loop;
-- attention;
-- goals;
-- curiosity;
-- planning;
-- action execution;
-- autonomy state;
-- autonomy safety boundaries;
-- runtime;
+Brain does **not** own semantic cognition, long-term memory/knowledge, behavioral goal authority, safety authority or motor-control authority.
+
+Canonical boundary statement: `docs/02-novi-brain/00_BRAIN_ARCHITECTURE_README.md`.
+
+## Autonomy — `02-autonomy/`
+
+Owns:
+
+- continuous autonomous behavior;
+- attention as a behavioral/resource policy;
+- goals and goal lifecycle;
+- planning and task selection;
+- curiosity/proactive behavior policy;
+- skill selection/execution coordination;
+- action proposals and behavioral state;
+- autonomy-specific safety boundaries;
 - autonomy testing and observability.
 
----
+Autonomy owns the behavioral loop. Brain executes/orchestrates the runtime mechanisms used by that loop.
 
-# 5. Cognition authority
+## Cognition — `03-cognition/`
 
-`03-cognition/` is authoritative for:
+Owns the semantic intelligence of Novi:
 
 - cognitive architecture;
 - world-model semantics;
-- multimodal cognition;
+- situation/context interpretation;
+- multimodal interpretation;
 - reasoning;
 - uncertainty;
-- identity/person model;
+- identity/person semantics;
 - social cognition;
 - temporal/causal reasoning;
-- context construction;
+- semantic spatial reasoning;
 - prediction;
 - personality/affect;
-- model routing;
+- cognitive model routing/selection;
 - cognitive data/API contracts;
-- cognitive failure modes;
-- cognitive testing.
+- cognitive failure modes and tests.
 
----
+## Memory and knowledge — `04-memory-and-knowledge/`
 
-# 6. Memory and knowledge authority
-
-`04-memory-and-knowledge/` is authoritative for:
+Owns:
 
 - memory taxonomy;
-- lifecycle/admission;
+- admission/lifecycle;
 - provenance;
 - retrieval;
 - knowledge graph;
 - identity/entity resolution;
-- temporal/spatial memory;
-- causal modeling;
+- temporal/spatial historical memory;
+- causal memory;
 - cross-modal memory;
-- skills/competence verification;
+- skills/competence evidence;
 - schema evolution;
-- memory governance;
-- human oversight.
+- memory governance and human oversight.
 
-The `archive/` tree is historical/reference material. It must not override the consolidated current documents without an explicit migration decision.
+The `archive/` tree is historical/reference material and does not override consolidated current documents without an explicit migration decision.
 
----
+## Hardware — `05-hardware/`
 
-# 7. Hardware authority
-
-`05-hardware/` is authoritative for physical-system requirements.
-
-Current authoritative documents:
-
-- `00_HIGH_LEVEL_HARDWARE_ARCHITECTURE.md`
-- `24_HARDWARE_SELECTION_AND_BOM_BASELINE.md`
-- `README.md`
-
-`24_HARDWARE_SELECTION_AND_BOM_BASELINE.md` is the current master for hardware selection requirements until the detailed hardware specifications are decomposed into their own files.
+Owns physical-system requirements and hardware selection. Current master selection baseline is `24_HARDWARE_SELECTION_AND_BOM_BASELINE.md` until detailed specifications are decomposed into their own authoritative files.
 
 ---
 
-# 8. Technology authority
+# 3. Boundary model
 
-## `TECHNOLOGY_REFERENCE.md`
+The same real-world concept may legitimately appear in multiple domains **only when each occurrence has a different responsibility**. Repetition of a concept is acceptable at an interface; competing definitions are not.
 
-Catalog of candidate ecosystems and technologies.
+| Concept | Canonical owner | Other domains may describe |
+|---|---|---|
+| North Star | Strategy | derived behavioral/runtime implications |
+| Cognitive semantics | Cognition | Brain execution path |
+| Continuous behavior loop | Autonomy | Brain scheduling/execution |
+| World Model | Cognition | Brain transport/runtime state |
+| Situation Model | Cognition | Autonomy consumption |
+| Current physical self/runtime state | Brain + authoritative telemetry | Cognition semantic self-model; Memory history; Autonomy task state |
+| Historical memory/knowledge | Memory | Cognition retrieval/use |
+| Temporal/causal reasoning | Cognition | System clock/timestamps; Memory historical records |
+| Semantic spatial reasoning | Cognition | Brain localization/runtime; Memory spatial history |
+| Model/cognitive selection | Cognition | Brain model execution/runtime |
+| Technology selection | System Architecture | domains provide requirements and benchmarks |
+| Physical control | Hardware/controllers | Brain/Autonomy submit bounded requests |
 
-## `TECHNOLOGY_STACK_BASELINE.md`
+**Rule:** an interface description is not a second semantic authority.
 
-Implementation-oriented proposed stack and technology boundaries.
+---
 
-## ADRs
+# 4. Consolidation rules for existing Brain documents
 
-Actual adoption decisions live in ADRs.
+The following documents were created before the cross-domain ownership boundary was fully consolidated:
 
-Therefore:
+```text
+02-novi-brain/01_BRAIN_NORTH_STAR_AND_BEHAVIORAL_CONTRACT.md
+02-novi-brain/02_COGNITIVE_ARCHITECTURE.md
+02-novi-brain/05_COGNITIVE_CYCLE.md
+02-novi-brain/18_WORLD_MODEL.md
+02-novi-brain/19_SPATIAL_COGNITION.md
+02-novi-brain/20_TEMPORAL_COGNITION.md
+02-novi-brain/21_SITUATION_MODEL.md
+02-novi-brain/22_SELF_MODEL.md
+```
+
+These must **not** be treated as competing semantic authorities.
+
+Consolidation policy:
+
+1. preserve unique runtime/integration information in the canonical Brain documents;
+2. move semantic definitions to their canonical Cognition/Autonomy/Memory owners;
+3. mark documents that retain only boundary/reference material as `SUPERSEDED / BOUNDARY REFERENCE`;
+4. remove stale cross-references after migration;
+5. do not create replacement duplicates merely to preserve the old document names.
+
+The existing Brain boundary audit is the migration guide.
+
+---
+
+# 5. Model routing boundary
+
+Model selection is deliberately split:
+
+```text
+COGNITION
+Which capability/model is appropriate for this cognitive task?
+              ↓
+BRAIN RUNTIME
+Where and how does the selected model execute?
+              ↓
+HARDWARE
+What physical compute/resources execute it?
+```
+
+This is a boundary, not duplicated ownership.
+
+---
+
+# 6. Technology and research authority
+
+`TECHNOLOGY_REFERENCE.md` is a candidate ecosystem/reference catalog.
+
+`TECHNOLOGY_STACK_BASELINE.md` is the implementation-oriented proposed stack.
+
+`01-system-architecture/16_SOLUTION_SELECTION_POLICY.md` defines the evaluation process.
+
+ADRs record actual adoption decisions.
 
 ```text
 Technology Reference
       ↓
 Stack Baseline
       ↓
-Benchmark
+Requirement
+      ↓
+Benchmark / evaluation
       ↓
 ADR
       ↓
-Adopted Technology
+Adopted implementation
 ```
 
----
-
-# 9. Research authority
-
-The two Library documents are research inputs:
-
-- `NVIDIA_Novi_Comprehensive_Research.md`
-- `NVIDIA_Novi_Physical_AI_Research_2026.md`
-
-They are not project architecture authority and do not automatically approve NVIDIA technology.
-
-The research itself explicitly separates vendor capability claims, architectural implications and adoption decisions. fileciteturn23file0L195-L241
+The NVIDIA research documents in the Library are research inputs. They are not project architecture authority and do not automatically approve NVIDIA technology.
 
 ---
 
-# 10. Required future domain documents
+# 7. No-new-domain rule
 
-The README's planned domain structure remains the long-term decomposition:
+The long-term domain list is a planning aid, not a requirement to create 26 directories immediately.
 
-```text
-01-system-architecture
-02-autonomy
-03-cognition
-04-world-model
-05-memory
-06-knowledge-base
-07-perception
-08-personality-and-social
-09-models-and-inference
-10-agent-and-tools
-11-safety-and-security
-12-robotics-and-ros2
-13-nvidia-platform
-14-simulation-and-digital-twin
-15-hardware
-16-audio-and-voice
-17-navigation-and-mapping
-18-iot-and-external-systems
-19-data-and-storage
-20-control-app
-21-observability-diagnostics-audit
-22-testing-and-validation
-23-data-generation-and-training
-24-deployment-and-operations
-25-privacy-and-governance
-26-development-process
-```
+A new domain/document is justified only when all of the following are true:
 
-The current repository has consolidated domains for the first system-architecture, autonomy, cognition, memory/knowledge and hardware work. The remaining planned domains must be created when their specifications are sufficiently mature to become authoritative.
+1. the responsibility cannot remain coherent inside an existing canonical domain;
+2. it has an independent lifecycle and architecture boundary;
+3. it has distinct interfaces/contracts;
+4. the split reduces ambiguity rather than creating another authority;
+5. the existing domain cannot reasonably own it.
 
-The pre-implementation audit tracks this work as a gap rather than pretending those domains already exist.
+**Do not create a new document simply because a topic is important.** Important topics belong in the correct existing authority unless the boundary itself requires decomposition.
 
 ---
 
-# 11. Required document metadata
-
-Every authoritative document should state:
-
-- status;
-- date;
-- owner/domain;
-- scope;
-- dependencies;
-- supersedes/superseded-by if applicable;
-- related ADRs;
-- validation status.
-
----
-
-# 12. Document lifecycle
+# 8. Document lifecycle
 
 ```text
 DRAFT
@@ -288,27 +282,44 @@ AUTHORITATIVE
 SUPERSEDED / DEPRECATED
 ```
 
-A document marked `ARCHIVED` is not an active authority unless explicitly referenced by a current document.
+`ARCHIVED` means historical/reference material. It must not silently override a current authoritative document.
+
+Every authoritative document should state:
+
+- status;
+- date;
+- owner/domain;
+- scope;
+- dependencies;
+- supersedes/superseded-by if applicable;
+- related ADRs;
+- validation status.
 
 ---
 
-# 13. Pre-implementation documentation gate
+# 9. Documentation freeze and consolidation gate
 
-The project is documentation-ready only when:
+Until the current architecture is consolidated:
 
-- [ ] every P0 domain has an authoritative specification;
-- [ ] all major cross-domain interfaces are defined;
-- [ ] all major technology choices have an ADR or explicit evaluation status;
-- [ ] hardware capability requirements are defined;
-- [ ] physical safety requirements are defined;
-- [ ] simulation requirements are defined;
-- [ ] data/model artifacts are defined;
-- [ ] validation criteria exist;
-- [ ] all stale project terminology has been removed;
-- [ ] no current implementation plan depends on an undocumented assumption.
+- [ ] no new semantic architecture documents are created for already-owned concepts;
+- [ ] duplicate Brain semantic documents are migrated or marked boundary-only;
+- [ ] cross-domain ownership is explicit;
+- [ ] technology selection has one canonical policy;
+- [ ] stale references to superseded authorities are removed;
+- [ ] every P0 capability has exactly one semantic owner;
+- [ ] major interfaces are defined;
+- [ ] technology choices have ADR/evaluation status;
+- [ ] hardware capability requirements exist;
+- [ ] safety requirements exist;
+- [ ] simulation/data/model/validation requirements exist;
+- [ ] no implementation plan depends on an undocumented assumption.
+
+Only after this gate passes should new architectural domains be considered.
 
 ---
 
-# 14. Final rule
+# 10. Final rule
 
-> **If we cannot point to the document that defines what a component is, why it exists, what it consumes, what it produces, where it runs, what technology implements it, how it fails, how it is tested, and what proves it works, it is not ready for implementation.**
+> **If we cannot point to the one document that owns a concept, and separately identify the documents that merely consume, execute, observe or validate it, the architecture is not consolidated.**
+
+> **Do not solve documentation duplication by creating another document. Solve it by assigning authority, merging unique information, and superseding the duplicate.**
