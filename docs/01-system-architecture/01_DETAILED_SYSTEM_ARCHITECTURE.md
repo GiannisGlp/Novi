@@ -1,10 +1,13 @@
 # 01 — Detailed System Architecture
 
+**Status:** P0 detailed system specification  
+**Authority:** Cross-domain implementation architecture; technology-specific choices require ADRs.
+
 ## 1. Scope
 
-This document is the detailed system-level specification for Novi. It defines subsystem responsibilities, interfaces, execution flow, state ownership, lifecycle, concurrency expectations, failure handling, and deployment boundaries.
+This document defines subsystem responsibilities, interfaces, execution flow, state ownership, lifecycle, concurrency expectations, failure handling, deployment boundaries and security boundaries for Novi.
 
-It is intentionally more precise than `00_HIGH_LEVEL_ARCHITECTURE.md` and is the reference document for implementation decisions that affect multiple domains.
+It is more precise than `00_HIGH_LEVEL_ARCHITECTURE.md` and must be reconciled with domain specifications before implementation.
 
 ## 2. Canonical Runtime Topology
 
@@ -12,117 +15,110 @@ It is intentionally more precise than `00_HIGH_LEVEL_ARCHITECTURE.md` and is the
 ┌───────────────────────────────────────────────────────────────────────┐
 │                         NOVI APPLICATION RUNTIME                     │
 │                                                                       │
-│  ┌──────────────┐   ┌──────────────┐   ┌─────────────────────────┐   │
-│  │ Event Intake │──▶│ World Model  │──▶│ Attention / Situation   │   │
-│  └──────────────┘   └──────┬───────┘   └────────────┬────────────┘   │
-│                            │                         │                │
-│                            ▼                         ▼                │
-│                     ┌──────────────┐        ┌──────────────┐         │
-│                     │ Memory / KB  │◀──────▶│ Goal Manager │         │
-│                     └──────┬───────┘        └──────┬───────┘         │
-│                            │                       │                  │
-│                            └──────────┬────────────┘                  │
-│                                       ▼                               │
-│                              ┌────────────────┐                       │
-│                              │ Agent Runtime  │                       │
-│                              └───────┬────────┘                       │
-│                                      │                                │
-│                          ┌───────────▼───────────┐                    │
-│                          │  Primary Reasoner     │                    │
-│                          │ Nemotron 3 Nano       │                    │
-│                          │ 30B-A3B candidate     │                    │
-│                          └───────────┬───────────┘                    │
-│                                      │                                │
-│                           tool/action proposals                       │
-│                                      ▼                                │
-│                              ┌──────────────┐                         │
-│                              │ Policy Layer │                         │
-│                              └──────┬───────┘                         │
-│                                     │                                 │
-│                              ┌──────▼──────┐                          │
-│                              │Safety Gate  │                          │
-│                              └──────┬──────┘                          │
-└─────────────────────────────────────┼─────────────────────────────────┘
-                                      │
-                               capability calls
-                                      │
-                           ┌──────────▼──────────┐
-                           │      ROS 2 / HW     │
-                           └──────────┬──────────┘
-                                      │
-                ┌─────────────────────┼─────────────────────┐
-                ▼                     ▼                     ▼
-             Sensors               Motion              External
-             /audio                /head                systems
+│  Event Intake → World Model → Attention / Situation                  │
+│       │              │                 │                              │
+│       └──────────────┼─────────────────┘                              │
+│                      ↓                                                │
+│                Memory / Knowledge ↔ Goals                              │
+│                      ↓                                                │
+│                 Agent Runtime                                          │
+│                      ↓                                                │
+│             Model Runtime Interface                                    │
+│                      ↓                                                │
+│              Proposal / Tool Request                                   │
+│                      ↓                                                │
+│             Governance / Policy                                        │
+│                      ↓                                                │
+│                Safety Gateway                                          │
+└──────────────────────┼────────────────────────────────────────────────┘
+                       ↓ capability call
+              ROS 2 / robotics services
+                       ↓
+       ros2_control / Nav2 / sensor interfaces
+                       ↓
+                    hardware
+                       ↓
+                    sensors
+                       └──────── feedback ───────→ event intake
 ```
 
 ## 3. Process Boundaries
 
-The implementation should eventually separate components according to risk and performance rather than simply mirroring Python packages.
+The implementation must separate components according to safety, resource and failure characteristics.
 
-### 3.1 Application process
+### 3.1 Cognitive application boundary
 
 Contains:
 
-- autonomy engine;
-- world model coordination;
-- memory/knowledge services;
+- autonomy orchestration;
+- world-model coordination;
+- memory/knowledge APIs;
+- attention;
 - personality/social state;
-- goal manager;
-- agent runtime;
-- non-critical tool orchestration.
+- goal management;
+- agent/tool orchestration.
 
-### 3.2 Model worker processes
+It does not directly own privileged hardware access.
 
-Models may be isolated to manage memory pressure, crashes, model lifecycle, and GPU resource ownership.
+### 3.2 Model runtime boundary
+
+Models execute behind a versioned inference capability interface.
 
 Requirements:
 
-- explicit model lifecycle;
-- health endpoint/state;
+- explicit model ID/version;
+- lifecycle;
+- health;
 - bounded concurrency;
-- request cancellation;
-- timeout handling;
-- metrics;
-- deterministic configuration.
+- timeout;
+- cancellation;
+- resource accounting;
+- structured input/output contracts;
+- provenance;
+- failure classification.
 
-### 3.3 Robotics process graph
+Candidate implementations may include CPU/reference runtimes, ONNX Runtime, TensorRT/TensorRT-LLM and other validated runtimes.
 
-ROS 2 nodes own high-frequency robotics behavior and hardware integration.
+### 3.3 Robotics boundary
+
+ROS 2 owns robotics communication and integration. High-frequency control and hardware interaction must remain outside the general reasoning runtime.
 
 ### 3.4 Safety boundary
 
-The privileged safety implementation must not run as ordinary adaptive application code. The final physical implementation should provide process/permission separation and, where necessary, independent hardware safety mechanisms.
+The physical safety path must remain available even if cognitive/model processes are unhealthy. The eventual physical implementation must include an independent hardware safety mechanism for actuator power/enable as required by the safety case.
 
 ## 4. Event Architecture
 
-All environmental inputs should become normalized events before being consumed by higher-level cognition.
+All consequential environmental and state-changing inputs are normalized into typed events.
 
-Canonical event shape:
+Canonical semantic envelope:
 
-```json
-{
-  "event_id": "evt_01",
-  "timestamp": "2026-08-16T12:00:00Z",
-  "source": "vision",
-  "type": "person.detected",
-  "subject_id": "person_123",
-  "location_id": "room_living",
-  "payload": {},
-  "confidence": 0.94,
-  "provenance": {
-    "sensor": "camera_front",
-    "model": "detector_v1",
-    "frame_id": "frame_123"
-  }
-}
+```text
+EventEnvelope
+├── event_id
+├── event_type
+├── schema_version
+├── occurred_at
+├── recorded_at
+├── producer_id
+├── actor_context
+├── authority_context
+├── subject_refs[]
+├── causation_id
+├── correlation_id
+├── payload
+├── provenance_refs[]
+├── policy_context
+├── model_context (optional)
+├── state_revision
+└── integrity_metadata
 ```
 
-Events are append-oriented. Corrections should create new records rather than rewriting the historical observation.
+`occurred_at` and `recorded_at` are distinct. Causation must never be inferred from wall-clock time alone.
 
 ## 5. Observation vs Interpretation
 
-The system must explicitly distinguish:
+Novi must distinguish:
 
 ```text
 Observation
@@ -133,32 +129,14 @@ Interpretation
   ↓
 Hypothesis
   ↓
-Fact / verified knowledge
+Verified knowledge / current state
 ```
 
-Example:
-
-```text
-Observation:
-A person is holding a mug.
-
-Interpretation:
-The person may be drinking coffee.
-
-Hypothesis:
-Vano may be drinking coffee in the morning.
-
-Verified fact:
-Vano confirmed that he likes morning coffee.
-```
-
-These should not be collapsed into one database record.
+Each transition must preserve provenance and uncertainty.
 
 ## 6. World Model Ownership
 
-The world model owns current structured state. It must support versioned state changes and historical reconstruction where required.
-
-Minimum domains:
+The world model owns current structured state for:
 
 - people;
 - places;
@@ -172,201 +150,161 @@ Minimum domains:
 - temporal context;
 - active situations.
 
-The world model consumes events and emits state-change events.
+It consumes events and emits versioned state changes. It does not own raw sensor drivers, model weights or safety authority.
 
-## 7. Memory Ownership
+## 7. Memory and Knowledge Ownership
 
-Memory owns durable experience and learned context.
+Memory owns durable experiences and retrieval. Knowledge owns structured concepts/facts/relationships and verification state.
 
-It must support:
+Both must preserve:
 
-- storage;
-- retrieval;
-- consolidation;
-- deduplication;
-- entity resolution;
-- temporal queries;
-- spatial queries;
-- semantic retrieval;
-- relationship retrieval;
 - provenance;
-- confidence;
-- verification;
-- decay/archival policies.
+- confidence/uncertainty;
+- temporal validity;
+- source identity;
+- revision history;
+- deletion/retention metadata.
 
-Memory must never be treated as an authoritative safety source.
+Neither is a safety-authority store.
 
 ## 8. Attention Architecture
 
-Attention should combine:
+Attention considers:
 
-- explicit user addressing;
-- identity and relationship;
+- direct addressing;
+- identity/relationship;
 - event importance;
 - safety relevance;
 - novelty;
 - current goals;
-- current interaction state;
-- emotional/social evidence;
+- interaction state;
+- social evidence;
 - learned routines;
 - confidence;
-- interruption cost.
+- interruption cost;
+- available resources.
 
 Suggested states:
 
 ```text
-IDLE
-OBSERVE
-MONITOR
-FOCUS
-PREPARE
-ENGAGE
-URGENT
-COOLDOWN
+IDLE → OBSERVE → MONITOR → FOCUS → PREPARE → ENGAGE
+                  ↘                 ↘
+                   COOLDOWN ←────── URGENT
 ```
 
-Transitions must be deterministic enough to test even when model-assisted reasoning is used for scoring or interpretation.
+State transitions must be testable without requiring a particular LLM.
 
 ## 9. Personality Architecture
 
-Personality consists of three layers:
+Personality has three conceptual layers:
 
 ### Stable traits
 
-Examples:
+Examples: curiosity, warmth, humor, playfulness, caution.
 
-- playful;
-- curious;
-- warm;
-- humorous;
-- energetic;
-- cautious.
+### Dynamic state
 
-### Dynamic internal state
-
-Examples:
-
-- excited;
-- focused;
-- uncertain;
-- curious;
-- calm;
-- socially engaged.
+Examples: focused, uncertain, calm, curious, socially engaged.
 
 ### Relationship state
 
-Examples:
+Examples: stranger, visitor, acquaintance, friend, family, owner/primary user.
 
-- stranger;
-- visitor;
-- acquaintance;
-- friend;
-- family;
-- owner/primary user.
+These are semantic state, not merely prompt text.
 
-The final response style is derived from all three layers plus current context.
+## 10. Autonomy Scheduling
 
-## 10. Autonomy Loop Scheduling
-
-The autonomy runtime should support multiple clocks:
+The autonomy runtime supports multiple clocks:
 
 ```text
 High frequency:
-  sensor/event processing
+  sensor/event handling
 
 Medium frequency:
-  attention and situation evaluation
+  attention/situation evaluation
 
 Low frequency:
-  memory consolidation
-  routine discovery
-  curiosity review
-  maintenance
+  consolidation/maintenance/curiosity review
 
 Event driven:
-  explicit speech
-  safety event
-  direct request
-  significant environmental change
+  speech, safety events, direct requests, significant change
 ```
 
-This prevents the expensive reasoning model from running on every sensor tick.
+The expensive reasoning model must not run on every sensor tick.
 
 ## 11. Reasoning Invocation Policy
 
-Nemotron should be invoked when reasoning provides sufficient value to justify its latency/resource cost.
+A model may be invoked when its expected value exceeds its latency/resource cost and the request is within policy.
 
-Examples that may invoke the primary reasoner:
+Typical candidates:
 
-- ambiguous user requests;
+- ambiguity resolution;
 - multi-step planning;
 - memory synthesis;
-- social response generation;
+- social reasoning;
 - novel situations;
-- knowledge conflicts;
+- knowledge conflict analysis;
 - tool selection;
-- curiosity resolution;
-- complex explanations.
+- explanations.
 
-Examples that should usually avoid the primary reasoner:
+Typical non-model responsibilities:
 
 - emergency stop;
-- simple sensor threshold checks;
-- basic object counting;
-- battery threshold alarms;
-- motor safety limits;
-- deterministic navigation control;
-- raw speech/audio processing.
+- hard actuator limits;
+- deterministic sensor thresholds;
+- watchdogs;
+- safety interlocks;
+- low-level control.
 
 ## 12. Tool Execution
 
-The model produces structured tool requests. The application validates them before execution.
-
 ```text
-model
+model proposal
   ↓
-ToolRequest schema validation
+schema validation
   ↓
-authorization/policy
+authorization / policy
+  ↓
+resource checks
   ↓
 capability execution
   ↓
 result normalization
   ↓
-model/context update
+event/audit
+  ↓
+context update
 ```
 
-A tool must never expose unrestricted shell, database, filesystem, or network access merely because the model requested it.
+Tools must expose only the capability they are designed to provide. No model receives unrestricted shell, filesystem, database or network authority.
 
-## 13. Data Generation and Schema Evolution
+## 13. Data and Schema Evolution
 
-Novi may propose new data structures when existing structures cannot represent a recurring concept.
-
-Required pipeline:
+Novi may propose new structures but must use:
 
 ```text
-Need identified
-  ↓
-Existing entity/type/attribute check
-  ↓
-Schema proposal
-  ↓
-Validation
-  ↓
-Policy check
-  ↓
-Migration plan
-  ↓
-Apply to managed storage
-  ↓
-Audit
+need
+ ↓
+existing-schema check
+ ↓
+proposal
+ ↓
+compatibility validation
+ ↓
+policy review
+ ↓
+migration plan
+ ↓
+managed application
+ ↓
+audit
 ```
 
-Immutable storage is excluded from this process.
+Immutable event history is not rewritten as a convenience.
 
-## 14. File System Boundary
+## 14. Filesystem Boundary
 
-The logical storage model should include:
+Logical storage classes:
 
 ```text
 protected/
@@ -374,91 +312,70 @@ managed/
 temporary/
 ```
 
-The adaptive application receives explicit capabilities for managed and temporary storage. It does not receive unrestricted access to the host filesystem.
+Adaptive components receive explicit capabilities, not arbitrary host filesystem access.
 
 ## 15. Database Boundary
 
 Models never receive direct database credentials.
 
-Preferred:
-
 ```text
 Model
-  ↓
-Knowledge/Data Service
-  ↓
+ ↓
+Data/Knowledge Service
+ ↓
 validated operation
-  ↓
-SQLite/PostgreSQL/vector backend
+ ↓
+storage backend
 ```
 
-This provides:
-
-- validation;
-- quotas;
-- authorization;
-- audit;
-- migration control;
-- backend independence.
+This provides authorization, quotas, audit, migration control and backend independence.
 
 ## 16. Action Architecture
 
 All physical actions follow:
 
 ```text
-Reasoning
-  ↓
+Reasoning / policy proposal
+        ↓
 Action Proposal
-  ↓
-Policy
-  ↓
+        ↓
+Governance
+        ↓
 Safety Gateway
-  ↓
+        ↓
 Capability Adapter
-  ↓
+        ↓
 ROS 2
-  ↓
-Hardware
+        ↓
+ros2_control / Nav2 / hardware interface
+        ↓
+physical system
 ```
 
-The action proposal should describe intent rather than low-level actuator commands whenever possible.
-
-Example:
-
-```json
-{
-  "action": "navigate_to",
-  "destination": "kitchen",
-  "constraints": {
-    "speed_limit": "normal",
-    "avoid_people": true
-  }
-}
-```
-
-The navigation stack converts the intent into motion commands.
+The model proposes semantic intent; it does not generate raw motor commands as the physical authority.
 
 ## 17. Safety Architecture
 
-Safety rules are enforced outside the model.
-
-Minimum controls:
+Minimum software controls:
 
 - schema validation;
 - authorization;
-- speed limits;
-- collision constraints;
+- capability scoping;
+- speed/force constraints;
 - restricted areas;
-- emergency stop;
+- collision constraints;
+- emergency-stop integration;
 - battery protection;
 - actuator health checks;
 - watchdogs;
-- timeout handling;
-- audit logging.
+- timeout/cancellation;
+- audit.
+
+Physical safety must be independently capable of disabling hazardous actuation.
 
 ## 18. Failure Handling
 
-Each service must define:
+Every service must define:
 
 - startup failure;
 - dependency unavailable;
@@ -470,130 +387,128 @@ Each service must define:
 - stale sensor data;
 - contradictory evidence;
 - hardware fault;
-- storage fault.
+- storage fault;
+- security incident.
 
-The default behavior for unsafe ambiguity is to fail closed.
+Unsafe ambiguity fails closed or transitions to the defined safe degraded state.
 
 ## 19. Observability
 
-Every significant autonomous cycle should have a trace ID linking:
+Every consequential autonomous cycle should carry a trace/correlation identity linking, as applicable:
 
 ```text
 input events
 → context
 → retrieval
 → model calls
-→ decisions
-→ tool calls
-→ policy decisions
-→ action
+→ decisions/proposals
+→ policy
+→ safety
+→ tools/actions
 → result
-→ memory update
+→ memory/state update
 ```
 
-Sensitive content must be redacted or access-controlled according to the privacy domain specification.
+Sensitive payloads are redacted or access-controlled according to the privacy architecture.
 
 ## 20. Lifecycle
 
-Services should implement a consistent lifecycle:
+Services should expose:
 
 ```text
 DISCOVER
-  ↓
+ ↓
 INITIALIZE
-  ↓
+ ↓
 READY
-  ↓
+ ↓
 RUNNING
-  ↓
+ ↓
 DEGRADED / RECOVERING
-  ↓
+ ↓
 STOPPING
-  ↓
+ ↓
 STOPPED
 ```
 
-Health status must be queryable without requiring the main reasoning model.
+Health must be queryable without requiring the primary reasoning model.
 
 ## 21. Resource Management
 
-The Jetson deployment must treat unified memory as a shared system resource. Model residency should be configurable. Large models may be loaded on demand if benchmarks demonstrate that keeping every model resident harms perception or navigation latency.
+The edge runtime must measure:
 
-The architecture must measure:
-
-- CPU utilization;
-- GPU utilization;
-- memory usage;
+- CPU;
+- GPU;
+- RAM/VRAM/unified memory;
 - model load time;
 - time to first token;
-- tokens/second;
+- model throughput;
 - perception latency;
-- end-to-end interaction latency;
+- end-to-end latency;
 - thermal state;
-- power consumption.
+- power;
+- storage I/O.
 
-## 22. Mac-to-Jetson Contract
+NVIDIA's DeepStream documentation also recommends component-level latency measurement when diagnosing pipeline performance, reinforcing the requirement for component-level observability. citeturn0search10
 
-Mac implementations must implement the same logical contracts as Jetson implementations.
+## 22. Mac-to-Edge Contract
 
-Example:
+Example capability:
 
 ```text
 Camera
- ├── MacCamera
- ├── SimulatedCamera
- └── JetsonCamera
+ ├── DevelopmentCamera
+ ├── SimulationCamera
+ └── EdgeCamera
 ```
 
-Likewise:
+and:
 
 ```text
 ModelRuntime
- ├── MacRuntime
- └── JetsonRuntime
+ ├── ReferenceRuntime
+ └── EdgeRuntime
 ```
 
-The higher-level autonomy code imports only the interface.
+Higher-level autonomy code imports only the capability contract.
 
 ## 23. Simulation Contract
 
 Simulation must reproduce the logical semantics of physical sensors and actuators sufficiently for software validation.
 
-A simulated action should generate a result event just as a physical action does.
-
 Example:
 
 ```text
 navigate_to(kitchen)
-  ↓
-simulator moves virtual robot
-  ↓
-robot.position_changed
-  ↓
+ ↓
+simulation executes
+ ↓
+position/state events
+ ↓
 world model updates
 ```
 
+NVIDIA Isaac Sim provides a ROS 2 bridge and currently documents Jazzy as an officially tested/recommended distribution. citeturn0search4turn0search7
+
 ## 24. Security Boundary
 
-The following are protected from adaptive modification:
+Protected from adaptive modification:
 
 - safety policy;
 - authentication/authorization policy;
 - privileged credentials;
-- protected system configuration;
 - trusted software identity;
 - emergency-stop configuration;
-- hardware safety limits.
-
-The model may propose changes to learnable state but cannot directly alter protected state.
+- hardware safety limits;
+- protected recovery authority.
 
 ## 25. Testing Strategy
 
-The architecture requires four test classes:
+Required test classes:
 
 ### Unit
 
-Pure subsystem behavior and data transformations.
+Pure subsystem behavior, schemas and transformations.
 
 ### Integration
 
@@ -601,24 +516,34 @@ Cross-service contracts and event flows.
 
 ### Simulation
 
-Autonomous behavior against virtual sensors, environments, and robot state.
+Autonomous behavior against controlled virtual sensors/worlds.
 
-### Hardware-in-loop / physical
+### HIL / physical
 
-Safety-critical and hardware-dependent behavior on Jetson and the robot.
+Hardware-dependent, safety-critical and timing-sensitive behavior.
 
-## 26. Architectural Acceptance Criteria
+### Failure injection
 
-The implementation satisfies the system architecture when:
+Crashes, stale data, duplicate events, model failures, storage faults, network loss and safety transitions.
+
+### Long-duration
+
+Memory growth, event growth, thermal drift, repeated recovery and autonomous continuity.
+
+## 26. Architecture Acceptance Criteria
+
+The architecture passes when:
 
 - subsystem boundaries are enforceable;
-- event flow is observable;
-- no adaptive component bypasses safety;
-- models are replaceable behind contracts;
-- Mac and Jetson share core interfaces;
-- memory/knowledge have provenance;
+- contracts are explicit and versioned;
+- event/state semantics are testable;
+- adaptive components cannot bypass governance/safety;
+- models are replaceable;
+- development/simulation/edge share logical interfaces;
+- provenance survives projection;
 - autonomous loops are testable;
 - schema evolution is governed;
 - physical actions are auditable;
 - failures degrade safely;
-- simulation can exercise the same high-level behavior as the physical system.
+- recovery is defined;
+- privacy/deletion semantics survive replication and recovery.
