@@ -1,6 +1,7 @@
 # 04 — Runtime Profiles
 
 **Status:** P0 runtime architecture specification
+**Priority:** P1
 
 ## Purpose
 
@@ -53,6 +54,8 @@ Novi robotics adapters
 Novi cognition/autonomy
 ```
 
+This profile provides a vendor-neutral robotics simulation path. It must remain available even if the NVIDIA simulation profile changes.
+
 ### Required simulated capabilities
 
 - camera;
@@ -75,7 +78,11 @@ Novi cognition/autonomy
 
 NVIDIA Isaac Sim.
 
-NVIDIA's current documentation recommends ROS 2 Humble and Jazzy and provides an Ubuntu 24.04/Jazzy workflow. citeturn0search4
+NVIDIA's Isaac Sim 6.0 documentation recommends ROS 2 Humble and Jazzy and documents an Ubuntu 24.04 / ROS 2 Jazzy workflow:
+
+https://docs.isaacsim.omniverse.nvidia.com/6.0.0/ros2_tutorials/ros2_landing_page.html
+
+The exact Isaac Sim release is part of the deployment manifest and must be pinned for reproducible validation.
 
 ### Required validation
 
@@ -89,35 +96,49 @@ NVIDIA's current documentation recommends ROS 2 Humble and Jazzy and provides an
 - fault injection;
 - scenario/version manifests.
 
-Isaac Sim is an advanced simulation candidate, not Novi's semantic world-model authority.
+Isaac Sim is an advanced simulation implementation, not Novi's semantic world-model authority.
 
 ## Profile D — NVIDIA Edge
 
-### Current candidate
+### Current reference hardware
 
-Jetson AGX Orin family; exact production module remains subject to workload and hardware selection.
+**Jetson AGX Orin 64GB** remains the reference edge target.
 
-NVIDIA's current AGX Orin developer-kit documentation identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release. citeturn1search1
+NVIDIA's current AGX Orin Developer Kit documentation identifies **JetPack 7.2 / L4T r39.2** as the latest JetPack baseline for that platform:
+
+https://docs.nvidia.com/jetson/agx-orin-devkit/user-guide/latest/setup_bsp.html
+
+This is a current validation baseline, not a permanent version lock. The exact installed tuple must always be captured in the deployment manifest.
 
 ### Reference software layers
 
 ```text
-JetPack
- ↓
-Ubuntu/L4T
+JetPack / L4T
  ↓
 CUDA
  ↓
-TensorRT / GPU runtime
+TensorRT / NVIDIA runtime components
  ↓
-ROS 2 Jazzy
+ROS 2 Jazzy candidate
  ↓
 Novi capability adapters
 ```
 
-Additional NVIDIA components such as Isaac ROS and DeepStream are workload-specific.
+NVIDIA's current Isaac ROS documentation states that Isaac ROS packages are designed and tested with ROS 2 Jazzy:
 
-DeepStream 9.1 supports Jetson Orin and uses JetPack 7.2/L4T r39.2 for its Jetson package. citeturn0search0turn0search1
+https://nvidia-isaac-ros.github.io/v/release-4.3/getting_started/index.html
+
+This does not mean every Isaac ROS package/release is automatically approved for the AGX Orin target. Platform-specific package compatibility must be checked before adoption.
+
+NVIDIA's current TensorRT migration documentation states that TensorRT 11.2.1 does not support JetPack and that Jetson deployments should remain on the TensorRT 10.x release supported by the selected JetPack version:
+
+https://docs.nvidia.com/deeplearning/tensorrt/latest/api/migration/tensorrt-10x-to-11x-jetson.html
+
+Additional NVIDIA components such as Isaac ROS, DeepStream and Holoscan are workload-specific.
+
+NVIDIA's current DeepStream documentation lists Jetson Orin support and documents JetPack 7.2 / L4T 39.2 for the current Jetson path:
+
+https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html
 
 ### Purpose
 
