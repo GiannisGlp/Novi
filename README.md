@@ -1,12 +1,18 @@
 # Novi
 
-Novi is the clean implementation repository for **Wheely**: an autonomous embodied AI system designed to perceive its environment, maintain a persistent world model and memory, reason and plan, develop relationships and personality, learn continuously, and safely act through a physical robotic body.
+Novi is a standalone project to build a persistent autonomous embodied AI system designed to perceive its environment, maintain a persistent world model and memory, reason and plan, develop relationships and personality, learn continuously, and safely act through a physical robotic body.
 
-This repository is intentionally separate from the original `Wheely` research/prototype repository. The original repository remains a reference and research archive. Novi is the implementation target.
+Novi is **not a voice assistant with wheels** and is not defined by a particular LLM, robot chassis, simulator, GPU vendor, or compute board.
 
-## Project Vision
+## North Star
 
-Novi is not intended to be a voice assistant with wheels. It is intended to operate as a continuously running autonomous cognitive system:
+The end goal is:
+
+> **Build Novi into a persistent, autonomous, embodied artificial intelligence that continuously perceives and understands its environment, maintains a coherent model of the world and itself, remembers and learns from experience, forms and pursues goals, reasons and plans, develops and uses skills, interacts naturally with people, and acts safely in the physical world — while remaining locally capable, inspectable, auditable, recoverable, and governed by explicit safety boundaries.**
+
+See [`docs/00-strategy/NOVI_NORTH_STAR.md`](docs/00-strategy/NOVI_NORTH_STAR.md).
+
+## Cognitive Loop
 
 ```text
 PERCEIVE
@@ -25,193 +31,135 @@ REASON
    ↓
 PLAN
    ↓
-SAFETY CHECK
+GOVERNANCE / SAFETY
    ↓
 ACT
    ↓
 OBSERVE RESULT
    ↓
-LEARN
+LEARN / UPDATE
    ↓
 CONTINUE
 ```
 
-The system should be able to run first on a development Mac, then in simulation, and finally on the target **NVIDIA Jetson AGX Orin 64GB** hardware without redesigning the cognitive architecture.
+## Architecture
 
-## Core Architectural Principles
+Novi uses a **hybrid cognitive architecture**.
+
+Neural models are used where learning is appropriate:
+
+- perception;
+- speech;
+- multimodal understanding;
+- embeddings;
+- reasoning;
+- prediction;
+- learned skills and policies.
+
+Structured/deterministic systems own:
+
+- persistent state;
+- memory semantics;
+- world-model semantics;
+- provenance;
+- authorization;
+- governance;
+- safety;
+- hardware limits;
+- recovery;
+- audit.
+
+The brain is the complete cognitive architecture, not the LLM alone.
+
+## Core Principles
 
 1. **Autonomous first** — Novi continuously observes and evaluates its environment rather than waiting for prompts.
-2. **One primary general reasoning model initially** — NVIDIA Nemotron 3 Nano 30B-A3B is the primary candidate; specialized models remain separate for perception, speech, embeddings, and other modality-specific tasks.
-3. **Open-source and local first** — the default solution must be open source, locally runnable, and suitable for offline/private operation.
-4. **Best existing solution first** — before implementing a subsystem ourselves, evaluate mature existing open-source local solutions from NVIDIA, TensorFlow, PyTorch, OpenCV, ROS, Hugging Face, or other relevant ecosystems. Do not reinvent a capability that already meets our requirements.
-5. **Vendor-neutral core** — NVIDIA is the reference deployment platform, but the cognitive core is not hard-coded to NVIDIA APIs. A different vendor or framework can be selected when it is objectively better for the specific requirement.
-6. **NVIDIA-preferred where appropriate** — when an NVIDIA component is the best fit for the target Jetson/robotics workload, use it rather than creating an unnecessary replacement.
-7. **Specialized systems for specialized work** — perception, speech, navigation, hardware control, and safety do not become LLM responsibilities.
-8. **Memory is not just RAG** — Novi maintains episodic, semantic, spatial, temporal, procedural, and verified knowledge with provenance.
-9. **Learning is evidence-driven** — observations, hypotheses, facts, and owner-verified knowledge remain distinguishable.
-10. **Schema evolution is controlled** — Novi may create new data structures when necessary, but through a governed Data/Knowledge capability layer.
-11. **Safety is outside adaptive intelligence** — the immutable safety boundary cannot be modified by the AI.
-12. **Simulation before hardware** — the same logical interfaces should work with simulated and physical sensors and actuators.
-13. **Everything is observable and auditable** — autonomous decisions, data changes, model calls, tool calls, and physical actions have traceable records.
-14. **Connectivity is optional** — Wi-Fi and Bluetooth extend Novi's capabilities but are never prerequisites for core cognition, perception, autonomy, memory, personality, safety, local interaction, or hardware operation.
-15. **Offline-first core** — Novi must remain fully functional in an isolated environment with no Wi-Fi, no Bluetooth, and no external network access. Connectivity-dependent features must degrade gracefully and recover through controlled synchronization when connectivity returns.
+2. **Hybrid intelligence** — neural models and structured systems are combined deliberately.
+3. **Local/offline first** — core cognition, memory, safety and physical operation must not require cloud connectivity.
+4. **Existing solution first** — use mature open-source solutions when they meet requirements; do not reinvent commodity infrastructure.
+5. **Vendor-neutral semantic core** — NVIDIA is an important reference ecosystem, but Novi's contracts must not depend on NVIDIA product names.
+6. **Specialized systems for specialized work** — perception, speech, navigation, control and safety are not LLM responsibilities.
+7. **Memory is not just RAG** — Novi maintains episodic, semantic, spatial, temporal, procedural and verified knowledge with provenance.
+8. **Observation is not truth** — observations, evidence, beliefs, predictions, simulations and counterfactuals remain distinguishable.
+9. **Safety is outside adaptive intelligence** — the protected safety boundary cannot be modified by the AI.
+10. **Simulation before physical actuation** — the same logical interfaces should operate against simulated and physical systems.
+11. **Everything important is observable and auditable** — model calls, data changes, decisions, tool calls and physical actions have traceable records.
+12. **Hardware is a consequence of workload** — final hardware is selected only after the software workload and physical requirements are measured.
+13. **Connectivity is optional** — Wi-Fi/Bluetooth extend capabilities but never become mandatory for core operation.
+14. **Learning is governed** — experience can improve memory, knowledge and skills, but cannot silently rewrite protected invariants.
 
-## Formal Connectivity Architecture Rule
-
-> **Novi must be fully operational without Wi-Fi, Bluetooth, or external network access. Connectivity may extend Novi's capabilities but must never be a mandatory dependency for core perception, cognition, autonomy, memory, personality, safety, local interaction, diagnostics, or physical operation.**
-
-The connectivity state may change what optional capabilities are available, but it must not determine whether the core system can operate.
+## Development Strategy
 
 ```text
-                         NOVI CORE
-                            │
-          ┌─────────────────┼─────────────────┐
-          │                 │                 │
-      Perception         Cognition          Memory
-          │                 │                 │
-          └─────────────────┼─────────────────┘
-                            │
-                    Local capabilities
-                            │
-               ┌────────────┴────────────┐
-               │                         │
-             Wi-Fi                 Bluetooth
-            OPTIONAL                OPTIONAL
+Architecture
+    ↓
+Cognitive software
+    ↓
+Synthetic inputs
+    ↓
+Real perception on development hardware
+    ↓
+Simulation
+    ↓
+SIL / HIL validation
+    ↓
+Hardware capability selection
+    ↓
+Physical robot
 ```
 
-When connectivity is unavailable, Novi continues local operation. Network-dependent tasks may queue, defer, expire, or be disabled according to their capability contract. Reconnection must not bypass privacy, authorization, provenance, deletion, or safety policies.
+The project explicitly follows **build the mind before the body**.
 
-## Solution Selection Policy
+Jetson AGX Orin 64GB is currently a reference hardware candidate, not a locked commitment. Current NVIDIA JetPack 7.2 supports the Jetson Orin family and uses Ubuntu 24.04/L4T 39.2. citeturn5search3
 
-Novi follows a **local-first, open-source-first, existing-solution-first** policy.
+## Technology Policy
 
-For every significant technical capability, the engineering process should first ask:
+See:
+
+- [`docs/TECHNOLOGY_REFERENCE.md`](docs/TECHNOLOGY_REFERENCE.md) — ecosystem catalog.
+- [`docs/TECHNOLOGY_STACK_BASELINE.md`](docs/TECHNOLOGY_STACK_BASELINE.md) — implementation-oriented stack baseline.
+- [`docs/00-strategy/NOVI_PRE_IMPLEMENTATION_READINESS_AUDIT.md`](docs/00-strategy/NOVI_PRE_IMPLEMENTATION_READINESS_AUDIT.md) — readiness and gap register.
+
+Technology decisions must follow:
 
 ```text
-Does a mature solution already exist?
-        ↓
-Is it open source with an acceptable license?
-        ↓
-Can it run locally on our target environment?
-        ↓
-Does it meet our accuracy / latency / memory / power requirements?
-        ↓
-Is it maintained and sufficiently mature?
-        ↓
-Does it integrate cleanly with Novi's interfaces?
-        ↓
-YES → adopt / integrate / wrap it
-NO  → evaluate alternatives
-        ↓
-Still no suitable local solution?
-        ↓
-Consider a cloud service only as an explicit exception
+Requirement
+  ↓
+Candidate solutions
+  ↓
+License/security review
+  ↓
+Local/offline check
+  ↓
+Benchmark
+  ↓
+ADR
+  ↓
+Adoption
 ```
 
-## Cloud Exception Policy
+## Hardware
 
-Cloud services are **not the default architecture**. A cloud dependency may be considered only when no suitable local open-source solution exists or the capability is genuinely impractical locally, and only after privacy, security, latency, cost, availability, vendor lock-in, retention, and graceful-degradation implications are documented.
+See:
 
-Cloud use must never silently become mandatory for core autonomous operation if local operation is technically feasible.
+- [`docs/05-hardware/README.md`](docs/05-hardware/README.md)
+- [`docs/05-hardware/00_HIGH_LEVEL_HARDWARE_ARCHITECTURE.md`](docs/05-hardware/00_HIGH_LEVEL_HARDWARE_ARCHITECTURE.md)
+- [`docs/05-hardware/24_HARDWARE_SELECTION_AND_BOM_BASELINE.md`](docs/05-hardware/24_HARDWARE_SELECTION_AND_BOM_BASELINE.md)
 
-## Development Environments
+The final physical BOM is deliberately deferred until the cognitive workload, robot geometry, power, thermal, sensor-FOV, synchronization and safety requirements are measured.
 
-### Mac development
+## Documentation Status
 
-The Mac is the primary early development environment. It should support the majority of the cognitive system, knowledge system, personality, autonomy loop, camera/microphone experimentation, UI, simulation adapters, and automated tests.
+Novi is currently in the **architecture, research and pre-implementation preparation phase**.
 
-### Simulation
+A documented capability is not necessarily implemented.
 
-NVIDIA Isaac Sim and ROS 2 are the reference robotics simulation path. Simulation must expose the same logical contracts used by the physical robot. Other simulation technologies should be considered when they provide a better fit for a specific workload.
-
-### Jetson
-
-The target edge platform is NVIDIA Jetson AGX Orin 64GB. NVIDIA CUDA, TensorRT, Isaac ROS, JetPack, and related tooling are used where they provide measurable benefits. Alternative local frameworks remain acceptable when they better satisfy a specific requirement.
-
-### Physical robot
-
-The physical body is introduced only after the software can operate against simulated hardware and has passed the required safety and integration tests.
-
-## Repository Rules
-
-- Do not add a feature without identifying its architectural domain.
-- Do not bypass subsystem interfaces to access another subsystem's implementation directly.
-- Do not let LLM code directly control motors, safety-critical hardware, or protected storage.
-- Do not silently change an architectural contract; document the decision.
-- Do not treat an observation as a verified fact without provenance and appropriate validation.
-- Do not allow autonomous schema evolution to modify immutable system/safety data.
-- Prefer existing mature open-source local solutions over custom implementations when they satisfy requirements.
-- Compare NVIDIA and non-NVIDIA alternatives for important infrastructure decisions instead of assuming NVIDIA is always best.
-- Prefer small, independently testable changes.
-- Every significant subsystem must have unit, integration, and failure-mode tests appropriate to its risk.
-- No subsystem may introduce an implicit network dependency into the offline-capable core.
-
-## Documentation Structure
-
-Documentation is organized by system domain. Every domain folder must contain a `README.md` that provides the high-level purpose, scope, terminology, dependencies, and document map. Detailed engineering specifications are stored in separate documents beneath the domain.
-
-The first domain is `01-system-architecture/`. It defines the system-wide architecture and the boundaries that all later domains must follow.
-
-Planned domains include:
-
-```text
-01-system-architecture/
-02-autonomy/
-03-cognition/
-04-world-model/
-05-memory/
-06-knowledge-base/
-07-perception/
-08-personality-and-social/
-09-models-and-inference/
-10-agent-and-tools/
-11-safety-and-security/
-12-robotics-and-ros2/
-13-nvidia-platform/
-14-simulation-and-digital-twin/
-15-hardware/
-16-audio-and-voice/
-17-navigation-and-mapping/
-18-iot-and-external-systems/
-19-data-and-storage/
-20-control-app/
-21-observability-diagnostics-audit/
-22-testing-and-validation/
-23-data-generation-and-training/
-24-deployment-and-operations/
-25-privacy-and-governance/
-26-development-process/
-```
-
-## Documentation Levels
-
-Each domain will be documented at multiple levels:
-
-### High-level
-
-Explains what the subsystem is, why it exists, what decisions have been made, its boundaries, and how it connects to other subsystems.
-
-### Detailed specification
-
-Defines exact responsibilities, interfaces, state, data models, workflows, failure modes, lifecycle behavior, security constraints, performance requirements, and acceptance criteria.
-
-### Implementation
-
-Defines packages, modules, classes, functions, configuration, runtime dependencies, deployment details, and test requirements.
-
-### Validation
-
-Defines how the subsystem is tested on Mac, simulation, Jetson, and physical hardware where applicable.
-
-## Current Status
-
-Novi is currently in the **architecture and documentation foundation phase**. No assumption should be made that a documented capability is already implemented.
-
-The documentation must explicitly distinguish:
+Use these statuses explicitly:
 
 ```text
 DESIGNED
 PROPOSED
+EVALUATING
 PROTOTYPE
 IMPLEMENTED
 TESTED
@@ -222,8 +170,18 @@ BLOCKED
 DEPRECATED
 ```
 
-## Relationship to the Original Wheely Repository
+## Repository Structure
 
-`GiannisGlp/Wheely` contains prior research, prototypes, experiments, architecture work, and detailed knowledge-base material. It is a reference source rather than the implementation base for Novi.
+```text
+docs/
+├── 00-strategy/
+├── 01-system-architecture/
+├── 02-autonomy/
+├── 03-cognition/
+├── 04-memory-and-knowledge/
+├── 05-hardware/
+├── TECHNOLOGY_REFERENCE.md
+└── TECHNOLOGY_STACK_BASELINE.md
+```
 
-Useful material may be selectively migrated into Novi after review. Novi should not be created by copying the old codebase wholesale.
+The architecture domains remain authoritative for their respective subsystem semantics. Strategy documents define direction; technology references define candidates; ADRs define adopted implementation decisions.
