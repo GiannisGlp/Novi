@@ -1,10 +1,14 @@
-# 05 — Novi Continuous Cognitive Cycle
+# 05 — Novi Cognitive Runtime Cycle
 
-**Status:** P0 — critical
+**Status:** BOUNDARY REFERENCE — NOT CANONICAL AUTONOMY LOOP
+**Canonical behavioral loop:** `docs/02-autonomy/01_CONTINUOUS_COGNITIVE_LOOP.md`
+**Owner:** `02-novi-brain`
 
-## Purpose
+> This document does not define a second autonomy loop. It defines how the Brain runtime executes and coordinates the canonical continuous behavior loop.
 
-The cognitive cycle is the primary mechanism behind Novi's continuous embodied existence.
+## Runtime purpose
+
+The Brain runtime must continuously support:
 
 ```text
 WORLD → PERCEPTION → EVIDENCE → WORLD STATE → ATTENTION
@@ -13,80 +17,82 @@ WORLD → PERCEPTION → EVIDENCE → WORLD STATE → ATTENTION
 → OBSERVE OUTCOME → UPDATE/LEARN → CONTINUE
 ```
 
-## Stages
+The behavioral meaning and policy of these stages belongs to Autonomy, Cognition, Memory and System Architecture. Brain provides execution, scheduling, transport, synchronization and recovery.
+
+## Runtime stages
 
 ### 1. Perceive
 
-Consume RGB, depth, LiDAR, IMU, encoders, microphones, thermal, environmental sensors and external events at appropriate rates.
+Schedule and consume RGB, depth, LiDAR, IMU, encoders, microphones, thermal, environmental sensors and external events at appropriate rates.
 
 ### 2. Evidence
 
-Convert raw inputs into structured observations containing source, timestamp, frame where relevant, confidence, calibration and processing/model version.
+Transport structured observations containing source, timestamp, frame where relevant, confidence, calibration and processing/model version.
 
 ### 3. World-state update
 
-Integrate evidence with entities, relationships, activities, changes, uncertainty and temporal history. Contradictory evidence must remain visible.
+Coordinate updates to the canonical world state. Brain must not redefine semantic world-state ownership.
 
 ### 4. Attention
 
-Prioritize safety, human interaction, active goals, novelty, uncertainty, environmental changes and scheduled obligations.
+Provide runtime scheduling/resource mechanisms for the attention policy defined by Cognition/Autonomy. Safety interrupts use the protected safety path.
 
 ### 5. React / deliberate / wait
 
-React when delay is costly; deliberate for multi-step/ambiguous problems; wait when no useful or required action exists. Waiting is an intentional state.
+Schedule reactive, deliberative and intentional-wait execution according to the canonical autonomy policy.
 
 ### 6. Goals and intent
 
-Evaluate active goals, human requests, persistent obligations, safety requirements and bounded curiosity/maintenance. Possible decisions: observe, ask, respond, continue, change task, plan, act or wait.
+Execute and transport the goal/intent decisions produced by Autonomy and Cognition.
 
 ### 7. Planning and skills
 
-Plans define what should happen; skills define how known actions are performed. Skills expose preconditions, inputs, outputs, constraints, effects, failure and cancellation conditions.
+Provide runtime support for planning/skill components and enforce their capability interfaces. Plans define what should happen; skills define how known actions are performed according to their canonical domain contracts.
 
 ### 8. Action proposal
 
-Produce a structured intention with target, reason, confidence, constraints, expected outcome, required capabilities, deadline and cancellation conditions. It is not authorization.
+Transport structured action proposals containing target, reason, confidence, constraints, expected outcome, required capabilities, deadline and cancellation conditions.
 
 ### 9. Governance and safety
 
-Authorization, capability validation, physical constraints and safety must approve the proposal before execution. Rejected actions are observable.
+Route proposals through the authoritative governance/safety interfaces. A runtime path must never treat proposal generation as authorization.
 
 ### 10. Act
 
-Execution occurs through robotics/control. Cognition receives acceptance, progress, completion, failure and unexpected outcome.
+Execute only approved capabilities through robotics/control interfaces and return acceptance, progress, completion, failure and unexpected outcome.
 
 ### 11. Observe outcome
 
-Perception checks whether the world changed as expected. Unexpected outcomes cause replanning or safe fallback.
+Coordinate perception and telemetry needed to determine whether the expected world change occurred.
 
 ### 12. Learn/remember
 
-Meaningful outcomes can become episodic memory, knowledge, skill metrics, planner feedback or model evaluation data through governed admission.
+Route meaningful outcomes to the canonical Memory/Knowledge and learning pipelines through governed admission.
 
 ## Multi-rate operation
 
-Control/safety, perception, tracking, attention, interaction, planning, long-horizon reasoning and learning operate at different frequencies. Slow cognition must never block fast safety/control.
+Control/safety, perception, tracking, interaction, planning, reasoning and learning operate at different frequencies. Slow cognition must never block fast safety/control.
 
-## Parallel cognition
+## Parallel execution
 
-Camera, audio, localization, conversation and background memory work may operate concurrently. Shared state must obey ownership and consistency contracts.
+Camera, audio, localization, conversation and background work may operate concurrently. Shared state must obey system ownership and consistency contracts.
 
 ## Interruptions
 
-Conceptual priority is safety > immediate human interaction > critical goal > ordinary goal > curiosity > maintenance. Exact policy must be benchmarked.
+Brain implements scheduling, cancellation and preemption mechanisms. The semantic priority policy is owned by Autonomy/System Architecture.
 
 ## Spontaneous behavior
 
-Self-initiated behavior is permitted only when it has a reason, bounded scope, resource budget, safety constraints, cancellation path and observability.
+Brain may execute self-initiated behavior only when a bounded request is produced by an authoritative policy/domain and includes reason, resource budget, safety constraints, cancellation path and observability.
 
-## Degraded cycle
+## Degraded runtime
 
-If a capability fails, recompute available capabilities and continue in a safe degraded mode. Examples: lighter models under GPU pressure, reduced navigation confidence after LiDAR loss, local operation after network loss.
+If a capability fails, Brain recomputes available runtime capabilities and continues in a safe degraded mode where permitted. Examples include lighter models under GPU pressure, reduced navigation confidence after sensor loss and local operation after network loss.
 
-## Prediction
+## Prediction boundary
 
-Candidate actions may be evaluated using learned or deterministic prediction. Predictions remain distinct from historical observations.
+Prediction semantics belong to Cognition. Brain provides the runtime required to execute predictive models and return their results with provenance and timing.
 
 ## Acceptance
 
-Novi must demonstrate continuous perception, meaningful attention, appropriate reaction/deliberation, bounded action, consequence observation, memory/learning and continued operation without requiring a human prompt to restart the cycle.
+The Brain runtime is acceptable when it continuously executes the canonical autonomy loop, supports bounded latency and interruption, safely routes actions through governance, observes outcomes, supports memory/learning and recovers from individual component failures without requiring a human prompt to restart the cycle.
