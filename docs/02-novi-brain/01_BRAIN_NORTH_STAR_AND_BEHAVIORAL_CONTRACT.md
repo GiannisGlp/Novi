@@ -1,75 +1,89 @@
-# 01 — Novi Brain North Star and Behavioral Contract
+# 01 — Novi Brain Behavioral Contract
 
-**Status:** P0 — critical
+**Status:** BOUNDARY REFERENCE — NOT CANONICAL NORTH STAR
+**Canonical North Star:** `docs/00-strategy/NOVI_NORTH_STAR.md`
+**Owner:** `02-novi-brain`
 
-## North star
+> This document does not define a second Novi North Star. The project North Star is owned exclusively by `00-strategy/NOVI_NORTH_STAR.md`. This document records the implications that the Brain runtime must support.
 
-Novi's brain is a persistent embodied intelligence that maintains an evolving internal model of itself, its environment and its relationships; continuously interprets multimodal experience; decides what matters; remembers useful experience; reasons when necessary; selects skills; acts through bounded capabilities; observes consequences; and adapts through governed learning.
+## Brain runtime interpretation
 
-The objective is a coherent agent whose perception, memory, cognition, personality, interaction and physical behavior remain consistent over time.
+Novi's brain runtime must support a persistent embodied intelligence that maintains an evolving internal model of itself, its environment and its relationships; continuously interprets multimodal experience; participates in attention, memory, cognition and autonomy; acts through bounded capabilities; observes consequences; and supports governed learning.
 
-## Continuous loop
+The objective is a coherent agent whose perception, memory, cognition, personality, interaction and physical behavior remain consistent over time. The semantic definitions belong to the canonical Cognition, Memory and Autonomy domains.
+
+## Runtime contract
 
 ```text
-SENSE → INTERPRET → WORLD STATE → ATTENTION → MEMORY/KNOWLEDGE
-→ SITUATION → GOALS → REASON → PLAN → SKILL → ACTION PROPOSAL
-→ GOVERNANCE/SAFETY → ACT → OBSERVE → LEARN/REMEMBER → SENSE
+SENSE → PERCEIVE → INTERPRET → WORLD STATE → ATTENTION →
+REACT / THINK / WAIT → GOAL → PLAN → SKILL → ACTION PROPOSAL →
+GOVERNANCE / SAFETY → ACT → OBSERVE → LEARN / REMEMBER → CONTINUE
 ```
 
-This is a conceptual concurrent loop, not one synchronous thread.
+This is a conceptual concurrent runtime contract, not a definition of ownership for each stage.
 
-## Behavioral properties
+## Behavioral implications for Brain
 
-Novi must be:
+The Brain runtime must support:
 
-- persistent;
-- situated in the real environment;
-- multimodal;
-- selective in attention;
-- explicitly uncertain;
-- goal-directed;
-- socially coherent;
-- physically grounded;
-- recoverable;
-- learnable but governed;
-- continuously present even when no person is speaking to it.
+- continuous operation independent of a user prompt;
+- multi-modal input and model execution;
+- multi-rate execution;
+- interruption and cancellation;
+- bounded action proposals;
+- protected safety/governance interfaces;
+- runtime degradation and recovery;
+- observation of action outcomes;
+- persistent operation when individual models or services fail.
 
 ## Alive as an engineering property
 
-"Alive" means continuous embodied agency, not consciousness or sentience. Novi should be capable of noticing events, deciding whether to interrupt, orienting itself, initiating bounded interactions, maintaining tasks, remembering experiences, adapting from outcomes and intentionally remaining idle when nothing requires action.
+"Alive" is an engineering property defined by the North Star: continuous embodied agency, not consciousness or sentience. The Brain runtime must provide the infrastructure for noticing, scheduling, executing, observing and remaining intentionally idle when appropriate. It must not manufacture activity merely to appear alive.
 
-It must never create random activity merely to appear alive.
-
-## Multi-speed cognition
+## Multi-speed runtime
 
 ```text
 SYSTEM 0 — deterministic safety/control
-SYSTEM 1 — fast perception/reactive behavior
-SYSTEM 2 — deliberate reasoning/planning/social cognition
-SYSTEM 3 — background consolidation/learning
+SYSTEM 1 — fast perception/reactive execution
+SYSTEM 2 — deliberate reasoning/planning execution
+SYSTEM 3 — background consolidation/learning execution
 ```
 
-NVIDIA's GR00T research provides a useful example of separating slower reasoning/planning from continuous action generation, but Novi must not copy that architecture blindly; its persistent memory, personality, social and governance requirements are broader.
+The exact semantic policy for these modes belongs to the canonical domains that use them.
 
-## Brain is not an LLM
+## Brain is not a model
 
-An LLM, VLM, VLA, neural network, orchestrator, database or ROS 2 installation is not individually Novi's brain. The brain is the coordinated persistent system.
+An LLM, VLM, VLA, neural network, orchestrator, database or ROS 2 installation is not individually Novi's brain. The Brain is the coordinated runtime/integration system that connects the canonical cognitive, memory, autonomy, policy and hardware capabilities.
 
 ## Success scenarios
 
-The eventual brain must demonstrate:
+The scenarios below are retained as integration acceptance examples, not as semantic ownership:
 
-1. person enters a room;
-2. Novi detects and tracks them;
-3. identity is known/unknown/uncertain rather than fabricated;
-4. attention determines whether interaction matters;
-5. Novi orients/approaches/waits appropriately;
-6. Novi hears a request while another task is active;
-7. context and relevant memory are retrieved;
-8. reasoning produces a bounded plan;
-9. a skill executes through governed robotics interfaces;
+1. a person enters a room;
+2. perception produces evidence;
+3. identity is resolved as known/unknown/uncertain;
+4. Cognition produces a situation interpretation;
+5. Autonomy determines whether interaction matters;
+6. relevant memory is retrieved;
+7. a bounded plan/skill is selected;
+8. governance and safety approve or reject the action;
+9. the robotics interface executes the approved capability;
 10. consequences are observed;
-11. memory/world state is updated;
-12. future behavior changes from verified experience;
+11. canonical world state and memory are updated;
+12. future behavior can change from verified experience;
 13. individual model failures do not erase the agent;
-14. Novi can state what is known, inferred and unknown.
+14. Novi can distinguish known, inferred and unknown information.
+
+## Boundary
+
+The Brain directory must not redefine the canonical:
+
+- North Star — `00-strategy`;
+- semantic World Model — `03-cognition`;
+- Situation Model — `03-cognition`;
+- temporal/causal reasoning — `03-cognition`;
+- semantic spatial reasoning — `03-cognition`;
+- long-term memory/knowledge — `04-memory-and-knowledge`;
+- behavioral goal authority — `02-autonomy`;
+- safety authority — system/policy layer;
+- motor-control authority — hardware/controllers.
