@@ -1,29 +1,33 @@
 # 03 — Component Boundaries
 
+**Status:** P0 normative architecture specification
+
 ## Purpose
 
-This document defines ownership boundaries so that the implementation does not become a monolith.
+Define ownership boundaries so Novi remains composable, testable, secure and replaceable rather than becoming a monolith.
 
 ## Boundary Table
 
 | Domain | Owns | May depend on | Must not own |
 |---|---|---|---|
-| Perception | sensor interpretation | hardware interfaces, model runtime | durable truth |
-| World Model | current structured world state | events, identity, storage | raw sensor drivers |
-| Memory | durable experience and retrieval | storage, embeddings, world model | motor control |
-| Knowledge | structured facts/concepts/schema | memory, storage, verification | safety decisions |
+| Perception | sensor interpretation/evidence | sensor interfaces, model runtime, calibration | durable truth, authorization |
+| World Model | current structured world state | events, identity, storage | raw sensor drivers, safety authority |
+| Memory | durable experience/retrieval | storage, embeddings, world model | motor control, authorization |
+| Knowledge | facts/concepts/relationships/schema | memory, storage, verification | physical safety decisions |
 | Attention | relevance/interaction state | events, world model, social state | hardware execution |
-| Personality | stable traits/dynamic social behavior | identity, context, memory | safety policy |
-| Autonomy | continuous loop/goals | all cognitive contracts | direct hardware drivers |
-| Agent Runtime | model context/tool orchestration | model runtime, tools, memory | safety bypass |
-| Models | inference | hardware runtime | business/world state |
+| Personality | stable/dynamic social behavior | identity, context, memory | safety policy |
+| Autonomy | continuous loop/goals | cognitive contracts | direct hardware drivers |
+| Agent Runtime | model/tool orchestration | model runtime, tools, memory | safety bypass |
+| Model Runtime | model execution | compute/runtime adapters | business/world state authority |
 | Tools | bounded capabilities | domain services | unrestricted system access |
-| Policy | allowed behavior | context, safety rules | model weights |
-| Safety | physical-action constraints | trusted state, hardware health | adaptive memory |
-| ROS 2 | robotics middleware | hardware drivers | personality/LLM logic |
-| Hardware | physical I/O | ROS 2/driver contracts | reasoning |
-| Control App | monitoring/control UI | application APIs | direct DB/hardware access |
-| Diagnostics | health/metrics/audit | system telemetry | autonomous policy |
+| Policy/Governance | authorization and allowed behavior | context, identity, policy state | model weights |
+| Safety | physical constraints/safe-state enforcement | trusted state, hardware health | adaptive memory |
+| ROS 2 | robotics middleware | drivers, controllers, navigation | personality/LLM logic |
+| ros2_control | controller/hardware abstraction | hardware interfaces | cognitive policy |
+| Navigation | path planning/execution | map/localization/robot state | social reasoning |
+| Hardware | physical I/O | driver/control contracts | reasoning |
+| Control App | administrative UI | application APIs | direct DB/ROS/hardware access |
+| Diagnostics | health/metrics/audit | telemetry | autonomous policy |
 
 ## Dependency Direction
 
@@ -41,31 +45,51 @@ Platform Adapters
 ROS 2 / OS / Hardware
 ```
 
-A lower-level component must not import a higher-level cognitive component merely to satisfy a convenience requirement.
+Lower-level components must never import higher-level cognitive components merely for convenience.
+
+## Contract rule
+
+Every boundary should define:
+
+```text
+INPUT SCHEMA
+OUTPUT SCHEMA
+ERROR MODEL
+VERSION
+AUTHORITY
+TIME SEMANTICS
+RESOURCE LIMITS
+OBSERVABILITY
+SECURITY
+PRIVACY
+RECOVERY
+```
 
 ## Perception Boundary
 
-Perception receives raw or near-raw sensor data and emits normalized observations. It may call specialized models. It does not decide what a person ultimately means or permanently store a verified fact.
+Receives sensor data and calibration context. Produces normalized observations/evidence with timestamps, confidence, provenance and sensor/model identity.
+
+It does not permanently assert verified knowledge without downstream governance.
 
 ## World Model Boundary
 
-The world model is the authoritative structured representation of current state. It consumes events and maintains versions. It does not own raw media or model weights.
+Authoritative for current structured state. Consumes events and maintains revisions. It does not own raw media, model weights or safety policy.
 
 ## Memory Boundary
 
-Memory owns durable experiences and retrieval. It can reference world-model entities, but it must preserve provenance and historical context.
+Authoritative for durable experience and retrieval semantics. It references world entities while preserving historical context and provenance.
 
 ## Knowledge Boundary
 
-Knowledge manages concepts, facts, relationships, sources, verification, and schema evolution. It must use controlled storage interfaces.
+Owns concepts, facts, relationships, verification and schema evolution. It does not authorize physical actions.
 
 ## Autonomy Boundary
 
-Autonomy coordinates the cognitive loop. It may ask other services to perform work, but it does not implement their internals.
+Coordinates continuous cognition, goals and decision flow. It requests capabilities; it does not implement their physical internals.
 
 ## Model Boundary
 
-Models expose capabilities such as:
+Models expose stable capability interfaces such as:
 
 ```text
 reason
@@ -74,48 +98,65 @@ transcribe
 synthesize
 embed
 rerank
+predict
+act_propose
 ```
 
-The rest of the system should not depend on a model's local tensor/runtime details.
+The rest of Novi must not depend on tensor/runtime-specific details.
 
 ## Tool Boundary
 
-A tool is a bounded capability with an explicit input/output schema and authorization policy. Tools are not arbitrary plugins with unrestricted access.
+A tool has explicit input/output schemas, authorization, quotas, timeout, cancellation and audit behavior.
+
+A tool is not an unrestricted plugin system.
+
+## Policy Boundary
+
+Policy determines whether a requested capability is permitted under identity, purpose, state, scope and current governance.
 
 ## Safety Boundary
 
-Safety is the last software gate before physical execution. It should remain available even if the general reasoning system is unhealthy.
+Safety is the final software gate before physical execution and must integrate with independent hardware safety mechanisms.
+
+Safety must remain functional if the reasoning model is unavailable.
 
 ## Hardware Boundary
 
-Hardware adapters translate logical commands and sensor streams into physical interfaces. They must not contain high-level social or reasoning logic.
+Hardware adapters translate logical capability requests and sensor streams into physical interfaces. They must not contain high-level social/reasoning logic.
 
 ## Control Application Boundary
 
-The control application observes and controls permitted administrative functions through APIs. It should not connect directly to the database or ROS graph for ordinary application features.
+The control UI interacts through authenticated application APIs and never receives direct database credentials or unrestricted ROS/hardware access.
 
-## Forbidden Dependency Examples
-
-The following are architectural violations:
+## Forbidden Dependencies
 
 ```text
 LLM → motor driver
-LLM → SQLite credentials
+LLM → DB credentials
 LLM → host filesystem
-Web UI → SQLite
+LLM → unrestricted network
+Web UI → SQLite directly
 Web UI → motor GPIO
 Personality → safety limits
 Memory → motor controller
-Camera driver → Nemotron
+Camera driver → reasoning model
 ROS driver → personality
+Model → authorization authority
+Vector index → semantic truth authority
 ```
 
 ## Allowed Examples
 
 ```text
-LLM → Tool API → Navigation Service → Safety → ROS 2
-LLM → Knowledge Service → Database
-Camera → Perception → Event Bus → World Model
+Model → Tool API → Navigation → Policy → Safety → ROS 2
+Model → Knowledge Service → validated storage
+Camera → Perception → Event → World Model
 Web UI → Application API → Diagnostics
-Autonomy → ModelRuntime → Nemotron
+Autonomy → ModelRuntime → selected model
 ```
+
+## NVIDIA boundary
+
+NVIDIA implementations such as Isaac ROS, TensorRT, DeepStream and related accelerators remain behind the relevant capability boundaries. NVIDIA's current documentation shows Isaac ROS packages tested with ROS 2 Jazzy, while DeepStream 9.1 supports Jetson Orin and is based on JetPack 7.2/L4T r39.2. citeturn0search6turn0search0
+
+These facts validate compatibility candidates; they do not grant those products architectural authority.
