@@ -1,32 +1,13 @@
 # 04 — Memory and Knowledge Source Material Status Registry
 
-**Status:** CANONICAL SOURCE DISPOSITION REGISTRY
+**Status:** CANONICAL SOURCE DISPOSITION REGISTRY — V1.1
 **Date:** 2026-08-17
 
-This registry defines how Memory and Knowledge documents are treated. `CANONICAL` means current normative authority. `MERGE` identifies material incorporated into a canonical destination. `MOVE` identifies implementation material belonging elsewhere. `REFERENCE` identifies research/background material. `HISTORICAL` identifies preserved non-normative material.
+This registry defines how Memory and Knowledge documents are treated. `CANONICAL` means current normative authority. `MERGE` identifies material incorporated into a canonical destination. `MOVE` identifies implementation material belonging elsewhere. `REFERENCE` identifies research/background material. `HISTORICAL` identifies preserved non-normative material. `GAP` identifies a source number for which no repository file was found.
 
 ## Current normative spine
 
-The only active semantic architecture authority is:
-
-- `01_MEMORY_TAXONOMY_AND_CORE_MODEL.md`
-- `02_MEMORY_LIFECYCLE_AND_ADMISSION.md`
-- `03_PROVENANCE_EVIDENCE_TRUST_AND_UNCERTAINTY.md`
-- `04_MEMORY_CONSOLIDATION_RETRIEVAL_AND_CONTEXT.md`
-- `05_KNOWLEDGE_GRAPH_RELATIONSHIPS_AND_BELIEF_REVISION.md`
-- `06_IDENTITY_AND_ENTITY_RESOLUTION.md`
-- `07_TEMPORAL_MEMORY_AND_REASONING.md`
-- `08_SPATIAL_MEMORY_AND_STATE.md`
-- `09_CAUSAL_WORLD_MODELING.md`
-- `10_CROSS_MODAL_MEMORY.md`
-- `11_SKILL_AND_COMPETENCE_VERIFICATION.md`
-- `12_MEMORY_SCHEMA_AND_KNOWLEDGE_EVOLUTION.md`
-- `13_MODEL_AND_MEMORY_CO_EVOLUTION.md`
-- `14_PRIVACY_AND_MEMORY_DATA_GOVERNANCE.md`
-- `15_MACHINE_GOVERNANCE_INTERFACE.md`
-- `16_HUMAN_OVERSIGHT_AND_ACCOUNTABILITY.md`
-- `17_INTEGRATION_AND_REFERENCE_MODEL.md`
-- `18_FINAL_ARCHITECTURE_AUDIT_AND_TRACEABILITY.md`
+The only active semantic architecture authority is the `01`–`18` canonical set listed in `ARCHITECTURE_INDEX.md`.
 
 ## Transitional 95–106 disposition
 
@@ -38,13 +19,9 @@ They are preserved unchanged for provenance and recovery, but are **NON-NORMATIV
 
 ## Historical 00–94
 
-The historical 00–94 corpus is preserved under:
+The existing historical 00–94 corpus was reviewed source-by-source during consolidation. Existing files are preserved under `archive/` and are **NON-NORMATIVE**.
 
-`archive/`
-
-It is **NON-NORMATIVE**.
-
-Previously established mappings remain valid where recorded in `SOURCE_TRACEABILITY_MATRIX.md`. Files that still require deeper section-level review remain historical/pending rather than being falsely labelled fully superseded.
+For every existing source, useful normative requirements were mapped into canonical destinations or identified as belonging to system architecture. No historical source is required as an active semantic authority.
 
 ## Source inventory gaps
 
@@ -61,7 +38,7 @@ These are inventory gaps, not missing canonical architecture documents.
 
 The following are not semantic Memory & Knowledge implementation authority:
 
-- physical SQLite/schema mechanics;
+- physical storage/schema mechanics;
 - transaction implementation;
 - replication transport;
 - recovery implementation;
@@ -73,4 +50,14 @@ Their semantic requirements may be referenced from Memory & Knowledge, while imp
 
 ## Supersession rule
 
-Historical files must not be deleted merely because a canonical destination exists. A source may be marked fully `SUPERSEDED` only after its unique requirements, contradictions and cross-references have been verified. Until then, preservation under `archive/` is the safe state.
+Historical files are preserved because they provide architectural provenance and research traceability. They do not override 01–18. Any future archival deletion requires an explicit repository-level decision and must not be inferred from semantic consolidation alone.
+
+## V1.1 status
+
+```text
+00–94 existing sources       REVIEWED / DISPOSITIONED
+24                           GAP
+65                           GAP
+95–106                       TRANSITIONAL / ARCHIVED
+01–18                        CURRENT CANONICAL AUTHORITY
+```
