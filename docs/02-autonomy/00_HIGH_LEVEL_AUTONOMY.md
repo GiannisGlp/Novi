@@ -6,15 +6,15 @@
 
 ## Purpose
 
-Novi's autonomy system is responsible for maintaining a continuous cycle of environmental awareness, situation interpretation, attention management, goal management, decision making, action, outcome observation, and learning.
+Novi's autonomy system is responsible for maintaining a continuous cycle of environmental awareness, behavioral attention, goal management, decision making, action requests, outcome observation, and controlled learning.
 
 The autonomy subsystem answers five questions continuously:
 
-1. **What is happening?**
-2. **What matters right now?**
-3. **Should I do anything?**
-4. **If so, what is the safest useful action?**
-5. **What did I learn from the result?**
+1. **What is happening?** — Cognition supplies the semantic interpretation.
+2. **What matters right now?** — Cognition supplies salience; Autonomy makes the behavioral attention decision.
+3. **Should I do anything?** — Autonomy decides whether to pursue behavior.
+4. **If so, what is the safest useful action?** — Cognition can propose strategies; Autonomy manages the task; policy/safety authorizes.
+5. **What did I learn from the result?** — Autonomy identifies learning opportunities; Memory/Knowledge owns persistence and consolidation.
 
 It must be possible for Novi to observe without interacting. Silence is a valid autonomous decision.
 
@@ -22,51 +22,49 @@ It must be possible for Novi to observe without interacting. Silence is a valid 
 
 Autonomy owns:
 
-- continuous cognitive-loop scheduling
-- situation assessment
-- attention and salience
-- goal creation, prioritization, suspension, and completion
-- curiosity and information-seeking decisions
-- high-level planning
-- action proposal and capability selection
-- outcome assessment
-- autonomous state transitions
-- social interaction decisions
-- resource-aware behavior
-- learning triggers
-- autonomy telemetry and audit records
+- continuous behavioral-loop orchestration;
+- behavioral attention decisions;
+- goal creation, prioritization, suspension, and completion;
+- curiosity and information-seeking decisions;
+- high-level behavioral planning;
+- task sequencing and pursuit;
+- action-request lifecycle;
+- outcome assessment for task progress;
+- autonomous behavioral state transitions;
+- social interaction decisions;
+- resource-aware behavioral adaptation;
+- learning triggers;
+- autonomy telemetry and behavioral audit records.
 
 Autonomy does not own:
 
-- raw sensor drivers
-- motor control
-- safety-critical actuator control
-- authoritative knowledge storage
-- raw media storage
-- model implementation internals
-- ROS 2 transport internals
-- authentication and authorization primitives
+- raw sensor drivers;
+- motor control;
+- safety-critical actuator control;
+- authoritative knowledge storage;
+- raw media storage;
+- model implementation internals;
+- runtime scheduling implementation;
+- ROS 2 transport internals;
+- authentication and authorization primitives;
+- the canonical semantic World Model or Situation Model.
 
 ## Core Runtime Contract
 
 ```text
 observe
   ↓
-normalize
+consume cognition's current semantic state
   ↓
-correlate
-  ↓
-update world state
-  ↓
-retrieve relevant memory/knowledge
-  ↓
-compute attention
+compute behavioral attention
   ↓
 maintain goals
   ↓
 select response strategy
   ↓
-reason / plan
+request reasoning / plan when needed
+  ↓
+commit or update behavioral task
   ↓
 policy + safety validation
   ↓
@@ -74,9 +72,9 @@ execute through capability
   ↓
 observe outcome
   ↓
-store experience
+update goal/task state
   ↓
-learn / update state
+create learning candidate when warranted
   ↓
 repeat
 ```
@@ -95,15 +93,15 @@ If an autonomous intention conflicts with a safety rule, the safety rule wins. T
 
 ### A3 — Uncertainty is preserved
 
-An inference must never silently become a fact. Observations, inferred state, hypotheses, memories, and verified knowledge have distinct types and provenance.
+Autonomy must never convert an inference into a fact. Observations, inferred state, hypotheses, memories, and verified knowledge have distinct types and provenance owned by their canonical domains.
 
 ### A4 — Attention is selective
 
-Perception events do not automatically cause speech, movement, screen changes, or tool execution. An explicit attention decision determines whether an event deserves an external response.
+Perception events do not automatically cause speech, movement, screen changes, or tool execution. Cognition supplies semantic relevance; Autonomy makes the behavioral response decision.
 
 ### A5 — Human confirmation is a capability policy
 
-Certain actions require explicit confirmation regardless of model confidence. Confirmation requirements are determined by policy, not by the LLM.
+Certain actions require explicit confirmation regardless of model confidence. Confirmation requirements are determined by policy, not by the LLM or autonomy engine.
 
 ### A6 — Learning cannot rewrite the protected core
 
@@ -111,7 +109,7 @@ Novi may update managed data and approved adaptive state. It cannot modify the i
 
 ### A7 — Every consequential action is traceable
 
-The system records what triggered an action, which state and evidence were considered, which capability was requested, what policy decision occurred, and what outcome was observed. The audit record must not contain hidden chain-of-thought or sensitive raw data unnecessarily.
+The system records what triggered an action, which state/evidence references were used, which capability was requested, what policy decision occurred, and what outcome was observed. The audit record must not contain hidden chain-of-thought or sensitive raw data unnecessarily.
 
 ### A8 — Deterministic behavior where possible
 
@@ -145,7 +143,7 @@ Generate curiosity goals, learn from experience, form hypotheses, validate uncer
 
 Coordinate multiple goals and long-running activities with resource management and human oversight, while remaining bounded by the immutable safety system.
 
-The first physical Wheely release should target Levels 1–3. Level 4 should be introduced through controlled experiments. Level 5 requires explicit safety and reliability validation.
+The first physical Novi release should target Levels 1–3. Level 4 should be introduced through controlled experiments. Level 5 requires explicit safety and reliability validation.
 
 ## Priority Model
 
@@ -181,25 +179,25 @@ For every socially relevant event, the autonomy engine may produce:
 
 The system must optimize for appropriate behavior rather than maximum interaction frequency.
 
-## Relationship to Nemotron
+## Relationship to Reasoning Models
 
-Nemotron is the primary general reasoning-model candidate. It may interpret context, generate plans, select tools, explain options, and produce conversational responses. It is not the source of truth for world state, memory, authorization, or safety.
+A reasoning model is an implementation behind the Cognition model-selection contract. It may interpret context, generate candidate plans, select among exposed tools, explain options, and produce conversational responses. It is not the source of truth for world state, memory, authorization, or safety.
 
-The autonomy engine supplies a bounded context package to the model and validates model outputs before execution.
+Autonomy supplies behavioral requirements and bounded context through contracts; Cognition owns semantic reasoning and model selection; Brain owns model execution/runtime.
 
 ## Resource Awareness
 
 Autonomy must account for:
 
-- battery level
-- compute utilization
-- thermal state
-- memory pressure
-- network availability
-- sensor availability
-- charging state
-- current task commitments
-- physical location
+- battery level;
+- compute utilization;
+- thermal state;
+- memory pressure;
+- network availability;
+- sensor availability;
+- charging state;
+- current task commitments;
+- physical location.
 
 When resources become constrained, non-critical goals can be paused or discarded. Safety and explicit high-priority tasks remain protected.
 
@@ -217,7 +215,7 @@ Simulation runtime
 
 Jetson runtime
   → physical sensors / actuators
-  → Jetson AGX Orin acceleration
+  → selected Jetson acceleration
 ```
 
 Only adapters and performance characteristics should differ; autonomy semantics must remain consistent.
@@ -230,10 +228,10 @@ The high-level autonomy design is acceptable when the implementation can demonst
 2. notices meaningful environmental events;
 3. distinguishes events requiring action from events requiring observation only;
 4. maintains goals and priorities;
-5. plans multi-step actions through capabilities;
+5. manages multi-step behavioral tasks through capabilities;
 6. respects safety and authorization boundaries;
 7. observes action outcomes and recovers from normal failures;
-8. learns through controlled memory/knowledge updates;
+8. creates controlled learning candidates without owning persistent memory;
 9. maintains personality and relationship context without bypassing safety;
 10. produces structured, auditable autonomy events;
 11. behaves consistently across Mac, simulation, and Jetson runtimes;
