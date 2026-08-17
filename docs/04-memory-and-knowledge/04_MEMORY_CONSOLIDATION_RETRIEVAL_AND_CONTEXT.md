@@ -1,6 +1,6 @@
 # 04 — Memory Consolidation, Retrieval and Context
 
-**Status:** CANONICAL — CONSOLIDATED V1
+**Status:** CANONICAL — CONSOLIDATED V1.1
 
 ## Purpose
 
@@ -34,13 +34,13 @@ consolidation
  └── delete
 ```
 
-Consolidation determines what survives, how it is represented, what evidence supports it, what it supersedes and what should be discarded. fileciteturn205file0
+Consolidation determines what survives, how it is represented, what evidence supports it, what it supersedes and what should be discarded.
 
 ## Online and background processing
 
 Online memory work supports immediate continuity. Background work performs clustering, comparison, merge, validation, promotion, indexing and decay/archive operations. Background work must yield to safety-critical robot functions.
 
-Triggers include session completion, repeated observations, contradictions, user correction, prediction error, resource pressure, checkpoint/shutdown and idle periods. A trigger schedules evaluation; it does not guarantee mutation. fileciteturn205file0
+Triggers include session completion, repeated observations, contradictions, user correction, prediction error, resource pressure, checkpoint/shutdown and idle periods. A trigger schedules evaluation; it does not guarantee mutation.
 
 ## Consolidation invariants
 
@@ -51,7 +51,7 @@ DERIVATIVE ≠ INDEPENDENT EVIDENCE
 SIGNIFICANCE ≠ TRUTH
 ```
 
-Repeated retrieval of a generated derivative must not create artificial evidentiary weight. fileciteturn214file0
+Repeated retrieval of a generated derivative must not create artificial evidentiary weight.
 
 ## Evidence preservation
 
@@ -88,7 +88,7 @@ verification
 durable knowledge
 ```
 
-Successful execution alone does not establish general procedural competence. fileciteturn214file0
+Successful execution alone does not establish general procedural competence.
 
 ## Forgetting versus deletion
 
@@ -100,7 +100,7 @@ Novi distinguishes:
 - delete;
 - explicit user-directed deletion.
 
-Forgetting may reduce retrieval priority or contextual eligibility without destroying historical evidence. Deletion is a separate privacy/lifecycle operation. fileciteturn205file0
+Forgetting may reduce retrieval priority or contextual eligibility without destroying historical evidence. Deletion is a separate privacy/lifecycle operation.
 
 ## Retrieval architecture
 
@@ -141,7 +141,7 @@ exact semantic temporal structured relationship
               cognition
 ```
 
-The system must not reduce retrieval to `query → vector top-k → LLM`. fileciteturn206file0
+The system must not reduce retrieval to `query → vector top-k → LLM`.
 
 ## Query understanding
 
@@ -164,12 +164,6 @@ final_k
 reranking policy
 ```
 
-Examples:
-
-- preference query → semantic + preference + entity match;
-- historical event query → episodic + temporal + spatial;
-- current device/location query → structured operational state with high freshness.
-
 ## Candidate generation
 
 Use multiple retrieval mechanisms as appropriate:
@@ -181,7 +175,7 @@ Use multiple retrieval mechanisms as appropriate:
 - relationship/graph;
 - file/document retrieval.
 
-The initial local architecture can use SQLite for authoritative state and relationships, SQLite FTS or equivalent for lexical retrieval, a local vector index for semantic retrieval, and files for large artifacts. A separate graph database is not mandatory initially. fileciteturn216file0
+The initial local architecture can use SQLite for authoritative state and relationships, SQLite FTS or equivalent for lexical retrieval, a local vector index for semantic retrieval, and files for large artifacts. A separate graph database is not mandatory initially.
 
 ## Hard filters versus ranking
 
@@ -189,7 +183,7 @@ Hard eligibility constraints include unauthorized scope, deleted records, invali
 
 Ranking signals include semantic relevance, lexical relevance, freshness, confidence, importance, source quality, relationship relevance, temporal fit and redundancy.
 
-A forbidden memory must never become eligible because it scores highly for similarity. fileciteturn206file0
+A forbidden memory must never become eligible because it scores highly for similarity.
 
 ## Candidate pool and ranking
 
@@ -199,7 +193,7 @@ Candidate generation should favor recall; final ranking should favor precision.
 candidate_k > final_k
 ```
 
-All candidates retain their originating retriever and original score. Scores from heterogeneous retrievers must be normalized or reconciled in a later ranking stage. fileciteturn206file0
+All candidates retain their originating retriever and original score. Scores from heterogeneous retrievers must be normalized or reconciled in a later ranking stage.
 
 ## Retrieval is not truth
 
@@ -210,6 +204,40 @@ EVIDENCE QUALITY ≠ AUTHORIZATION
 ```
 
 Retrieval produces candidates. Evidence quality, provenance, freshness, conflict state and policy determine whether candidates are suitable for context.
+
+## Retrieval failure states
+
+Retrieval must represent failure explicitly:
+
+```text
+NO_RESULT
+LOW_CONFIDENCE
+AMBIGUOUS_RESULT
+CONFLICTED_RESULT
+STALE_RESULT
+INSUFFICIENT_CONTEXT
+UNAUTHORIZED_RESULT
+INDEX_UNAVAILABLE
+SOURCE_UNAVAILABLE
+RETRIEVAL_DEGRADED
+```
+
+A failure state must not be converted into a fabricated answer.
+
+## Abstention and revalidation
+
+The context/retrieval layer supports:
+
+```text
+ANSWER
+ANSWER_WITH_UNCERTAINTY
+REQUEST_CLARIFICATION
+REVALIDATE
+ABSTAIN
+ESCALATE_TO_HUMAN
+```
+
+The higher the consequence of an error, the stronger the evidence and freshness requirements should be. If evidence is insufficient, the correct result may be abstention rather than more aggressive retrieval.
 
 ## Context assembly
 
@@ -225,7 +253,7 @@ Context packages preserve:
 - instruction/data separation;
 - authorization/privacy decisions.
 
-This is the boundary between memory retrieval and reasoning. fileciteturn214file0
+This is the boundary between memory retrieval and reasoning.
 
 ## Current-state supremacy
 
@@ -236,7 +264,7 @@ historical memory → context
 current authoritative observation → current state
 ```
 
-Examples include current location, obstacles, device state, authorization and safety conditions. fileciteturn214file0
+Examples include current location, obstacles, device state, authorization and safety conditions.
 
 ## Read gate
 
@@ -260,14 +288,39 @@ context budget
 working memory
 ```
 
-Retrieval cannot bypass governance. fileciteturn214file0
+Retrieval cannot bypass governance.
+
+## Retrieval evaluation contract
+
+Retrieval quality must be evaluated separately from generation quality. At minimum evaluate:
+
+```text
+retrieval_recall
+retrieval_precision
+relevance
+freshness
+source_coverage
+evidence_grounding
+faithfulness
+authorization_correctness
+privacy_leakage
+stale_result_rate
+false_memory_rate
+context_sufficiency
+latency
+cost
+```
+
+Evaluation datasets must include adversarial, stale, contradictory, unauthorized and empty-result cases. Metrics and test sets should be versioned and documented so results are repeatable.
+
+## Longitudinal evaluation
+
+Memory retrieval must be tested over accumulated history, not only static benchmarks. Include tests for stale-memory growth, contradiction accumulation, provenance degradation, deletion propagation and retrieval drift.
+
+## Research basis
+
+Recent RAG evaluation research distinguishes retrieval relevance, answer accuracy and faithfulness and highlights the hybrid nature of retrieval-plus-generation evaluation. Trustworthiness research additionally emphasizes robustness, transparency, accountability and privacy. NIST's TEVV guidance likewise emphasizes documented metrics, test sets and context-specific evaluation.
 
 ## Source consolidation
 
-Merged into this canonical document:
-
-- `04_MEMORY_CONSOLIDATION_AND_FORGETTING.md`
-- `05_MEMORY_RETRIEVAL_AND_RANKING.md`
-- consolidation/retrieval/context requirements from Documents 78–90 and 95–96.
-
-The historical documents remain preserved pending final supersession. fileciteturn205file0 fileciteturn206file0
+The historical corpus remains preserved in `archive/`. The active authority is this document and the other canonical 01–18 documents.
