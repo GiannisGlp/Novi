@@ -120,7 +120,7 @@ The autonomy engine coordinates the continuous loop across perception, attention
 
 The agent runtime constructs context, invokes models through capability interfaces, validates structured outputs, manages tools, cancellation, retries and traceability.
 
-No particular LLM is architecturally authoritative. The initial model candidate is selected through the model evaluation process and ADRs.
+No particular LLM is architecturally authoritative. Model selection is performed through the model evaluation process and ADRs.
 
 ### 4.8 Tools
 
@@ -217,13 +217,17 @@ Used for cognitive development, schema work, local model experiments, sensor tes
 
 Isaac Sim is the NVIDIA high-fidelity simulation candidate. Gazebo remains the portable ROS 2 simulation candidate. The simulator is selected by workload and validated against the robot contract.
 
-NVIDIA's current Isaac Sim documentation recommends ROS 2 Humble and Jazzy and provides a tested Jazzy workflow on Ubuntu 24.04. citeturn0search4turn0search7
+NVIDIA Isaac Sim 6.0 documentation recommends ROS 2 Humble and Jazzy and documents an Ubuntu 24.04 / ROS 2 Jazzy workflow:
+
+https://docs.isaacsim.omniverse.nvidia.com/6.0.0/ros2_tutorials/ros2_landing_page.html
 
 ### Edge
 
-Jetson is the current NVIDIA edge-compute candidate. JetPack, CUDA, TensorRT and accelerated robotics/video components are version-locked through deployment manifests.
+Jetson is the current NVIDIA edge-compute reference platform. JetPack, CUDA, TensorRT and accelerated robotics/video components are version-locked through deployment manifests.
 
-NVIDIA currently identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release for the AGX Orin developer kit. citeturn1search1
+NVIDIA currently identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release for the AGX Orin Developer Kit:
+
+https://docs.nvidia.com/jetson/agx-orin-devkit/user-guide/latest/setup_bsp.html
 
 ### Physical robot
 
