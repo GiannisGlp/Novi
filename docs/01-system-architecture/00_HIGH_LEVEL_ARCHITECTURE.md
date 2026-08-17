@@ -1,53 +1,52 @@
 # 00 — High-Level Architecture
 
+**Status:** P0 system architecture foundation  
+**Authority:** System-level architecture; implementation details belong in domain specifications and ADRs.
+
 ## 1. Executive Summary
 
-Novi is the implementation platform for Wheely, an autonomous embodied AI system. The intended system continuously perceives the environment, builds and updates an internal representation of the world, retrieves relevant memory and knowledge, evaluates what deserves attention, reasons about goals, decides whether and how to interact, performs actions through controlled capabilities, observes the outcome, and learns from the resulting experience.
+Novi is a persistent autonomous embodied-AI system. It continuously perceives its environment, builds and updates a structured representation of the world, retrieves relevant memory and knowledge, evaluates attention, maintains goals, reasons and plans, requests bounded capabilities, observes outcomes, and learns through governed state evolution.
 
-The architecture is deliberately split into two broad domains:
+The architecture separates two fundamental domains:
 
-1. **Adaptive intelligence** — models, memory, knowledge, personality, attention, curiosity, planning, and learned behavior.
-2. **Protected execution** — safety policy, authorization, hardware limits, privileged robotics services, emergency stop, and immutable system configuration.
+1. **Adaptive intelligence** — perception interpretation, models, memory, knowledge, personality, attention, curiosity, planning, prediction and learned behavior.
+2. **Protected execution** — authorization, governance, safety policy, hardware limits, privileged robotics services, emergency stop, trusted identities, and protected configuration.
 
-Adaptive intelligence can evolve. Protected execution cannot be modified by the adaptive system through normal application capabilities.
+Adaptive intelligence may evolve. Protected execution cannot be modified by ordinary adaptive capabilities.
 
 ## 2. Product Definition
 
-Novi/Wheely should behave as an autonomous robotic companion rather than a conventional prompt/response assistant.
+Novi is an autonomous embodied AI system rather than a prompt/response assistant.
 
-Desired properties:
+Desired properties include:
 
 - continuous environmental awareness;
-- context-aware and selective interaction;
+- selective/context-aware interaction;
 - persistent personality;
-- differentiated relationships with family, known people, and strangers;
+- differentiated relationships;
 - multimodal perception;
 - long-term memory;
 - spatial and temporal understanding;
 - curiosity and controlled exploration;
-- ability to recognize uncertainty and ask questions;
-- ability to learn from people while tracking provenance;
-- ability to create new knowledge and data structures when justified;
+- explicit uncertainty;
+- provenance-aware learning;
 - local-first operation;
 - safe physical action;
-- hardware diagnostics and auditability;
-- evolution of knowledge and behavior without uncontrolled self-modification.
+- diagnostics, auditability and recovery;
+- governed evolution without unrestricted self-modification.
 
 ## 3. System Context
 
 ```text
                  HUMAN / HOUSEHOLD / WORLD
                            │
-                ┌──────────▼──────────┐
-                │      SENSORS       │
-                │ camera/audio/IMU/...│
-                └──────────┬──────────┘
-                           │ observations
+                    SENSORS / INPUTS
+                           │
                            ▼
                  ┌───────────────────┐
                  │     PERCEPTION    │
                  └─────────┬─────────┘
-                           │ events/evidence
+                           │ observations/evidence
                            ▼
                  ┌───────────────────┐
                  │    WORLD MODEL    │
@@ -62,263 +61,219 @@ Desired properties:
                      GOALS / POLICY
                            │
                            ▼
-                     AGENT RUNTIME
+                  AGENT / MODEL RUNTIME
                            │
+                    action/tool proposals
                            ▼
-                      NEMOTRON
+                  GOVERNANCE / SAFETY
                            │
-                     tool/action plan
-                           ▼
-                    SAFETY GATEWAY
-                           │
+                    capability requests
                            ▼
                          ROS 2
                            │
             ┌──────────────┼──────────────┐
             ▼              ▼              ▼
-          MOTION        INTERACTION       IOT
+         MOTION        INTERACTION       IOT
+            │              │              │
+            └──────────────┼──────────────┘
+                           ▼
+                      WORLD CHANGE
+                           │
+                           └──────── feedback ────────→ perception
 ```
 
 ## 4. Major Subsystems
 
 ### 4.1 Perception
 
-Converts raw sensor streams into structured observations and evidence. It includes visual detection, visual reasoning, speech recognition, audio event detection, face/voice identity, body/gesture signals, environmental sensors, and multimodal fusion.
+Converts sensor streams into structured observations and evidence. It may use classical processing, specialized neural models, multimodal models and sensor fusion.
 
-Perception should produce evidence with timestamps, source, confidence, and provenance. It must not silently convert an uncertain observation into a permanent fact.
+Perception outputs must retain timestamps, source, calibration context, confidence and provenance. An uncertain observation must not silently become a permanent fact.
 
 ### 4.2 World Model
 
-Represents the current and historical state of people, places, objects, rooms, relationships, routines, spatial state, temporal state, and situations.
+Represents current structured state of people, places, objects, devices, relationships, spatial state, temporal state, activities and situations.
 
-The world model is not the same as memory. It represents structured state that can change over time while preserving historical evidence.
+The world model is not the same thing as historical memory. Current state may change while historical evidence remains preserved.
 
 ### 4.3 Memory and Knowledge
 
-Memory preserves experiences and learned information. Knowledge represents structured facts and concepts. Both must support provenance and confidence.
+Memory preserves experiences and learned context. Knowledge represents structured concepts, facts, relationships and verified information.
 
-Novi should support:
-
-- working memory;
-- episodic memory;
-- semantic memory;
-- spatial memory;
-- procedural memory;
-- owner-verified knowledge;
-- external/world knowledge;
-- household knowledge;
-- personal knowledge;
-- multimodal memories.
+Both require provenance and confidence appropriate to their source.
 
 ### 4.4 Attention
 
-Attention decides whether an event should be ignored, monitored, remembered, acted on, or surfaced to a person.
+Attention determines which events deserve observation, monitoring, retrieval, reasoning, interaction or action.
 
-Attention is separate from the LLM. The LLM can help reason about a situation, but the entire environment should not be sent to the model continuously.
+Attention is not synonymous with model invocation.
 
 ### 4.5 Personality and Social State
 
-Personality provides stable behavioral traits such as playfulness, curiosity, warmth, humor, and conversational style. Social state provides dynamic context such as familiarity, relationship, current interaction state, and inferred emotional context.
+Personality contains stable traits plus governed dynamic state. Social state represents relationship and current interaction context.
 
 ### 4.6 Autonomy
 
-The autonomy engine maintains the continuous loop. It coordinates perception, attention, goals, memory, reasoning, planning, action requests, and learning.
+The autonomy engine coordinates the continuous loop across perception, attention, goals, memory, reasoning, planning, action and learning.
 
-### 4.7 Agent Runtime
+### 4.7 Agent and Model Runtime
 
-The agent runtime provides model context, tool definitions, structured outputs, reasoning execution, planning, cancellation, retries, and traceability.
+The agent runtime constructs context, invokes models through capability interfaces, validates structured outputs, manages tools, cancellation, retries and traceability.
 
-### 4.8 Models
+No particular LLM is architecturally authoritative. The initial model candidate is selected through the model evaluation process and ADRs.
 
-The primary general reasoning candidate is NVIDIA Nemotron 3 Nano 30B-A3B. It is not responsible for all AI tasks. Specialized models remain appropriate for speech, object detection, face recognition, embeddings, visual reasoning, and other high-frequency workloads.
+### 4.8 Tools
 
-### 4.9 Tools
+Tools are bounded capabilities with explicit schemas, permissions, resource limits and audit behavior.
 
-Tools provide controlled access to capabilities such as navigation, IoT, time, calculations, files, knowledge, diagnostics, and external services. Tools have explicit schemas and permissions.
+### 4.9 Governance and Safety
 
-### 4.10 Safety Gateway
+Governance determines whether an action is permitted. Safety enforces physical constraints and safe-state behavior. Neither is delegated to the model.
 
-The safety gateway validates physical action requests and enforces immutable constraints before commands reach robotics middleware or hardware.
+### 4.10 Robotics
 
-### 4.11 Robotics Layer
+ROS 2 is the primary robotics integration boundary. `ros2_control`, Navigation2, sensor drivers and hardware interfaces sit behind capability contracts.
 
-ROS 2 is the principal robotics integration boundary. Isaac ROS and NVIDIA accelerated components may provide implementations behind this boundary.
+NVIDIA technologies may accelerate implementations behind these boundaries.
 
 ## 5. Core Data Flow
-
-The preferred data flow is:
 
 ```text
 raw sensor
   ↓
 observation
   ↓
-event / evidence
+evidence/event
   ↓
-world-model update
+world-state update
   ↓
 attention evaluation
   ↓
-memory / knowledge retrieval
+memory/knowledge retrieval
   ↓
 context construction
   ↓
-reasoning / planning
+reasoning/planning
   ↓
 policy evaluation
   ↓
-action request
+action proposal
   ↓
 safety validation
   ↓
-execution
+capability execution
   ↓
 result observation
   ↓
-experience / learning
+experience / governed learning
 ```
+
+The durable event/state architecture records consequential state transitions and preserves provenance across projections.
 
 ## 6. Autonomy Model
 
-Novi must not be implemented as a request-response loop only.
+Novi is continuously operating. User interaction is one event source, not the primary lifecycle trigger.
 
-A continuously running autonomy loop should operate on event streams and periodic evaluation cycles. The system should be able to remain silent while observing, become attentive when something relevant happens, and initiate appropriate interaction when policy permits it.
-
-Example:
+The runtime combines:
 
 ```text
-Person enters room
-  ↓
-Face recognized
-  ↓
-Relationship = family
-  ↓
-No active interaction
-  ↓
-Attention = observe
-  ↓
-Person speaks directly to Novi
-  ↓
-Attention = engage
-  ↓
-Retrieve recent relationship/context
-  ↓
-Reason
-  ↓
-Respond using personality + social context
+high-rate event processing
+medium-rate attention/situation evaluation
+low-rate consolidation/maintenance
+explicit event-driven reasoning
 ```
+
+Expensive model calls must be triggered by an explicit value/latency/resource policy rather than every sensor tick.
 
 ## 7. Learning Model
 
-Learning occurs primarily through state and knowledge evolution rather than uncontrolled source-code modification.
+Learning is governed state evolution:
 
 ```text
 experience
   ↓
 observation
   ↓
-candidate interpretation
+interpretation
   ↓
 evidence accumulation
   ↓
 hypothesis
   ↓
-verification when appropriate
+verification where required
   ↓
-knowledge/memory update
+memory / knowledge / skill update
 ```
 
-A new observation must not automatically become a permanent truth.
+Learning does not grant permission to rewrite protected system or safety foundations.
 
-## 8. Data Generation
+## 8. Runtime Environments
 
-Novi may generate data as part of normal operation. This includes:
+### Development host
 
-- new entities;
-- relationships;
-- observations;
-- memories;
-- embeddings;
-- documents;
-- structured records;
-- learned schemas;
-- simulation scenarios;
-- diagnostic reports.
-
-Generated data must pass through governed APIs and storage policies. The adaptive system must not directly modify immutable safety or system foundations.
-
-## 9. Runtime Environments
-
-### Mac
-
-Primary software-development environment. Supports cognitive development, local models where practical, camera/microphone testing, data generation, UI, memory, knowledge, simulated hardware, and most automated tests.
+Used for cognitive development, schema work, local model experiments, sensor testing, data generation and automated tests.
 
 ### Simulation
 
-Isaac Sim + ROS 2 is the reference robotics simulation environment. It supplies virtual sensors, robot state, environments, people, objects, navigation scenarios, and fault injection.
+Isaac Sim is the NVIDIA high-fidelity simulation candidate. Gazebo remains the portable ROS 2 simulation candidate. The simulator is selected by workload and validated against the robot contract.
 
-### Jetson
+NVIDIA's current Isaac Sim documentation recommends ROS 2 Humble and Jazzy and provides a tested Jazzy workflow on Ubuntu 24.04. citeturn0search4turn0search7
 
-Jetson AGX Orin 64GB is the reference edge target. NVIDIA-specific implementations include JetPack, CUDA, TensorRT, Isaac ROS, and other validated components.
+### Edge
+
+Jetson is the current NVIDIA edge-compute candidate. JetPack, CUDA, TensorRT and accelerated robotics/video components are version-locked through deployment manifests.
+
+NVIDIA currently identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release for the AGX Orin developer kit. citeturn1search1
 
 ### Physical robot
 
-The final deployment combines the Jetson runtime with physical sensors, motors, head mechanism, display, audio, battery, networking, and safety hardware.
+The physical deployment combines the validated edge runtime with sensors, actuators, displays, audio, power, networking and independent safety hardware.
 
-## 10. Vendor Boundary
-
-NVIDIA is the reference platform because the target robot is Jetson-based and the system benefits from NVIDIA's robotics and accelerated-AI ecosystem.
-
-However:
+## 9. Vendor Boundary
 
 ```text
-NVIDIA platform implementation
-             ↓
-       Wheely interfaces
-             ↓
-       Cognitive core
+Novi semantic contracts
+          ↓
+capability adapters
+          ↓
+NVIDIA / open-source implementation
+          ↓
+platform hardware
 ```
 
-not:
+NVIDIA is not the semantic source of truth for Novi. This prevents vendor-specific implementation details from leaking into cognition, memory or governance.
 
-```text
-Cognitive core
-      ↓
-NVIDIA-specific APIs everywhere
-```
+## 10. Non-Goals
 
-This allows future hardware/runtime changes without rewriting the cognitive architecture.
+Novi must not:
 
-## 11. Non-Goals
+- give an LLM unrestricted shell/filesystem/database/network access;
+- allow an LLM to directly control motors;
+- allow adaptive learning to rewrite protected safety constraints;
+- treat every observation as fact;
+- put the entire memory store into every model context;
+- require one model for every modality;
+- require cloud connectivity for core autonomy;
+- select final hardware before workload, power, thermal and mechanical requirements are measured.
 
-The system is not intended to:
+## 11. High-Level Acceptance Criteria
 
-- give an LLM unrestricted shell access;
-- let an LLM directly control motors;
-- let learned behavior rewrite safety constraints;
-- treat all observations as facts;
-- make the entire knowledge base part of every model prompt;
-- require one model to perform every modality;
-- hard-code every possible future entity into the initial schema;
-- depend on cloud services for core autonomy.
+The architecture is viable when the development runtime demonstrates:
 
-## 12. High-Level Acceptance Criteria
-
-The architecture is considered viable when the Mac runtime can demonstrate:
-
-1. continuous perception/event processing;
-2. persistent world state;
-3. persistent memory and knowledge;
+1. continuous event processing;
+2. persistent versioned world state;
+3. persistent memory and knowledge with provenance;
 4. selective attention;
-5. personality-aware responses;
+5. personality/social state;
 6. relationship-aware interaction;
 7. controlled curiosity;
 8. evidence-based learning;
-9. controlled data/schema generation;
-10. tool use;
-11. safety-gated action planning;
-12. complete audit traces;
-13. simulated robot operation;
-14. hardware-independent interfaces.
+9. governed schema/data evolution;
+10. bounded tool use;
+11. policy- and safety-gated action proposals;
+12. end-to-end audit traces;
+13. simulation through the same logical interfaces;
+14. replaceable model/runtime implementations;
+15. safe degradation and recovery.
 
-The Jetson implementation must then demonstrate the same behavior under real edge constraints, with NVIDIA-specific performance and hardware validation.
+Physical deployment adds hardware and safety validation rather than introducing a second cognitive architecture.
