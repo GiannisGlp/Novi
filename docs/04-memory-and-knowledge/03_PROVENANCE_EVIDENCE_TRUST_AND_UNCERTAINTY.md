@@ -1,6 +1,6 @@
 # 03 — Provenance, Evidence, Trust and Uncertainty
 
-**Status:** CANONICAL — CONSOLIDATED V1
+**Status:** CANONICAL — CONSOLIDATED V1.1
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Define how Novi records where information came from, how it was transformed, wha
 
 > Novi must know not only what it believes, but why it believes it, where the information came from, when it was valid, what evidence supports it, and what could invalidate it.
 
-Provenance is part of the memory model, not optional metadata. fileciteturn210file0
+Provenance is part of the memory model, not optional metadata.
 
 ## Fundamental separations
 
@@ -21,8 +21,6 @@ EVIDENCE ≠ CLAIM
 CLAIM ≠ BELIEF
 BELIEF ≠ TRUTH
 ```
-
-These are architecture-wide invariants. fileciteturn215file0
 
 ## Provenance chain
 
@@ -44,9 +42,38 @@ knowledge
 retrieval
         ↓
 cognitive conclusion
+        ↓
+decision / action / outcome
 ```
 
-Each stage may have multiple parents. Transformations such as summaries, embeddings, merges, reflections and schema migrations must retain links to supporting evidence. fileciteturn210file0
+Each stage may have multiple parents. Transformations such as summaries, embeddings, merges, reflections and schema migrations must retain links to supporting evidence.
+
+## Evidence record contract
+
+Consequential evidence should have a stable identity and support, where applicable:
+
+```text
+EvidenceRecord
+├── evidence_id
+├── source_class
+├── source_identity
+├── actor_or_producer
+├── observed_at / captured_at
+├── received_at
+├── content_ref
+├── integrity_metadata
+├── provenance_parent_refs
+├── transformation_refs
+├── independence_group
+├── validity_scope
+├── reliability_assessment
+├── uncertainty
+├── verification_state
+├── privacy_class
+└── retention_policy_ref
+```
+
+The physical representation may vary, but these semantics must remain available for consequential evidence.
 
 ## Source classes
 
@@ -71,71 +98,35 @@ HUMAN_VALIDATION
 DERIVED_MEMORY
 ```
 
-Source classes are not globally ordered. Authority depends on the claim. For example, a user may be authoritative for their own preference; a sensor may be authoritative for a current measurement; a model prediction is not automatically independent evidence. fileciteturn210file0
+Source classes are not globally ordered. Authority depends on the claim.
 
 ## Evidence, claim and belief
 
-### Evidence
-
-Observed, measured, received or retrieved information tied to a source.
-
-### Claim
-
-A proposition derived from one or more evidence items.
-
-### Belief
-
-The currently accepted interpretation used by Novi, subject to validity, provenance, confidence and policy.
-
 ```text
-Evidence:
-"User said: I prefer cold brew."
-        ↓
-Claim:
-"Vano prefers cold brew."
-        ↓
-Belief:
-current_preference(coffee) = cold_brew
-status = USER_CONFIRMED
+Evidence
+  ↓
+Claim
+  ↓
+Evaluation
+  ↓
+Belief state
 ```
 
-This prevents a generated summary from becoming indistinguishable from its source evidence. fileciteturn210file0
-
-## Provenance metadata
-
-Consequential evidence should retain enough information to answer:
-
-```text
-Where did this come from?
-When was it observed?
-Who/what produced it?
-How was it transformed?
-How independent is it?
-How reliable is the source for this task?
-Is it current enough?
-What depends on it?
-```
-
-At minimum, an evidence record should be able to represent source class, source identity, actor, capture/observation time, content reference, integrity metadata and derivation links. fileciteturn210file0
+A generated summary remains a derivative. It does not become independent evidence merely because it is stored, retrieved or repeated.
 
 ## Trust is contextual
 
 Novi must not use one global trust score.
 
 ```text
-user → strong source for own preference
-camera → strong source for visible appearance
-camera → not necessarily strong source for identity/function
-LLM → reasoning output, not independent evidence
+trust(source, claim_type, context, time, consequence)
 ```
 
-Trust is evaluated relative to the claim, environment, time and consequence.
+must be treated as contextual. A user can be authoritative about their own preference while a sensor can be authoritative about a measurement within its calibrated domain.
 
 ## Confidence and verification
 
-Confidence describes belief strength; verification describes the validation process/status. They remain separate.
-
-Example states may include:
+Confidence describes epistemic strength; verification describes the validation process/status. They remain separate.
 
 ```text
 UNVERIFIED
@@ -148,14 +139,51 @@ CONTRADICTED
 EXPIRED
 ```
 
-A high confidence score must never be treated as proof. fileciteturn203file0
+A high confidence score must never be treated as proof.
+
+## Multidimensional evidence quality
+
+Evidence quality should not collapse into one scalar. Relevant dimensions include:
+
+```text
+reliability
+freshness
+independence
+integrity
+completeness
+precision
+relevance
+context_fit
+verification
+source_authority
+measurement_quality
+```
+
+The weighting and thresholds are claim- and consequence-specific.
+
+## Uncertainty taxonomy
+
+Where material, Novi should distinguish:
+
+```text
+EPISTEMIC_UNCERTAINTY     // insufficient knowledge
+MEASUREMENT_UNCERTAINTY  // measurement error / precision
+ALEATORIC_UNCERTAINTY    // inherent variability
+IDENTITY_UNCERTAINTY     // unresolved referent
+TEMPORAL_UNCERTAINTY     // uncertain time interval
+SPATIAL_UNCERTAINTY      // uncertain location / frame
+MODEL_UNCERTAINTY        // model limitations
+MISSINGNESS              // expected evidence unavailable
+```
+
+Do not infer that one uncertainty type is equivalent to another.
 
 ## Independence and common-source dependence
 
 Multiple observations derived from the same underlying source must not be counted as independent corroboration.
 
 ```text
-one camera frame
+camera frame
  ↓
 object detector
  ↓
@@ -166,9 +194,11 @@ embedding
 
 This remains one evidence lineage, not four independent confirmations.
 
+Evidence should support an `independence_group` or equivalent dependency representation when corroboration matters.
+
 ## Temporal validity
 
-Evidence and claims should distinguish capture/observation time from validity time. A historical claim may remain true about the past while being invalid for current state.
+Evidence and claims should distinguish capture/observation time from validity time.
 
 ```text
 observed_at
@@ -177,9 +207,9 @@ valid_until
 last_confirmed
 ```
 
-Current authoritative state takes precedence over historical memory where current truth is required. fileciteturn214file0
+A historical claim may remain true about the past while being invalid for current state.
 
-## Conflict and belief revision
+## Conflict and evidence arbitration
 
 Conflicting claims are first-class state:
 
@@ -190,13 +220,21 @@ CLAIM B
 CONFLICT SET
 ```
 
-Possible outcomes include accepted A, accepted B, both conditionally valid, unresolved, or requiring new evidence. The architecture must not force a single answer where evidence does not justify one. fileciteturn214file0
+Before arbitration, compare identity, predicate, scope, time, location, measurement domain, source authority, independence and evidence quality.
 
-## Provenance and retrieval
+Possible outcomes:
 
-Retrieved content remains data, not authority. A memory containing an instruction cannot grant itself permission to modify policy or authorize action.
+```text
+ACCEPT_A
+ACCEPT_B
+BOTH_CONDITIONALLY_VALID
+REFINE
+REQUIRE_NEW_EVIDENCE
+UNRESOLVED
+ABSTAIN
+```
 
-Retrieval ranking must not silently become a truth ranking or authorization mechanism.
+There is no universal newest-wins or highest-confidence-wins rule.
 
 ## Provenance and derivatives
 
@@ -208,26 +246,44 @@ WHAT SUPPORTS IT?
 WHAT DEPENDS ON IT?
 WHO/WHAT PRODUCED IT?
 WHEN WAS IT PRODUCED?
+WHAT TRANSFORMATIONS OCCURRED?
 ```
 
-Traceability does not imply truth. fileciteturn214file0
+Traceability does not imply truth.
 
 ## Erasure and lineage
 
 Deletion must consider the provenance/derivation graph. When a source is erased, applicable summaries, embeddings, indexes and derived records must be deleted, sanitized or recomputed according to policy.
 
-If required erasure cannot be verified, the system reports `ERASURE_PENDING`. fileciteturn214file0
+If required erasure cannot be verified, the system reports `ERASURE_PENDING`.
 
 ## Security boundary
 
-Persistent memory is an attack surface. Relevant threats include memory poisoning, sleeper memories, indirect prompt injection, provenance forgery, retrieval poisoning, cross-user leakage, malicious synchronization and data exfiltration. Write-time and read-time controls are both required. fileciteturn215file0
+Persistent memory is an attack surface. Relevant threats include memory poisoning, sleeper memories, indirect prompt injection, provenance forgery, retrieval poisoning, cross-user leakage, malicious synchronization and data exfiltration. Write-time and read-time controls are both required.
+
+## Audit and evaluation
+
+Material evidence and belief revisions should be auditable without storing hidden chain-of-thought. Record structured metadata such as source, evidence IDs, policy version, model/version where applicable, decision reason codes and timestamps.
+
+Evaluation should include provenance coverage, unsupported-claim rate, source-independence errors, stale-evidence rate, calibration, contradiction handling, dependency trace completeness and erasure propagation correctness.
+
+## Abstention
+
+When evidence is insufficient for the consequence of the requested operation, the system should support:
+
+```text
+REQUEST_CLARIFICATION
+REVALIDATE
+ABSTAIN
+ESCALATE_TO_HUMAN
+```
+
+Uncertainty must remain visible to downstream cognition and governance.
+
+## Research basis
+
+Current RAG research treats relevance, accuracy and faithfulness as distinct evaluation dimensions, while broader trustworthiness work adds robustness, fairness, transparency, accountability and privacy. NIST likewise emphasizes context-specific measurement and documented TEVV rather than a single generic AI quality score.
 
 ## Source consolidation
 
-Merged into this canonical document:
-
-- `06_MEMORY_PROVENANCE_AND_TRUST.md`
-- provenance/evidence requirements from Documents 74, 75, 91 and 92.
-- system-wide provenance invariants from Documents 95–96.
-
-The historical documents remain preserved pending final audit and supersession. fileciteturn210file0
+The historical corpus remains preserved in `archive/`. The active authority is this document and the other canonical 01–18 documents.
