@@ -1,10 +1,33 @@
 # 01 — System Architecture
 
+**Status:** Authoritative system-architecture domain / P0 foundation  
+**Scope:** System boundaries, dependencies, runtime profiles, cross-cutting requirements, durable state, consistency, replication, recovery, privacy, observability, resource governance and future multi-agent coordination.
+
 ## Purpose
 
-This folder defines the authoritative system-level architecture for Novi/Wheely. It establishes the boundaries, responsibilities, dependencies, runtime environments, architectural principles, and non-negotiable constraints that every other domain must follow.
+This folder defines the authoritative system-level architecture for **Novi**. It establishes the boundaries, responsibilities, dependencies, runtime environments, architectural principles, contracts and non-negotiable constraints that every other domain must follow.
 
-This is a **high-level architecture domain**. It deliberately does not contain the complete implementation specification for every subsystem. Detailed subsystem behavior belongs in the corresponding domain folders.
+This is the **system architecture domain**, not the implementation repository. Detailed subsystem behavior belongs in the corresponding domain folders, while technology adoption belongs in ADRs.
+
+## Authority rules
+
+```text
+Novi North Star
+      ↓
+Project strategy
+      ↓
+System architecture
+      ↓
+Domain architecture
+      ↓
+Technology ADRs
+      ↓
+Implementation specifications
+      ↓
+Validation evidence
+```
+
+If two architecture documents conflict, the newer explicitly approved ADR or higher-authority document wins. No implementation may silently resolve an architectural conflict.
 
 ## What This Domain Defines
 
@@ -12,190 +35,187 @@ This is a **high-level architecture domain**. It deliberately does not contain t
 - The autonomous cognitive-loop architecture.
 - Major subsystem boundaries.
 - Dependency direction.
-- The relationship between cognition, perception, models, memory, robotics, and safety.
-- Mac, simulation, Jetson, and physical-runtime boundaries.
-- The distinction between adaptive intelligence and protected system infrastructure.
-- Cross-cutting data, event, observability, and audit principles.
-- Architectural requirements that downstream domains must satisfy.
+- Contracts between cognition, perception, memory, knowledge, models, robotics, safety and external systems.
+- Mac, simulation, edge and physical-runtime boundaries.
+- Adaptive-intelligence versus protected-execution boundaries.
+- Durable state and event semantics.
+- Consistency and concurrency contracts.
+- Replication and synchronization semantics.
+- Recovery and disaster-resilience semantics.
+- Privacy, retention and dependency-aware erasure semantics.
+- Observability, evaluation, resource governance and lifespan reliability.
+- Future multi-agent coordination boundaries.
 
-## Core Architecture
+## Architecture principles
+
+1. Autonomous, not prompt-driven.
+2. Intelligence is layered.
+3. Models are replaceable behind capability interfaces.
+4. The cognitive core is vendor-neutral.
+5. Evidence is distinguishable from interpretation and verified knowledge.
+6. Memory is structured and provenance-aware.
+7. Safety and authorization remain outside adaptive model authority.
+8. Physical actions require explicit capability and safety boundaries.
+9. Local/offline operation is a tested runtime profile.
+10. Simulation and physical execution share logical contracts.
+11. Durable state is versioned and attributable.
+12. Privacy applies to source data and material derivatives.
+13. Everything critical is observable, auditable and recoverable.
+14. Technology choices are benchmarked and adopted through ADRs.
+
+## Core system boundary
 
 ```text
-                         NOVI / WHEELY
-                              │
-                   ┌──────────▼──────────┐
-                   │   Autonomous Core   │
-                   └──────────┬──────────┘
-                              │
-       ┌──────────────────────┼──────────────────────┐
-       │                      │                      │
-       ▼                      ▼                      ▼
-  Perception             World Model             Memory
-       │                      │                      │
-       └──────────────────────┼──────────────────────┘
-                              ▼
-                         Attention
-                              │
-                         Goal Manager
-                              │
-                         Policy Engine
-                              │
-                         Agent Runtime
-                              │
-                         Nemotron LLM
-                              │
-                 ┌────────────┼────────────┐
-                 ▼            ▼            ▼
-               Tools       Knowledge    Planning
-                 │            │            │
-                 └────────────┼────────────┘
-                              ▼
-                        Action Proposal
-                              │
-                         Safety Gateway
-                              │
-                             ROS 2
-                              │
-                ┌─────────────┼─────────────┐
-                ▼             ▼             ▼
-             Motors         Head          IoT
+                        HUMAN / WORLD
+                             │
+                     SENSORS / INPUTS
+                             │
+                             ▼
+                     ┌──────────────┐
+                     │  PERCEPTION  │
+                     └──────┬───────┘
+                            │ evidence
+                            ▼
+                     ┌──────────────┐
+                     │  WORLD MODEL │
+                     └──────┬───────┘
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+          MEMORY         KNOWLEDGE      ATTENTION
+             │              │              │
+             └──────────────┼──────────────┘
+                            ▼
+                     GOALS / POLICY
+                            │
+                            ▼
+                    AGENT / REASONING
+                            │
+                       proposals only
+                            ▼
+                 GOVERNANCE / SAFETY
+                            │
+                     capability calls
+                            ▼
+                         ROS 2
+                            │
+                  CONTROL / HARDWARE
+                            │
+                         WORLD
+                            │
+                            └──── feedback ────→ PERCEPTION
 ```
 
-## Continuous Cognitive Loop
+## Adaptive vs protected execution
 
-Novi is a continuously operating system. User messages are one source of events, not the trigger for the entire system.
+### Adaptive intelligence may change
 
-```text
-PERCEIVE
-  → interpret observations
-  → update world state
-  → retrieve relevant memory
-  → evaluate attention
-  → update goals
-  → decide whether action/reasoning is required
-  → reason and plan
-  → apply policy and safety constraints
-  → act through approved capabilities
-  → observe consequences
-  → record experience
-  → learn/update allowed state
-  → repeat
-```
+- interpretations;
+- memories;
+- knowledge candidates;
+- learned routines;
+- plans;
+- model selections within policy;
+- personality/social state within policy.
 
-## Architectural Layers
+### Protected execution may not be changed through ordinary adaptive capabilities
 
-### Layer 1 — Physical and platform layer
+- safety constraints;
+- authorization rules;
+- emergency-stop behavior;
+- physical actuator limits;
+- trusted identities/credentials;
+- protected configuration;
+- recovery authority.
 
-Sensors, actuators, Jetson, cameras, microphones, speakers, display, motors, battery, networking, and other hardware.
+## Runtime contract
 
-### Layer 2 — Robotics middleware
-
-ROS 2, Isaac ROS, navigation, sensor pipelines, hardware drivers, and device abstractions.
-
-### Layer 3 — Perception
-
-Vision, audio, speech recognition, face/voice identity, object detection, gesture/body-expression analysis, environmental sensing, and multimodal event generation.
-
-### Layer 4 — Cognitive state
-
-World model, people, places, objects, relationships, temporal state, spatial state, current situation, and active context.
-
-### Layer 5 — Memory and knowledge
-
-Episodic memory, semantic knowledge, spatial memory, procedural knowledge, embeddings, graph/relational data, provenance, verification, and retrieval.
-
-### Layer 6 — Autonomy
-
-Attention, curiosity, goals, internal state, prioritization, policy, planning, and continuous decision making.
-
-### Layer 7 — Reasoning and agent runtime
-
-Nemotron as the primary general-purpose reasoning candidate, tool calling, structured outputs, context construction, planning, and response generation.
-
-### Layer 8 — Interaction
-
-Speech, voice, screen, movement, head orientation, LEDs, social behavior, IoT interaction, and control application integration.
-
-### Layer 9 — Safety and trust boundary
-
-Protected policy, authorization, action validation, emergency stop, hardware limits, audit, and privileged execution.
-
-## Dependency Rule
-
-Dependencies flow downward through contracts. Higher-level intelligence may request capabilities, but it must not reach around the contract to manipulate lower-level implementation details.
-
-For example:
+The same logical capability interfaces must operate across:
 
 ```text
-Nemotron
-  ↓
-ActionRequest
-  ↓
-PolicyEngine
-  ↓
-SafetyGateway
-  ↓
-NavigationService
-  ↓
-ROS 2
-  ↓
-Motor Controller
-```
-
-Never:
-
-```text
-Nemotron → motor driver
-```
-
-## Runtime Strategy
-
-Novi must support the same logical interfaces across:
-
-```text
-Mac development
+Development host
       ↓
 Simulation
       ↓
-Jetson edge runtime
+Edge compute
       ↓
 Physical robot
 ```
 
-Only platform adapters and performance-specific implementations should change.
+Only platform adapters, model runtimes, sensor drivers and performance-specific implementations may change.
 
-## Documentation Map
+## NVIDIA integration rule
 
-- `00_HIGH_LEVEL_ARCHITECTURE.md` — system overview, boundaries, and architectural choices.
-- `01_DETAILED_SYSTEM_ARCHITECTURE.md` — detailed component topology, data flow, lifecycle, interfaces, and failure behavior.
-- `02_ARCHITECTURAL_PRINCIPLES.md` — mandatory engineering rules and constraints.
-- `03_COMPONENT_BOUNDARIES.md` — ownership and dependency boundaries between subsystems.
-- `04_RUNTIME_PROFILES.md` — Mac, simulation, Jetson, and physical deployment profiles.
-- `05_CROSS_CUTTING_REQUIREMENTS.md` — observability, configuration, audit, performance, reliability, and testing requirements.
-- `06_107_DURABLE_STATE_EVENT_LOG_EXECUTION_SEMANTICS.md` — P1 durable-state substrate, event semantics, versioning, provenance, checkpoints, and execution/recovery contracts.
+NVIDIA is an important reference ecosystem for Novi's edge AI, robotics acceleration and simulation. NVIDIA-specific components must remain behind capability boundaries.
 
-### P1 architecture sequence
+Current NVIDIA documentation explicitly recommends ROS 2 Jazzy for Isaac Sim testing, and current Isaac ROS documentation states that its packages are designed/tested with ROS 2 Jazzy. citeturn0search4turn0search6
+
+Current Jetson AGX Orin documentation identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release for the developer kit. citeturn1search1
+
+Therefore the current architecture baseline is:
 
 ```text
-107 Durable State / Event Log / Execution Semantics
-  ↓
-108 Transactions / Concurrency / Consistency / Conflicts
-  ↓
-109 Replication / Synchronization / Distributed Memory
-  ↓
-110 Recovery / Checkpointing / Disaster Resilience
-  ↓
-111 Privacy / Retention / Dependency-Aware Erasure
-  ↓
-112 Observability / Evaluation / Lifespan Reliability
-  ↓
-113 Resource Governance / Scheduling / Budgets
-  ↓
-114 Multi-Agent Coordination / Delegation / Shared Memory
+Novi capability contracts
+        ↓
+ROS 2 Jazzy boundary
+        ↓
+NVIDIA adapters where beneficial
+        ↓
+JetPack / CUDA / TensorRT / Isaac / DeepStream / Holoscan
 ```
+
+These are implementation candidates, not semantic authorities.
+
+## Documents in this domain
+
+### P0 — system foundation
+
+- `00_HIGH_LEVEL_ARCHITECTURE.md` — system context and major architecture.
+- `01_DETAILED_SYSTEM_ARCHITECTURE.md` — components, data flow, lifecycle and failure semantics.
+- `02_ARCHITECTURAL_PRINCIPLES.md` — mandatory architectural rules.
+- `03_COMPONENT_BOUNDARIES.md` — ownership and dependency boundaries.
+- `04_RUNTIME_PROFILES.md` — development, simulation, edge and physical profiles.
+- `05_CROSS_CUTTING_REQUIREMENTS.md` — requirements spanning all domains.
+- `10_ARCHITECTURE_VALIDATION_AND_TRACEABILITY.md` — requirements-to-architecture-to-test traceability and evidence rules.
+- `11_ARCHITECTURE_DECISION_FRAMEWORK.md` — ADR requirements and technology-decision governance.
+
+### P1 — durable/distributed system foundation
+
+- `06_107_DURABLE_STATE_EVENT_LOG_EXECUTION_SEMANTICS.md`
+- `07_108_TRANSACTIONS_CONCURRENCY_CONSISTENCY_AND_CONFLICT_RESOLUTION.md`
+- `07_109_REPLICATION_SYNCHRONIZATION_AND_DISTRIBUTED_MEMORY_ARCHITECTURE.md`
+- `08_110_RECOVERY_CHECKPOINTING_AND_DISASTER_RESILIENCE_ARCHITECTURE.md`
+- `09_111_PRIVACY_RETENTION_DEPENDENCY_AWARE_ERASURE_AND_DATA_LIFECYCLE_ARCHITECTURE.md`
+- `12_112_OBSERVABILITY_EVALUATION_AND_LIFESPAN_RELIABILITY.md`
+- `13_113_RESOURCE_GOVERNANCE_SCHEDULING_AND_BUDGETS.md`
+- `14_114_MULTI_AGENT_COORDINATION_DELEGATION_AND_SHARED_MEMORY.md`
+
+## Required future architecture domains
+
+System architecture must also define explicit interfaces with:
+
+- cognition;
+- world model;
+- memory/knowledge;
+- perception;
+- models/inference;
+- agent/tools;
+- safety/security;
+- ROS 2/control/navigation;
+- NVIDIA platform;
+- simulation/digital twin;
+- hardware;
+- audio/voice;
+- data/storage;
+- observability;
+- testing/validation;
+- deployment/operations;
+- privacy/governance.
+
+The system architecture must not duplicate those domain specifications; it defines their contracts and dependency direction.
 
 ## Status
 
-**Architecture status:** Proposed / Foundation
+**Architecture status:** P0 foundation under consolidation.
 
-This folder is authoritative for system-level architectural decisions unless a newer Architecture Decision Record explicitly supersedes a statement.
+No implementation should begin from this folder alone. Implementation requires the applicable domain specification, technology ADR, interface contract, test plan and validation evidence.
