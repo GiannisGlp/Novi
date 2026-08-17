@@ -1,162 +1,225 @@
 # 04 — Runtime Profiles
 
+**Status:** P0 runtime architecture specification
+
 ## Purpose
 
-Novi must run through a common set of contracts across development, simulation, edge deployment, and physical hardware. This document defines the expected runtime profiles.
+Novi must operate through common contracts across development, simulation, edge and physical deployment. Profiles define environment-specific implementations and constraints without changing semantic contracts.
 
-## Profile A — Mac Development
+## Profile A — Development Host
 
 ### Purpose
 
-Primary software-development environment using the user's MacBook Pro M3 Pro 36GB.
+Primary software-development environment.
 
-### Available
+### Provides
 
-- application runtime;
-- autonomy engine;
+- cognitive runtime;
+- autonomy;
 - world model;
-- knowledge base;
-- memory;
+- memory/knowledge;
 - personality;
 - attention;
-- local camera;
-- microphone/audio;
-- local model runtimes where supported;
-- web/control UI;
+- local camera/audio where available;
+- reference model runtimes;
+- UI;
 - synthetic events;
 - simulated hardware;
 - unit/integration tests;
-- local SQLite and files.
+- local development storage.
 
-### Not representative of
+### Does not represent
 
-- CUDA/TensorRT performance;
-- Jetson thermals;
-- Jetson memory behavior;
-- physical robotics latency;
-- Jetson camera/GPIO interfaces.
+- Jetson GPU/thermal behavior;
+- physical actuator latency;
+- final sensor interfaces;
+- final edge power envelope.
 
-## Profile B — Simulation
+The host hardware is therefore a development target, not evidence of physical-runtime readiness.
+
+## Profile B — Portable Robotics Simulation
 
 ### Purpose
 
-Run the same high-level software against virtual sensors and actuators.
+Validate robotics interfaces and autonomous behavior against virtual sensors/actuators.
 
-### Reference stack
+### Candidate stack
 
 ```text
-Isaac Sim
-  ↕
-ROS 2
-  ↕
-Novi adapters
-  ↕
-Autonomy/Cognition
+Gazebo + ROS 2
+      ↕
+Novi robotics adapters
+      ↕
+Novi cognition/autonomy
 ```
 
-### Simulation should provide
+### Required simulated capabilities
 
-- virtual camera;
-- depth data;
+- camera;
+- depth;
 - LiDAR;
 - IMU;
-- microphone/audio events;
+- audio events;
 - robot pose;
-- doors;
-- people;
-- objects;
-- obstacles;
-- battery state;
+- joints/encoders;
+- battery/power state;
 - navigation;
-- controllable fault injection.
+- people/objects;
+- environmental changes;
+- deterministic seeds;
+- fault injection.
 
-## Profile C — Jetson Edge
+## Profile C — NVIDIA High-Fidelity Simulation
 
-### Target
+### Candidate
 
-NVIDIA Jetson AGX Orin 64GB.
+NVIDIA Isaac Sim.
 
-### Reference NVIDIA stack
+NVIDIA's current documentation recommends ROS 2 Humble and Jazzy and provides an Ubuntu 24.04/Jazzy workflow. citeturn0search4
 
-- JetPack;
-- CUDA;
-- TensorRT;
-- Isaac ROS;
-- ROS 2;
-- NVIDIA-supported inference/runtime tooling where validated.
+### Required validation
+
+- ROS 2 topic/service/action interoperability;
+- simulated sensor timing;
+- calibration metadata;
+- robot state;
+- physics parameters;
+- deterministic/reproducible scenarios where possible;
+- synthetic-data provenance;
+- fault injection;
+- scenario/version manifests.
+
+Isaac Sim is an advanced simulation candidate, not Novi's semantic world-model authority.
+
+## Profile D — NVIDIA Edge
+
+### Current candidate
+
+Jetson AGX Orin family; exact production module remains subject to workload and hardware selection.
+
+NVIDIA's current AGX Orin developer-kit documentation identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release. citeturn1search1
+
+### Reference software layers
+
+```text
+JetPack
+ ↓
+Ubuntu/L4T
+ ↓
+CUDA
+ ↓
+TensorRT / GPU runtime
+ ↓
+ROS 2 Jazzy
+ ↓
+Novi capability adapters
+```
+
+Additional NVIDIA components such as Isaac ROS and DeepStream are workload-specific.
+
+DeepStream 9.1 supports Jetson Orin and uses JetPack 7.2/L4T r39.2 for its Jetson package. citeturn0search0turn0search1
 
 ### Purpose
 
-Validate actual edge inference, resource usage, perception throughput, audio/vision concurrency, and sustained operation.
+Measure:
 
-## Profile D — Physical Robot
+- actual inference latency;
+- perception throughput;
+- CPU/GPU/unified-memory behavior;
+- sensor concurrency;
+- storage throughput;
+- power;
+- thermal behavior;
+- recovery;
+- sustained operation.
 
-### Hardware
+## Profile E — Hardware-in-the-Loop
 
-- Jetson AGX Orin 64GB;
-- cameras;
-- microphone array;
-- speakers;
-- display;
-- head pan/tilt mechanism;
-- wheel/motor controllers;
-- IMU;
-- optional LiDAR/depth sensing;
-- environmental sensors;
-- battery and power management;
-- physical emergency stop.
+HIL combines real selected hardware interfaces with controlled simulation.
 
-### Requirements
+Examples:
 
-Physical deployment must add no new cognitive behavior merely because hardware is real. It should expose the same logical capabilities used by simulation.
+```text
+real compute + simulated sensors
+real motor controller + simulated world
+real sensors + simulated cognition
+real safety controller + simulated faults
+```
+
+HIL is a promotion gate, not a final acceptance test.
+
+## Profile F — Physical Robot
+
+Physical deployment combines the validated edge runtime with:
+
+- selected compute;
+- sensors;
+- actuators;
+- motor/controller system;
+- displays;
+- audio;
+- battery/BMS;
+- power distribution;
+- network interfaces;
+- independent safety mechanisms.
+
+Physical hardware must expose the same logical capability contracts used by simulation.
 
 ## Capability Matrix
 
-| Capability | Mac | Simulation | Jetson | Physical |
-|---|---:|---:|---:|---:|
-| Autonomy loop | Yes | Yes | Yes | Yes |
-| World model | Yes | Yes | Yes | Yes |
-| Knowledge/memory | Yes | Yes | Yes | Yes |
-| Personality | Yes | Yes | Yes | Yes |
-| Camera | Mac camera | Simulated | Jetson camera | Physical |
-| Audio | Mac audio | Simulated | Jetson audio | Physical |
-| Navigation | Simulated | Yes | Yes | Yes |
-| ROS 2 | Optional/dev | Yes | Yes | Yes |
-| Isaac ROS | No/limited | Yes | Yes | Yes |
-| TensorRT | No | GPU host dependent | Yes | Yes |
-| Jetson performance | No | No | Yes | Yes |
-| Motor control | Simulated | Simulated | HIL/driver | Physical |
-| Safety hardware | Simulated | Simulated | Software validation | Required |
+| Capability | Development | Portable Sim | Isaac Sim | Edge | Physical |
+|---|---|---|---|---|---|
+| Autonomy | Yes | Yes | Yes | Yes | Yes |
+| World model | Yes | Yes | Yes | Yes | Yes |
+| Memory/knowledge | Yes | Yes | Yes | Yes | Yes |
+| Personality | Yes | Yes | Yes | Yes | Yes |
+| Camera | Host | Virtual | Virtual | Edge | Physical |
+| Audio | Host | Virtual | Virtual/event | Edge | Physical |
+| Navigation | Mock/limited | Yes | Yes | Yes | Yes |
+| ROS 2 | Optional | Yes | Yes | Yes | Yes |
+| Isaac ROS | Optional | Candidate | Candidate | Candidate | Candidate |
+| TensorRT | Host-dependent | Host-dependent | Host-dependent | Candidate | Candidate |
+| DeepStream | Optional | Optional | Optional | Workload-dependent | Workload-dependent |
+| Motors | Mock | Virtual | Virtual | HIL | Physical |
+| Safety hardware | Mock | Simulated | Simulated | HIL | Required |
+
+"Candidate" means not automatically enabled; it requires workload validation and an ADR.
 
 ## Configuration
 
-Runtime behavior should be selected by explicit profile configuration, for example:
+Profiles should be explicit, e.g.:
 
 ```text
-NOVI_PROFILE=mac
+NOVI_PROFILE=development
 NOVI_PROFILE=simulation
-NOVI_PROFILE=jetson
+NOVI_PROFILE=isaac-sim
+NOVI_PROFILE=edge
+NOVI_PROFILE=hil
 NOVI_PROFILE=physical
 ```
 
-Configuration must not alter architectural contracts.
+Configuration must never change semantic contracts.
 
 ## Promotion Path
 
 ```text
-Mac unit tests
-   ↓
-Mac integration tests
-   ↓
-Simulation tests
-   ↓
-Jetson software tests
-   ↓
-Hardware-in-loop
-   ↓
-Physical controlled tests
-   ↓
-Autonomous validation
+Unit
+ ↓
+Integration
+ ↓
+Portable simulation
+ ↓
+High-fidelity simulation
+ ↓
+Edge software validation
+ ↓
+HIL
+ ↓
+Controlled physical
+ ↓
+Bounded autonomy
+ ↓
+Extended autonomy
 ```
 
-A failed lower stage blocks promotion to the next stage.
+A failed lower-stage gate blocks promotion.
