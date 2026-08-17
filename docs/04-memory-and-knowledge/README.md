@@ -1,14 +1,25 @@
 # 04 — Memory and Knowledge
 
-## High-Level Description
+## Status
 
-The Memory and Knowledge subsystem is Novi's durable learning and information layer. It converts selected experiences into memories and knowledge, stores them with provenance and epistemic state, retrieves relevant information for cognition, consolidates repeated experiences, resolves contradictions, supports controlled schema evolution, and manages forgetting and retention.
+**CLEANUP / CONSOLIDATION IN PROGRESS**
 
-Memory is **not** a single vector database and is not the LLM's context window. Novi uses multiple memory types and storage/indexing mechanisms, each optimized for a different purpose.
+This directory contains the Memory and Knowledge architecture for Novi. It currently includes several generations of detailed design documents. Until consolidation is complete, **the authority hierarchy in `ARCHITECTURE_INDEX.md` is normative**.
 
-The architecture is informed by current agent-memory patterns and NVIDIA's NeMo Agent Toolkit. NVIDIA's current toolkit exposes pluggable memory backends, separate reader/writer/editor/manager interfaces, automatic memory capture/retrieval, and retriever abstractions. NVIDIA's RAG stack also uses staged retrieval, reranking, planning, retries, synthesis and optional verification for complex knowledge queries. These patterns are useful references, but Novi will keep its own vendor-neutral contracts and local-first deployment policy. citeturn0search1turn0search9turn0search0
+citeturn0search1turn0search9turn0search0
 
-## Core Principle
+## Authority
+
+Start with:
+
+- `ARCHITECTURE_INDEX.md` — document authority, overlap clusters, cleanup rules and consolidation plan.
+- `95_MEMORY_KNOWLEDGE_MEMORY_ARCHITECTURE_INTEGRATION_AND_REFERENCE_MODEL.md` — integrated reference architecture.
+- `96_MEMORY_KNOWLEDGE_ARCHITECTURE_AUDIT_TRACEABILITY_AND_GAP_REGISTER.md` — audit, traceability and gap register.
+- `97`–`106` — focused architecture documents produced by the latest integration/audit pass.
+
+The older `00`–`94` documents are **source material**, not automatically authoritative. They will be reviewed and either retained, merged, superseded, or moved as part of the cleanup.
+
+## Core principle
 
 > Experience is not automatically memory, memory is not automatically knowledge, and knowledge is not automatically truth.
 
@@ -38,41 +49,28 @@ context
 cognition
 ```
 
-## Memory Classes
+## Memory classes
 
-Novi will support distinct memory classes:
+Novi supports distinct memory classes, including:
 
-- working memory — transient current cognitive state;
-- session/conversation memory — current interaction context;
-- episodic memory — experiences and events;
-- semantic memory — durable facts, concepts and learned information;
-- procedural memory — routines, skills and validated procedures;
-- relationship memory — person-specific interaction history and relationship state;
-- spatial memory — places, objects, locations and spatial relationships;
-- temporal memory — routines, sequences and time-dependent knowledge;
-- preference memory — user/household preferences with provenance;
-- system/operational memory — validated device and environment state/history.
+- working memory;
+- session/conversation memory;
+- episodic memory;
+- semantic memory;
+- procedural memory;
+- relationship memory;
+- spatial memory;
+- temporal memory;
+- preference memory;
+- system/operational memory.
 
-## Knowledge Model
+## Knowledge model
 
-Knowledge is represented separately from raw experience. A knowledge item can contain:
+Knowledge is represented separately from raw experience and should carry evidence, provenance, confidence, epistemic state, validity, verification state, source, privacy classification, retention policy, and contradiction/supersession relationships where applicable.
 
-- entity and relation references;
-- claim/content;
-- evidence;
-- provenance;
-- confidence;
-- epistemic state;
-- validity interval;
-- verification state;
-- source;
-- privacy classification;
-- retention policy;
-- contradiction/supersession links.
+## Storage direction
 
-## Storage Strategy
-
-The logical memory layer is independent from physical storage. The initial local implementation may use:
+The logical memory layer remains independent of physical storage. The initial local direction is:
 
 ```text
 SQLite
@@ -91,11 +89,11 @@ Graph/relationship layer
   → entity and relationship traversal
 ```
 
-A separate graph database is not mandatory initially; relationship structures can begin in SQLite and be promoted if benchmarks demonstrate a need.
+A separate graph database is not mandatory initially; relationship structures can begin in SQLite and be promoted only when benchmarks justify it.
 
-## Retrieval Strategy
+## Retrieval direction
 
-Retrieval is a capability, not a memory type. Novi should combine retrieval methods when appropriate:
+Retrieval is a capability rather than a memory type. Novi may combine:
 
 ```text
 query
@@ -119,107 +117,46 @@ confidence + provenance checks
 context package
 ```
 
-NVIDIA's NeMo Agent Toolkit provides a useful reference for keeping retrievers behind a standard read-only interface and supporting different data-store providers. citeturn0search3
+## Local-first requirement
 
-## Memory Writing
+The production robot should remain useful without cloud memory services. External memory/retrieval infrastructure requires an explicit rationale, data-flow/privacy assessment, local fallback where practical, and migration path.
 
-Memory writes are controlled. The reasoning model may propose a memory, but the Memory Manager decides whether it should be persisted.
+## Documentation lifecycle
 
-Possible outcomes:
-
-- discard;
-- keep as transient observation;
-- create episode;
-- create candidate memory;
-- merge with existing memory;
-- update existing knowledge;
-- create new entity/type proposal;
-- require human verification;
-- mark contradiction;
-- schedule later consolidation.
-
-## Consolidation
-
-Novi should asynchronously consolidate experiences so the real-time cognitive loop is not blocked. Consolidation can summarize repeated events, merge duplicates, promote stable patterns, reduce stale memories, and generate knowledge candidates.
-
-## Dynamic Knowledge Evolution
-
-Novi can create new entities, attributes, relationships and—when justified—new schema structures. It must first attempt to fit new information into existing structures.
+The documentation is being consolidated deliberately rather than deleted destructively:
 
 ```text
-new concept
- ↓
-existing entity?
- ↓ no
-existing type?
- ↓ no
-existing attribute/relation?
- ↓ no
-schema proposal
- ↓
-validation/policy
- ↓
-migration
+existing documents
+       ↓
+classification
+       ↓
+content comparison
+       ↓
+merge / retain / supersede / move
+       ↓
+canonical architecture
+       ↓
+final naming pass
+       ↓
+architecture audit
 ```
 
-The immutable protected system area is never modified by this mechanism.
+Git history remains the recovery mechanism for superseded or renamed documents.
 
-## Provenance and Epistemic State
+## Cleanup policy
 
-Memory must preserve the distinction between:
+Do not use filename numbering alone to determine which design is correct. When documents overlap, the latest integrated architecture and audit documents provide the starting authority, while earlier documents remain evidence until their content has been explicitly reviewed.
 
-- observed;
-- reported;
-- inferred;
-- hypothesized;
-- predicted;
-- verified;
-- contradicted;
-- stale;
-- unknown.
+For the full status model and consolidation plan, see `ARCHITECTURE_INDEX.md`.
 
-A generated statement is never authoritative merely because an LLM produced it.
+## Completion criterion
 
-## NVIDIA Findings and Constraints
+This directory is not considered clean until:
 
-NVIDIA's NeMo Agent Toolkit currently provides pluggable memory providers including Mem0, MemMachine, Redis and Zep, plus an automatic memory wrapper and a `MemoryManager` abstraction for higher-level operations such as summarization/reflection. citeturn0search1turn0search9
-
-NVIDIA's NeMo Retriever provides indexing/querying services for multimodal data and a standard retrieval architecture, while the Agentic RAG blueprint demonstrates planning, retrieval, retry, synthesis and verification for complex knowledge queries. citeturn0search6turn0search0
-
-These are **reference implementations and integration candidates**, not architectural mandates. Some NVIDIA Retriever ingestion deployments have substantial infrastructure requirements, so they should not be assumed suitable for the Jetson itself; resource-heavy indexing can remain a development/server-side workload while the robot uses a lightweight local retrieval runtime. citeturn0search10
-
-## Local-First Requirement
-
-The production robot should remain useful without cloud memory services. Any external backend must have a documented reason, data-flow/privacy assessment, local fallback where practical, and migration path.
-
-## Detailed Documentation
-
-The following documents define the implementation in progressively greater detail:
-
-- `00_HIGH_LEVEL_MEMORY_ARCHITECTURE.md`
-- `01_MEMORY_TAXONOMY.md`
-- `02_MEMORY_LIFECYCLE.md`
-- `03_MEMORY_WRITE_AND_ADMISSION_POLICY.md`
-- `04_MEMORY_CONSOLIDATION_AND_FORGETTING.md`
-- `05_MEMORY_RETRIEVAL_AND_RANKING.md`
-- `06_SEMANTIC_KNOWLEDGE_AND_SCHEMA_EVOLUTION.md`
-- `07_EPISODIC_MEMORY.md`
-- `08_PROCEDURAL_RELATIONSHIP_SPATIAL_AND_TEMPORAL_MEMORY.md`
-- `09_PROVENANCE_CONFIDENCE_AND_CONTRADICTIONS.md`
-- `10_STORAGE_SQLITE_FILES_AND_INDEXES.md`
-- `11_VECTOR_AND_EMBEDDING_ARCHITECTURE.md`
-- `12_MEMORY_SECURITY_PRIVACY_AND_ISOLATION.md`
-- `13_MEMORY_API_AND_CAPABILITY_CONTRACTS.md`
-- `14_MEMORY_GENERATION_AND_LEARNING.md`
-- `15_NVIDIA_NEMO_MEMORY_AND_RETRIEVAL_EVALUATION.md`
-- `16_ALTERNATIVE_OPEN_SOURCE_MEMORY_SOLUTIONS.md`
-- `17_MEMORY_TESTING_AND_BENCHMARKING.md`
-- `18_MEMORY_OBSERVABILITY_AND_AUDIT.md`
-- `19_MEMORY_BACKUP_RECOVERY_AND_MIGRATION.md`
-- `20_MEMORY_IMPLEMENTATION_ROADMAP.md`
-
-## Status
-
-**DESIGN — INITIALIZED**
-
-This folder begins from architecture research. Implementation choices will be benchmarked rather than assumed.
+1. every document has an explicit status;
+2. every substantive topic has one canonical home;
+3. contradictory requirements have been resolved;
+4. cross-document references point to canonical names;
+5. obsolete documents are clearly marked or removed;
+6. the final README reflects the canonical architecture;
+7. the architecture audit reports no unresolved documentation-structure gaps.
