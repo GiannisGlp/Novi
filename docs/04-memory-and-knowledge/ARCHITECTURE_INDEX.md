@@ -1,6 +1,6 @@
 # 04 — Memory and Knowledge Architecture Index
 
-**Status:** CANONICAL ARCHITECTURE ACTIVE — HISTORICAL CLEANUP COMPLETE
+**Status:** CANONICAL ARCHITECTURE ACTIVE — V1.1 ENRICHED
 
 ## Authority hierarchy
 
@@ -9,7 +9,7 @@
 | CANONICAL | `01`–`18` | Current canonical semantic architecture |
 | CANONICAL REGISTRY | `SOURCE_MATERIAL_STATUS.md` | Source classification and disposition |
 | CANONICAL TRACEABILITY | `SOURCE_TRACEABILITY_MATRIX.md` | Source-to-destination traceability |
-| FINAL AUDIT | `FINAL_CONSOLIDATION_AUDIT.md` | Final cleanup result and remaining non-destructive source-review work |
+| FINAL AUDIT | `FINAL_CONSOLIDATION_AUDIT.md` | Consolidation result and audit history |
 | HISTORICAL | `archive/` | Historical, transitional and audit material; non-normative |
 
 ## Canonical semantic architecture
@@ -40,7 +40,7 @@
 ```text
 semantic memory              → docs/04-memory-and-knowledge
 physical storage             → 01-system-architecture
-transactions / concurrency  → 01-system-architecture
+transactions / concurrency   → 01-system-architecture
 replication                  → 01-system-architecture
 recovery                     → 01-system-architecture
 runtime scheduling           → 01-system-architecture
@@ -51,17 +51,21 @@ human governance             → 16
 
 Semantic conflicts belong to `05`; distributed state conflicts belong to system architecture.
 
-## Final cleanup state
+## V1.1 completion state
 
 - [x] Canonical 01–18 spine exists.
-- [x] Active README identifies only 01–18 as normative.
-- [x] Source disposition and traceability registries exist.
-- [x] Transitional 95–106 authorities moved out of the active namespace.
-- [x] Consolidation/audit artifacts moved to archive.
+- [x] All 18 canonical documents enriched with required semantic contracts or confirmed as already complete.
+- [x] Retrieval, provenance, uncertainty and abstention requirements are explicit.
+- [x] Identity, temporal, spatial, causal and multimodal contracts are explicit.
+- [x] Skill, schema, model/memory, privacy and governance contracts are explicit.
+- [x] Human oversight state machine and integration scenarios are explicit.
+- [x] Final audit in document 18 records the V1.1 completion gate.
+- [x] Transitional 95–106 authorities remain archived and non-normative.
+- [x] Consolidation/audit artifacts remain archived.
 - [x] Historical corpus remains preserved.
 - [x] Missing source numbers 24 and 65 are explicitly recorded as inventory gaps.
 - [x] No new 19+ semantic architecture series created.
 
-## Remaining source-review note
+## Canonical rule
 
-The historical archive remains preserved because individual historical files may still contain useful research, implementation details, or requirements that need section-level traceability. This does not affect the canonical authority of 01–18.
+If an implementation decision concerns the semantic meaning of memory or knowledge, resolve ownership against `01–18` first. Historical archive material may explain origin or provide evidence, but it cannot override the canonical set.
