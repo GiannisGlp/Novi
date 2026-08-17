@@ -1,322 +1,562 @@
 # Novi Technology Reference
 
+**Status:** Living ecosystem/reference catalog  
+**Last audited:** 2026-08-17  
+**Authority:** Candidate/reference technologies only. Adoption requires an ADR and benchmark.
+
 ## Purpose
 
-This document is the canonical reference list for major technology ecosystems that Novi may evaluate, integrate, or use.
+This document is the canonical catalog of technology ecosystems Novi may evaluate, integrate, wrap or use.
 
-These are **reference ecosystems, not mandatory dependencies**. Novi is vendor-neutral. The project must select the best available solution for each capability based on the solution-selection policy.
+It is deliberately different from `TECHNOLOGY_STACK_BASELINE.md`:
 
-## Core Rule
+- **Technology Reference:** what exists and what it can provide.
+- **Technology Stack Baseline:** what Novi currently proposes to use and where.
+- **ADR:** what Novi has actually adopted.
 
-> **Prefer an existing mature open-source solution that runs locally and fits Novi's requirements. Do not reinvent a capability unnecessarily.**
-
-The decision order is generally:
-
-1. Existing mature solution
-2. Open-source / permissive or otherwise compatible license
-3. Local/offline execution
-4. Hardware compatibility
-5. Accuracy and robustness
-6. Latency
-7. Memory and compute requirements
-8. Power requirements for edge deployment
-9. Security and privacy
-10. Maintenance/community health
-11. Integration complexity
-12. Cloud only when no practical local solution exists
-
-No ecosystem below receives automatic preference merely because it appears in this document.
-
----
-
-## 1. NVIDIA
-
-### Role
-
-NVIDIA is the primary **reference hardware and accelerated-computing ecosystem** for Novi's planned Jetson deployment, but it is not the exclusive AI/software provider.
-
-### Relevant areas
-
-- Jetson AGX Orin 64GB
-- JetPack
-- CUDA
-- TensorRT
-- Isaac ROS
-- Isaac Sim
-- DeepStream
-- TAO Toolkit where applicable
-- NeMo/Nemotron where appropriate
-- Nsight profiling and diagnostics
-
-### Use when
-
-NVIDIA provides the best practical local solution for GPU acceleration, robotics acceleration, inference optimization, simulation, video pipelines, or Jetson-specific capabilities.
-
-### Do not use automatically
-
-A non-NVIDIA open-source solution should be preferred when it is materially better for the specific capability and integrates cleanly with Novi.
-
----
-
-## 2. PyTorch
-
-### Role
-
-Primary reference ecosystem for evaluating and running open-source deep-learning models and training/fine-tuning workflows.
-
-### Relevant areas
-
-- computer vision
-- audio models
-- multimodal models
-- model training
-- fine-tuning
-- research/prototyping
-- inference when appropriate
-
-### Use when
-
-A PyTorch-native model or pipeline provides the best local capability, quality, flexibility, or community support.
-
-PyTorch models may subsequently be exported or optimized for another runtime, including ONNX or TensorRT, when beneficial.
-
----
-
-## 3. TensorFlow
-
-### Role
-
-Reference ML ecosystem to evaluate when an existing TensorFlow/TFLite model or pipeline provides a better solution for a particular task.
-
-### Relevant areas
-
-- computer vision
-- mobile/edge inference
-- lightweight models
-- classification/detection
-- specialized pretrained models
-- TFLite deployments where appropriate
-
-### Use when
-
-A mature TensorFlow/TFLite solution is demonstrably better suited to the target capability than available alternatives.
-
-Novi must not choose TensorFlow merely because it is listed here, and must not reject it merely because PyTorch is used elsewhere.
-
----
-
-## 4. OpenCV
-
-### Role
-
-Reference computer-vision toolkit for classical and modern vision operations that can be solved without unnecessarily deploying a large neural model.
-
-### Relevant areas
-
-- image/video processing
-- camera calibration
-- geometric vision
-- feature extraction
-- tracking primitives
-- transformations
-- filtering
-- optical-flow-related operations
-- image quality checks
-- preprocessing/postprocessing
-
-### Use when
-
-A deterministic or classical computer-vision operation is sufficient. Novi should avoid using an LLM or neural network where a robust local OpenCV operation is the appropriate solution.
-
----
-
-## 5. ONNX Runtime
-
-### Role
-
-Reference portable local inference runtime and model-interoperability layer.
-
-### Relevant areas
-
-- portable model execution
-- ONNX model deployment
-- CPU/GPU/accelerator execution
-- cross-framework model serving
-- fallback inference
-- benchmarking different execution providers
-
-### Use when
-
-Portability or an existing ONNX model makes ONNX Runtime the best option. It can also be evaluated against TensorRT and other runtimes for the same workload.
-
----
-
-## 6. Hugging Face
-
-### Role
-
-Reference ecosystem for discovering, evaluating, downloading, versioning, and integrating open-source models and datasets.
-
-### Relevant areas
-
-- language models
-- vision models
-- vision-language models
-- speech/audio models
-- embeddings
-- tokenizers
-- datasets
-- evaluation
-- model metadata
-
-### Use when
-
-A suitable open model or dataset is available through the ecosystem and its license, provenance, quality, and local deployment requirements are acceptable.
-
-Hugging Face is a model ecosystem rather than a guarantee that a model is open-source, safe, local, or production-ready. Every model must be evaluated individually.
-
----
-
-## 7. ROS 2
-
-### Role
-
-Reference robotics middleware and communication architecture for the physical robot.
-
-### Relevant areas
-
-- robot nodes
-- sensor interfaces
-- actuator interfaces
-- topics
-- services
-- actions
-- lifecycle management
-- transforms
-- navigation integration
-- simulation integration
-
-### Use when
-
-A capability belongs to the robotics/middleware layer. Novi Cognition and Autonomy should communicate through stable interfaces rather than depending directly on hardware drivers.
-
----
-
-## 8. NVIDIA Isaac / Isaac ROS / Isaac Sim
-
-### Role
-
-Reference NVIDIA robotics ecosystem layered around ROS 2 for accelerated perception, robotics workloads, and simulation.
-
-### Isaac ROS
-
-Evaluate for:
-
-- hardware-accelerated perception
-- image processing
-- visual SLAM
-- depth processing
-- object detection/tracking pipelines
-- navigation-related acceleration
-- Jetson deployment
-
-### Isaac Sim
-
-Evaluate for:
-
-- robot simulation
-- synthetic environments
-- sensor simulation
-- ROS 2 integration
-- navigation testing
-- synthetic-data generation
-- hardware/software integration testing before physical deployment
-
-### Rule
-
-Use Isaac components when they provide the best fit. Do not make Novi Cognition dependent on Isaac-specific APIs when a stable vendor-neutral interface is sufficient.
-
----
-
-## Relationship Between These Ecosystems
-
-They are complementary and can coexist:
+## Selection rule
 
 ```text
-                         NOVI
-                           │
-                 Vendor-neutral APIs
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-   AI / Models         Vision / Data       Robotics
-        │                  │                  │
- ┌──────┼──────┐      ┌────┴────┐      ┌────┴─────┐
- │      │      │      │         │      │          │
-PyTorch TF Hugging   OpenCV   ONNX   ROS 2    Isaac ROS
-            Face     │         │               │
-            Models   │         │               │
-                     └────┬────┘               │
-                          │                    │
-                     Local inference     Jetson / Sim
-                          │                    │
-                          └────────┬───────────┘
-                                   │
-                              Novi runtime
+Novi requirement
+      ↓
+Mature existing solution?
+      ↓
+Open/local/offline?
+      ↓
+Compatible license/security?
+      ↓
+Meets quality/latency/memory/power?
+      ↓
+Integrates behind Novi contract?
+      ↓
+Benchmark
+      ↓
+ADR
+      ↓
+Adopt / Wrap / Defer / Reject
 ```
 
-## Example Selection Scenarios
+No vendor, model, database, simulator or runtime is a semantic authority merely because it appears in this document.
 
-### Face detection
+---
 
-Evaluate existing local OpenCV, PyTorch, TensorFlow/TFLite, Hugging Face model, or NVIDIA-accelerated solution. Select based on real benchmark results and licensing.
+# 1. NVIDIA ecosystem
 
-### Object detection
+## Jetson / JetPack
 
-Evaluate available pretrained local models first. If a model is PyTorch-native but TensorRT provides substantially better Jetson latency, consider a PyTorch → ONNX → TensorRT deployment path.
+**Role:** edge compute candidate.
 
-### Speech recognition
+Current reference: Jetson AGX Orin 64GB.
 
-Evaluate mature local open-source speech models/runtimes before considering cloud speech APIs.
+NVIDIA currently lists JetPack 7.2 / Jetson Linux 39.2 for Jetson Orin, with Ubuntu 24.04, CUDA 13.2.1 and TensorRT 10.16.2. citeturn5search3
 
-### Navigation
+**Novi status:** Reference / candidate. Final hardware remains workload-driven.
 
-Prefer established ROS 2/Navigation2/Isaac components rather than implementing a navigation stack from scratch unless a genuine Novi-specific requirement is missing.
+## CUDA / CUDA-X
 
-### General reasoning
+GPU acceleration foundation.
 
-Evaluate local open models, including Nemotron and other suitable models, against Novi's latency, memory, reasoning, tool-use, licensing, and Jetson constraints.
+**Use:** accelerated inference, perception, simulation, data processing.
 
-## Required Evaluation Record
+**Rule:** CUDA stays below Novi capability interfaces.
 
-Every significant external technology selected for Novi should eventually have a corresponding evaluation record containing:
+## TensorRT
 
-- capability being solved
-- candidate solutions
-- license
-- local/offline support
-- supported platforms
-- model/runtime size
-- quality metrics
-- latency benchmarks
-- memory usage
-- power/thermal implications
-- maintenance status
-- security considerations
-- privacy considerations
-- integration requirements
-- fallback option
-- reason for selection
-- date/version tested
+Inference optimization/runtime for NVIDIA GPUs.
 
-## Non-Negotiable Project Preference
+Current general TensorRT release is 11.2.1, but NVIDIA documents that TensorRT 11.2.1 does not support JetPack; Jetson deployments must use the TensorRT 10.x version supplied by the selected JetPack release. citeturn2search0turn2search4
 
-Novi is intended to operate locally and preserve user privacy. Therefore:
+**Use:** optimized deployment after model selection and benchmarking.
 
-**Local open-source solution first.**
+## TensorRT-LLM
 
-Cloud services are exceptional dependencies and require explicit architectural justification. Safety-critical functionality must not depend on cloud availability.
+LLM inference optimization.
 
-## Status
+**Use:** evaluate for local NVIDIA LLM deployment.
 
-This document is a living reference. Candidate ecosystems can be added when they become relevant. Existing entries do not imply adoption.
+## Isaac ROS
+
+CUDA-accelerated ROS 2 packages for perception, localization, mapping, navigation and related robotics workloads.
+
+**Use:** perception/robotics acceleration behind ROS/Novi contracts.
+
+## Isaac Sim
+
+High-fidelity robotics simulation, sensors, synthetic data and validation.
+
+**Use:** advanced simulation/SIL/synthetic-data workloads.
+
+## Isaac Lab
+
+Robot-learning/simulation framework.
+
+**Use:** RL, imitation learning, policy training, evaluation, sim-to-real.
+
+## GR00T
+
+Embodied/robot foundation-model and VLA research ecosystem.
+
+**Use:** future learned skills/policies; never direct authorization.
+
+## Cosmos
+
+Physical-AI/world-model ecosystem.
+
+**Use:** prediction, physical reasoning, scenario generation, synthetic data, policy evaluation.
+
+**Rule:** prediction remains distinct from observed history.
+
+## OpenUSD / Omniverse
+
+3D world/spatial interoperability and simulation representation.
+
+**Use:** robot/environment assets, digital twins, simulation scenes.
+
+**Rule:** not Novi's semantic memory database.
+
+## NuRec
+
+Neural reconstruction/3D Gaussian-splatting ecosystem.
+
+**Use:** real-world capture → reconstructed scene → simulation/spatial reasoning.
+
+## Holoscan
+
+High-rate multimodal sensor processing.
+
+**Use:** evaluate when sensor throughput/synchronization/latency justifies it.
+
+Current Holoscan Sensor Bridge 2.7 supports AGX Orin with JetPack 7.2. citeturn4search7
+
+## DeepStream / Metropolis
+
+High-throughput video analytics and multi-camera pipelines.
+
+Current DeepStream documentation supports Jetson Orin and JetPack 7.2. citeturn5search4
+
+## NeMo / Nemotron
+
+Model training, customization, evaluation, deployment and reasoning-model ecosystem.
+
+**Use:** candidate local LLM/VLM/reasoning models and later customization.
+
+## NeMo Agent Toolkit
+
+Agent workflow profiling, evaluation, optimization and tool integration.
+
+**Use:** later agent evaluation/optimization; not semantic authority.
+
+## NeMo Curator
+
+Data curation, filtering and dataset preparation.
+
+**Use:** future training-data pipelines.
+
+## TAO
+
+Vision/VLM post-training and customization.
+
+**Use:** domain-specific perception models when general models are insufficient.
+
+## OSMO
+
+Physical-AI workflow orchestration across simulation/training/evaluation infrastructure.
+
+**Use:** later development infrastructure; not robot runtime.
+
+## RAPIDS
+
+GPU data and graph analytics.
+
+**Use:** later large-scale evaluation/data workloads.
+
+## cuOpt
+
+Constrained optimization and routing.
+
+**Use:** later planning/optimization backend.
+
+## Dynamo / NCCL / NIXL
+
+Distributed inference and GPU communication infrastructure.
+
+**Use:** later scale only; not first Novi runtime.
+
+## PhysX / Warp / Newton
+
+Physics/simulation technologies.
+
+**Use:** simulation/robot-learning workloads selected by simulator requirements.
+
+---
+
+# 2. ROS 2 ecosystem
+
+## ROS 2
+
+Robotics middleware.
+
+### Current distribution candidates
+
+- **Jazzy Jalisco:** LTS, Ubuntu 24.04, supported until May 2029. citeturn1search4
+- **Kilted Kaiju:** non-LTS, Ubuntu 24.04, support through December 2026. citeturn1search0turn1search2
+- **Lyrical Luth:** newest LTS, Ubuntu 26.04, supported until May 2031. citeturn3search2turn3search1
+
+**Novi current baseline candidate:** Jazzy, because the current JetPack 7.2 target is Ubuntu 24.04. Re-evaluate if the edge OS changes.
+
+## ros2_control
+
+Real-time robot-control framework with controller manager, hardware abstraction, lifecycle and command/state interfaces. citeturn3search3turn3search5
+
+**Novi role:** physical actuator boundary.
+
+## Navigation2
+
+Navigation planning/control/behavior stack.
+
+**Novi role:** high-level navigation intent; Nav2 performs navigation execution.
+
+Nav2 supports modern Gazebo integration for Jazzy and newer. citeturn0search0turn0search7
+
+## TF2 / robot_state_publisher
+
+Transforms and robot state representation.
+
+**Novi role:** physical/simulation coordinate-frame infrastructure.
+
+## rosbag2
+
+ROS data recording/playback.
+
+**Novi role:** transport-level recording and replay; not semantic memory.
+
+## DDS / RMW
+
+Candidate middleware implementations:
+
+- Fast DDS;
+- Cyclone DDS;
+- Zenoh RMW;
+- other ROS-supported RMWs.
+
+Selection should be benchmarked against latency, reliability, discovery behavior and offline operation.
+
+---
+
+# 3. Simulation
+
+## Gazebo Harmonic
+
+Portable robotics simulation baseline.
+
+**Use:** ROS 2 integration, navigation, control, sensor simulation.
+
+## Isaac Sim
+
+NVIDIA advanced simulation candidate.
+
+**Use:** high-fidelity physical-AI simulation, synthetic data, digital twins, advanced sensors and policy validation.
+
+## OpenUSD
+
+Scene representation/interchange.
+
+## Physics engines
+
+Candidate families:
+
+- PhysX;
+- Newton;
+- other simulator-native physics engines.
+
+The simulator and physics engine must be selected based on the target workload.
+
+---
+
+# 4. AI/ML ecosystem
+
+## PyTorch
+
+Primary deep-learning development candidate.
+
+## TensorFlow / TFLite
+
+Alternative ML/edge ecosystem when an existing solution is materially better.
+
+## Hugging Face
+
+Model/dataset ecosystem.
+
+Every model must be independently reviewed for license, provenance and suitability.
+
+## ONNX
+
+Model interchange format.
+
+## ONNX Runtime
+
+Portable inference runtime/fallback candidate.
+
+## vLLM / SGLang
+
+Candidate local LLM serving runtimes for workstation/server-class environments.
+
+They must remain behind `NoviInference` and are not assumed suitable for Jetson deployment.
+
+---
+
+# 5. Computer vision
+
+## OpenCV
+
+Classical vision, calibration, image processing, geometry, tracking and preprocessing.
+
+## Specialized neural perception
+
+Candidate classes:
+
+- object detection;
+- segmentation;
+- depth;
+- pose;
+- optical flow;
+- tracking;
+- re-identification;
+- visual embeddings;
+- VLMs.
+
+Exact model selection belongs in the model evaluation matrix.
+
+---
+
+# 6. Speech/audio
+
+Candidate technologies:
+
+- Whisper-family ASR;
+- NVIDIA Riva;
+- local TTS engines;
+- microphone-array DSP;
+- beamforming;
+- acoustic echo cancellation;
+- noise suppression;
+- VAD;
+- diarization;
+- speaker identification;
+- acoustic event detection.
+
+All speech components must expose structured outputs and provenance rather than directly modifying semantic memory.
+
+---
+
+# 7. Data/storage ecosystem
+
+Novi needs separate technology categories for:
+
+1. durable event/state storage;
+2. relational/structured state;
+3. knowledge graph;
+4. vector retrieval/index;
+5. media/object storage;
+6. caches;
+7. backup/archive.
+
+Candidate families to evaluate include:
+
+- embedded SQL/relational databases;
+- PostgreSQL-class relational systems;
+- graph databases or relational graph representations;
+- pgvector-class vector indexing;
+- local object stores/filesystems;
+- content-addressed artifact storage.
+
+**Selection rule:** no database becomes semantic authority merely because it is convenient.
+
+---
+
+# 8. Data/model lifecycle
+
+Required technology capabilities:
+
+- dataset versioning;
+- model registry;
+- artifact registry;
+- content hashing;
+- provenance;
+- evaluation datasets;
+- model cards;
+- license tracking;
+- deployment manifests;
+- rollback.
+
+Candidate ecosystems include:
+
+- Git/GitHub for source;
+- DVC/compatible dataset versioning where useful;
+- MLflow/model-registry-class systems where justified;
+- object storage/artifact repositories;
+- NVIDIA NeMo/TAO tooling for later model lifecycle work.
+
+The final choice must remain compatible with local/offline development.
+
+---
+
+# 9. Observability
+
+Candidate stack:
+
+- OpenTelemetry;
+- Prometheus-compatible metrics;
+- structured logs;
+- trace storage;
+- Grafana-class visualization.
+
+Novi's audit records remain semantically richer than ordinary telemetry.
+
+---
+
+# 10. Build/deployment
+
+Candidate technologies:
+
+- Docker/OCI containers;
+- Dev Containers;
+- CMake/colcon for ROS/C++;
+- Python virtual environments/uv-class tooling;
+- GitHub Actions;
+- reproducible lockfiles;
+- signed artifacts;
+- SBOM generation;
+- OTA/update tooling.
+
+The final deployment strategy must include rollback and recovery.
+
+---
+
+# 11. Security
+
+Required capability families:
+
+- secure boot;
+- hardware-backed identity where available;
+- key storage;
+- secret management;
+- signed models/artifacts;
+- access control;
+- encrypted storage;
+- encrypted transport;
+- update authorization;
+- audit.
+
+Threats include:
+
+- model poisoning;
+- sensor spoofing;
+- prompt injection;
+- memory poisoning;
+- malicious tools;
+- compromised models;
+- unauthorized updates;
+- supply-chain compromise;
+- credential theft;
+- privacy leakage.
+
+---
+
+# 12. Hardware ecosystem categories
+
+The hardware architecture must evaluate:
+
+- edge compute;
+- NVMe storage;
+- RGB cameras;
+- depth cameras;
+- LiDAR;
+- IMU;
+- encoders;
+- microphone arrays;
+- speakers;
+- thermal cameras;
+- environmental sensors;
+- tactile/contact sensors;
+- displays;
+- RGB lighting;
+- motor/actuator systems;
+- motor controllers;
+- MCU/safety controller;
+- battery;
+- BMS;
+- power converters;
+- fuses/protection;
+- Ethernet/USB/CAN/UART/I2C/SPI;
+- cooling;
+- mechanical chassis;
+- connectors/cabling.
+
+Exact part selection is defined by `docs/05-hardware/24_HARDWARE_SELECTION_AND_BOM_BASELINE.md` and later BOM records.
+
+---
+
+# 13. Technology status vocabulary
+
+Every entry should eventually have one of:
+
+```text
+REFERENCE
+CANDIDATE
+EVALUATING
+ADOPTED
+WRAPPED
+DEFERRED
+REJECTED
+DEPRECATED
+```
+
+No `ADOPTED` decision is valid without an evaluation record and ADR where the decision is architecturally significant.
+
+---
+
+# 14. Non-negotiable boundaries
+
+```text
+LLM/VLM/VLA
+   ≠ authorization
+
+Vector retrieval
+   ≠ truth
+
+World-model prediction
+   ≠ observation
+
+Simulation
+   ≠ historical reality
+
+GPU memory
+   ≠ semantic memory
+
+KV cache
+   ≠ long-term memory
+
+OpenUSD
+   ≠ Novi knowledge graph
+
+Optimizer
+   ≠ authorization
+
+NVIDIA product
+   ≠ Novi architecture
+```
+
+These boundaries come directly from the current Novi architecture and NVIDIA research. fileciteturn22file0L403-L418 fileciteturn22file0L435-L440
+
+---
+
+# 15. Current 2026 reference notes
+
+- ROS 2 Lyrical is the newest LTS, but the current JetPack 7.2 Orin stack is Ubuntu 24.04; therefore Novi currently favors Jazzy for the shared robot baseline. citeturn3search2turn5search3
+- JetPack 7.2 supports Jetson Orin and includes CUDA 13.2.1 and TensorRT 10.16.2. citeturn5search3
+- General TensorRT 11.2.1 is not currently the JetPack runtime; Jetson must use the TensorRT 10.x line supported by its JetPack. citeturn2search4
+- DeepStream 9.1 supports Jetson Orin and JetPack 7.2. citeturn5search4
+- Nav2's modern Gazebo guidance targets Gazebo Harmonic or newer with ROS 2 Jazzy or newer. citeturn0search7
+
+All version information must be revalidated before final ADR approval.
