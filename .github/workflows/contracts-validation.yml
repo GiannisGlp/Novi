@@ -1,0 +1,62 @@
+name: Contract Validation
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts-validation.yml'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts-validation.yml'
+
+jobs:
+  validate-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install validator dependency
+        run: python -m pip install -r contracts/tests/requirements.txt
+      - name: Generate deterministic fixtures
+        run: python contracts/tests/generate_fixtures.py
+      - name: Validate registry and schemas
+        run: python contracts/tests/validate_registry.py
+      - name: Validate positive fixtures
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, FormatChecker
+
+          root = Path('contracts')
+          registry = json.loads((root / 'registry.json').read_text())
+          for entry in registry['contracts']:
+              schema = json.loads((root / entry['schema']).read_text())
+              fixture = json.loads((root / 'tests/fixtures/positive' / f"{entry['contract_id']}.json").read_text())
+              Draft202012Validator(schema, format_checker=FormatChecker()).validate(fixture)
+          print(f"Validated {len(registry['contracts'])} positive fixtures.")
+          PY
+      - name: Validate negative fixtures
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, FormatChecker
+
+          root = Path('contracts')
+          registry = json.loads((root / 'registry.json').read_text())
+          checked = 0
+          for entry in registry['contracts']:
+              schema = json.loads((root / entry['schema']).read_text())
+              validator = Draft202012Validator(schema, format_checker=FormatChecker())
+              for suffix in ('missing-required', 'extra-property'):
+                  fixture = json.loads((root / 'tests/fixtures/negative' / f"{entry['contract_id']}__{suffix}.json").read_text())
+                  errors = list(validator.iter_errors(fixture))
+                  if not errors:
+                      raise SystemExit(f"Negative fixture unexpectedly passed: {entry['contract_id']} / {suffix}")
+                  checked += 1
+          print(f"Rejected {checked} negative fixtures.")
+          PY
