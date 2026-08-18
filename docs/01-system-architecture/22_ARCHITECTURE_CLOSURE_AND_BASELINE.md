@@ -23,7 +23,7 @@ System Architecture may be marked `COMPLETE` only when every P0/P1 closure item 
 | ID | Workstream | Current state | Completion evidence |
 |---|---|---|---|
 | ARCH-CLOSE-001 | Canonical contracts | 🟢 Executable validation evidenced; final closure audit pending | Registry + executable schemas + ownership + validation rules + evidence record |
-| ARCH-CLOSE-002 | Consistency mapping | 🟡 | State-class matrix with required/provided guarantees |
+| ARCH-CLOSE-002 | Consistency mapping | 🟢 Architecture-level validation evidenced | State-class matrix + ownership/consistency/lifecycle evidence |
 | ARCH-CLOSE-003 | Stage-1 durable storage | 🟡 | ADR + benchmark + recovery evidence |
 | ARCH-CLOSE-004 | Runtime/version tuple | 🟡 | Tested compatibility manifest |
 | ARCH-CLOSE-005 | Safety integration | 🟡 | Cross-domain safety/control contracts + traceability |
@@ -92,19 +92,13 @@ The evidence record captures the implementation references and limitations. A gr
 
 ## 6. ARCH-CLOSE-002 — Consistency mapping
 
-Create a state-class matrix covering:
+The canonical consistency/state-class matrix is documented and validated in `docs/01-system-architecture/35_ARCH_CLOSE_002_CONSISTENCY_MAPPING_VALIDATION.md`.
 
-- source-of-truth owner;
-- durability requirement;
-- consistency class;
-- transaction requirement;
-- concurrency model;
-- conflict policy;
-- replication requirement;
-- recovery requirement;
-- deletion/erasure behavior.
+It defines, for each state class, source-of-truth ownership, durability, consistency class, transaction boundary, concurrency model, conflict policy, replication scope, recovery path and deletion/erasure lifecycle.
 
-The matrix must distinguish Stage-1 local requirements from future distributed requirements.
+The matrix explicitly distinguishes authoritative state from rebuildable derived state and Stage-1 local behavior from future distributed behavior.
+
+**State:** architecture-level validation evidenced; implementation-specific storage/concurrency evidence remains with ARCH-CLOSE-003.
 
 ## 7. ARCH-CLOSE-003 — Stage-1 durable storage
 
