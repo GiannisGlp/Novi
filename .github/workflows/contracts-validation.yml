@@ -72,3 +72,5 @@ jobs:
         run: python contracts/tests/semantic/test_contract_semantics.py
       - name: Validate consumer integration boundaries
         run: python contracts/tests/integration/test_contract_consumers.py
+      - name: Validate persistence and recovery
+        run: python contracts/tests/persistence/test_persistence_recovery.py
