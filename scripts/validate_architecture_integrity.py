@@ -12,6 +12,11 @@ Checks:
 Numeric filename prefixes remain organizational labels. Exact paths and
 ARCH-CLOSE identifiers are the preferred stable references. Local numeric
 references are a temporary migration bridge for legacy documentation.
+
+Historical archive documents and the ARCH-CLOSE-010 audit itself may contain
+numeric examples intentionally describing the numbering problem. Those
+references are not executable dependencies and are therefore excluded from
+numeric-reference enforcement.
 """
 
 from __future__ import annotations
@@ -64,24 +69,30 @@ def main() -> int:
             if ref not in relative:
                 errors.append(f"{relative_path}: unresolved document path: {ref}")
 
-        for prefix in numeric_pattern.findall(text):
-            candidates = prefix_to_paths.get(prefix, [])
-            if len(candidates) <= 1:
-                continue
-            local_candidates = [
-                candidate for candidate in candidates
-                if Path(candidate).parent == path.relative_to(ROOT).parent
-            ]
-            if len(local_candidates) == 1:
-                warnings.append(
-                    f"{relative_path}: legacy scoped numeric reference 'document {prefix}' "
-                    f"resolves locally to {local_candidates[0]}"
-                )
-            else:
-                errors.append(
-                    f"{relative_path}: ambiguous numeric reference 'document {prefix}'; "
-                    f"use an exact filename or ARCH-CLOSE ID ({', '.join(candidates)})"
-                )
+        # Archive material and the closure audit may intentionally mention
+        # ambiguous numeric examples while describing historical state.
+        enforce_numeric = "/archive/" not in relative_path and not relative_path.endswith(
+            "38_ARCH_CLOSE_010_DEPENDENCY_NUMBERING_INTEGRITY_AUDIT.md"
+        )
+        if enforce_numeric:
+            for prefix in numeric_pattern.findall(text):
+                candidates = prefix_to_paths.get(prefix, [])
+                if len(candidates) <= 1:
+                    continue
+                local_candidates = [
+                    candidate for candidate in candidates
+                    if Path(candidate).parent == path.relative_to(ROOT).parent
+                ]
+                if len(local_candidates) == 1:
+                    warnings.append(
+                        f"{relative_path}: legacy scoped numeric reference 'document {prefix}' "
+                        f"resolves locally to {local_candidates[0]}"
+                    )
+                else:
+                    errors.append(
+                        f"{relative_path}: ambiguous numeric reference 'document {prefix}'; "
+                        f"use an exact filename or ARCH-CLOSE ID ({', '.join(candidates)})"
+                    )
 
         for closure_id in re.findall(r"\bARCH-CLOSE-\d{3}\b", text):
             if closure_id not in closure_ids:
