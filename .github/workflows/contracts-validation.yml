@@ -52,11 +52,12 @@ jobs:
           for entry in registry['contracts']:
               schema = json.loads((root / entry['schema']).read_text())
               validator = Draft202012Validator(schema, format_checker=FormatChecker())
-              for suffix in ('missing-required', 'extra-property'):
-                  fixture = json.loads((root / 'tests/fixtures/negative' / f"{entry['contract_id']}__{suffix}.json").read_text())
+              prefix = entry['contract_id']
+              for path in sorted((root / 'tests/fixtures/negative').glob(f'{prefix}__*.json')):
+                  fixture = json.loads(path.read_text())
                   errors = list(validator.iter_errors(fixture))
                   if not errors:
-                      raise SystemExit(f"Negative fixture unexpectedly passed: {entry['contract_id']} / {suffix}")
+                      raise SystemExit(f"Negative fixture unexpectedly passed: {path}")
                   checked += 1
           print(f"Rejected {checked} negative fixtures.")
           PY
