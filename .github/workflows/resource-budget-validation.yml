@@ -1,0 +1,25 @@
+name: Resource Budget Validation
+
+on:
+  push:
+    paths:
+      - 'contracts/resource_budgets.stage1.json'
+      - 'contracts/tests/integration/test_resource_budgets.py'
+      - '.github/workflows/resource-budget-validation.yml'
+  pull_request:
+    paths:
+      - 'contracts/resource_budgets.stage1.json'
+      - 'contracts/tests/integration/test_resource_budgets.py'
+      - '.github/workflows/resource-budget-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-resource-budgets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate resource budget invariants
+        run: python contracts/tests/integration/test_resource_budgets.py
