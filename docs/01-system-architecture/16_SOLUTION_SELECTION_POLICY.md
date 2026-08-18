@@ -3,7 +3,7 @@
 **Status:** DESIGN — cross-cutting engineering policy
 **Owner:** `01-system-architecture`
 **Scope:** All Novi subsystems and implementation domains
-**Supersedes:** `docs/02-autonomy/16_SOLUTION_SELECTION_POLICY.md`
+**Supersedes:** earlier autonomy-scoped solution-selection policy; the exact historical path is not retained as a current authority.
 
 ## Purpose
 
