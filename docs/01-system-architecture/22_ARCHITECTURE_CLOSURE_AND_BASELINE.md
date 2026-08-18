@@ -28,7 +28,7 @@ System Architecture may be marked `COMPLETE` only when every P0/P1 closure item 
 | ARCH-CLOSE-004 | Runtime/version tuple | 🟡 | Tested compatibility manifest |
 | ARCH-CLOSE-005 | Safety integration | 🟡 | Cross-domain safety/control contracts + traceability |
 | ARCH-CLOSE-006 | Time synchronization | 🟡 | Clock contract + synchronization/error budget |
-| ARCH-CLOSE-007 | Resource budgets | 🟡 | Initial measured CPU/GPU/RAM/storage/thermal budgets |
+| ARCH-CLOSE-007 | Resource budgets | 🟡 Hardware comparison baseline defined; empirical benchmark pending | Selected compute platform + battery/power/thermal model + measured CPU/GPU/RAM/storage/thermal evidence |
 | ARCH-CLOSE-008 | Deployment manifest | 🟡 | Reproducible manifest and validation procedure |
 | ARCH-CLOSE-009 | Architecture-to-test mapping | 🟡 | Requirement → test/evidence matrix |
 | ARCH-CLOSE-010 | Dependency/numbering integrity | 🟡 | Full cross-reference audit with no stale authoritative references |
@@ -159,18 +159,16 @@ The result must define which timestamps are authoritative for each class of deci
 
 ## 11. ARCH-CLOSE-007 — Resource budgets
 
-Define measured initial budgets for the Mac-first runtime:
+The initial hardware/resource research baseline is documented in `docs/01-system-architecture/32_COMPUTE_PLATFORM_COMPARISON_AGX_ORIN_64_VS_THOR.md`.
 
-- CPU;
-- GPU;
-- unified memory;
-- storage;
-- model residency;
-- queue depth/backpressure;
-- thermal/power where measurable;
-- latency budgets by critical loop.
+The comparison establishes two explicit deployment profiles:
 
-Budgets must be treated as hypotheses until benchmark evidence validates them.
+- **Mobile Novi:** Jetson AGX Orin 64GB as the preferred high-capability mobile candidate, with an initial 8–10 hour target modeled around a 2.0–2.5kWh battery class.
+- **Stationary/heavy-compute Novi:** Jetson Thor T5000 as the preferred candidate when mains power or a substantially larger energy/thermal envelope is acceptable.
+
+The research baseline covers compute, memory, AI model capability, battery sizing, power conversion, thermal management, carrier boards, sensors, cost, pros/cons and validation methodology.
+
+These values remain hypotheses until measured on the selected hardware. ARCH-CLOSE-007 is not closed by the comparison document alone.
 
 ## 12. ARCH-CLOSE-008 — Deployment manifest
 
