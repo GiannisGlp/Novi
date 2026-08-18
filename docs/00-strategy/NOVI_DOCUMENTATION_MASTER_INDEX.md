@@ -1,6 +1,6 @@
 # Novi — Master Documentation Index & Authority Map
 
-**Date:** 2026-08-17  
+**Date:** 2026-08-18  
 **Status:** P0 — documentation control baseline  
 **Owner:** `00-strategy`
 
@@ -147,7 +147,7 @@ The `archive/` tree is historical/reference material and does not override conso
 
 ## Hardware — `05-hardware/`
 
-Owns physical-system requirements and hardware selection. Current master selection baseline is `24_HARDWARE_SELECTION_AND_BOM_BASELINE.md` until detailed specifications are decomposed into their own authoritative files.
+Owns physical-system requirements and hardware selection. Current master selection baseline is `26_HARDWARE_SELECTION_AND_BOM_BASELINE.md` until detailed specifications are decomposed into their own authoritative files.
 
 ---
 

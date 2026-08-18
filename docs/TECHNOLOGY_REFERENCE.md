@@ -493,7 +493,7 @@ The hardware architecture must evaluate:
 - mechanical chassis;
 - connectors/cabling.
 
-Exact part selection is defined by `docs/05-hardware/24_HARDWARE_SELECTION_AND_BOM_BASELINE.md` and later BOM records.
+Exact part selection is defined by `docs/05-hardware/26_HARDWARE_SELECTION_AND_BOM_BASELINE.md` and later BOM records.
 
 ---
 

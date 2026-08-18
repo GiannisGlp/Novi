@@ -144,7 +144,7 @@ See:
 
 - [`docs/05-hardware/README.md`](docs/05-hardware/README.md)
 - [`docs/05-hardware/00_HIGH_LEVEL_HARDWARE_ARCHITECTURE.md`](docs/05-hardware/00_HIGH_LEVEL_HARDWARE_ARCHITECTURE.md)
-- [`docs/05-hardware/24_HARDWARE_SELECTION_AND_BOM_BASELINE.md`](docs/05-hardware/24_HARDWARE_SELECTION_AND_BOM_BASELINE.md)
+- [`docs/05-hardware/26_HARDWARE_SELECTION_AND_BOM_BASELINE.md`](docs/05-hardware/26_HARDWARE_SELECTION_AND_BOM_BASELINE.md)
 
 The final physical BOM is deliberately deferred until the cognitive workload, robot geometry, power, thermal, sensor-FOV, synchronization and safety requirements are measured.
 
