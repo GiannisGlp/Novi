@@ -1,0 +1,25 @@
+{
+  "matrix_version": "1.0.0",
+  "policy": "major-stable",
+  "rules": [
+    {
+      "from_major": 1,
+      "to_major": 1,
+      "compatible": true,
+      "requirements": [
+        "existing required fields retain meaning",
+        "additive optional fields do not invalidate existing payloads"
+      ]
+    },
+    {
+      "from_major": 1,
+      "to_major": 2,
+      "compatible": false,
+      "requirements": [
+        "major semantic version required",
+        "migration or compatibility adapter required"
+      ]
+    }
+  ],
+  "evidence_required": true
+}
