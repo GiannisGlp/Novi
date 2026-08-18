@@ -3,13 +3,15 @@
 
 Checks:
 1. Explicit Markdown path references resolve to existing repository files.
-2. Ambiguous numeric references such as "document 18" are rejected when the
-   prefix is used by more than one Markdown document.
-3. ARCH-CLOSE identifiers referenced by documents must be defined in at least
-   one current architecture document.
+2. Ambiguous numeric references are accepted only when the referencing
+   document's directory contains exactly one matching local document; these
+   legacy references are reported as migration warnings.
+3. ARCH-CLOSE identifiers referenced by documents must be defined in the
+   tracked architecture corpus.
 
-Numeric filename prefixes remain organizational labels; exact paths and
-ARCH-CLOSE identifiers are the stable references.
+Numeric filename prefixes remain organizational labels. Exact paths and
+ARCH-CLOSE identifiers are the preferred stable references. Local numeric
+references are a temporary migration bridge for legacy documentation.
 """
 
 from __future__ import annotations
@@ -46,36 +48,44 @@ def main() -> int:
             prefix_to_paths[match.group(1)].append(path)
 
     errors: list[str] = []
+    warnings: list[str] = []
     closure_ids: set[str] = set()
     for path in files:
         text = path.read_text(encoding="utf-8")
         closure_ids.update(re.findall(r"\bARCH-CLOSE-\d{3}\b", text))
 
     explicit_path_pattern = re.compile(r"(?<![A-Za-z0-9_./-])(?:docs/|contracts/)[A-Za-z0-9_./-]+\.md")
-    ambiguous_numeric_pattern = re.compile(
-        r"\b(?:document|doc)\s+(\d{1,3})\b", re.IGNORECASE
-    )
+    numeric_pattern = re.compile(r"\b(?:document|doc)\s+(\d{1,3})\b", re.IGNORECASE)
 
     for path in files:
+        relative_path = path.relative_to(ROOT).as_posix()
         text = path.read_text(encoding="utf-8")
         for ref in explicit_path_pattern.findall(text):
             if ref not in relative:
-                errors.append(f"{path.relative_to(ROOT)}: unresolved document path: {ref}")
+                errors.append(f"{relative_path}: unresolved document path: {ref}")
 
-        for prefix in ambiguous_numeric_pattern.findall(text):
+        for prefix in numeric_pattern.findall(text):
             candidates = prefix_to_paths.get(prefix, [])
-            if len(candidates) > 1:
+            if len(candidates) <= 1:
+                continue
+            local_candidates = [
+                candidate for candidate in candidates
+                if Path(candidate).parent == path.relative_to(ROOT).parent
+            ]
+            if len(local_candidates) == 1:
+                warnings.append(
+                    f"{relative_path}: legacy scoped numeric reference 'document {prefix}' "
+                    f"resolves locally to {local_candidates[0]}"
+                )
+            else:
                 errors.append(
-                    f"{path.relative_to(ROOT)}: ambiguous numeric reference 'document {prefix}'; "
+                    f"{relative_path}: ambiguous numeric reference 'document {prefix}'; "
                     f"use an exact filename or ARCH-CLOSE ID ({', '.join(candidates)})"
                 )
 
         for closure_id in re.findall(r"\bARCH-CLOSE-\d{3}\b", text):
-            # The closure document itself may be the defining occurrence; this
-            # check only verifies that the identifier exists somewhere in the
-            # tracked architecture corpus.
             if closure_id not in closure_ids:
-                errors.append(f"{path.relative_to(ROOT)}: unknown {closure_id}")
+                errors.append(f"{relative_path}: unknown {closure_id}")
 
     if errors:
         print("ARCHITECTURE INTEGRITY: FAIL")
@@ -89,7 +99,12 @@ def main() -> int:
     print("ARCHITECTURE INTEGRITY: PASS")
     print(f"Markdown documents scanned: {len(files)}")
     print(f"Duplicate numeric prefixes governed as non-authoritative: {len(duplicate_prefixes)}")
+    print(f"Scoped legacy numeric references: {len(warnings)}")
     print(f"Closure IDs discovered: {len(closure_ids)}")
+    if warnings:
+        print("MIGRATION WARNINGS:")
+        for warning in warnings:
+            print(f"- {warning}")
     return 0
 
 
