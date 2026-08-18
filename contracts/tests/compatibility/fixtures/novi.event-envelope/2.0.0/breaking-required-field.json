@@ -1,0 +1,9 @@
+{
+  "event_id": "evt-compat-2-0",
+  "event_type": "compatibility.fixture",
+  "schema_version": "2.0.0",
+  "occurred_at": "2026-01-01T00:00:00Z",
+  "producer_id": "compatibility-test",
+  "payload": {},
+  "breaking_required_field": "migration-required"
+}
