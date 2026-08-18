@@ -1,0 +1,33 @@
+name: Recovered Architecture Gates
+
+on:
+  push:
+    paths:
+      - 'contracts/tests/integration/test_time_semantics.py'
+      - 'contracts/tests/integration/test_resource_budgets.py'
+      - 'contracts/tests/integration/test_safety_authorization_integration.py'
+      - 'contracts/resource_budgets.stage1.json'
+      - '.github/workflows/recovered-architecture-gates.yml'
+  pull_request:
+    paths:
+      - 'contracts/tests/integration/test_time_semantics.py'
+      - 'contracts/tests/integration/test_resource_budgets.py'
+      - 'contracts/tests/integration/test_safety_authorization_integration.py'
+      - 'contracts/resource_budgets.stage1.json'
+      - '.github/workflows/recovered-architecture-gates.yml'
+  workflow_dispatch:
+
+jobs:
+  recovered-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate time semantics
+        run: python contracts/tests/integration/test_time_semantics.py
+      - name: Validate resource budgets
+        run: python contracts/tests/integration/test_resource_budgets.py
+      - name: Validate safety authorization boundary
+        run: python contracts/tests/integration/test_safety_authorization_integration.py
