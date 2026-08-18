@@ -22,7 +22,7 @@ System Architecture may be marked `COMPLETE` only when every P0/P1 closure item 
 
 | ID | Workstream | Current state | Completion evidence |
 |---|---|---|---|
-| ARCH-CLOSE-001 | Canonical contracts | 🟡 | Registry + executable schemas + ownership + validation rules |
+| ARCH-CLOSE-001 | Canonical contracts | 🟢 Executable validation evidenced; final closure audit pending | Registry + executable schemas + ownership + validation rules + evidence record |
 | ARCH-CLOSE-002 | Consistency mapping | 🟡 | State-class matrix with required/provided guarantees |
 | ARCH-CLOSE-003 | Stage-1 durable storage | 🟡 | ADR + benchmark + recovery evidence |
 | ARCH-CLOSE-004 | Runtime/version tuple | 🟡 | Tested compatibility manifest |
@@ -70,6 +70,25 @@ Close the remaining architecture-level contract gap by producing a canonical reg
 - DeploymentManifest
 
 The registry must point to the authoritative schema and define versioning, compatibility, provenance, timestamps, privacy classification and validation requirements.
+
+### Validation evidence — 2026-08-18
+
+The executable validation portion of ARCH-CLOSE-001 is evidenced by `docs/01-system-architecture/25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md`.
+
+The validated CI chain includes:
+
+- registry/schema validation;
+- positive fixtures;
+- negative fixtures;
+- compatibility matrix validation;
+- explicit schema-evolution validation;
+- semantic/domain invariants;
+- consumer integration boundaries;
+- persistence/recovery validation.
+
+The evidence record captures the implementation references and limitations. A green CI result is not treated as evidence of physical/hardware behavior, long-duration operation, or complete system implementation.
+
+**State:** executable validation evidenced; final architecture closure audit pending.
 
 ## 6. ARCH-CLOSE-002 — Consistency mapping
 
