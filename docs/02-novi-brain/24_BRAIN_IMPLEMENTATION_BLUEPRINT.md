@@ -1,8 +1,8 @@
 # 11 — Brain Implementation Blueprint
 
-**Status:** P0 — implementation gate
-**Owner:** `02-novi-brain`
-**Primary target:** MacBook Pro, Apple M3 Pro, 38 GB unified memory, 1 TB internal storage, latest macOS
+**Status:** P0 — implementation gate  
+**Owner:** `02-novi-brain`  
+**Primary target:** MacBook Pro, Apple M3 Pro, 38 GB unified memory, 1 TB internal storage, latest macOS  
 **Purpose:** Convert the existing Novi architecture into an implementation-ready map without creating competing semantic authorities.
 
 ---
@@ -11,7 +11,7 @@
 
 This document is the bridge between Novi's documentation and the first working Brain implementation.
 
-It does **not** redefine Brain, Cognition, Memory, Autonomy, Safety, or System Architecture. Their existing canonical documents remain authoritative.
+It does **not** redefine Brain, Soul, Cognition, Memory, Autonomy, Safety, or System Architecture. Their existing canonical documents remain authoritative.
 
 Its job is to answer, for every implementation capability:
 
@@ -50,6 +50,8 @@ Neural models
       +
 Structured state
       +
+Soul / persistent identity
+      +
 Memory
       +
 Reasoning
@@ -78,18 +80,18 @@ A neural network is therefore a capability provider inside the Brain ecosystem, 
 | Runtime orchestration | Brain | Own |
 | Model execution | Brain | Own runtime |
 | Perception execution | Brain | Own runtime |
+| Soul / identity / personality semantics | Soul | Execute runtime pathways |
 | World semantics | Cognition | Execute |
 | Situation model | Cognition | Execute |
 | Reasoning | Cognition | Execute |
 | Prediction | Cognition | Execute |
-| Identity/personality/affect | Cognition | Execute |
 | Long-term memory | Memory & Knowledge | Execute |
 | Knowledge | Memory & Knowledge | Execute |
 | Goals/behavior | Autonomy | Execute |
-| Safety authorization | System Architecture | Consume decision |
+| Safety authorization | System Architecture / Policy | Consume decision |
 | Physical control | Hardware | Interface only |
 
-The existing Brain architecture explicitly establishes this boundary: Brain coordinates and executes, Cognition understands, Memory remembers/knows, Autonomy chooses/pursues, Policy permits/denies, and Hardware executes physical control. fileciteturn72file0
+The Brain must reference these canonical owners rather than creating competing semantic definitions.
 
 ---
 
@@ -109,7 +111,7 @@ The first Mac implementation should use a modular topology that can later be dis
           │                   │                   │
           └──────────────┬────┴───────────────────┘
                          ↓
-                    COGNITION
+                    SOUL / COGNITION
                          │
           ┌──────────────┼──────────────┐
           ↓              ↓              ↓
@@ -134,7 +136,7 @@ The first Mac implementation should use a modular topology that can later be dis
                          ↓
                       Outcome
                          ↓
-              Memory + Cognition update
+              Memory + Cognition + Soul update
 ```
 
 The loop must remain continuous. A user prompt is only one possible stimulus.
@@ -159,7 +161,7 @@ Responsibilities:
 - resource/degradation coordination;
 - observability registration.
 
-It must **not** decide goals or bypass safety.
+It must **not** decide goals, redefine Soul semantics, or bypass safety.
 
 ### Required states
 
@@ -230,15 +232,30 @@ Responsibilities:
 - health;
 - latency measurement.
 
-The existing Brain documents already define neural-network strategy, model taxonomy, routing/selection, lifecycle and model runtime. This blueprint maps those specifications to implementation; it does not replace them. fileciteturn73file0
+The existing Brain model strategy, taxonomy, routing/selection, lifecycle and runtime specifications remain authoritative; this blueprint maps them to implementation.
 
 ### 6.4 Brain State Runtime
 
 Maintains short-lived execution state needed to coordinate the embodied loop.
 
-It must not become a duplicate of the canonical World Model or long-term Memory.
+It must not become a duplicate of the canonical World Model, Soul state, or long-term Memory.
 
-### 6.5 Cognition Adapter
+### 6.5 Soul Adapter
+
+Provides typed runtime access to canonical Soul state and services.
+
+Expected capabilities:
+
+- read current identity state;
+- read personality/values/preferences state;
+- read affective state where exposed by Soul;
+- submit eligible experience/state updates;
+- request continuity/state transitions;
+- expose provenance and uncertainty where applicable.
+
+Brain executes the runtime pathway; Soul remains the semantic authority.
+
+### 6.6 Cognition Adapter
 
 Provides typed interfaces into the Cognition domain.
 
@@ -252,7 +269,7 @@ Expected capabilities:
 - update cognitive context;
 - expose uncertainty.
 
-### 6.6 Memory Adapter
+### 6.7 Memory Adapter
 
 Provides typed interfaces into Memory & Knowledge.
 
@@ -265,9 +282,7 @@ Expected capabilities:
 - update/revise beliefs;
 - request consolidation.
 
-The existing Memory domain already specifies taxonomy, lifecycle, provenance, retrieval/consolidation, knowledge graph, identity, temporal/spatial memory and related capabilities. fileciteturn75file0
-
-### 6.7 Autonomy Adapter
+### 6.8 Autonomy Adapter
 
 Provides:
 
@@ -281,13 +296,13 @@ Provides:
 
 Brain executes the runtime path but does not become the behavioral authority.
 
-### 6.8 Safety Adapter
+### 6.9 Safety Adapter
 
 Accepts ActionProposal records and returns the canonical authorization decision.
 
 No Brain component may bypass this boundary.
 
-### 6.9 Body/Controller Adapter
+### 6.10 Body/Controller Adapter
 
 Initially this may be a simulator/mock.
 
@@ -312,6 +327,8 @@ UPDATE EVIDENCE
  ↓
 UPDATE WORLD/SITUATION
  ↓
+UPDATE RELEVANT SOUL STATE
+ ↓
 ATTEND
  ↓
 REACT / THINK / WAIT
@@ -331,6 +348,8 @@ OBSERVE OUTCOME
 UPDATE STATE
  ↓
 MEMORY / LEARNING
+ ↓
+SOUL CONTINUITY UPDATE WHERE APPROPRIATE
  ↓
 NEXT CYCLE
 ```
@@ -413,11 +432,13 @@ Control
 
 ---
 
-## 10. Personality and continuity
+## 10. Soul, personality and continuity
 
-Personality is not a prompt template.
+Personality is not a prompt template and identity is not an LLM session artifact.
 
-Novi's persistent identity should emerge from coordinated state across:
+The canonical Soul domain owns the semantic continuity of the persistent self. Brain only provides runtime pathways through which Soul state is read, updated and expressed.
+
+The intended continuity spans:
 
 ```text
 Identity
@@ -426,57 +447,62 @@ Personality
  +
 Values
  +
+Motivations
+ +
 Preferences
  +
 Affect
  +
-Goals
+Social disposition
  +
 Relationships
  +
-Autobiographical memory
+Autobiographical continuity
  +
 Experience
+ +
+Learned tendencies
  →
 Behavioral continuity
 ```
 
-The canonical personality/identity material belongs to Cognition; Brain provides the runtime pathways that allow those state changes to influence behavior.
+Cognition remains responsible for understanding, world/situation representation, reasoning, prediction and interpretation. Memory remains responsible for retained experience and knowledge. Autonomy remains responsible for goals and behavioral pursuit. Brain remains responsible for execution and coordination.
+
+The Brain implementation must therefore **not**:
+
+- define a second identity model;
+- define a competing personality model;
+- store canonical Soul semantics in Brain state;
+- reduce Soul to prompt text;
+- create a `SoulService` inside Brain merely to satisfy the metaphor.
+
+The engineering objective is coherent continuity over time through the canonical Soul architecture and its interfaces.
 
 ---
 
 ## 11. The “soul” concept
 
-For Novi design purposes, **soul is a conceptual term, not a software component**.
+For Novi design purposes, **Soul is a canonical semantic domain, while “soul” is also a conceptual term for persistent continuity**.
 
-It describes the desired continuity of:
+It is not a magical software primitive. It is the architecture's explicit owner for the persistent self-related semantics required for continuity.
 
-- identity;
-- memories;
-- personality;
-- values;
-- relationships;
-- preferences;
-- experiences;
-- learned tendencies;
-- current internal state;
-- behavioral history.
-
-We must not create a `SoulService`, `SoulModel`, or other artificial subsystem solely to satisfy the metaphor.
-
-The engineering objective is to make the resulting system exhibit coherent continuity over time.
+Brain must consume Soul through contracts and must never become its semantic authority.
 
 ---
 
 ## 12. Minimum interfaces
 
-The initial Brain implementation should define typed interfaces for at least:
+The initial Brain implementation should define or consume typed interfaces for at least:
 
 ```text
 Observation
 Evidence
 WorldState
 Situation
+SoulState
+IdentityState
+PersonalityState
+AffectState
 MemoryQuery
 MemoryRecord
 KnowledgeQuery
@@ -488,7 +514,6 @@ SafetyDecision
 ActionExecution
 ActionOutcome
 InternalState
-PersonState
 ModelInvocation
 ModelResult
 HealthState
@@ -512,6 +537,7 @@ novi-brain
 ├── perception-runtime
 ├── model-runtime
 ├── state-runtime
+├── soul-adapter
 ├── cognition-adapter
 ├── memory-adapter
 ├── autonomy-adapter
@@ -548,7 +574,11 @@ Reasoning and planning may propose actions; they do not authorize them.
 
 Neural/LLM/VLM output must pass through typed contracts and appropriate governance.
 
-### Rule 6 — Failure is explicit
+### Rule 6 — Soul state is not prompt state
+
+Persistent identity/personality continuity must not depend on an ephemeral prompt or model context window.
+
+### Rule 7 — Failure is explicit
 
 Missing, stale, contradictory or low-confidence information must remain representable.
 
@@ -600,9 +630,9 @@ Implement:
 
 Implement a closed cognitive loop with reasoning and situation updates.
 
-### Stage 5 — Personality/continuity
+### Stage 5 — Soul continuity
 
-Introduce persistent identity, preferences, affect and autobiographical continuity.
+Integrate the canonical Soul interfaces for persistent identity, personality, values, preferences, affect and continuity. Do not create competing Brain-owned semantics.
 
 ### Stage 6 — Autonomy
 
@@ -631,9 +661,9 @@ Before committing to Jetson, Novi should demonstrate locally on the Mac that it 
 3. remember relevant experiences;
 4. retrieve those experiences later;
 5. recognize familiar people/entities where permitted;
-6. maintain a coherent identity;
-7. exhibit consistent personality;
-8. maintain changing internal/affective state;
+6. maintain a coherent persistent identity through the canonical Soul interface;
+7. exhibit consistent personality and values through canonical Soul state;
+8. maintain changing internal/affective state where supported;
 9. form goals without requiring a new user prompt every cycle;
 10. react to environmental changes;
 11. reason about situations;
@@ -642,7 +672,8 @@ Before committing to Jetson, Novi should demonstrate locally on the Mac that it 
 14. pass every action through safety/governance;
 15. observe outcomes;
 16. update memory/state from outcomes;
-17. continue operating when no user is actively interacting.
+17. update relevant continuity state where appropriate;
+18. continue operating when no user is actively interacting.
 
 This is the first meaningful definition of **“the brain is really a brain”** for the project.
 
@@ -680,7 +711,7 @@ Important metrics include:
 - resource consumption;
 - model failure/fallback rate;
 - memory consistency;
-- identity continuity;
+- Soul/identity continuity;
 - behavioral consistency;
 - safety intervention rate.
 
@@ -696,11 +727,13 @@ The initial Brain is considered Mac-ready when:
 - simulated/local inputs can enter the loop;
 - perception produces canonical evidence;
 - Cognition can update/query state;
+- Soul state can be read through its canonical interface;
 - Memory can persist/retrieve records;
 - Autonomy can produce an ActionProposal;
 - Safety can authorize/deny it;
 - a simulated body can execute it;
 - outcomes return to the Brain;
+- relevant continuity updates reach the canonical Soul interface;
 - observability can reconstruct the cycle;
 - failure/degradation paths are exercised;
 - resource usage is measured;
@@ -746,6 +779,7 @@ Before coding the full Brain, the repository should contain or identify:
 - runtime configuration schema;
 - model registry schema;
 - model metadata format;
+- Soul interface/schema reference;
 - memory interface schema;
 - observation/evidence schema;
 - goal/plan/action schemas;
@@ -770,7 +804,8 @@ This blueprint does not authorize:
 - treating LLM output as ground truth;
 - treating personality as a prompt-only feature;
 - creating duplicate semantic authorities;
-- bypassing canonical system contracts.
+- bypassing canonical system contracts;
+- moving Soul semantic ownership into Brain.
 
 ---
 
@@ -798,14 +833,4 @@ Benchmark
 Observed result
 ```
 
-If any P0 capability cannot complete this chain, the implementation gate remains closed.
-
----
-
-## 23. Guiding principle
-
-> **Build Novi's brain as a continuously running embodied intelligence system whose identity, cognition, memory, personality, perception, autonomy and learned models work together — while keeping every consequential physical action behind explicit contracts, governance and safety.**
-
-The Mac is where this architecture must first prove itself.
-
-The robot is the next embodiment, not the definition of the Brain.
+The implementation gate is satisfied only when the runtime can integrate Soul, Cognition, Memory, Autonomy and Safety through explicit contracts without redefining their semantic ownership.
