@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the Novi canonical contract registry and its JSON Schemas.
-
-This validator intentionally performs structural checks only. Domain semantics
-remain owned by the canonical contract documents and domain test suites.
-"""
+"""Validate the Novi canonical contract registry and JSON Schemas."""
 from __future__ import annotations
 
 import json
@@ -11,12 +7,13 @@ from pathlib import Path
 import sys
 
 try:
-    from jsonschema import Draft202012Validator, FormatChecker
+    from jsonschema import Draft202012Validator
 except ImportError as exc:  # pragma: no cover
-    raise SystemExit("Missing dependency: jsonschema. Install with: python -m pip install jsonschema") from exc
+    raise SystemExit("Missing dependency: jsonschema. Install with: python -m pip install -r contracts/tests/requirements.txt") from exc
 
 ROOT = Path(__file__).resolve().parents[2]
-REGISTRY_PATH = ROOT / "contracts" / "registry.json"
+CONTRACTS = ROOT / "contracts"
+REGISTRY_PATH = CONTRACTS / "registry.json"
 
 
 def load_json(path: Path):
@@ -39,6 +36,7 @@ def main() -> int:
         contract_id = entry.get("contract_id")
         name = entry.get("canonical_name")
         schema_rel = entry.get("schema")
+        version = entry.get("semantic_version")
 
         if not contract_id or contract_id in seen_ids:
             failures.append(f"duplicate/missing contract_id: {contract_id!r}")
@@ -48,23 +46,27 @@ def main() -> int:
             failures.append(f"duplicate/missing canonical_name: {name!r}")
         seen_names.add(name)
 
-        schema_path = ROOT / "contracts" / schema_rel
+        if not version:
+            failures.append(f"missing semantic_version for {contract_id}")
+            continue
+
+        schema_path = CONTRACTS / schema_rel
         if not schema_path.is_file():
             failures.append(f"missing schema for {contract_id}: {schema_rel}")
             continue
 
         schema = load_json(schema_path)
-        if schema.get("$id") != f"{contract_id}/{entry['semantic_version']}":
-            failures.append(f"$id mismatch for {contract_id}: {schema.get('$id')!r}")
+        expected_id = f"{contract_id}/{version}"
+        if schema.get("$id") != expected_id:
+            failures.append(f"$id mismatch for {contract_id}: {schema.get('$id')!r}; expected {expected_id!r}")
 
         try:
             Draft202012Validator.check_schema(schema)
-        except Exception as exc:  # pragma: no cover - exact library exception varies
+        except Exception as exc:  # pragma: no cover
             failures.append(f"invalid JSON Schema for {contract_id}: {exc}")
 
-        required = schema.get("required", [])
         properties = schema.get("properties", {})
-        for field in required:
+        for field in schema.get("required", []):
             if field not in properties:
                 failures.append(f"required field {field!r} absent from properties in {contract_id}")
 
