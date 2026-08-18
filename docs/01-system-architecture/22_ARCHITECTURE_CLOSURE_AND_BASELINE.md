@@ -29,8 +29,8 @@ System Architecture may be marked `COMPLETE` only when every P0/P1 closure item 
 | ARCH-CLOSE-005 | Safety integration | 🟡 | Cross-domain safety/control contracts + traceability |
 | ARCH-CLOSE-006 | Time synchronization | 🟡 | Clock contract + synchronization/error budget |
 | ARCH-CLOSE-007 | Resource budgets | 🟡 Hardware comparison baseline defined; empirical benchmark pending | Selected compute platform + battery/power/thermal model + measured CPU/GPU/RAM/storage/thermal evidence |
-| ARCH-CLOSE-008 | Deployment manifest | 🟡 | Reproducible manifest and validation procedure |
-| ARCH-CLOSE-009 | Architecture-to-test mapping | 🟡 | Requirement → test/evidence matrix |
+| ARCH-CLOSE-008 | Deployment manifest | 🟡 Contract defined; executable validation pending | Reproducible manifest + startup compatibility validation + artifact integrity evidence |
+| ARCH-CLOSE-009 | Architecture-to-test mapping | 🟡 Matrix defined; execution evidence pending | Complete P0 requirement → validation/evidence matrix + recorded results |
 | ARCH-CLOSE-010 | Dependency/numbering integrity | 🟡 | Full cross-reference audit with no stale authoritative references |
 
 ## 4. Authority boundaries
@@ -166,23 +166,19 @@ These values remain hypotheses until measured on the selected hardware. ARCH-CLO
 
 ## 12. ARCH-CLOSE-008 — Deployment manifest
 
-Define a machine-readable deployment manifest containing all artifacts required to reproduce a Novi runtime, including software versions, model identifiers/hashes, configuration, schemas, data migrations and hardware profile.
+The deployment-manifest contract is defined in `docs/01-system-architecture/36_ARCH_CLOSE_008_DEPLOYMENT_MANIFEST.md`.
 
-The manifest must support validation before startup and provenance after execution.
+It defines immutable-by-revision deployment identity, runtime/model/configuration/hardware provenance, startup compatibility checks, artifact hashes, security boundaries, rollback semantics and Mac-first/future physical deployment profiles.
+
+**State:** architecture contract defined; executable manifest generation, startup validation and reconstruction evidence remain pending.
 
 ## 13. ARCH-CLOSE-009 — Architecture-to-test mapping
 
-Every P0 architecture invariant must map to a validation identifier. The matrix must distinguish:
+The P0 architecture-to-test matrix is defined in `docs/01-system-architecture/37_ARCH_CLOSE_009_ARCHITECTURE_TO_TEST_MAPPING.md`.
 
-- static/document validation;
-- unit/contract tests;
-- integration tests;
-- simulation tests;
-- HIL tests;
-- physical safety tests;
-- long-duration/soak tests.
+It assigns validation identifiers and evidence classes to P0 invariants and explicitly separates document/unit/integration/simulation/HIL/physical/soak/benchmark/recovery evidence.
 
-An architectural statement without a validation path is not considered fully closed.
+**State:** traceability baseline defined; execution results and evidence linkage remain pending.
 
 ## 14. ARCH-CLOSE-010 — Dependency and numbering integrity
 
