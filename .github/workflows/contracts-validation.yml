@@ -68,3 +68,5 @@ jobs:
         run: |
           cd contracts/tests/compatibility
           python test_schema_evolution.py
+      - name: Validate semantic invariants
+        run: python contracts/tests/semantic/test_contract_semantics.py
