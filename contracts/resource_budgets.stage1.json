@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "status": "baseline",
+  "hardware_target": "deferred",
+  "resources": {
+    "cpu_sustained_utilization_max": 0.70,
+    "gpu_sustained_utilization_max": 0.75,
+    "ram_working_set_gb_max": 12,
+    "model_memory_gb_max": 10,
+    "active_storage_gb_max": 200,
+    "compute_power_w_target": 25,
+    "compute_power_w_test_max": 40,
+    "compute_rail_voltage_v_nominal": 12,
+    "compute_rail_current_a_min": 5,
+    "soc_temperature_c_target_max": 80,
+    "soc_temperature_c_degraded_at": 90,
+    "soc_temperature_c_operating_limit": 99
+  },
+  "execution_classes": {
+    "S0": {"frequency_hz": 100, "p99_latency_ms": 2, "max_latency_ms": 5, "queue_depth": 1},
+    "S1": {"frequency_hz": 50, "p99_latency_ms": 5, "max_latency_ms": 10, "queue_depth": 1},
+    "S2": {"frequency_hz": 20, "p99_latency_ms": 25, "max_latency_ms": 50, "queue_depth": 2},
+    "S3": {"frequency_hz": 30, "p99_latency_ms": 80, "max_latency_ms": 120, "queue_depth": 2},
+    "S4": {"frequency_hz_min": 1, "frequency_hz_max": 5, "p99_latency_ms": 500, "max_latency_ms": 1000, "queue_depth": 1},
+    "S5": {"frequency_hz": null, "p99_latency_ms": null, "max_latency_ms": null, "queue_depth": 32}
+  }
+}
