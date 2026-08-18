@@ -1,0 +1,25 @@
+name: Consistency Matrix Validation
+
+on:
+  push:
+    paths:
+      - 'docs/01-system-architecture/26_ARCH_CLOSE_002_CONSISTENCY_STATE_CLASS_MATRIX.md'
+      - 'contracts/tests/integration/test_consistency_state_matrix.py'
+      - '.github/workflows/consistency-matrix-validation.yml'
+  pull_request:
+    paths:
+      - 'docs/01-system-architecture/26_ARCH_CLOSE_002_CONSISTENCY_STATE_CLASS_MATRIX.md'
+      - 'contracts/tests/integration/test_consistency_state_matrix.py'
+      - '.github/workflows/consistency-matrix-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-consistency-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate consistency state matrix
+        run: python contracts/tests/integration/test_consistency_state_matrix.py
