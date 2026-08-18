@@ -1,0 +1,10 @@
+{
+  "matrix_version": "1.0.0",
+  "policy": "major-stable",
+  "rules": [
+    {"from":"1.0.x","to":"1.0.x","expected":"compatible"},
+    {"from":"1.x","to":"2.x","expected":"requires-explicit-compatibility-review"},
+    {"from":"2.x","to":"1.x","expected":"incompatible-by-default"}
+  ],
+  "note": "This is a policy baseline. Runtime compatibility tests must be added when a second schema version exists."
+}
