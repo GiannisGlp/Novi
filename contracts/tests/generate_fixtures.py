@@ -9,39 +9,51 @@ ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "contracts" / "registry.json"
 FIXTURES = ROOT / "contracts" / "tests" / "fixtures"
 
-# Minimal values chosen to satisfy the current structural schemas. These are
-# deliberately synthetic and carry no real user/device data.
-VALUE_BY_TYPE = {
-    "string": "fixture-value",
-    "integer": 1,
-    "number": 1.0,
-    "boolean": True,
-    "object": {},
-    "array": [],
-}
+
+def value_for_property(prop: dict):
+    if "const" in prop:
+        return prop["const"]
+    if "default" in prop:
+        return prop["default"]
+    if prop.get("format") == "date-time":
+        return "2026-01-01T00:00:00Z"
+
+    kind = prop.get("type")
+    if kind == "string":
+        return "fixture-value" if prop.get("minLength", 0) == 0 else "fixture-value"
+    if kind == "integer":
+        return max(1, prop.get("minimum", 1))
+    if kind == "number":
+        return max(1.0, prop.get("minimum", 1.0))
+    if kind == "boolean":
+        return True
+    if kind == "array":
+        count = max(1, prop.get("minItems", 0))
+        item_schema = prop.get("items", {"type": "string"})
+        return [value_for_property(item_schema) for _ in range(count)]
+    if kind == "object":
+        return {}
+    return {}
 
 
 def example_for_schema(schema: dict) -> dict:
     result = {}
+    properties = schema.get("properties", {})
     for name in schema.get("required", []):
-        prop = schema.get("properties", {}).get(name, {})
-        if "const" in prop:
-            result[name] = prop["const"]
-            continue
-        if "default" in prop:
-            result[name] = prop["default"]
-            continue
-        if prop.get("format") == "date-time":
-            result[name] = "2026-01-01T00:00:00Z"
-            continue
-        kind = prop.get("type", "object")
-        if kind == "array":
-            result[name] = []
-        elif kind == "object":
-            result[name] = {}
-        else:
-            result[name] = VALUE_BY_TYPE.get(kind, "fixture-value")
+        result[name] = value_for_property(properties.get(name, {}))
     return result
+
+
+def wrong_type_for(prop: dict):
+    kind = prop.get("type")
+    return {
+        "string": 123,
+        "integer": "not-an-integer",
+        "number": "not-a-number",
+        "boolean": "not-a-boolean",
+        "array": {},
+        "object": [],
+    }.get(kind, "wrong-type")
 
 
 def main() -> None:
@@ -53,8 +65,7 @@ def main() -> None:
 
     for entry in registry["contracts"]:
         contract_id = entry["contract_id"]
-        schema_path = ROOT / "contracts" / entry["schema"]
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        schema = json.loads((ROOT / "contracts" / entry["schema"]).read_text(encoding="utf-8"))
         example = example_for_schema(schema)
 
         (positive / f"{contract_id}.json").write_text(
@@ -74,6 +85,17 @@ def main() -> None:
         (negative / f"{contract_id}__extra-property.json").write_text(
             json.dumps(extra, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
+
+        for name in required:
+            prop = schema.get("properties", {}).get(name, {})
+            wrong = wrong_type_for(prop)
+            if wrong == "wrong-type":
+                continue
+            invalid = dict(example)
+            invalid[name] = wrong
+            (negative / f"{contract_id}__wrong-type-{name}.json").write_text(
+                json.dumps(invalid, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
 
     print(f"Generated fixtures for {len(registry['contracts'])} contracts.")
 
