@@ -48,6 +48,24 @@ The current documents are intentionally **high-level architecture specifications
 | `22_HARDWARE_PRIVACY_CONTROLS.md` | Camera/microphone indicators, physical controls and privacy states | High-level |
 | `23_HARDWARE_VALIDATION_AND_TESTING.md` | Hardware verification, environmental and fault testing | High-level |
 
+## Numbering Integrity Note
+
+The hardware domain uses exact filenames as canonical identities; numeric prefixes are organizational labels only.
+
+The former `24_HARDWARE_SELECTION_AND_BOM_BASELINE.md` conflicted with `24_GNSS_GPS_AND_GLOBAL_POSITIONING.md`. The BOM baseline has therefore been moved, without changing its content, to:
+
+`26_HARDWARE_SELECTION_AND_BOM_BASELINE.md`
+
+The canonical hardware numbering is now:
+
+```text
+24_GNSS_GPS_AND_GLOBAL_POSITIONING.md
+25_HARDWARE_VALIDATION_AND_TESTING.md
+26_HARDWARE_SELECTION_AND_BOM_BASELINE.md
+```
+
+This removes the known hardware-domain collision identified by ARCH-CLOSE-010.
+
 ## Current Hardware Baseline
 
 Novi is expected to include, at minimum:
