@@ -71,7 +71,7 @@ def can_execute(
     """Minimum deterministic execution gate for consequential actions."""
     if proposal["proposal_id"] != safety["proposal_ref"]:
         return False
-    if authorization["decision_id"] != authorization["decision_id"]:
+    if authorization["capability"] != proposal["capability"]:
         return False
     if authorization["decision"] not in {"ALLOW", "ALLOW_WITH_CONSTRAINTS"}:
         return False
@@ -185,6 +185,12 @@ def run() -> int:
     if proposal.get("decision") in {"ALLOW", "ALLOW_WITH_CONSTRAINTS"}:
         failures.append("proposal must never contain execution authority")
 
+    # A mismatched capability cannot cross the authorization boundary.
+    mismatched_capability = dict(authorization)
+    mismatched_capability["capability"] = "unknown.capability"
+    if can_execute(proposal, mismatched_capability, safety, hardware, now):
+        failures.append("authorization for a different capability was accepted")
+
     # Authorization must be present and valid in time.
     expired = dict(authorization)
     expired["valid_until"] = (now - timedelta(seconds=1)).isoformat()
@@ -201,6 +207,11 @@ def run() -> int:
     blocked["decision"] = "DENY"
     if can_execute(proposal, authorization, blocked, hardware, now):
         failures.append("denied safety decision was accepted")
+
+    mismatched_proposal = dict(safety)
+    mismatched_proposal["proposal_ref"] = "different-proposal"
+    if can_execute(proposal, authorization, mismatched_proposal, hardware, now):
+        failures.append("safety decision for a different proposal was accepted")
 
     # Hardware health is authoritative for execution eligibility.
     unhealthy = dict(hardware)
@@ -238,7 +249,7 @@ def run() -> int:
 
     print("SAFETY AUTHORIZATION INTEGRATION GATE: PASS")
     print("Validated proposal -> authorization -> safety -> execution boundary.")
-    print("Validated expiry, denial, hardware health, calibration, communication, and emergency-stop rejection.")
+    print("Validated expiry, denial, capability binding, hardware health, calibration, communication, and emergency-stop rejection.")
     return 0
 
 
