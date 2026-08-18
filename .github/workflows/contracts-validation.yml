@@ -9,6 +9,7 @@ on:
     paths:
       - 'contracts/**'
       - '.github/workflows/contracts-validation.yml'
+  workflow_dispatch:
 
 jobs:
   validate-contracts:
