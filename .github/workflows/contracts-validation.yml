@@ -62,3 +62,5 @@ jobs:
                   checked += 1
           print(f"Rejected {checked} negative fixtures.")
           PY
+      - name: Validate compatibility matrix
+        run: python contracts/tests/compatibility/test_compatibility_matrix.py
