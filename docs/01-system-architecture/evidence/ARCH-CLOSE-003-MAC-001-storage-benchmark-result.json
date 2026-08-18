@@ -1,0 +1,39 @@
+{
+  "benchmark_id": "ARCH-CLOSE-003-MAC-001",
+  "benchmark_revision": "1.0.0",
+  "timestamp_utc": "2026-08-18T20:42:10Z",
+  "environment": {
+    "host": "Vanos-MacBook-Pro.local",
+    "os": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "processor": "arm",
+    "python": "3.14.6",
+    "sqlite": "3.53.4",
+    "filesystem": "unknown; record manually if material",
+    "novi_revision": "unknown"
+  },
+  "candidate_availability": {
+    "sqlite": {"available": true, "reason": "Python standard library"},
+    "rocksdb": {"available": false, "reason": "Install/configure a reproducible RocksDB adapter before comparison"},
+    "postgresql": {"available": true, "reason": "psql detected"}
+  },
+  "sqlite": {
+    "candidate": "sqlite",
+    "version": "3.53.4",
+    "iterations": 10000,
+    "readers_requested": 4,
+    "write_ms": {"p50": 0.03308302257210016, "p95": 0.051499984692782164, "p99": 0.12108299415558577, "mean": 0.037011334527051076},
+    "read_ms": {"p50": 0.002707995008677244, "p95": 0.0032919924706220627, "p99": 0.004166970029473305, "mean": 0.002734210155904293},
+    "event_count": 10000,
+    "final_revision": 10000,
+    "conflicts": 0,
+    "durability_reopen_pass": true,
+    "db_size_bytes": 790528
+  },
+  "limitations": [
+    "This first harness measures the local SQLite baseline only.",
+    "RocksDB/PostgreSQL are not comparable until reproducible adapters and configurations are provided.",
+    "Power/thermal measurements require the target hardware and are not inferred from this Mac run.",
+    "Fault-injection, migration and backup/restore remain separate closure gates."
+  ]
+}
