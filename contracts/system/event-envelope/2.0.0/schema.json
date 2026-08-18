@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novi.event-envelope/2.0.0",
+  "title": "EventEnvelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_type", "schema_version", "occurred_at", "producer_id", "payload", "breaking_required_field"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"type": "string", "minLength": 1},
+    "schema_version": {"const": "2.0.0"},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "producer_id": {"type": "string", "minLength": 1},
+    "payload": {},
+    "breaking_required_field": {"type": "string", "minLength": 1}
+  }
+}
