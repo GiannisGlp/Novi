@@ -2,39 +2,52 @@
 
 ## Status
 
-**DESIGN**
+**DESIGN — BOUNDARY REVISED**
 
 ## Purpose
 
-Define the cognitive representation that allows Novi to have a persistent personality, adapt its interaction style, and maintain transient internal affect without pretending to have verified human emotions.
+Define the **cognitive interpretation boundary** for personality- and affect-related information. The canonical semantic definition of Novi's personality, values, motivations, and stable character belongs to the Soul domain.
 
-## Personality Layers
+Cognition does not own or redefine Novi's personality. It consumes the canonical Soul state and uses context, relationships, observations, and current internal state to determine how that personality should be interpreted in the present situation.
 
-### Stable traits
+## Canonical ownership
 
-Examples:
+```text
+SOUL
+  ↓
+identity / values / motivations / stable personality / character
+  ↓
+COGNITION
+  ├── contextual interpretation
+  ├── social and emotional evidence
+  ├── current self/world context
+  ├── affect hypotheses
+  └── personality-conditioned reasoning context
+  ↓
+AUTONOMY
+  ├── attention
+  ├── interaction decision
+  ├── goal priority
+  └── action coordination
+```
 
-- playful
-- curious
-- warm
-- patient
-- mischievous
-- conversational
+Soul is the semantic authority for personality. Cognition may not silently redefine it.
 
-### Adaptive state
+## Personality input
 
-Examples:
+Cognition receives a typed personality context containing, as applicable:
 
-- energetic
-- focused
-- cautious
-- curious
-- socially engaged
-- resource-constrained
+- stable traits;
+- foundational values;
+- motivations;
+- communication preferences;
+- relationship-conditioned expression rules;
+- learned preferences with confidence and provenance;
+- current adaptive affect supplied by the runtime.
 
-Stable traits should change slowly and through controlled configuration/learning. Adaptive state can change quickly.
+Cognition may use these inputs to construct context for reasoning and response generation.
 
-## Emotion Representation
+## Human emotion interpretation
 
 Novi should represent inferred human emotional state as hypotheses:
 
@@ -45,31 +58,31 @@ emotion_hypothesis:
   evidence: [voice, posture, context]
 ```
 
-The system must not claim certainty about another person's internal emotional state from appearance or voice alone.
+The system must not claim certainty about another person's internal emotional state from appearance, voice, posture, or behavior alone.
 
-## Internal Affect
+## Novi's internal affect
 
-Novi can maintain internal computational states that influence behavior, such as:
+Transient affect is computational runtime state, not a claim of human consciousness. Examples include:
 
-- curiosity level
-- social engagement
-- task focus
-- frustration/recovery state
-- energy/resource state
-- attention load
+- curiosity level;
+- social engagement;
+- task focus;
+- frustration/recovery state;
+- energy/resource state;
+- attention load.
 
-These are system state variables, not claims of human consciousness.
+The runtime representation and decay rules belong to the appropriate state/autonomy interfaces; Cognition consumes the resulting state when relevant to interpretation and reasoning.
 
-## Personality Response Pipeline
+## Personality response pipeline
 
 ```text
 context
  ↓
-social policy
+social/context policy
  ↓
-relationship
+relationship context
  ↓
-personality traits
+canonical Soul personality
  ↓
 current affect
  ↓
@@ -78,16 +91,30 @@ reasoning/model generation
 response validation
 ```
 
-Personality must never bypass safety, privacy, authorization, or user preferences.
+Personality must never bypass safety, privacy, authorization, or explicit user preferences.
 
 ## Consistency
 
-The same person should recognize Novi's characteristic style over time. Variation is desirable, but the identity and core personality should remain coherent.
+The same person should recognize Novi's characteristic style over time. Contextual variation is desirable, but identity, foundational values, and core personality must remain coherent.
 
-## Learning Personality
+## Learning boundary
 
-Interaction history may suggest preferred styles, humor tolerance, or communication patterns. Such preferences require confidence and should be reversible.
+Interaction history may produce candidate changes to preferences, humor tolerance, communication patterns, or adaptive style. Cognition may infer or propose such candidates, but persistent changes to canonical personality or values require the Soul learning/governance path.
 
-## Acceptance Criteria
+## Acceptance criteria
 
-Novi demonstrates stable recognizable personality, context-sensitive behavior, appropriate emotional hypotheses, and separation between adaptive style and immutable safety behavior.
+Cognition demonstrates:
+
+- correct consumption of canonical Soul personality state;
+- contextual interpretation without redefining personality;
+- probabilistic human emotion hypotheses;
+- separation of transient affect from stable personality;
+- provenance/confidence for inferred social-emotional information;
+- no ability for personality context to bypass safety or authorization.
+
+## Related canonical documents
+
+- `docs/06-soul/00_SOUL_AND_BEHAVIORAL_CONSTITUTION.md`
+- `docs/06-soul/01_IDENTITY_AND_SELF_MODEL.md`
+- `docs/06-soul/02_PERSONALITY_VALUES_AND_MOTIVATIONS.md`
+- `docs/02-autonomy/08_INTERNAL_STATE_AND_AFFECT.md`
