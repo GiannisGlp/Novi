@@ -1,0 +1,97 @@
+{
+  "events": [
+    {
+      "cycle": 0,
+      "event_type": "mac_brain.started",
+      "payload": {
+        "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      },
+      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+    },
+    {
+      "cycle": 1,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-1",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+    },
+    {
+      "cycle": 1,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-1",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 1,
+        "uncertainty": []
+      },
+      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+    },
+    {
+      "cycle": 1,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "inspect",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "inspect",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+    },
+    {
+      "cycle": 1,
+      "event_type": "mac_brain.stopped",
+      "payload": {
+        "cycles": 1,
+        "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      },
+      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+    }
+  ],
+  "mode": "deterministic_demo",
+  "results": [
+    {
+      "action": "inspect",
+      "authorized": true,
+      "cycle": 1,
+      "detections": [],
+      "frame_id": "demo-1",
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "46673264-ceb6-48be-9710-e498420f4717",
+      "virtual_body": {
+        "heading_deg": 0.0,
+        "last_action": "inspect",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    }
+  ],
+  "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+}
