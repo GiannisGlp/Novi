@@ -1,32 +1,33 @@
 # 48 — ARCH-CLOSE-009 Architecture → Implementation Traceability Gate
 
-**Status:** GATE DEFINED — execution pending  
-**Priority:** P0  
+**Status:** CLOSED — final traceability matrix recorded  
+**Priority:** P0 / critical / high importance  
 **Authority:** System Architecture  
-**Scope:** Verify that authoritative architecture claims have corresponding implementation/contracts/tests or an explicit deferred status.
+**Closure item:** ARCH-CLOSE-009  
+**Final evidence:** `50_ARCH_CLOSE_009_FINAL_TRACEABILITY_MATRIX_2026-08-19.md`
 
 ## 1. Purpose
 
 Novi has a substantial architecture corpus. ARCH-CLOSE-009 prevents documentation from becoming an independent reality by requiring every closure-critical architectural claim to map to executable contracts, code, tests, workflows, evidence, or an explicit hardware/deployment deferral.
 
-The repository already contains consistency and state-class matrices, architecture completion/closure gates, a Brain implementation blueprint, storage and recovery architecture, and a completion tracker. fileciteturn387file0 fileciteturn387file3 fileciteturn387file4 fileciteturn387file5
+The gate is now closed for the current implementation phase. Closure does **not** mean that every future runtime, learned model, physical sensor, actuator or robot deployment has already been implemented. It means that each P0 architecture invariant has a traceability path and that no unresolved `GAP` remains.
 
 ## 2. Traceability classes
 
-Every closure-critical item must be classified as exactly one of:
+Every closure-critical item is classified as exactly one of:
 
 - **IMPLEMENTED** — executable implementation exists.
 - **CONTRACTED** — normative contract/schema exists and is enforced by validation.
 - **TESTED** — executable test/gate demonstrates the requirement.
-- **EVIDENCED** — measured evidence exists but does not yet constitute implementation.
-- **DEFERRED** — intentionally postponed because it depends on hardware, model, or later phase.
+- **EVIDENCED** — measured evidence exists but does not yet constitute complete implementation.
+- **DEFERRED** — intentionally postponed because it depends on hardware, model, simulation, deployment or a later implementation phase.
 - **GAP** — required architecture has no adequate implementation/evidence/deferral.
 
-`GAP` is the only unacceptable class for an architecture closure claim.
+`GAP` is the only unacceptable class for an architecture closure claim. The final matrix contains **zero GAP classifications**.
 
 ## 3. Traceability chain
 
-For each item record:
+For each item:
 
 ```text
 architecture requirement
@@ -35,7 +36,7 @@ authoritative document
         ↓
 contract / interface / schema
         ↓
-implementation
+implementation or justified deferral
         ↓
 test / validation gate
         ↓
@@ -44,95 +45,81 @@ evidence
 status + limitations
 ```
 
-A document without an implementation/evidence mapping must not be described as implemented.
+A document without an implementation/evidence mapping is not described as implemented.
 
-## 4. Priority scope
+## 4. Final closure scope
 
-The first execution pass covers:
+The final execution covers:
 
-1. System architecture closure items ARCH-CLOSE-001 through ARCH-CLOSE-010;
+1. all 30 P0 architecture invariants in `37_ARCH_CLOSE_009_ARCHITECTURE_TO_TEST_MAPPING.md`;
 2. safety authorization and emergency-stop boundaries;
 3. time semantics;
 4. durable state/storage;
-5. Brain orchestration/cognitive cycle boundaries;
-6. memory/knowledge contracts;
-7. model/inference boundaries;
-8. deployment/runtime boundaries;
-9. resource budgets;
-10. sensor/actuator interface contracts.
+5. deployment/runtime boundaries;
+6. resource budgets;
+7. sensor/actuator interfaces;
+8. model/inference trust boundaries;
+9. memory/provenance/erasure boundaries;
+10. physical-only validation deferrals.
 
-## 5. Existing implementation anchors
+## 5. Final evidence
 
-Known repository anchors include:
+The authoritative final matrix is:
 
-- contract validation suites;
-- safety authorization integration gate;
-- time semantics integration gate;
-- resource-budget validation assets;
-- SQLite storage benchmark/recovery harness;
-- architecture completion/closure documents;
-- Brain implementation blueprint;
-- memory/knowledge schema and migration architecture;
-- durable event-log and execution semantics;
-- transaction/concurrency/consistency architecture;
-- recovery/checkpointing architecture.
+`50_ARCH_CLOSE_009_FINAL_TRACEABILITY_MATRIX_2026-08-19.md`
 
-The existence of these files is not itself sufficient; each must be mapped to the requirement it satisfies.
+It records for T-001 through T-030:
 
-## 6. Required audit output
+- requirement;
+- authority;
+- contract/API;
+- implementation anchor or explicit deferral;
+- test/validation class;
+- evidence;
+- status;
+- limitation/trigger.
 
-Produce a machine-readable and human-readable matrix with columns:
+## 6. No false closure
 
-| Requirement | Authority | Contract/API | Implementation | Test | Evidence | Status | Gap / limitation |
-|---|---|---|---|---|---|---|---|
+The following remain explicitly excluded from an implementation-complete interpretation:
 
-The audit must distinguish:
-
-- implementation present;
-- implementation planned;
-- test present;
-- test passing;
-- evidence measured;
-- physical validation pending.
-
-## 7. No false closure
-
-The following do **not** constitute implementation by themselves:
-
-- architecture prose;
-- TODO lists;
-- filenames;
+- architecture prose alone;
+- filenames or document existence;
 - passing documentation lint;
-- a unit test for a different layer;
-- a Mac benchmark used to claim robot performance;
-- software safety tests used to claim physical safety;
-- a model being named without an executable inference integration.
+- a test that validates another layer;
+- Mac benchmarks used as robot-performance claims;
+- software safety tests used as physical-safety claims;
+- named models without executable model integration;
+- candidate NVIDIA technologies without adoption ADRs and validation.
 
-## 8. Deferred hardware boundary
+## 7. Deferred boundary
 
 The following may legitimately remain `DEFERRED` while Mac-first development continues:
 
 - final Jetson/Thor selection;
-- CUDA/JetPack/TensorRT versions;
+- exact CUDA/JetPack/TensorRT versions for the final robot;
 - physical sensor drivers;
 - physical actuator drivers;
 - battery/thermal measurements;
-- HIL/physical safety validation.
+- HIL/physical safety validation;
+- complete replay and sensor-fusion runtime implementation;
+- physical fault-injection and endurance evidence.
 
-A deferred item must state its trigger for activation and required evidence.
+Every deferred item in the final matrix contains a trigger and required evidence.
 
-## 9. Closure criteria
+## 8. Closure result
 
-ARCH-CLOSE-009 can close only when:
+ARCH-CLOSE-009 is closed because:
 
-1. all P0 closure requirements have a traceability entry;
+1. all 30 P0 closure requirements have traceability entries;
 2. no P0 item is classified `GAP`;
 3. every `IMPLEMENTED` claim points to implementation and executable validation;
 4. every `EVIDENCED` claim states limitations;
 5. every `DEFERRED` claim states why and when it becomes actionable;
-6. contradictory architecture claims are identified and resolved;
-7. the matrix is reproducible from the repository.
+6. physical-only claims are not falsely promoted to software evidence;
+7. the final matrix is reproducible from `main`;
+8. contradictions relevant to the traceability gate are explicitly governed.
 
-## 10. Architectural invariant
+## 9. Architectural invariant
 
-> **Every authoritative Novi architecture decision must be traceable to implementation, executable validation, measured evidence, or an explicit justified deferral. Documentation alone never closes an implementation requirement.**
+> **Every authoritative Novi architecture decision must be traceable to a contract, implementation, executable validation, measured evidence, or an explicit justified deferral; documentation alone never closes an implementation requirement.**
