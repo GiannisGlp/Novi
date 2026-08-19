@@ -55,7 +55,7 @@ class SimulatedCapabilityGateway:
     ) -> SimulatedExecution:
         if not allowed:
             raise PermissionError("execution requires explicit authorization and safety approval")
-        if not proposal.constraints.get("requires_safety_authorization", True):
+        if proposal.constraints.get("requires_safety_authorization") is not True:
             raise PermissionError("proposal does not carry the required safety boundary")
 
         operation_id = sha256(
