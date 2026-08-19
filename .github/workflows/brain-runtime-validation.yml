@@ -5,12 +5,18 @@ on:
     branches: [main]
     paths:
       - 'brain/**'
+      - 'mac_brain/**'
+      - 'scripts/mac-brain-test.sh'
       - 'docs/02-novi-brain/**'
+      - 'MAC_BRAIN/**'
       - '.github/workflows/brain-runtime-validation.yml'
   pull_request:
     paths:
       - 'brain/**'
+      - 'mac_brain/**'
+      - 'scripts/mac-brain-test.sh'
       - 'docs/02-novi-brain/**'
+      - 'MAC_BRAIN/**'
       - '.github/workflows/brain-runtime-validation.yml'
   workflow_dispatch:
 
@@ -36,3 +42,15 @@ jobs:
 
       - name: Run Brain test suite again as CI gate
         run: python -m unittest discover -s brain/tests -p 'test_*.py'
+
+      - name: Run Mac Brain integration tests
+        run: python -m unittest discover -s mac_brain/tests -p 'test_*.py' -v
+
+      - name: Run Mac Brain deterministic runtime smoke test
+        run: python -m mac_brain.cli --cycles 3 --evidence mac_brain_ci_evidence.json
+
+      - name: Upload Mac Brain smoke evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-brain-evidence
+          path: mac_brain_ci_evidence.json
