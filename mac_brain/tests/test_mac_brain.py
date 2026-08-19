@@ -51,8 +51,8 @@ class MacBrainTests(unittest.TestCase):
         brain = MacBrain(camera=FakeCamera())
         brain.start()
         brain.step()
-        event_types = [event["event_type"] for event in brain.events]
         brain.stop()
+        event_types = [event["event_type"] for event in brain.events]
 
         self.assertIn("mac_brain.started", event_types)
         self.assertIn("sensor.camera.frame", event_types)
