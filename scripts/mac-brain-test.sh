@@ -8,16 +8,24 @@ if [[ -x "$ROOT/.venv/bin/python" ]]; then
   PYTHON="$ROOT/.venv/bin/python"
 fi
 
-# Always make the repository root the Python import root. This keeps unittest
-# discovery stable across macOS shells, Python versions and invocation paths.
-export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+# macOS commonly uses a case-insensitive filesystem. The repository contains
+# the documentation directory MAC_BRAIN and the executable Python package
+# mac_brain. A case-insensitive checkout can merge those paths in the working
+# tree even though Git stores them separately. Materialize the tracked Python
+# package into an isolated temporary directory from Git's object database so
+# tests always execute the exact committed package.
+PACKAGE_TMP="$(mktemp -d "${TMPDIR:-/tmp}/novi-mac-brain.XXXXXX")"
+trap 'rm -rf "$PACKAGE_TMP"' EXIT
+
+git archive --format=tar HEAD mac_brain | tar -x -C "$PACKAGE_TMP"
+export PYTHONPATH="$PACKAGE_TMP:$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="$ROOT/mac_test_results/mac_brain/$RUN_ID"
 mkdir -p "$OUT"
 
 set +e
-"$PYTHON" -m unittest discover -s "$ROOT/mac_brain/tests" -t "$ROOT" -p 'test_*.py' >"$OUT/tests.log" 2>&1
+"$PYTHON" -m unittest discover -s "$PACKAGE_TMP/mac_brain/tests" -t "$PACKAGE_TMP" -p 'test_*.py' >"$OUT/tests.log" 2>&1
 TEST_STATUS=$?
 "$PYTHON" -m mac_brain.cli --cycles 3 --evidence "$OUT/runtime.json" >"$OUT/runtime.log" 2>&1
 RUNTIME_STATUS=$?
