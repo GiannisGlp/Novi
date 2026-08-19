@@ -1,6 +1,6 @@
 # 01 — System Architecture
 
-**Status:** Authoritative system-architecture domain / P0 foundation  
+**Status:** COMPLETE — architecture closure gate passed  
 **Scope:** System boundaries, dependencies, runtime profiles, cross-cutting requirements, durable state, consistency, replication, recovery, privacy, observability, resource governance and future multi-agent coordination.
 
 ## Purpose
@@ -148,9 +148,9 @@ Only platform adapters, model runtimes, sensor drivers and performance-specific 
 
 NVIDIA is an important reference ecosystem for Novi's edge AI, robotics acceleration and simulation. NVIDIA-specific components must remain behind capability boundaries.
 
-Current NVIDIA documentation explicitly recommends ROS 2 Jazzy for Isaac Sim testing, and current Isaac ROS documentation states that its packages are designed/tested with ROS 2 Jazzy. citeturn0search4turn0search6
+Current NVIDIA documentation explicitly recommends ROS 2 Jazzy for Isaac Sim testing, and current Isaac ROS documentation states that its packages are designed/tested with ROS 2 Jazzy.
 
-Current Jetson AGX Orin documentation identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release for the developer kit. citeturn1search1
+Current Jetson AGX Orin documentation identifies JetPack 7.2 / L4T r39.2 as the latest JetPack release for the developer kit.
 
 Therefore the current architecture baseline is:
 
@@ -190,6 +190,13 @@ These are implementation candidates, not semantic authorities.
 - `13_113_RESOURCE_GOVERNANCE_SCHEDULING_AND_BUDGETS.md`
 - `14_114_MULTI_AGENT_COORDINATION_DELEGATION_AND_SHARED_MEMORY.md`
 
+### Closure artifacts
+
+- `22_ARCHITECTURE_CLOSURE_AND_BASELINE.md` — canonical architecture closure register.
+- `37_ARCH_CLOSE_009_ARCHITECTURE_TO_TEST_MAPPING.md` — ARCH-CLOSE-009 mapping.
+- `38_ARCH_CLOSE_010_DEPENDENCY_NUMBERING_INTEGRITY_AUDIT.md` — ARCH-CLOSE-010 final audit.
+- `39_ARCH_CLOSE_010_VALIDATION_EVIDENCE_2026-08-19.md` — executable validation evidence for ARCH-CLOSE-010.
+
 ## Required future architecture domains
 
 System architecture must also define explicit interfaces with:
@@ -214,8 +221,27 @@ System architecture must also define explicit interfaces with:
 
 The system architecture must not duplicate those domain specifications; it defines their contracts and dependency direction.
 
+## Closure result
+
+All ten architecture closure workstreams have completed their current architecture-phase gates:
+
+```text
+ARCH-CLOSE-001  CLOSED
+ARCH-CLOSE-002  CLOSED
+ARCH-CLOSE-003  CLOSED
+ARCH-CLOSE-004  CLOSED
+ARCH-CLOSE-005  CLOSED
+ARCH-CLOSE-006  CLOSED
+ARCH-CLOSE-007  CLOSED
+ARCH-CLOSE-008  CLOSED
+ARCH-CLOSE-009  CLOSED
+ARCH-CLOSE-010  CLOSED
+```
+
+The repository architecture-integrity workflow passes after the ARCH-CLOSE-010 remediation. The final program-level tracker is the canonical surface for recording the System Architecture domain as COMPLETE.
+
 ## Status
 
-**Architecture status:** P0 foundation under consolidation.
+**Architecture status: COMPLETE for the current implementation phase.**
 
-No implementation should begin from this folder alone. Implementation requires the applicable domain specification, technology ADR, interface contract, test plan and validation evidence.
+This does not mean Novi software or the physical robot is complete. Implementation proceeds through the domain completion gates defined by the canonical program tracker.
