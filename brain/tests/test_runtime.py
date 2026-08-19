@@ -64,7 +64,7 @@ class BrainRuntimeTests(unittest.TestCase):
         self.assertTrue(outcome.success)
         self.assertEqual(outcome.action, "inspect")
         self.assertEqual(brain.lifecycle, Lifecycle.SHUTTING_DOWN)
-        self.assertEqual(len(brain.events.events), 8)
+        self.assertEqual(len(brain.events.events), 9)
 
     def test_scheduler_runs_priority_order(self) -> None:
         scheduler = DeterministicScheduler()
