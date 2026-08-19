@@ -46,9 +46,9 @@ Validator:
 
 Validator blob SHA at the validated repository revision:
 
-`d922d0dec28ff49eed6a8ce7900f60e289fd103`
+`d922d0dec28ffbb8a6beb8a21d5f9c5ba625358e`
 
-> Note: the validator's executable behavior is the authority; this record identifies the repository artifact used for the gate.
+> The validator's executable behavior is the authority; this record identifies the repository artifact used for the gate.
 
 ## 5. Validation result
 
