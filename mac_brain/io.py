@@ -25,11 +25,7 @@ class Camera(Protocol):
 
 
 class MacCamera:
-    """macOS camera adapter using OpenCV when installed.
-
-    OpenCV is optional at import time so CI can exercise the interface without
-    camera hardware. A real Mac run requires `opencv-python` for this adapter.
-    """
+    """macOS camera adapter using OpenCV when installed."""
 
     def __init__(self, device: int = 0, width: int = 640, height: int = 480) -> None:
         self.device = device
@@ -152,7 +148,7 @@ class VirtualBody:
     velocity_mps: float = 0.0
     last_action: str = "idle"
 
-    ALLOWED_ACTIONS = frozenset({"move_forward", "turn_left", "turn_right", "stop", "wait", "observe", "speak"})
+    ALLOWED_ACTIONS = frozenset({"inspect", "move_forward", "turn_left", "turn_right", "stop", "wait", "observe", "speak"})
 
     def execute(self, action: str, **parameters: Any) -> dict[str, Any]:
         if action not in self.ALLOWED_ACTIONS:
@@ -170,7 +166,7 @@ class VirtualBody:
         elif action == "turn_right":
             self.heading_deg = (self.heading_deg - degrees) % 360.0
             self.velocity_mps = 0.0
-        elif action in {"stop", "wait", "observe", "speak"}:
+        elif action in {"stop", "wait", "observe", "inspect", "speak"}:
             self.velocity_mps = 0.0
         self.last_action = action
         return self.snapshot()
