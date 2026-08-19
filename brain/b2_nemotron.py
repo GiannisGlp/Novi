@@ -3,7 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol
 
-from .b2_model_runtime import ModelInvocationRequest, ModelResult, ModelRuntime
+from .b2_model_runtime import (
+    ModelArtifact,
+    ModelInvocationError,
+    ModelInvocationRequest,
+    ModelResult,
+    ModelRuntime,
+)
 
 
 NEMOTRON_3_NANO_OMNI_MODEL_ID = "nvidia/nemotron-3-nano-omni-30b-a3b"
@@ -11,7 +17,12 @@ NEMOTRON_3_NANO_OMNI_VERSION = "3.0"
 
 
 class NemotronBackend(Protocol):
-    def invoke(self, *, payload: Mapping[str, Any], request: ModelInvocationRequest) -> Any: ...
+    """Runtime backend contract used by a Nemotron implementation."""
+
+    def load(self, artifact: ModelArtifact) -> None: ...
+    def unload(self, model_id: str) -> None: ...
+    def health(self, model_id: str) -> str: ...
+    def invoke(self, request: ModelInvocationRequest) -> Any: ...
 
 
 @dataclass(frozen=True)
@@ -47,9 +58,17 @@ class NemotronAdapter:
         self.runtime = runtime
         self.backend = backend
 
-    def invoke(self, *, invocation_id: str, artifact_digest: str, runtime_name: str,
-               runtime_version: str, hardware: Mapping[str, Any],
-               input_data: NemotronInput, correlation_id: str | None = None) -> ModelResult:
+    def invoke(
+        self,
+        *,
+        invocation_id: str,
+        artifact_digest: str,
+        runtime_name: str,
+        runtime_version: str,
+        hardware: Mapping[str, Any],
+        input_data: NemotronInput,
+        correlation_id: str | None = None,
+    ) -> ModelResult:
         request = ModelInvocationRequest(
             invocation_id=invocation_id,
             model_id=self.model_id,
@@ -68,9 +87,28 @@ class NemotronAdapter:
 
 
 class DeterministicNemotronBackend:
-    """CI backend; it validates multimodal payload shape without model inference."""
+    """CI backend; validates multimodal payload shape without model inference."""
 
-    def invoke(self, *, payload: Mapping[str, Any], request: ModelInvocationRequest) -> Any:
+    def __init__(self) -> None:
+        self._loaded: dict[str, ModelArtifact] = {}
+
+    def load(self, artifact: ModelArtifact) -> None:
+        self._loaded[artifact.model_id] = artifact
+
+    def unload(self, model_id: str) -> None:
+        self._loaded.pop(model_id, None)
+
+    def health(self, model_id: str) -> str:
+        return "READY" if model_id in self._loaded else "UNLOADED"
+
+    def invoke(self, request: ModelInvocationRequest) -> Any:
+        if request.model_id not in self._loaded:
+            raise ModelInvocationError("model_not_loaded")
+
+        payload = request.input_payload
+        if not isinstance(payload, Mapping):
+            raise ModelInvocationError("invalid_multimodal_payload")
+
         return {
             "type": "multimodal_evidence",
             "text_present": payload.get("text") is not None,
