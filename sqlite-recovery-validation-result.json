@@ -1,0 +1,49 @@
+{
+  "benchmark_id": "ARCH-CLOSE-003-SQLITE-RECOVERY-001",
+  "sqlite_version": "3.53.4",
+  "python": "3.14.6",
+  "timestamp_utc": "2026-08-19T05:27:07Z",
+  "tests": [
+    {
+      "name": "commit_reopen_persistence",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback_uncommitted_transaction",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "duplicate_event_rejected",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "stale_revision_rejected",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "checkpoint_reopen_integrity",
+      "passed": true,
+      "detail": "event_count=1"
+    },
+    {
+      "name": "backup_restore",
+      "passed": true,
+      "detail": "restored_events=1"
+    },
+    {
+      "name": "malformed_migration_isolated",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "passed": true,
+  "limitations": [
+    "This harness validates transactional/recovery invariants without forcibly killing a live process at arbitrary kernel/storage boundaries.",
+    "Storage-full and permission failures require environment-controlled integration tests.",
+    "Concurrent conflict and interrupted backup require separate stress/fault campaigns."
+  ]
+}
