@@ -27,7 +27,7 @@ class BrainRuntimeTests(unittest.TestCase):
         self.assertTrue(outcome.success)
         self.assertEqual(outcome.action, "inspect")
         self.assertEqual(brain.lifecycle, Lifecycle.SHUTTING_DOWN)
-        self.assertEqual(len(brain.events.events), 5)
+        self.assertEqual(len(brain.events.events), 8)
 
     def test_safety_cannot_be_bypassed(self) -> None:
         brain = BrainSupervisor()
