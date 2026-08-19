@@ -1,0 +1,39 @@
+name: Brain Runtime Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'brain/**'
+      - 'docs/02-novi-brain/**'
+      - '.github/workflows/brain-runtime-validation.yml'
+  pull_request:
+    paths:
+      - 'brain/**'
+      - 'docs/02-novi-brain/**'
+      - '.github/workflows/brain-runtime-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  brain-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Verify Python test discovery
+        run: |
+          python --version
+          python -m unittest discover -s brain/tests -p 'test_*.py' -v
+
+      - name: Run Brain test suite again as CI gate
+        run: python -m unittest discover -s brain/tests -p 'test_*.py'
