@@ -32,11 +32,14 @@ class DemoCamera:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the Novi Mac Brain runtime")
     parser.add_argument("--live-camera", action="store_true", help="use the Mac camera instead of the deterministic camera")
+    parser.add_argument("--deterministic", action="store_true", help="explicitly select the deterministic camera mode")
     parser.add_argument("--cycles", type=int, default=1)
     parser.add_argument("--speak", type=str, default=None)
-    parser.add_argument("--evidence", type=Path, default=None, help="write JSON evidence to this path")
+    parser.add_argument("--evidence", type=Path, default=Path("mac_brain_evidence.json"), help="write JSON evidence to this path")
     args = parser.parse_args()
 
+    if args.live_camera and args.deterministic:
+        parser.error("--live-camera and --deterministic are mutually exclusive")
     if args.cycles <= 0:
         parser.error("--cycles must be > 0")
 
