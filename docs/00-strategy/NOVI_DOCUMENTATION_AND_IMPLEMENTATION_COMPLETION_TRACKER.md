@@ -3,7 +3,7 @@
 **Status:** Canonical master tracker  
 **Priority:** P0 / critical  
 **Owner:** Novi architecture and implementation program  
-**Updated:** 2026-08-18  
+**Updated:** 2026-08-19  
 
 ---
 
@@ -52,7 +52,7 @@ A domain marked **COMPLETE** means its documentation and architectural decisions
 | Domain | Current status | Current assessment | Immediate closure target |
 |---|---|---|---|
 | Soul | **COMPLETE** | ██████████ | Cross-domain stale-reference audit only |
-| System Architecture | **IN PROGRESS** | █████████░ | Close ARCH-CLOSE-001..010 and pass architecture gate |
+| System Architecture | **COMPLETE** | ██████████ | Architecture closed; proceed to next program-status domain |
 | Brain | **IN PROGRESS** | █████████░ | Close runtime/adapter/contracts and validation gaps |
 | Cognition | **IN PROGRESS** | █████████░ | Complete implementation contracts, typed models and validation |
 | Memory | **IN PROGRESS** | █████████░ | Complete concrete storage/retrieval implementation baseline |
@@ -64,7 +64,7 @@ A domain marked **COMPLETE** means its documentation and architectural decisions
 | Security | **IN PROGRESS** | █████░░░░░ | Complete physical-AI threat model and security validation |
 | Deployment | **IN PROGRESS** | ████░░░░░░ | Complete reproducible manifests, artifact/version and rollback strategy |
 
-**Important:** the previous tracker labels were stale relative to repository work completed after the tracker was created. This synchronization deliberately does **not** promote any domain to COMPLETE merely because documents now exist. Completion requires its documented gate and evidence.
+**Important:** System Architecture is now marked COMPLETE because the ten ARCH-CLOSE workstreams have been closed and the final architecture-integrity validation passed. This does not promote any downstream implementation domain to COMPLETE. Downstream domains retain their existing evidence-based status.
 
 ---
 
@@ -111,18 +111,14 @@ Soul owns enduring identity, personality, values, motivations, social dispositio
 
 ---
 
-## 5.2 System Architecture — IN PROGRESS
+## 5.2 System Architecture — COMPLETE
 
 ### Authority
 `docs/01-system-architecture/`
 
-### Current work
+### Completed scope
 
-The architecture has a strong foundation and now has an explicit closure register:
-
-`docs/01-system-architecture/22_ARCHITECTURE_CLOSURE_AND_BASELINE.md`
-
-The closure campaign contains:
+The System Architecture closure campaign has completed all ten P0 workstreams:
 
 1. canonical contracts;
 2. consistency mapping;
@@ -135,15 +131,49 @@ The closure campaign contains:
 9. architecture-to-test traceability;
 10. dependency/numbering integrity.
 
-### Exit criteria
+The final dependency/numbering integrity gate was closed through executable repository validation. The validation evidence is recorded in:
 
-- no unresolved P0 architecture contradiction;
-- every system boundary has an owner;
-- every P0 interface has one canonical contract;
-- architecture validation and traceability gate passes;
-- closure evidence exists for the ten ARCH-CLOSE workstreams.
+`docs/01-system-architecture/39_ARCH_CLOSE_010_VALIDATION_EVIDENCE_2026-08-19.md`
 
-**Status: IN PROGRESS — closure required**
+The architecture-integrity validator is:
+
+`scripts/validate_architecture_integrity.py`
+
+and its CI workflow is:
+
+`.github/workflows/architecture-integrity-validation.yml`
+
+### Final closure evidence
+
+```text
+ARCH-CLOSE-001  CLOSED
+ARCH-CLOSE-002  CLOSED
+ARCH-CLOSE-003  CLOSED
+ARCH-CLOSE-004  CLOSED
+ARCH-CLOSE-005  CLOSED
+ARCH-CLOSE-006  CLOSED
+ARCH-CLOSE-007  CLOSED
+ARCH-CLOSE-008  CLOSED
+ARCH-CLOSE-009  CLOSED
+ARCH-CLOSE-010  CLOSED
+                         ↓
+             SYSTEM ARCHITECTURE COMPLETE
+```
+
+### Completion gate
+
+- no unresolved P0 architecture contradiction identified in the closure campaign;
+- system boundaries and ownership are established;
+- P0 interface authority is explicitly governed;
+- architecture validation and traceability gates are closed;
+- closure evidence exists for all ten ARCH-CLOSE workstreams;
+- repository dependency/numbering integrity validation passes.
+
+### Scope boundary
+
+**COMPLETE** means the system architecture and its closure evidence are sufficient for the current implementation stage. It does **not** mean the Brain, Cognition, Memory, Autonomy, Hardware, Technology, Simulation, Validation, Security or Deployment implementation domains are complete.
+
+**Status: COMPLETE — System Architecture closure achieved 2026-08-19.**
 
 ---
 
@@ -471,13 +501,13 @@ Every interface has one authoritative owner. The current closure campaign is `AR
 
 Canonical system-level contracts must be reconciled with domain semantic models before executable schemas are created. Cognition, Memory, Autonomy, Brain and Hardware must not silently create competing system-level authorities.
 
-**Status: IN PROGRESS — reconciliation required.**
+**Status: IN PROGRESS — implementation reconciliation remains after architecture closure.**
 
 ## X-002 — Time and synchronization
 
 Define system, monotonic, ROS, simulation, sensor and hardware clocks; timestamp semantics; synchronization; drift; ordering and failure behavior.
 
-**Status: IN PROGRESS — P0.**
+**Status: IN PROGRESS — P0 implementation/evidence work remains.**
 
 ## X-003 — Observability
 
@@ -487,50 +517,54 @@ Trace the complete causal path:
 sensor → perception → evidence → world state → memory → cognition → autonomy → policy → action → outcome
 ```
 
-**Status: IN PROGRESS — P0.**
+**Status: IN PROGRESS — P0 implementation/evidence work remains.**
 
 ## X-004 — Resource governance
 
 Define CPU/GPU/RAM/unified-memory/storage/network/power/thermal budgets for Mac-first and future edge targets.
 
-**Status: IN PROGRESS — P0.**
+**Status: IN PROGRESS — P0 implementation/evidence work remains.**
 
 ## X-005 — Data/model provenance
 
 Every model, dataset, learned behavior and durable memory artifact must have provenance, version and lifecycle semantics.
 
-**Status: IN PROGRESS — P0.**
+**Status: IN PROGRESS — P0 implementation/evidence work remains.**
 
 ## X-006 — Failure and degradation
 
 Define behavior when sensors, models, memory, network, GPU, storage, speech, navigation or actuators fail.
 
-**Status: IN PROGRESS — P0.**
+**Status: IN PROGRESS — P0 implementation/evidence work remains.**
 
 ---
 
 # 7. System Architecture closure sequence
 
-The program is currently working through System Architecture closure before starting another major implementation phase:
+The System Architecture closure campaign is complete. All ten P0 architecture closure workstreams have passed their applicable evidence gates, including the final repository-wide dependency/numbering integrity validation.
 
 ```text
-ARCH-CLOSE-001  Canonical contracts             🟠 reconciliation required
-ARCH-CLOSE-002  Consistency mapping             🟡
-ARCH-CLOSE-003  Stage-1 durable storage         🟡
-ARCH-CLOSE-004  Runtime/version tuple           🟡
-ARCH-CLOSE-005  Safety integration              🟡
-ARCH-CLOSE-006  Time synchronization            🟡
-ARCH-CLOSE-007  Resource budgets                🟡
-ARCH-CLOSE-008  Deployment manifest             🟡
-ARCH-CLOSE-009  Architecture → test mapping     🟡
-ARCH-CLOSE-010  Dependency/numbering integrity  🟡
-                         ↓
-                Final architecture audit
+ARCH-CLOSE-001  Canonical contracts             CLOSED
+ARCH-CLOSE-002  Consistency mapping             CLOSED
+ARCH-CLOSE-003  Stage-1 durable storage         CLOSED
+ARCH-CLOSE-004  Runtime/version tuple           CLOSED
+ARCH-CLOSE-005  Safety integration              CLOSED
+ARCH-CLOSE-006  Time synchronization            CLOSED
+ARCH-CLOSE-007  Resource budgets                CLOSED
+ARCH-CLOSE-008  Deployment manifest             CLOSED
+ARCH-CLOSE-009  Architecture → test mapping     CLOSED
+ARCH-CLOSE-010  Dependency/numbering integrity  CLOSED
                          ↓
               SYSTEM ARCHITECTURE COMPLETE
+                         ↓
+              NEXT PROGRAM DOMAIN: BRAIN
 ```
 
-**Current work item:** ARCH-CLOSE-001 — reconcile canonical system contracts with the master data/artifact catalog and domain contracts, assign one authority to every contract/artifact type, then create the executable contract registry and schemas.
+### ARCH-CLOSE-010 final evidence
+
+`docs/01-system-architecture/39_ARCH_CLOSE_010_VALIDATION_EVIDENCE_2026-08-19.md`
+
+The final validation establishes `ARCHITECTURE INTEGRITY: PASS` for the post-remediation repository revision. The gate validates documentation/reference integrity only; it does not imply physical hardware, HIL, production deployment or downstream domain completion.
 
 ---
 
@@ -636,22 +670,28 @@ If this tracker conflicts with a domain authority, resolve the conflict explicit
 
 # 12. Current program position
 
-The repository has moved from broad conceptual documentation into **architecture closure and implementation-readiness work**. The next work is not to start code prematurely; it is to close the remaining P0/P1 gates systematically.
+The repository has completed **System Architecture closure** and is now moving into the next program-status domain: **Brain**.
+
+This does not mean the program is globally implementation-ready. The global readiness gate remains dependent on completion of all required domains and cross-domain P0 gates.
 
 Current highest-priority sequence:
 
 ```text
-1. System Architecture closure
+1. System Architecture — COMPLETE
       ↓
-2. Canonical contract reconciliation
+2. Brain — next program-status domain
       ↓
-3. Executable contract registry/schemas
+3. Cognition / Memory / Autonomy integration
       ↓
-4. Remaining architecture P0 gates
+4. Hardware / Technology / Simulation foundations
       ↓
-5. Re-synchronize this tracker
+5. Validation / Security / Deployment gates
       ↓
-6. Close the next program-status domain
+6. Global readiness audit
+      ↓
+7. MAC BRAIN STAGE 0
 ```
+
+The next work must use the completed System Architecture as the governing boundary and must not reopen closed architecture decisions without an explicit new ADR or evidence-based change request.
 
 This tracker must be updated whenever a domain, cross-domain gate or authoritative dependency materially changes.
