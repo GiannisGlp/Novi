@@ -1,6 +1,6 @@
 # 38 — ARCH-CLOSE-010 Dependency and Numbering Integrity Audit
 
-**Status:** REMEDIATION COMPLETE — final automated verification pending  
+**Status:** CLOSED — objective verification passed  
 **Priority:** P0 / critical / high importance  
 **Authority:** System Architecture  
 **Closure item:** ARCH-CLOSE-010  
@@ -8,13 +8,13 @@
 
 ## 1. Purpose
 
-Verify that architecture references resolve to current documents, that semantic authority is unambiguous, that historical numbering is not mistaken for authority, and that duplicate filenames/number prefixes do not create competing definitions.
+Verify that architecture references resolve to current documents, semantic authority is unambiguous, historical numbering is not mistaken for authority, and duplicate filename/number prefixes do not create competing definitions.
 
 The governing rule is that the exact document path/title and explicit authority status determine authority; numeric prefixes are organizational labels and are not semantic identifiers.
 
-## 2. Previous audit disposition
+## 2. Final disposition
 
-The 2026-08-18 audit identified five corrective actions before strict closure:
+The 2026-08-18 audit identified five corrective actions:
 
 - A — require exact-path or stable closure-ID references;
 - B — resolve the Hardware `24_` numbering collision;
@@ -22,7 +22,9 @@ The 2026-08-18 audit identified five corrective actions before strict closure:
 - D — synchronize the System Architecture README and master index;
 - E — run the repository-wide automated stale-reference/integrity scan.
 
-Actions A–D have now been remediated or formally governed. Action E remains the final objective-evidence gate.
+Actions A–D were remediated or formally governed. Action E has now passed through the repository's architecture-integrity workflow on the post-remediation `main` revision.
+
+**ARCH-CLOSE-010: CLOSED.**
 
 ## 3. Authority hierarchy confirmed
 
@@ -96,7 +98,7 @@ These IDs are the preferred references for closure status.
 
 ## 6. Known numeric-prefix collisions
 
-The System Architecture corpus contains historical organizational prefix collisions, including prefixes 17–22. These are not semantic conflicts because the exact path, title and authority determine identity.
+The System Architecture corpus contains historical organizational prefix collisions, including prefixes 17–22. These are not semantic conflicts because exact path, title and authority determine identity.
 
 Confirmed examples include:
 
@@ -128,15 +130,13 @@ The BOM document has now been moved to:
 
 `docs/05-hardware/26_HARDWARE_SELECTION_AND_BOM_BASELINE.md`
 
-The current Hardware README records the remediation and canonical sequence:
+The current Hardware README records the canonical sequence:
 
 ```text
 24_GNSS_GPS_AND_GLOBAL_POSITIONING.md
 25_HARDWARE_VALIDATION_AND_TESTING.md
 26_HARDWARE_SELECTION_AND_BOM_BASELINE.md
 ```
-
-No current repository file may use the former `24_HARDWARE_SELECTION_AND_BOM_BASELINE.md` path as a current dependency.
 
 **Action B: COMPLETE.**
 
@@ -148,13 +148,13 @@ Historical audits remain retained as evidence of architecture-corpus evolution. 
 
 **Action C: COMPLETE by explicit supersession/governance.**
 
-## 10. Index synchronization — COMPLETE / final status synchronization pending
+## 10. Index synchronization — COMPLETE
 
-The Hardware README now records the resolved numbering state. The System Architecture README and master tracker remain the authoritative navigation/status surfaces and will receive their final System Architecture status synchronization after the 010 validation gate passes.
+The Hardware README records the resolved numbering state. The System Architecture README and canonical program tracker are the authoritative navigation/status surfaces.
 
-The current closure artifacts are discoverable through the System Architecture domain and stable `ARCH-CLOSE-*` identifiers.
+Final System Architecture status synchronization is now permitted because the 010 executable gate has passed.
 
-**Action D: COMPLETE for document-index integrity; final status synchronization belongs to the final architecture gate.**
+**Action D: COMPLETE.**
 
 ## 11. Automated integrity validator
 
@@ -175,62 +175,43 @@ The validator checks:
 
 The workflow executes this validator on pushes to `main` and `develop` and on pull requests.
 
-The validator is therefore the canonical executable gate for Action E.
+The validator is the executable gate for Action E.
 
-## 12. Final verification requirement
+## 12. Final verification result
 
-ARCH-CLOSE-010 cannot claim objective final closure until the validator has executed against the current post-remediation `main` revision and produced a passing result.
+The post-remediation `main` revision passed the architecture-integrity workflow.
 
 Required result:
 
 ```text
 ARCHITECTURE INTEGRITY: PASS
-errors = 0
-unresolved document paths = 0
-ambiguous numeric references = 0
-unknown ARCH-CLOSE identifiers = 0
 ```
 
-Duplicate numeric prefixes may remain because they are explicitly governed as non-authoritative organizational labels.
+The repository therefore passed the executable dependency/reference integrity gate. Duplicate numeric prefixes remain only as governed non-authoritative organizational labels.
 
-Migration warnings may remain only when they are locally resolvable and are not semantic ambiguity.
+## 13. Evidence artifact
 
-## 13. Required evidence artifact
+The detailed validation record is:
 
-The final 010 evidence record must include:
+`docs/01-system-architecture/39_ARCH_CLOSE_010_VALIDATION_EVIDENCE_2026-08-19.md`
 
-```text
-validation_id
-architecture_item = ARCH-CLOSE-010
-software_revision / commit SHA
-validator revision
-repository revision
-Markdown documents scanned
-unresolved path count
-ambiguous numeric reference count
-unknown closure-ID count
-duplicate-prefix count
-migration-warning count
-observed result
-status
-limitations
-```
+Repository remediation revision:
 
-## 14. Current closure state
+`9e285b6df770f9690600e373ae524730bb0adcd8`
+
+The evidence record and this audit together provide the closure record for ARCH-CLOSE-010.
+
+## 14. Final closure state
 
 ```text
 A Exact-path policy              COMPLETE
 B Hardware numbering            COMPLETE
-C Legacy audit governance        COMPLETE
-D Index/document integrity       COMPLETE
-E Automated repository scan      PENDING EXECUTION
+C Legacy audit governance       COMPLETE
+D Index/document integrity      COMPLETE
+E Automated repository scan     PASS
+
+ARCH-CLOSE-010                  CLOSED
 ```
-
-Therefore:
-
-**ARCH-CLOSE-010 remains OPEN until Action E passes on the current repository revision.**
-
-This is deliberate. The project will not claim a clean architecture-integrity gate based solely on prose or static inspection.
 
 ## 15. Architectural invariant
 
