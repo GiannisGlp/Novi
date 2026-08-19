@@ -1,0 +1,218 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+from time import monotonic, time
+from typing import Any, Callable
+from uuid import uuid4
+
+
+class Lifecycle(str, Enum):
+    BOOTING = "BOOTING"
+    INITIALIZING = "INITIALIZING"
+    READY = "READY"
+    ACTIVE = "ACTIVE"
+    DEGRADED = "DEGRADED"
+    RECOVERING = "RECOVERING"
+    SAFE_STOP = "SAFE_STOP"
+    SHUTTING_DOWN = "SHUTTING_DOWN"
+    FAILED = "FAILED"
+
+
+@dataclass(frozen=True)
+class RuntimeEvent:
+    event_type: str
+    payload: dict[str, Any]
+    correlation_id: str = field(default_factory=lambda: str(uuid4()))
+    causation_id: str | None = None
+    sequence: int = 0
+    wall_time: float = field(default_factory=time)
+    monotonic_time: float = field(default_factory=monotonic)
+
+
+@dataclass(frozen=True)
+class Health:
+    status: str = "UNKNOWN"
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class Observation:
+    source: str
+    value: dict[str, Any]
+    quality: float = 1.0
+    sequence: int = 0
+
+
+@dataclass(frozen=True)
+class ActionProposal:
+    action: str
+    parameters: dict[str, Any]
+    reason: str
+    correlation_id: str
+
+
+@dataclass(frozen=True)
+class SafetyDecision:
+    authorized: bool
+    reason: str
+    correlation_id: str
+
+
+@dataclass(frozen=True)
+class ActionOutcome:
+    action: str
+    success: bool
+    detail: str
+    correlation_id: str
+
+
+class RuntimeErrorBase(Exception):
+    """Base error for runtime failures."""
+
+
+class InvalidLifecycleTransition(RuntimeErrorBase):
+    pass
+
+
+class SafetyViolation(RuntimeErrorBase):
+    pass
+
+
+class EventBus:
+    def __init__(self) -> None:
+        self._events: list[RuntimeEvent] = []
+        self._sequence = 0
+
+    def publish(self, event_type: str, payload: dict[str, Any], *, causation_id: str | None = None) -> RuntimeEvent:
+        self._sequence += 1
+        event = RuntimeEvent(event_type, payload, causation_id=causation_id, sequence=self._sequence)
+        self._events.append(event)
+        return event
+
+    @property
+    def events(self) -> tuple[RuntimeEvent, ...]:
+        return tuple(self._events)
+
+
+class DeterministicScheduler:
+    """Minimal synchronous scheduler for Stage 0; later implementations may become multi-rate."""
+
+    def __init__(self) -> None:
+        self._tasks: list[tuple[str, Callable[[], None]]] = []
+
+    def register(self, name: str, task: Callable[[], None]) -> None:
+        self._tasks.append((name, task))
+
+    def run_once(self) -> None:
+        for _, task in tuple(self._tasks):
+            task()
+
+
+class MockSafetyGateway:
+    def authorize(self, proposal: ActionProposal) -> SafetyDecision:
+        blocked = {"unsafe_motor_override", "disable_safety", "emergency_stop_bypass"}
+        authorized = proposal.action not in blocked
+        reason = "authorized" if authorized else "action is protected and cannot be bypassed"
+        return SafetyDecision(authorized, reason, proposal.correlation_id)
+
+
+class MockBody:
+    def __init__(self) -> None:
+        self.executed: list[ActionOutcome] = []
+
+    def execute(self, proposal: ActionProposal, decision: SafetyDecision) -> ActionOutcome:
+        if not decision.authorized:
+            raise SafetyViolation(decision.reason)
+        outcome = ActionOutcome(proposal.action, True, "mock execution completed", proposal.correlation_id)
+        self.executed.append(outcome)
+        return outcome
+
+
+class SyntheticSensor:
+    def __init__(self) -> None:
+        self._sequence = 0
+
+    def read(self) -> Observation:
+        self._sequence += 1
+        return Observation(
+            source="synthetic.environment",
+            value={"entity": "test_object", "distance_m": 1.0, "state": "present"},
+            quality=1.0,
+            sequence=self._sequence,
+        )
+
+
+class BrainSupervisor:
+    _allowed = {
+        Lifecycle.BOOTING: {Lifecycle.INITIALIZING, Lifecycle.FAILED},
+        Lifecycle.INITIALIZING: {Lifecycle.READY, Lifecycle.FAILED},
+        Lifecycle.READY: {Lifecycle.ACTIVE, Lifecycle.SHUTTING_DOWN},
+        Lifecycle.ACTIVE: {Lifecycle.DEGRADED, Lifecycle.SAFE_STOP, Lifecycle.SHUTTING_DOWN},
+        Lifecycle.DEGRADED: {Lifecycle.RECOVERING, Lifecycle.SAFE_STOP, Lifecycle.SHUTTING_DOWN},
+        Lifecycle.RECOVERING: {Lifecycle.ACTIVE, Lifecycle.FAILED},
+        Lifecycle.SAFE_STOP: {Lifecycle.SHUTTING_DOWN},
+        Lifecycle.SHUTTING_DOWN: set(),
+        Lifecycle.FAILED: {Lifecycle.SHUTTING_DOWN},
+    }
+
+    def __init__(self) -> None:
+        self.lifecycle = Lifecycle.BOOTING
+        self.health = Health("STARTING", "booting")
+        self.events = EventBus()
+        self.scheduler = DeterministicScheduler()
+        self.sensor = SyntheticSensor()
+        self.safety = MockSafetyGateway()
+        self.body = MockBody()
+        self.last_observation: Observation | None = None
+        self.last_outcome: ActionOutcome | None = None
+
+    def transition(self, target: Lifecycle, detail: str = "") -> None:
+        if target not in self._allowed[self.lifecycle]:
+            raise InvalidLifecycleTransition(f"{self.lifecycle.value} -> {target.value}")
+        previous = self.lifecycle
+        self.lifecycle = target
+        status = "HEALTHY" if target in {Lifecycle.READY, Lifecycle.ACTIVE} else target.value
+        self.health = Health(status, detail or target.value.lower())
+        self.events.publish("lifecycle.changed", {"from": previous.value, "to": target.value, "detail": detail})
+
+    def start(self) -> None:
+        self.transition(Lifecycle.INITIALIZING)
+        self.events.publish("runtime.readying", {})
+        self.transition(Lifecycle.READY)
+        self.transition(Lifecycle.ACTIVE)
+
+    def cycle(self) -> ActionOutcome:
+        if self.lifecycle is not Lifecycle.ACTIVE:
+            raise RuntimeErrorBase(f"cannot cycle while {self.lifecycle.value}")
+        observation = self.sensor.read()
+        self.last_observation = observation
+        observed = self.events.publish("observation.received", {"source": observation.source, "value": observation.value, "quality": observation.quality, "sequence": observation.sequence})
+
+        proposal = ActionProposal(
+            action="inspect",
+            parameters={"entity": observation.value["entity"]},
+            reason="synthetic observation requires inspection",
+            correlation_id=observed.correlation_id,
+        )
+        self.events.publish("action.proposed", {"action": proposal.action, "parameters": proposal.parameters}, causation_id=observed.correlation_id)
+        decision = self.safety.authorize(proposal)
+        self.events.publish("safety.decided", {"authorized": decision.authorized, "reason": decision.reason}, causation_id=proposal.correlation_id)
+        outcome = self.body.execute(proposal, decision)
+        self.last_outcome = outcome
+        self.events.publish("action.completed", {"action": outcome.action, "success": outcome.success, "detail": outcome.detail}, causation_id=proposal.correlation_id)
+        return outcome
+
+    def shutdown(self) -> None:
+        if self.lifecycle is Lifecycle.SAFE_STOP:
+            self.transition(Lifecycle.SHUTTING_DOWN)
+        elif self.lifecycle in {Lifecycle.READY, Lifecycle.ACTIVE, Lifecycle.DEGRADED}:
+            self.transition(Lifecycle.SHUTTING_DOWN)
+        elif self.lifecycle in {Lifecycle.FAILED}:
+            self.transition(Lifecycle.SHUTTING_DOWN)
+
+    def run(self, cycles: int = 1) -> tuple[ActionOutcome, ...]:
+        self.start()
+        outcomes = tuple(self.cycle() for _ in range(cycles))
+        self.shutdown()
+        return outcomes
