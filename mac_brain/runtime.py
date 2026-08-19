@@ -24,23 +24,9 @@ class MacBrainConfig:
 
 
 class MacBrain:
-    """First executable Mac embodiment of the existing Novi Brain.
+    """First executable Mac embodiment of the existing Novi Brain."""
 
-    This class deliberately composes existing B1/B2 Brain components instead of
-    creating a second cognitive architecture. Camera/model providers remain
-    replaceable, while the deterministic runtime and safety boundary remain the
-    authority for action execution.
-    """
-
-    def __init__(
-        self,
-        *,
-        camera: Camera | None = None,
-        speaker: MacSpeaker | None = None,
-        body: VirtualBody | None = None,
-        perception: SpecialistPerception | None = None,
-        config: MacBrainConfig | None = None,
-    ) -> None:
+    def __init__(self, *, camera: Camera | None = None, speaker: MacSpeaker | None = None, body: VirtualBody | None = None, perception: SpecialistPerception | None = None, config: MacBrainConfig | None = None) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
         self.camera = camera
@@ -63,57 +49,17 @@ class MacBrain:
             raise RuntimeError(f"Mac Brain must be ACTIVE, got {self.brain.lifecycle.value}")
         if self.camera is None:
             raise RuntimeError("camera provider is not configured")
-
         self._cycle += 1
         frame = self.camera.read()
-        self._emit("sensor.camera.frame", {
-            "frame_id": frame.frame_id,
-            "width": frame.width,
-            "height": frame.height,
-            "captured_at": frame.captured_at,
-            "metadata": frame.metadata,
-        })
-
-        evidence = self.perception.process(
-            sensor_id=self.config.sensor_id,
-            frame_id=frame.frame_id,
-            timestamp=frame.captured_at,
-            frame=frame.payload,
-        )
-        self._emit("perception.completed", {
-            "frame_id": evidence.frame_id,
-            "detection_count": len(evidence.detections),
-            "provenance": dict(evidence.provenance),
-        })
-
-        observations = tuple(
-            SensorObservation(
-                cycle=self._cycle,
-                source=f"{self.config.sensor_id}.perception",
-                entity=detection.label,
-                location=None,
-                state="present",
-                confidence=detection.confidence,
-                captured_cycle=self._cycle,
-            )
-            for detection in evidence.detections
-        )
+        self._emit("sensor.camera.frame", {"frame_id": frame.frame_id, "width": frame.width, "height": frame.height, "captured_at": frame.captured_at, "metadata": frame.metadata})
+        evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
+        self._emit("perception.completed", {"frame_id": evidence.frame_id, "detection_count": len(evidence.detections), "provenance": dict(evidence.provenance)})
+        observations = tuple(SensorObservation(cycle=self._cycle, source=f"{self.config.sensor_id}.perception", entity=detection.label, location=None, state="present", confidence=detection.confidence, captured_cycle=self._cycle) for detection in evidence.detections)
         self.world.apply_many(observations)
         cognitive = self.cognition.cycle(self.world.state, observations, cycle=self._cycle)
-        self._emit("cognition.completed", {
-            "cycle": self._cycle,
-            "conclusion": cognitive.reasoning.conclusion,
-            "confidence": cognitive.reasoning.confidence,
-            "uncertainty": list(cognitive.situation.uncertainty),
-        })
-
+        self._emit("cognition.completed", {"cycle": self._cycle, "conclusion": cognitive.reasoning.conclusion, "confidence": cognitive.reasoning.confidence, "uncertainty": list(cognitive.situation.uncertainty)})
         action = self._action_from_cognition(cognitive.reasoning.conclusion)
-        proposal = RuntimeActionProposal(
-            action=action,
-            parameters={},
-            reason="Mac Brain v0 runtime bounded virtual action",
-            correlation_id=str(uuid4()),
-        )
+        proposal = RuntimeActionProposal(action=action, parameters={}, reason="Mac Brain v0 runtime bounded virtual action", correlation_id=str(uuid4()))
         decision = self.brain.propose(proposal)
         if decision.authorized:
             outcome = self.brain.execute(proposal, decision)
@@ -121,24 +67,8 @@ class MacBrain:
         else:
             outcome = None
             virtual_state = self.body.snapshot()
-
-        self._emit("action.completed", {
-            "action": action,
-            "authorized": decision.authorized,
-            "outcome": outcome.detail if outcome else decision.reason,
-            "virtual_body": virtual_state,
-        })
-        return {
-            "run_id": self.run_id,
-            "cycle": self._cycle,
-            "frame_id": frame.frame_id,
-            "detections": [d.label for d in evidence.detections],
-            "reasoning": cognitive.reasoning.conclusion,
-            "reasoning_confidence": cognitive.reasoning.confidence,
-            "action": action,
-            "authorized": decision.authorized,
-            "virtual_body": virtual_state,
-        }
+        self._emit("action.completed", {"action": action, "authorized": decision.authorized, "outcome": outcome.detail if outcome else decision.reason, "virtual_body": virtual_state})
+        return {"run_id": self.run_id, "cycle": self._cycle, "frame_id": frame.frame_id, "detections": [d.label for d in evidence.detections], "reasoning": cognitive.reasoning.conclusion, "reasoning_confidence": cognitive.reasoning.confidence, "action": action, "authorized": decision.authorized, "virtual_body": virtual_state}
 
     def speak(self, text: str) -> None:
         self._emit("audio.speech.requested", {"text": text})
@@ -153,16 +83,9 @@ class MacBrain:
         self._emit("mac_brain.stopped", {"run_id": self.run_id, "cycles": self._cycle})
 
     def _action_from_cognition(self, conclusion: str) -> str:
-        # The Mac prototype starts with observation-only autonomy. Movement is
-        # deliberately not inferred from model text until a future policy gate.
-        if conclusion == "person_alice_is_relevant_to_current_situation":
-            return "observe"
-        return "observe"
+        # Stage-1 Mac autonomy is observation-only. The existing Stage-0 safety
+        # gateway authorizes `inspect`; movement remains disabled until a later gate.
+        return "inspect"
 
     def _emit(self, event_type: str, payload: dict[str, Any]) -> None:
-        self.events.append({
-            "event_type": event_type,
-            "run_id": self.run_id,
-            "cycle": self._cycle,
-            "payload": payload,
-        })
+        self.events.append({"event_type": event_type, "run_id": self.run_id, "cycle": self._cycle, "payload": payload})
