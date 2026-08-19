@@ -2,6 +2,7 @@ import unittest
 
 from brain.runtime import (
     ActionProposal,
+    ActionRejected,
     BrainSupervisor,
     DeterministicScheduler,
     InvalidLifecycleTransition,
@@ -99,18 +100,43 @@ class BrainRuntimeTests(unittest.TestCase):
         with self.assertRaises(Exception):
             brain.cycle()
 
-    def test_safety_cannot_be_bypassed(self) -> None:
+    def test_safety_denies_unknown_action(self) -> None:
         brain = BrainSupervisor()
-        proposal = ActionProposal(
-            action="disable_safety",
-            parameters={},
-            reason="test",
-            correlation_id="test-correlation",
-        )
+        proposal = ActionProposal("move", {}, "test", "test-correlation")
+        decision = brain.safety.authorize(proposal)
+        self.assertFalse(decision.authorized)
+        self.assertIn("not authorized", decision.reason)
+
+    def test_safety_denies_protected_action(self) -> None:
+        brain = BrainSupervisor()
+        proposal = ActionProposal("disable_safety", {}, "test", "test-correlation")
         decision = brain.safety.authorize(proposal)
         self.assertFalse(decision.authorized)
         with self.assertRaises(SafetyViolation):
             brain.body.execute(proposal, decision)
+
+    def test_safety_requires_action_name(self) -> None:
+        brain = BrainSupervisor()
+        proposal = ActionProposal("", {}, "test", "test-correlation")
+        with self.assertRaises(ActionRejected):
+            brain.safety.validate_proposal(proposal)
+
+    def test_mock_body_cannot_execute_denied_proposal(self) -> None:
+        brain = BrainSupervisor()
+        proposal = ActionProposal("disable_safety", {}, "test", "test-correlation")
+        decision = brain.propose(proposal)
+        with self.assertRaises(SafetyViolation):
+            brain.execute(proposal, decision)
+        self.assertEqual(len(brain.body.executed), 0)
+        self.assertEqual(len(brain.body.rejected), 1)
+
+    def test_only_authorized_action_reaches_body(self) -> None:
+        brain = BrainSupervisor()
+        proposal = ActionProposal("inspect", {"entity": "test_object"}, "test", "test-correlation")
+        decision = brain.propose(proposal)
+        outcome = brain.execute(proposal, decision)
+        self.assertTrue(outcome.success)
+        self.assertEqual(len(brain.body.executed), 1)
 
 
 if __name__ == "__main__":
