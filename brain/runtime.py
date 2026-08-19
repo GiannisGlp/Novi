@@ -31,6 +31,10 @@ class SafetyViolation(RuntimeErrorBase):
     pass
 
 
+class SchedulerError(RuntimeErrorBase):
+    pass
+
+
 @dataclass(frozen=True)
 class RuntimeEvent:
     event_type: str
@@ -79,6 +83,13 @@ class ActionOutcome:
     correlation_id: str
 
 
+@dataclass(frozen=True)
+class ScheduledTask:
+    name: str
+    task: Callable[[], None]
+    priority: int = 0
+
+
 class EventBus:
     def __init__(self) -> None:
         self._events: list[RuntimeEvent] = []
@@ -109,19 +120,55 @@ class EventBus:
 
 
 class DeterministicScheduler:
-    """Minimal synchronous scheduler for Stage 0."""
+    """Synchronous, deterministic Stage-0 scheduler with explicit priorities."""
 
-    def __init__(self) -> None:
-        self._tasks: list[tuple[str, Callable[[], None]]] = []
+    def __init__(self, events: EventBus | None = None) -> None:
+        self._tasks: dict[str, ScheduledTask] = {}
+        self._events = events
+        self._run_count = 0
 
-    def register(self, name: str, task: Callable[[], None]) -> None:
-        if any(existing == name for existing, _ in self._tasks):
-            raise ValueError(f"scheduler task already registered: {name}")
-        self._tasks.append((name, task))
+    def register(self, name: str, task: Callable[[], None], *, priority: int = 0) -> None:
+        if not name:
+            raise ValueError("scheduler task name must not be empty")
+        if name in self._tasks:
+            raise SchedulerError(f"scheduler task already registered: {name}")
+        self._tasks[name] = ScheduledTask(name, task, priority)
+        if self._events:
+            self._events.publish("scheduler.task.registered", {"name": name, "priority": priority})
 
-    def run_once(self) -> None:
-        for _, task in tuple(self._tasks):
-            task()
+    def unregister(self, name: str) -> None:
+        if name not in self._tasks:
+            raise SchedulerError(f"scheduler task not registered: {name}")
+        del self._tasks[name]
+        if self._events:
+            self._events.publish("scheduler.task.unregistered", {"name": name})
+
+    def run_once(self) -> tuple[str, ...]:
+        self._run_count += 1
+        executed: list[str] = []
+        ordered = sorted(self._tasks.values(), key=lambda item: (-item.priority, item.name))
+        for item in ordered:
+            try:
+                item.task()
+            except Exception as exc:
+                if self._events:
+                    self._events.publish(
+                        "scheduler.task.failed",
+                        {"name": item.name, "error_type": type(exc).__name__, "detail": str(exc)},
+                    )
+                raise SchedulerError(f"scheduler task failed: {item.name}") from exc
+            executed.append(item.name)
+        if self._events:
+            self._events.publish("scheduler.cycle.completed", {"run_count": self._run_count, "tasks": executed})
+        return tuple(executed)
+
+    @property
+    def run_count(self) -> int:
+        return self._run_count
+
+    @property
+    def task_names(self) -> tuple[str, ...]:
+        return tuple(sorted(self._tasks))
 
 
 class MockSafetyGateway:
@@ -179,7 +226,7 @@ class BrainSupervisor:
         self.lifecycle = Lifecycle.BOOTING
         self.health = Health("STARTING", "booting")
         self.events = EventBus()
-        self.scheduler = DeterministicScheduler()
+        self.scheduler = DeterministicScheduler(self.events)
         self.sensor = SyntheticSensor()
         self.safety = MockSafetyGateway()
         self.body = MockBody()
