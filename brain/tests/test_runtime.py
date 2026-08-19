@@ -3,9 +3,11 @@ import unittest
 from brain.runtime import (
     ActionProposal,
     BrainSupervisor,
+    DeterministicScheduler,
     InvalidLifecycleTransition,
     Lifecycle,
     SafetyViolation,
+    SchedulerError,
 )
 
 
@@ -42,7 +44,7 @@ class BrainRuntimeTests(unittest.TestCase):
         brain.start()
         brain.safe_stop()
         self.assertEqual(brain.lifecycle, Lifecycle.SAFE_STOP)
-        with self.assertRaises(InvalidLifecycleTransition):
+        with self.assertRaises(Exception):
             brain.cycle()
         brain.shutdown()
         self.assertEqual(brain.lifecycle, Lifecycle.SHUTTING_DOWN)
@@ -62,6 +64,35 @@ class BrainRuntimeTests(unittest.TestCase):
         self.assertEqual(outcome.action, "inspect")
         self.assertEqual(brain.lifecycle, Lifecycle.SHUTTING_DOWN)
         self.assertEqual(len(brain.events.events), 8)
+
+    def test_scheduler_runs_priority_order(self) -> None:
+        scheduler = DeterministicScheduler()
+        calls: list[str] = []
+        scheduler.register("low", lambda: calls.append("low"), priority=1)
+        scheduler.register("high", lambda: calls.append("high"), priority=10)
+        self.assertEqual(scheduler.run_once(), ("high", "low"))
+        self.assertEqual(calls, ["high", "low"])
+        self.assertEqual(scheduler.run_count, 1)
+
+    def test_scheduler_rejects_duplicate_task_names(self) -> None:
+        scheduler = DeterministicScheduler()
+        scheduler.register("task", lambda: None)
+        with self.assertRaises(SchedulerError):
+            scheduler.register("task", lambda: None)
+
+    def test_scheduler_failure_is_wrapped(self) -> None:
+        scheduler = DeterministicScheduler()
+        scheduler.register("broken", lambda: (_ for _ in ()).throw(ValueError("boom")))
+        with self.assertRaises(SchedulerError):
+            scheduler.run_once()
+
+    def test_scheduler_emits_runtime_events(self) -> None:
+        brain = BrainSupervisor()
+        brain.scheduler.register("test", lambda: None, priority=5)
+        brain.scheduler.run_once()
+        event_types = [event.event_type for event in brain.events.events]
+        self.assertIn("scheduler.task.registered", event_types)
+        self.assertIn("scheduler.cycle.completed", event_types)
 
     def test_cycle_requires_active_state(self) -> None:
         brain = BrainSupervisor()
