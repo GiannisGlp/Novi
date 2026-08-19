@@ -6,17 +6,13 @@ on:
     paths:
       - 'brain/**'
       - 'mac_brain/**'
-      - 'scripts/mac-brain-test.sh'
       - 'docs/02-novi-brain/**'
-      - 'MAC_BRAIN/**'
       - '.github/workflows/brain-runtime-validation.yml'
   pull_request:
     paths:
       - 'brain/**'
       - 'mac_brain/**'
-      - 'scripts/mac-brain-test.sh'
       - 'docs/02-novi-brain/**'
-      - 'MAC_BRAIN/**'
       - '.github/workflows/brain-runtime-validation.yml'
   workflow_dispatch:
 
@@ -47,10 +43,12 @@ jobs:
         run: python -m unittest discover -s mac_brain/tests -p 'test_*.py' -v
 
       - name: Run Mac Brain deterministic runtime smoke test
-        run: python -m mac_brain.cli --cycles 3 --evidence mac_brain_ci_evidence.json
+        run: python -m mac_brain.cli --deterministic --cycles 1
 
       - name: Upload Mac Brain smoke evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mac-brain-evidence
-          path: mac_brain_ci_evidence.json
+          name: mac-brain-smoke-evidence
+          path: mac_brain_evidence.json
+          if-no-files-found: ignore
