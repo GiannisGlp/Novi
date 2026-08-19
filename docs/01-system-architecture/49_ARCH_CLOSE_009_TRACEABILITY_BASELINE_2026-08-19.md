@@ -1,48 +1,82 @@
 # 49 — ARCH-CLOSE-009 Traceability Baseline — 2026-08-19
 
-**Status:** BASELINE AUDIT — gaps/deferrals identified
-**Scope:** P0 architecture closure items and implementation anchors
+**Status:** SUPERSEDED BY FINAL CLOSURE MATRIX  
+**Scope:** P0 architecture closure items and implementation anchors  
+**Closure decision:** ARCH-CLOSE-009 is now CLOSED  
+**Final artifact:** `50_ARCH_CLOSE_009_FINAL_TRACEABILITY_MATRIX_2026-08-19.md`
 
 ## Executive result
 
-The repository has executable contract/integration validation and explicit architecture closure evidence, but the architecture is **not yet fully implementation-complete**. Several items are intentionally deferred to hardware/model phases, while storage recovery and physical safety/resource evidence remain pending.
+This document was the baseline audit that identified the remaining ARCH-CLOSE-009 traceability work. That work has now been completed and recorded in the final closure matrix.
+
+The repository has executable contract/integration validation, explicit architecture closure evidence, storage/recovery evidence, safety/time/resource validation assets, deployment/runtime contracts, and explicit hardware/model/implementation deferrals.
 
 No P0 item is promoted to `IMPLEMENTED` solely because an architecture document exists.
 
-## P0 traceability baseline
+## Final closure result
 
-| Area | Authority / anchor | Executable anchor | Current status | Remaining limitation |
-|---|---|---|---|---|
-| ARCH-CLOSE-001 | `25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md` | contract validation suite | TESTED / EVIDENCED | broader end-to-end evidence as defined by gate |
-| ARCH-CLOSE-002 | `26_ARCH_CLOSE_002_CONSISTENCY_STATE_CLASS_MATRIX.md` | consistency/contract validation | TESTED / EVIDENCED | complete repository-wide reconciliation remains an audit activity |
-| ARCH-CLOSE-003 | storage ADR + benchmark specification | `scripts/storage_benchmark.py`, `scripts/sqlite_recovery_validation.py` | EVIDENCED / PENDING | Mac recovery harness must be executed; environment fault tests remain |
-| ARCH-CLOSE-004 | runtime/version tuple | documented tuple | EVIDENCED / DEFERRED | final hardware runtime versions depend on platform selection |
-| ARCH-CLOSE-005 | safety/authorization architecture | safety authorization integration gate | TESTED / EVIDENCED | physical safety, HIL and actuator validation remain |
-| ARCH-CLOSE-006 | time synchronization architecture | `test_time_semantics.py` | TESTED / EVIDENCED | physical drift, synchronization loss/recovery and error budgets remain |
-| ARCH-CLOSE-007 | resource baseline + full resource model | benchmark/resource validation assets | EVIDENCED / PENDING | real robot power, thermal, battery, sensor and long-duration measurements remain |
-| ARCH-CLOSE-008 | deployment/hardware integration | deployment architecture | DEFINED / DEFERRED | selected hardware and SIL/HIL/physical deployment evidence remain |
-| ARCH-CLOSE-009 | traceability gate | this audit | IN PROGRESS | executable repository-wide mapping still needs continued refinement |
-| ARCH-CLOSE-010 | dependency/numbering integrity audit | `38_ARCH_CLOSE_010_DEPENDENCY_NUMBERING_INTEGRITY_AUDIT.md` | EVIDENCED / PENDING | final integrity sweep after closure work |
+**ARCH-CLOSE-009 = CLOSED.**
 
-## Existing implementation anchors
+The final matrix maps all 30 P0 invariants from `37_ARCH_CLOSE_009_ARCHITECTURE_TO_TEST_MAPPING.md` to:
 
-The repository contains an architecture completion/closure baseline, contract ownership reconciliation, contract test documentation, compatibility tests, and the Brain implementation blueprint. fileciteturn388file2 fileciteturn388file4 fileciteturn388file7 fileciteturn388file8
+- authoritative architecture;
+- contract/API;
+- implementation anchor or explicit deferral;
+- test/validation class;
+- evidence;
+- status;
+- limitation and/or activation trigger.
 
-The closure corpus also contains dedicated ARCH-CLOSE-001 evidence and an ARCH-CLOSE-010 dependency/numbering audit. fileciteturn388file1 fileciteturn388file6
+The final matrix contains:
 
-## Rules applied
+```text
+P0 invariants mapped: 30 / 30
+GAP classifications: 0
+```
 
-1. Documentation alone is never implementation evidence.
-2. A passing unit/integration test proves only the layer it exercises.
-3. Mac evidence does not prove robot hardware performance.
-4. Software safety evidence does not prove physical safety.
-5. Deferred hardware decisions remain explicitly deferred.
-6. Any unresolved `GAP` discovered during the detailed audit blocks architecture closure.
+## Important interpretation
 
-## Next audit work
+ARCH-CLOSE-009 closure is an **architecture traceability closure for the current implementation phase**.
 
-The next pass should enumerate the authoritative P0 requirements and attach exact contract/schema, implementation, test, and evidence paths for each. Any missing mapping becomes an explicit `GAP` or justified `DEFERRED` entry rather than an assumption.
+It is not a claim that:
 
-## Decision
+- the full Novi runtime is implemented;
+- all neural models have been integrated;
+- the final robot hardware has been selected;
+- physical safety has been validated;
+- target-hardware resource measurements exist;
+- HIL or physical endurance testing has been completed.
 
-**ARCH-CLOSE-009 remains OPEN.** This baseline establishes the current evidence state and prevents false closure; it is not itself the final traceability matrix.
+Those are explicitly marked `DEFERRED` where appropriate and retain their own activation/evidence requirements.
+
+## Why the gate can close before the physical robot exists
+
+The architecture deliberately defines a Mac-first validation strategy. Physical-only requirements are not falsely promoted to software evidence; instead they are represented as explicit deferred requirements with their future validation class and trigger.
+
+This preserves the central ARCH-CLOSE-009 invariant: every authoritative architecture claim has a traceability path, while claims that cannot yet be physically validated remain honestly bounded.
+
+## Final authority
+
+Use:
+
+`50_ARCH_CLOSE_009_FINAL_TRACEABILITY_MATRIX_2026-08-19.md`
+
+for the complete T-001 through T-030 matrix.
+
+Use:
+
+`48_ARCH_CLOSE_009_IMPLEMENTATION_TRACEABILITY_GATE.md`
+
+for the normative definition of the gate and closure rules.
+
+Use:
+
+`37_ARCH_CLOSE_009_ARCHITECTURE_TO_TEST_MAPPING.md`
+
+for the canonical P0 architecture invariant/evidence-class list.
+
+## Next step
+
+ARCH-CLOSE-009 must not be reopened unless a new P0 architecture invariant is introduced or an existing authority/contract changes materially.
+
+The remaining architecture closure activity is the final ARCH-CLOSE-010 dependency/numbering integrity work and the synchronized 001–010 architecture gate review.
