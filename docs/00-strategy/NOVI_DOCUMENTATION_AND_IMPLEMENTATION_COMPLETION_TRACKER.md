@@ -53,7 +53,7 @@ A domain marked **COMPLETE** means its documentation and architectural decisions
 |---|---|---|---|
 | Soul | **COMPLETE** | ██████████ | Cross-domain stale-reference audit only |
 | System Architecture | **COMPLETE** | ██████████ | Architecture closure complete; integrity gate passed |
-| Brain | **IN PROGRESS** | █████████░ | Complete B1 closed-loop stages and Brain domain completion gate |
+| Brain | **IN PROGRESS** | ██████████ | Complete remaining Brain domain completion gate |
 | Cognition | **IN PROGRESS** | █████████░ | Complete implementation contracts, typed models and validation |
 | Memory | **IN PROGRESS** | █████████░ | Complete concrete storage/retrieval implementation baseline |
 | Autonomy | **IN PROGRESS** | ████████░░ | Complete executable autonomy/runtime specification |
@@ -209,7 +209,7 @@ ARCH-CLOSE-010  CLOSED
 ### Important boundary
 Soul owns identity/personality/values/affect semantics. Brain consumes these through an adapter and must not recreate a competing semantic authority.
 
-**Status: IN PROGRESS — B0 complete; B1 closed-loop implementation in progress**
+**Status: IN PROGRESS — B0 complete; B1 closed-loop integration gate complete; remaining Brain domain completion work continues**
 
 ### Current Brain implementation progress
 
@@ -219,9 +219,42 @@ Soul owns identity/personality/values/affect semantics. Brain consumes these thr
 | B1.1 Closed Simulated Loop | **VALIDATED** | GitHub Actions Brain runtime validation | Closed |
 | B1.2 Multi-Event World State | **VALIDATED** | GitHub Actions Brain runtime validation | Closed |
 | B1.3 Cognition Integration | **VALIDATED** | GitHub Actions Brain runtime validation; 48/48 tests passed | Closed |
-| B1.4 Memory Integration | **NEXT** | Not started | Implement |
+| B1.4 Memory Integration | **VALIDATED** | GitHub Actions Brain CI passed | Closed |
+| B1.5 Autonomy / ActionProposal | **VALIDATED** | GitHub Actions Brain CI passed | Closed |
+| B1.6 Outcome + Replay | **VALIDATED** | GitHub Actions Brain CI passed | Closed |
+| B1.7 Authorization / Safety | **VALIDATED** | GitHub Actions Brain CI passed | Closed |
+| B1.8 Simulated Execution | **VALIDATED** | GitHub Actions Brain CI passed; fail-closed safety requirement validated | Closed |
+| B1 Integration Gate | **COMPLETE** | End-to-end B1 gate passed in GitHub Actions; PR #12 merged to `main` | Closed |
 
 B1 remains an implementation stage inside Brain and does not constitute Brain domain completion.
+
+### B1 completion gate
+
+The B1 closed cognitive-control loop has been integrated and validated end-to-end:
+
+```text
+World
+  ↓
+Temporal World Model
+  ↓
+Cognition
+  ↓
+Memory
+  ↓
+Autonomy / ActionProposal
+  ↓
+Authorization + Safety
+  ↓
+Simulated Execution
+  ↓
+Outcome Evaluation
+  ↓
+Replay
+```
+
+The gate validates deterministic semantic composition, explicit authorization/safety requirements, simulated-only execution, successful outcome evaluation, replay recording and denial of unauthorized execution. The B1 integration gate is evidence for the Brain implementation stage only; it does not close the full Brain domain.
+
+**B1 STATUS: COMPLETE — closed-loop integration gate passed 2026-08-19.**
 
 ---
 
@@ -678,7 +711,7 @@ If this tracker conflicts with a domain authority, resolve the conflict explicit
 
 # 12. Current program position
 
-The repository has moved from broad conceptual documentation into **architecture closure and implementation-readiness work**. System Architecture closure is now complete, and the Brain implementation program has entered the closed simulated loop stage.
+The repository has moved from broad conceptual documentation into **architecture closure and implementation-readiness work**. System Architecture closure is now complete, and the Brain implementation program has completed the B1 closed simulated cognitive-control loop integration gate.
 
 Current highest-priority sequence:
 
@@ -693,13 +726,23 @@ Current highest-priority sequence:
       ↓
 5. Brain B1.3 Cognition Integration               VALIDATED / CI
       ↓
-6. Brain B1.4 Memory Integration                  NEXT
+6. Brain B1.4 Memory Integration                  VALIDATED / CI
       ↓
-7. Remaining Brain B1 stages and integration gate
+7. Brain B1.5 Autonomy / ActionProposal            VALIDATED / CI
       ↓
-8. Re-synchronize this tracker at each gate
+8. Brain B1.6 Outcome + Replay                    VALIDATED / CI
       ↓
-9. Close the next program-status domain
+9. Brain B1.7 Authorization / Safety              VALIDATED / CI
+      ↓
+10. Brain B1.8 Simulated Execution                 VALIDATED / CI
+      ↓
+11. Brain B1 Integration Gate                     COMPLETE / CI
+      ↓
+12. Remaining Brain domain completion work        NEXT
+      ↓
+13. Re-synchronize this tracker at each gate
+      ↓
+14. Close the next program-status domain
 ```
 
 This tracker must be updated whenever a domain, cross-domain gate or authoritative dependency materially changes.
