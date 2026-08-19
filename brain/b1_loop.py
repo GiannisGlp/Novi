@@ -139,7 +139,7 @@ class ClosedSimulatedLoop:
             raise RuntimeError(f"closed loop requires ACTIVE Brain, got {self.brain.lifecycle.value}")
 
         observation = self.observe()
-        self.brain.events.publish(
+        observed = self.brain.events.publish(
             "simulation.observation",
             {"cycle": observation.cycle, "entity": observation.entity, "distance_m": observation.distance_m, "state": observation.state},
         )
@@ -148,23 +148,35 @@ class ClosedSimulatedLoop:
         self.brain.events.publish(
             "perception.interpreted",
             {"entity": situation.entity, "state": situation.state, "distance_m": situation.distance_m, "familiar": situation.familiar},
+            correlation_id=observed.correlation_id,
+            causation_id=observed.correlation_id,
         )
         self.cognition.update(situation)
-        self.brain.events.publish("cognition.world.updated", {"entity": situation.entity})
+        self.brain.events.publish(
+            "cognition.world.updated",
+            {"entity": situation.entity},
+            correlation_id=observed.correlation_id,
+        )
 
         memories = self.memory.recall(situation.entity)
         goal = self.autonomy.choose_goal(situation, memories)
         self.brain.events.publish(
             "autonomy.goal.selected",
             {"goal": goal.name, "priority": goal.priority, "memory_count": len(memories)},
+            correlation_id=observed.correlation_id,
         )
 
-        correlation_id = self.brain.events.publish("autonomy.action.requested", {"goal": goal.name}).correlation_id
-        proposal = self.autonomy.propose(goal, situation, correlation_id)
+        requested = self.brain.events.publish(
+            "autonomy.action.requested",
+            {"goal": goal.name},
+            correlation_id=observed.correlation_id,
+        )
+        proposal = self.autonomy.propose(goal, situation, requested.correlation_id)
         self.brain.events.publish(
             "action.proposed",
             {"action": proposal.action, "parameters": proposal.parameters},
             correlation_id=proposal.correlation_id,
+            causation_id=requested.correlation_id,
         )
 
         decision = self.brain.propose(proposal)
@@ -180,7 +192,8 @@ class ClosedSimulatedLoop:
         self.brain.events.publish(
             "memory.experience.stored",
             {"cycle": experience.cycle, "entity": experience.entity, "action": experience.action, "success": experience.success},
-            correlation_id=experience.cycle.__str__(),
+            correlation_id=outcome.correlation_id,
+            causation_id=outcome.correlation_id,
         )
         return experience
 
