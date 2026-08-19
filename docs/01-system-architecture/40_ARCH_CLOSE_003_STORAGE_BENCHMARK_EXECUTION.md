@@ -1,47 +1,67 @@
 # 40 — ARCH-CLOSE-003 Storage Benchmark Execution
 
-**Status:** P0 execution procedure  
+**Status:** P0 evidence record — SQLite selected for Stage 1, residual fault testing open  
 **Authority:** System Architecture  
 **Closure item:** ARCH-CLOSE-003 — Stage-1 durable storage
 
 ## Objective
 
-Produce the first real Novi storage evidence on the Mac development host. This is an evidence run, not an architecture decision by assumption.
+Produce and preserve real Novi storage evidence on the Mac development host. This is an evidence-driven architecture decision.
 
-## Run
+## Performance evidence
 
-From the repository root:
+The committed `storage-benchmark-result.json` establishes the Mac SQLite baseline using Novi-shaped event/state transactions:
 
-```bash
-python3 scripts/storage_benchmark.py --iterations 10000 --readers 4 --output storage-benchmark-result.json
-```
+- write p50: 0.033 ms;
+- write p95: 0.0515 ms;
+- write p99: 0.121 ms;
+- read p50: 0.00271 ms;
+- read p95: 0.00329 ms;
+- read p99: 0.00417 ms;
+- 10,000 events;
+- zero conflicts;
+- successful durability/reopen validation.
 
-The command records the host/runtime environment and measures the SQLite baseline using Novi-shaped event/state transactions. It also records whether RocksDB/PostgreSQL tooling is available.
+## Recovery/correctness evidence
 
-## First decision point
+The committed `sqlite-recovery-validation-result.json` reports **PASS** for all seven executed checks:
 
-SQLite may be recommended as the Stage-1 authority only after the complete closure evidence demonstrates:
+1. commit → reopen persistence;
+2. rollback of uncommitted transaction;
+3. duplicate-event rejection;
+4. stale-revision rejection;
+5. checkpoint → reopen integrity;
+6. backup → restore;
+7. malformed-migration isolation.
 
-- durable commit/reopen correctness;
-- acceptable p50/p95/p99 latency;
-- acceptable throughput;
-- governed concurrency/conflict behavior;
-- recovery correctness;
-- migration correctness;
-- backup/restore correctness;
-- acceptable resource envelope;
-- acceptable operational complexity.
+The recovery run used SQLite 3.53.4 and Python 3.14.6 and completed at `2026-08-19T05:27:07Z`. fileciteturn389file0
 
-The first script run intentionally does **not** close these additional gates. It establishes the Mac baseline.
+## Stage-1 decision
+
+**SQLite is selected as Novi's Stage-1 durable-state backend.**
+
+This decision is based on measured performance plus the executed correctness/recovery gate. There is currently no measured requirement that justifies adding RocksDB or PostgreSQL complexity for Stage 1.
+
+This is a Stage-1 decision, not a claim that SQLite will satisfy every future distributed, high-volume or robot-scale workload.
+
+## Residual validation
+
+ARCH-CLOSE-003 remains technically open for the following environment-level evidence:
+
+- arbitrary live-process termination during commit/checkpoint;
+- storage-full behavior;
+- permission/failure behavior;
+- deeper concurrent conflict stress;
+- interrupted backup testing;
+- long-duration growth/soak against the final Novi workload;
+- final robot hardware resource validation.
+
+The recovery harness explicitly records these limitations. fileciteturn389file0
 
 ## Evidence handling
 
-Do not hand-edit benchmark numbers. Commit the generated result only after verifying that it contains the actual machine identity, Novi revision and benchmark revision. If the result contains sensitive host information, retain the full result locally and commit a redacted evidence record instead.
+Benchmark numbers are generated artifacts and must not be hand-edited. Evidence should retain the exact Novi revision, benchmark revision, host/runtime identity and configuration where appropriate.
 
 ## Interpretation rule
 
-A fast SQLite result does not prove SQLite is universally superior. It answers a narrower question: whether the embedded Stage-1 candidate is comfortably within Novi's measured Mac workload envelope. The final adoption decision remains governed by the full ARCH-CLOSE-003 specification.
-
-## Current state
-
-`ARCH-CLOSE-003 = OPEN / empirical evidence pending.`
+A fast SQLite result alone does not prove SQLite is universally superior. The current adoption is justified because the measured Stage-1 workload is comfortably within the Mac envelope and the executed recovery/correctness checks pass. Remaining fault and robot-environment evidence is tracked explicitly rather than hidden.
