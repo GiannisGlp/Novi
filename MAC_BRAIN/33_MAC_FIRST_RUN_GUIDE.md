@@ -1,20 +1,53 @@
-# Novi Mac Brain — First Run Guide
+# Novi Mac Brain — First Run & M1 Execution Guide
 
 ## Purpose
 
-This guide takes the developer from a clean Mac checkout to the first real Mac neural-model experiment. Hardware/CI validation can remain parked until the Mac is available.
+This is the operational guide for running the Mac Brain from a clean Mac checkout through the first real neural-perception experiment.
+
+The Mac is the first development body for Novi. The goal is to exercise real local AI where practical while keeping the Brain architecture, safety boundaries and model interfaces vendor-neutral.
+
+## Important working rule
+
+Run these commands **from the repository root**, the directory containing `README.md` and `MAC_BRAIN/`.
+
+```text
+Novi/
+├── README.md
+├── MAC_BRAIN/
+├── scripts/
+└── test-image.png
+```
+
+Do not run the scripts from inside `MAC_BRAIN/`.
+
+## Script map
+
+| Script | Purpose | Hardware required |
+|---|---|---|
+| `bash scripts/mac/setup.sh` | Create/update the base Python environment | Mac only |
+| `bash scripts/mac/doctor.sh` | Inspect the Mac and collect environment evidence | Mac only |
+| `bash scripts/mac/neural-setup.sh` | Install the first local neural dependencies | Mac only |
+| `bash scripts/mac/neural-doctor.sh` | Verify PyTorch/torchvision/MPS/OpenCV/Pillow | Mac only |
+| `bash scripts/mac-brain-test.sh` | Run deterministic Mac Brain integration tests | No camera/model required |
+| `bash scripts/mac-brain.sh` | Start the Mac Brain runtime | No camera/model required |
+| `bash scripts/mac/m1-image-test.sh` | Run real SSDLite inference on `test-image.png` | No camera required |
+| `bash scripts/mac/m1-camera-test.sh` | Run real SSDLite inference on live camera frames | Camera required |
+| `bash scripts/mac/m1-run.sh` | Run the M1 environment + image stage + deterministic Brain tests | Camera not required |
+| `bash scripts/mac/collect-evidence.sh` | Snapshot collected Mac evidence into the implementation evidence area | No additional hardware |
+
+All scripts save or reference evidence under `mac_test_results/` and, when formally collected, `IMPLEMENTATION_PLAN/EVIDENCE/mac/`.
 
 ## 0. Requirements
 
 - macOS
-- preferably Apple Silicon
+- Apple Silicon preferred
 - Git
-- Python version required by the repository
+- repository-supported Python
 - Terminal
-- working camera for the later camera stage
-- internet access for initial dependency/model downloads
+- working camera for the camera stage
+- internet access for dependency/model downloads
 
-Do not install Jetson/NVIDIA dependencies for this stage.
+Do **not** install Jetson/NVIDIA dependencies for this stage.
 
 ## 1. Clone or update Novi
 
@@ -47,11 +80,11 @@ git --version
 system_profiler SPHardwareDataType
 ```
 
-Record the results for the eventual evidence package.
+Keep this information as part of the evidence trail.
 
-## 3. Set up the project environment
+## 3. Set up the base environment
 
-From the Novi root:
+From the **Novi root**:
 
 ```bash
 bash scripts/mac/setup.sh
@@ -65,61 +98,77 @@ which python
 python --version
 ```
 
-The Python executable should come from `.venv`.
+The executable should be inside `.venv`.
 
 Do not install project packages globally.
 
-## 4. Run the Mac environment doctor
+## 4. Run the base Mac doctor
 
 ```bash
 bash scripts/mac/doctor.sh
 ```
 
-**Checkpoint:** if this fails, stop and capture the complete output. Do not add ad-hoc packages or bypass environment protections before diagnosing the failure.
+**Checkpoint:** if this fails, stop. Capture the complete output before making changes.
 
-## 5. Run the deterministic Mac Brain tests
+## 5. Run deterministic Mac Brain validation
 
 ```bash
 bash scripts/mac-brain-test.sh
 ```
 
-This validates the Mac runtime and existing Brain integration without requiring a real neural model.
+This validates the Mac Brain plumbing without requiring a neural model.
 
-## 6. Start the Mac Brain runtime
+## 6. Start the deterministic Mac Brain runtime
 
 ```bash
 bash scripts/mac-brain.sh
 ```
 
-Capture the startup output. This is the runtime smoke stage, not yet the real neural inference stage.
+This is a runtime smoke test, not the neural-perception acceptance gate.
 
-## 7. Verify camera permissions
+## 7. Install the local neural runtime
 
-When camera access is needed, grant the relevant terminal/application permission in:
-
-**System Settings → Privacy & Security → Camera**
-
-Do not introduce a second camera implementation; use Novi's Mac I/O adapter.
-
-## 8. Inspect neural runtime support
-
-With the virtual environment active:
+Only after the base environment is healthy:
 
 ```bash
-python -c "import platform; print(platform.platform()); print(platform.machine())"
+bash scripts/mac/neural-setup.sh
 ```
 
-If PyTorch is already provided by the repository:
+This installs the current first neural experiment dependencies:
+
+- PyTorch
+- torchvision
+- Pillow
+- NumPy
+- OpenCV
+
+The exact model remains behind the `ObjectDetector` capability boundary.
+
+## 8. Run the neural doctor
 
 ```bash
-python -c "import torch; print('PyTorch:', torch.__version__); print('MPS:', torch.backends.mps.is_available())"
+bash scripts/mac/neural-doctor.sh
 ```
 
-If PyTorch is not installed, do not independently choose a version yet. Use the repository's dependency configuration or resolve the required version before installing it.
+This records:
 
-## 9. Verify Apple MPS when available
+- Python
+- PyTorch
+- torchvision
+- Pillow
+- OpenCV
+- machine architecture
+- MPS built/available state
 
-If PyTorch is installed:
+Evidence is written to:
+
+```text
+mac_test_results/neural_environment.json
+```
+
+If this fails, stop and resolve the environment before running M1 inference.
+
+## 9. Verify MPS manually if desired
 
 ```bash
 python - <<'PY'
@@ -140,112 +189,188 @@ else:
 PY
 ```
 
-MPS being unavailable does not automatically block the prototype; a CPU or other verified Mac runtime may still be usable.
+MPS unavailable does not automatically block the prototype; the detector can fall back to CPU.
 
-## 10. Select the first real neural detector
+## 10. M1 — real neural inference on the known image
 
-Do not assume RT-DETR is Mac-compatible before testing it. Evaluate candidates through the canonical `ObjectDetector` interface.
-
-Candidate flow:
+The first concrete neural candidate is:
 
 ```text
-candidate
-  ↓
-installation
-  ↓
-checkpoint load
-  ↓
+torchvision:ssdlite320_mobilenet_v3_large
+```
+
+Run:
+
+```bash
+bash scripts/mac/m1-image-test.sh
+```
+
+Or specify another image:
+
+```bash
+bash scripts/mac/m1-image-test.sh path/to/image.png
+```
+
+The command performs:
+
+```text
+ test-image.png
+      ↓
+SSDLite MobileNetV3
+      ↓
 real inference
-  ↓
-representative image
-  ↓
-valid normalized detections
-  ↓
-latency/memory measurement
-  ↓
-ACCEPT / REJECT
+      ↓
+normalized Detection[]
+      ↓
+provenance-rich evidence
 ```
 
-The first implementation target is object detection. Candidates may include RT-DETR variants or another detector that is demonstrably practical on the actual Mac.
-
-## 11. First neural inference
-
-Once a candidate is selected, run it first against a known image rather than the live camera.
-
-Expected path:
+Evidence is written to:
 
 ```text
-known image
-  ↓
-local neural detector
-  ↓
-Detection[]
-  ↓
-canonical Novi evidence
+mac_test_results/M1/latest.json
+mac_test_results/M1/image-<timestamp>.json
 ```
 
-Record model ID/checkpoint, runtime, device, load result, inference result, latency and memory.
+The evidence records model ID, runtime/device, model-load time, inference time, detections, confidence, bounding boxes and provenance.
 
-## 12. Connect the real camera
+### M1 image checkpoint
 
-Only after known-image inference succeeds:
+Do not proceed to the camera stage until the image test produces a successful real inference result.
+
+A package importing successfully is **not** enough. The checkpoint requires:
+
+- model weights load;
+- inference completes;
+- valid detections are produced or a documented no-detection result is produced;
+- provenance is present;
+- runtime/device is recorded;
+- inference latency is recorded.
+
+## 11. M1 — real Mac camera inference
+
+First grant camera access:
+
+**System Settings → Privacy & Security → Camera**
+
+Allow the Terminal/application being used to access the camera.
+
+Then run:
+
+```bash
+bash scripts/mac/m1-camera-test.sh
+```
+
+Defaults:
+
+```text
+camera device: 0
+frames:         5
+```
+
+You can select another device and frame count:
+
+```bash
+bash scripts/mac/m1-camera-test.sh 0 10
+```
+
+The path is:
 
 ```text
 Mac camera
-  ↓
+    ↓
 CameraFrame
-  ↓
-local neural detector
-  ↓
-Detection evidence
-  ↓
-Novi perception
-  ↓
-world state
+    ↓
+SSDLite neural inference
+    ↓
+Detection[]
+    ↓
+M1 evidence
 ```
 
-This separates camera/debugging problems from model/inference problems.
-
-## 13. First Mac Brain neural milestone
-
-The first meaningful target is:
+Camera evidence is written to:
 
 ```text
-CAMERA
-  ↓
-REAL NEURAL OBJECT DETECTOR
-  ↓
-PERCEPTION
-  ↓
-WORLD STATE
-  ↓
-COGNITION
+mac_test_results/M1/latest.json
+mac_test_results/M1/camera-<timestamp>.json
 ```
 
-The system should produce valid, provenance-rich evidence from real sensory input.
+## 12. Run the M1 combined image-stage workflow
 
-## Evidence
+For a repeatable M1 run before camera validation:
 
-Each formal run should record:
+```bash
+bash scripts/mac/m1-run.sh
+```
 
-- repository and commit SHA;
-- Mac hardware/macOS;
-- Python/runtime versions;
-- model/checkpoint ID;
-- inference runtime/device;
-- configuration;
-- input/fixture ID;
-- load success/failure;
-- inference success/failure;
-- output validation;
-- latency;
-- memory where measurable;
-- logs/errors.
+This runs:
+
+1. neural environment doctor;
+2. known-image neural inference;
+3. deterministic Mac Brain integration tests;
+4. evidence-location summary.
+
+It intentionally does **not** access the camera. Camera validation remains an explicit separate step.
+
+## 13. Collect the evidence
+
+After a meaningful run:
+
+```bash
+bash scripts/mac/collect-evidence.sh
+```
+
+This creates a timestamped evidence snapshot under:
+
+```text
+IMPLEMENTATION_PLAN/EVIDENCE/mac/<timestamp>/
+```
+
+Do not commit large generated model weights. Evidence should contain metadata, logs, JSON results and only intentionally retained test artifacts.
+
+## 14. M1 acceptance gate
+
+M1 is **PASS** only when all applicable evidence demonstrates:
+
+- real neural model loaded on the Mac;
+- inference succeeded on the known image;
+- selected device/runtime recorded;
+- detections are structurally valid;
+- confidence and bounding boxes are valid;
+- representative results are sensible;
+- real camera inference succeeds;
+- detections can enter the canonical Novi perception/world-state path;
+- deterministic Brain tests remain green;
+- evidence is reproducible from a recorded commit/environment.
+
+Until then use `PROTOTYPE`, `EVALUATING`, or `BLOCKED` rather than claiming `TESTED`/`INTEGRATED`.
+
+## 15. What comes after M1
+
+After real neural perception is accepted:
+
+```text
+M1  Real neural vision
+ ↓
+M2  Audio / speech perception
+ ↓
+M3  Multimodal reasoning
+ ↓
+M4  World-state + memory integration
+ ↓
+M5  Goals / planning / bounded autonomy
+ ↓
+M6  Continuous closed-loop Mac Brain
+```
+
+The Mac remains the development body. NVIDIA-specific models and acceleration remain future providers and do not block the Mac prototype.
 
 ## Rules
 
 - Do not treat package installation as model compatibility.
 - Do not claim Mac performance as NVIDIA performance.
 - Do not bypass project dependency constraints.
-- Do not commit credentials or downloaded model weights unless explicitly intended by repository policy.
+- Do not commit credentials or downloaded model weights.
 - Do not replace the existing Novi Brain with a parallel Mac-only Brain architecture.
+- Do not introduce physical motor control during M1.
+- Preserve the canonical `ObjectDetector` boundary so the model can later be replaced.
