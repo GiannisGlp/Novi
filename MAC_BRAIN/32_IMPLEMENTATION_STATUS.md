@@ -6,7 +6,7 @@
 
 ### Implemented
 
-- `mac_brain` Python package;
+- `MAC_BRAIN` Python package;
 - Mac camera adapter with optional OpenCV dependency;
 - Mac microphone recorder with optional sounddevice dependency;
 - Mac speaker adapter using native macOS `say`;

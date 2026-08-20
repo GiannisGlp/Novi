@@ -27,7 +27,7 @@ sys.path.insert(0, str(root))
 
 import torch
 from PIL import Image
-from mac_brain.models.torchvision_detector import TorchvisionSSDLiteDetector
+from MAC_BRAIN.models.torchvision_detector import TorchvisionSSDLiteDetector
 
 mps = bool(hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
 start_load = time.perf_counter()

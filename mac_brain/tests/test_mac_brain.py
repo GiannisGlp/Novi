@@ -3,8 +3,8 @@ import unittest
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from brain.runtime import Lifecycle
 
-from mac_brain.io import CameraFrame, VirtualBody
-from mac_brain.runtime import MacBrain
+from MAC_BRAIN.io import CameraFrame, VirtualBody
+from MAC_BRAIN.runtime import MacBrain
 
 
 class FakeCamera:
@@ -33,7 +33,7 @@ class PersonBackend(DeterministicPerceptionBackend):
 
 
 class MacBrainTests(unittest.TestCase):
-    def test_mac_brain_composes_existing_brain_runtime(self) -> None:
+    def test_MAC_BRAIN_composes_existing_brain_runtime(self) -> None:
         camera = FakeCamera()
         brain = MacBrain(camera=camera, perception=SpecialistPerception(PersonBackend()))
         brain.start()
@@ -47,19 +47,19 @@ class MacBrainTests(unittest.TestCase):
         self.assertEqual(brain.brain.lifecycle, Lifecycle.SHUTTING_DOWN)
         self.assertTrue(camera.closed)
 
-    def test_mac_brain_emits_observable_events(self) -> None:
+    def test_MAC_BRAIN_emits_observable_events(self) -> None:
         brain = MacBrain(camera=FakeCamera())
         brain.start()
         brain.step()
         brain.stop()
         event_types = [event["event_type"] for event in brain.events]
 
-        self.assertIn("mac_brain.started", event_types)
+        self.assertIn("MAC_BRAIN.started", event_types)
         self.assertIn("sensor.camera.frame", event_types)
         self.assertIn("perception.completed", event_types)
         self.assertIn("cognition.completed", event_types)
         self.assertIn("action.completed", event_types)
-        self.assertIn("mac_brain.stopped", event_types)
+        self.assertIn("MAC_BRAIN.stopped", event_types)
 
     def test_virtual_body_rejects_unknown_actions(self) -> None:
         body = VirtualBody()

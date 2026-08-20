@@ -26,9 +26,9 @@ Cognition
 
 The repository now contains:
 
-- `mac_brain/models/object_detection.py` — canonical capability contract;
-- `mac_brain/models/local_detector.py` — real local-neural adapter;
-- `mac_brain/models/__init__.py` — public model exports.
+- `MAC_BRAIN/models/object_detection.py` — canonical capability contract;
+- `MAC_BRAIN/models/local_detector.py` — real local-neural adapter;
+- `MAC_BRAIN/models/__init__.py` — public model exports.
 
 ## Why the exact model is not hard-coded
 

@@ -3,12 +3,12 @@ import unittest
 
 class TorchvisionDetectorTests(unittest.TestCase):
     def test_module_imports_without_loading_model(self) -> None:
-        from mac_brain.models.torchvision_detector import TorchvisionSSDLiteDetector
+        from MAC_BRAIN.models.torchvision_detector import TorchvisionSSDLiteDetector
 
         self.assertTrue(callable(TorchvisionSSDLiteDetector))
 
     def test_adapter_normalizes_neural_output(self) -> None:
-        from mac_brain.models.local_detector import LocalNeuralObjectDetector
+        from MAC_BRAIN.models.local_detector import LocalNeuralObjectDetector
 
         detector = LocalNeuralObjectDetector(
             lambda frame: [{

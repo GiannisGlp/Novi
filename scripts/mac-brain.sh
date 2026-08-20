@@ -16,7 +16,7 @@ fi
 PACKAGE_TMP="$(mktemp -d "${TMPDIR:-/tmp}/novi-mac-brain.XXXXXX")"
 trap 'rm -rf "$PACKAGE_TMP"' EXIT
 
-git archive --format=tar HEAD mac_brain | tar -x -C "$PACKAGE_TMP"
+git archive --format=tar HEAD MAC_BRAIN | tar -x -C "$PACKAGE_TMP"
 export PYTHONPATH="$PACKAGE_TMP:$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
-exec "$PYTHON" -m mac_brain.cli "$@"
+exec "$PYTHON" -m MAC_BRAIN.cli "$@"

@@ -2,7 +2,7 @@
   "events": [
     {
       "cycle": 0,
-      "event_type": "mac_brain.started",
+      "event_type": "MAC_BRAIN.started",
       "payload": {
         "run_id": "46673264-ceb6-48be-9710-e498420f4717"
       },
@@ -65,7 +65,7 @@
     },
     {
       "cycle": 1,
-      "event_type": "mac_brain.stopped",
+      "event_type": "MAC_BRAIN.stopped",
       "payload": {
         "cycles": 1,
         "run_id": "46673264-ceb6-48be-9710-e498420f4717"

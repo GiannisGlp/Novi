@@ -19,7 +19,7 @@ from .io import Camera, MacSpeaker, VirtualBody
 class MacBrainConfig:
     sensor_id: str = "mac.camera.front"
     run_id: str = ""
-    memory_dir: Path = Path("mac_brain_data/memory")
+    memory_dir: Path = Path("MAC_BRAIN_data/memory")
     max_cycles: int = 1
 
 
@@ -42,7 +42,7 @@ class MacBrain:
 
     def start(self) -> None:
         self.brain.start()
-        self._emit("mac_brain.started", {"run_id": self.run_id})
+        self._emit("MAC_BRAIN.started", {"run_id": self.run_id})
 
     def step(self) -> dict[str, Any]:
         if self.brain.lifecycle is not Lifecycle.ACTIVE:
@@ -80,7 +80,7 @@ class MacBrain:
             self.camera.close()
         if self.brain.lifecycle is not Lifecycle.SHUTTING_DOWN:
             self.brain.shutdown()
-        self._emit("mac_brain.stopped", {"run_id": self.run_id, "cycles": self._cycle})
+        self._emit("MAC_BRAIN.stopped", {"run_id": self.run_id, "cycles": self._cycle})
 
     def _action_from_cognition(self, conclusion: str) -> str:
         # Stage-1 Mac autonomy is observation-only. The existing Stage-0 safety

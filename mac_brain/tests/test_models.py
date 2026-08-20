@@ -1,6 +1,6 @@
 import unittest
 
-from mac_brain.models import MacModelProvider, MacModelSpec
+from MAC_BRAIN.models import MacModelProvider, MacModelSpec
 
 
 class MacModelProviderTests(unittest.TestCase):
