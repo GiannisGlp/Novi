@@ -21,6 +21,9 @@ from .identity import PersonIdentity
 from .io import Camera, MacMicrophone, MacSpeaker, VirtualBody
 from .kgraph import EntityKnowledgeGraph
 from .planner import Plan, Planner
+from .privacy import PrivacyGovernance
+from .audio import AudioEvent, AudioFrame, Hearing
+from .observability import Diagnostics, HealthMonitor, MetricRegistry, default_health_checks
 from .lexicon import LearnedPreferences, Lexicon
 from .social import Relationships, SocialIntelligence
 from .soul import Soul
@@ -75,6 +78,11 @@ class MacBrain:
         identity: PersonIdentity | None = None,
         knowledge: EntityKnowledgeGraph | None = None,
         planner: Planner | None = None,
+        governance: PrivacyGovernance | None = None,
+        hearing: Hearing | None = None,
+        health: HealthMonitor | None = None,
+        metrics: MetricRegistry | None = None,
+        diagnostics: Diagnostics | None = None,
         config: MacBrainConfig | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
@@ -184,7 +192,15 @@ class MacBrain:
             self.knowledge = EntityKnowledgeGraph.from_snapshot(persisted) if persisted else EntityKnowledgeGraph()
         else:
             self.knowledge = EntityKnowledgeGraph()
+        self.governance = governance or PrivacyGovernance(self.memory if isinstance(self.memory, DurableMemoryStore) else None)
+        self.hearing = hearing or Hearing()
+        self._pending_audio: list[ModalityObservation] = []
         self._pending_speech: list[ModalityObservation] = []
+        self._last_audio_events: list[dict[str, Any]] = []
+        self.metrics = metrics or MetricRegistry()
+        self.diagnostics = diagnostics or Diagnostics()
+        self.health = health or HealthMonitor(default_health_checks())
+        self._last_health: dict[str, Any] | None = None
         self._cycle = 0
         self.events: list[dict[str, Any]] = []
 
@@ -230,8 +246,9 @@ class MacBrain:
             ModalityObservation(modality="vision", entity=d.label, value="present", confidence=d.confidence, captured_at=now, received_at=now, source="camera")
             for d in evidence.detections
         ]
-        fused_events = self.fusion.ingest(vision_obs + self._pending_speech)
+        fused_events = self.fusion.ingest(vision_obs + self._pending_speech + self._pending_audio)
         self._pending_speech = []
+        self._pending_audio = []
         for event in fused_events:
             self._emit("fusion.completed", {"cycle": self._cycle, **event.snapshot()})
         fused_reported = [event.snapshot() for event in fused_events]
@@ -323,6 +340,8 @@ class MacBrain:
             self.consolidate()
         self._sync_goal_states()
 
+        observability = self._update_observability()
+
         uncertain = cognitive.reasoning.confidence < 0.5
         self.soul.update_for_cycle(success=soul_success, novel=novel_spawned is not None, speech=False, uncertain=uncertain)
         tone = self.soul.tone({"serious": uncertain})
@@ -352,6 +371,8 @@ class MacBrain:
             "temporal": {"expected": temporal_expected, "top_links": [l.snapshot() for l in self.temporal.top_links(limit=3)]},
             "fusion": fused_reported,
             "knowledge": self.knowledge.counts(),
+            "hearing": {"events": self._last_audio_events},
+            "observability": observability,
             "plan": active_plan.snapshot() if active_plan is not None and active_plan.status == "running" else (active_plan.snapshot() if active_plan else None),
         }
 
@@ -518,12 +539,13 @@ class MacBrain:
             self.identity.observe("person", name=name, confidence=transcription.confidence, modality="speech", cycle=self._cycle)
             self._emit("identity.named", {"cycle": self._cycle, "name": name, "confidence": transcription.confidence})
         self._learn_triples(transcription.text, entity_refs, transcription.confidence, source="audio.stt")
+        classification = self.governance.classify(memory_type="utterance", content=transcription.text, entity_refs=entity_refs, modality="speech")
         admission = self.memory.admit(
             memory_type="utterance",
             content=transcription.text,
             confidence=transcription.confidence,
             verification_status="verified" if transcription.confidence >= 0.7 else "unverified",
-            privacy_class="private",
+            privacy_class=classification.privacy_class,
             provenance={
                 "source": "audio.stt",
                 "provider": transcription.provider,
@@ -533,6 +555,8 @@ class MacBrain:
             entity_refs=entity_refs,
         )
         self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "utterance", "accepted": admission.accepted, "entity_refs": list(entity_refs)})
+        if admission.accepted and admission.memory_id:
+            self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
 
         speech = SensorObservation(
             cycle=self._cycle,
@@ -552,17 +576,52 @@ class MacBrain:
         self._emit("speech.ingested", {"text": transcription.text, "memory_id": admission.memory_id, "reasoning": cognitive.reasoning.conclusion})
         return {"admission": admission, "speech_observation": speech, "reasoning": cognitive.reasoning.conclusion, "confidence": cognitive.reasoning.confidence}
 
+    def ingest_audio_frame(self, frame: AudioFrame) -> dict[str, Any]:
+        """Hear a non-speech acoustic frame: detect events, monitor quality, admit
+        significant events to memory, and feed audio evidence into multimodal fusion."""
+        now = datetime.now(timezone.utc).isoformat()
+        events = self.hearing.detect(frame)
+        quality = self.hearing.quality(frame)
+        admitted: list[str] = []
+        for event in events:
+            self._emit("hearing.event", {"cycle": self._cycle, **event.snapshot()})
+            if event.speech:
+                self._emit("hearing.voice", {"cycle": self._cycle, **event.snapshot()})
+            if event.anomaly:
+                self._emit("hearing.anomaly", {"cycle": self._cycle, "event_type": event.event_type, "novelty": event.novelty, "direction_deg": event.direction_deg})
+            if self.hearing.worth_attention(event):
+                classification = self.governance.classify(memory_type="audio_event", content=event.snapshot(), entity_refs=(), modality="audio")
+                admission = self.memory.admit(
+                    memory_type="audio_event",
+                    content=event.snapshot(),
+                    confidence=event.confidence,
+                    verification_status="verified" if event.confidence >= 0.7 else "unverified",
+                    privacy_class=classification.privacy_class,
+                    provenance={"source": "audio.sed", "event_type": event.event_type},
+                )
+                if admission.accepted and admission.memory_id:
+                    self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
+                    admitted.append(admission.memory_id)
+                    self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "audio_event", "accepted": admission.accepted, "event_type": event.event_type})
+            self._pending_audio.append(self.hearing.to_modality_observation(event, received_at=now))
+        self._emit("hearing.quality", {"cycle": self._cycle, **quality.snapshot()})
+        self._last_audio_events = [e.snapshot() for e in events]
+        return {"events": [e.snapshot() for e in events], "quality": quality.snapshot(), "admitted": admitted}
+
     def _admit_detections(self, detections: Any) -> None:
         for detection in detections:
+            classification = self.governance.classify(memory_type="perception", content={"label": detection.label, "confidence": detection.confidence}, entity_refs=(detection.label,), modality="vision")
             admission = self.memory.admit(
                 memory_type="perception",
                 content={"label": detection.label, "confidence": detection.confidence, "bbox": list(detection.bbox_xyxy)},
                 confidence=detection.confidence,
                 verification_status="verified" if detection.confidence >= 0.7 else "unverified",
-                privacy_class="public",
+                privacy_class=classification.privacy_class,
                 provenance={"source": self.config.sensor_id, "capability": "vision.object_detection"},
                 entity_refs=(detection.label,),
             )
+            if admission.accepted and admission.memory_id:
+                self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
             self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "perception", "accepted": admission.accepted, "entity": detection.label})
 
     def _entities_in_text(self, text: str) -> tuple[str, ...]:
@@ -593,15 +652,71 @@ class MacBrain:
         self._emit("knowledge.recalled", {"entity": entity, "recalled": len(out)})
         return {"entity": entity, "triples": out}
 
+    # ---- privacy / memory governance API ----
+    def forget_memory(self, memory_id: str, *, reason: str = "user_request") -> dict[str, Any]:
+        report = self.governance.erase_memory(memory_id, reason=reason)
+        self._emit("privacy.erased", {"memory_id": memory_id, "reason": reason, "propagated": report.propagated})
+        return {"memory_id": memory_id, "reason": reason, "erased": memory_id in report.erased_ids, "propagated": report.propagated}
+
+    def forget_entity(self, entity: str, *, reason: str = "right_to_be_forgotten") -> dict[str, Any]:
+        report = self.governance.forget_entity(entity, reason=reason)
+        self._emit("privacy.entity_erased", {"entity": entity, "reason": reason, "erased": len(report.erased_ids), "propagated": report.propagated})
+        return {"entity": entity, "reason": reason, "erased": report.erased_ids, "propagated": report.propagated}
+
+    def restrict_memory(self, memory_id: str, *, purpose: str) -> bool:
+        ok = self.governance.restrict(memory_id, purpose=purpose)
+        if ok:
+            self._emit("privacy.restricted", {"memory_id": memory_id, "purpose": purpose})
+        return ok
+
+    def generalize_memory(self, memory_id: str) -> bool:
+        ok = self.governance.generalize(memory_id)
+        if ok:
+            self._emit("privacy.generalized", {"memory_id": memory_id})
+        return ok
+
+    def privacy_status(self) -> dict[str, Any]:
+        return self.governance.snapshot()
+
+    # ---- health / observability API ----
+    def health_report(self) -> dict[str, Any]:
+        snap = self.health.run(self)
+        self._last_health = snap.snapshot()
+        self._emit("observability.health", {"cycle": self._cycle, **self._last_health})
+        return self._last_health
+
+    def metrics_snapshot(self) -> list[dict[str, Any]]:
+        return self.metrics.snapshot()
+
+    def add_diagnostic(self, severity: str, message: str, context: dict[str, Any] | None = None) -> None:
+        self.diagnostics.add(severity, message, context)
+        self._emit("observability.diagnostic", {"cycle": self._cycle, "severity": severity, "message": message, "context": context or {}})
+
+    def _update_observability(self) -> dict[str, Any]:
+        """Record per-cycle metrics + run the health loop. Returns an observability block."""
+        self.metrics.set("cycle", self._cycle, unit="count")
+        if isinstance(self.memory, DurableMemoryStore):
+            self.metrics.set("memory.active", self.memory.active_count, unit="records")
+        self.metrics.set("knowledge.triples", self.knowledge.counts()["triples"], unit="triples")
+        self.metrics.set("goals.active", 1 if self.goals.active is not None else 0, unit="count")
+        health = self.health.run(self)
+        self._last_health = health.snapshot()
+        self._emit("observability.health", {"cycle": self._cycle, **health.snapshot()})
+        self._emit("observability.metrics", {"cycle": self._cycle, "metrics": self.metrics.snapshot()})
+        return {"health": health.snapshot(), "metrics": self.metrics.snapshot()}
+
     def _admit_goal_outcome(self, state: Any) -> None:
+        classification = self.governance.classify(memory_type="goal_outcome", content={"goal_id": state.goal.goal_id, "kind": state.goal.kind}, entity_refs=(), modality="")
         admission = self.memory.admit(
             memory_type="goal_outcome",
             content={"goal_id": state.goal.goal_id, "kind": state.goal.kind, "status": state.status.value, "steps_taken": state.steps_taken, "target": str(state.goal.target)},
             confidence=1.0,
             verification_status="verified",
-            privacy_class="public",
+            privacy_class=classification.privacy_class,
             provenance={"source": "autonomy.goals"},
         )
+        if admission.accepted and admission.memory_id:
+            self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
         self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "goal_outcome", "accepted": admission.accepted, "goal_id": state.goal.goal_id})
 
     def _recall_context(self, situation: Any, detections: Any) -> dict[str, Any]:
@@ -615,7 +730,12 @@ class MacBrain:
                 entities.append(detection.label)
         query = " ".join(entities) if entities else "memory"
         retrieve = getattr(self.memory, "retrieve_indexed", self.memory.retrieve)
-        records = retrieve(query, limit=5)
+        records = list(retrieve(query, limit=5))
+        if self.governance.store is not None:
+            candidates = len(records)
+            allowed = set(self.governance.authorize_ids([r.memory_id for r in records], requested_purpose=self.governance.default_purpose))
+            records = [r for r in records if r.memory_id in allowed]
+            self._emit("privacy.gate", {"query": query, "candidates": candidates, "allowed": len(records), "denied": candidates - len(records)})
         memories = [
             {
                 "memory_type": record.memory_type,

@@ -263,6 +263,34 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified on-device: a reach goal decomposed into evaluate→navigate→verify (with expected outcomes); advancement moves through the steps and completes; replan yields a fresh plan; brain wiring reported the active step and emitted `plan.created`/`plan.step`/`plan.completed`; a resumed goal kept its plan across restart.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/planner.json`.
 
+## Memory privacy & erasure governance (status: IMPLEMENTED)
+
+- `MAC_BRAIN/privacy.py` — `PrivacyGovernance` implements docs/04-memory-and-knowledge/14: deterministic **privacy classification** (public/operational/personal/sensitive/credential/biometric/location/communication/derived), per-class **retention & expiry**, **purpose limitation + consent**, and governed operations **RESTRICT / DELETE(GENERALIZE) / ERASE**.
+- Erasure is **physical** (`hard_delete` — cannot be undone by recovery) and **propagates to dependent derived representations** (`dependency_refs`) so derived data never outlives its source. A **right-to-be-forgotten** (`forget_entity`) erases all records referencing a person and their dependents.
+- **Authorization gate** (`authorize_ids`) is enforced in the brain's recall so retrieval never exposes records above a sensitivity limit or outside an allowed purpose.
+- Store gained governance primitives: `hard_delete`, `update_memory`, `set_expiry`, `records_by_entity`, `dependent_ids`, `count_by_class`, `expired_ids`, `gate_governance`, plus `purpose`/`consent` columns (migrated).
+- `MacBrain` classifies at admission (utterance/perception/goal), purpose-binds + expires each record, gates recall, and exposes `forget_memory`/`forget_entity`/`restrict_memory`/`generalize_memory`/`privacy_status`. Emits `privacy.gate`/`privacy.erased`/`privacy.entity_erased`/`privacy.restricted`/`privacy.generalized`.
+- Verified on-device: credential/personal/location/derived/operational classification; purpose+expiry binding; erasure propagated to a dependent record (both physically gone); sensitive record blocked from retrieval; right-to-be-forgotten erased 2 records; restrict→`restricted`; generalize→`derived` coarse summary; retention sweep removed an expired record.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/privacy-governance.json`.
+
+## Non-speech audio / hearing (status: IMPLEMENTED)
+
+- `MAC_BRAIN/audio.py` — `Hearing`, `AudioFrame`, `AudioEvent`, `AudioQuality` implement the offline-hearing subset of docs/02-novi-brain/13: VAD-style **speech/non-speech** classification, **sound-event detection** over an extensible taxonomy (knock/footstep/door/impact/object_fall/glass_break/alarm/appliance/machinery/vehicle/animal/clap/cry/laugh/cough/sneeze/unknown), acoustic **anomaly/novelty** representation (unknown sounds are never forced into a class), optional **direction-of-arrival** (uncertain), and **audio-quality** monitoring (clip/saturation/silence/excess_noise/channel_fault).
+- Determinism boundary (mirrors perception): a real SED model/front-end (future/Jetson) supplies an `AudioFrame` feature descriptor; the deterministic `Hearing` turns that evidence into typed, confident `AudioEvent`s and **degrades gracefully when ASR is absent** (a failed model never makes Novi deaf).
+- `MacBrain.ingest_audio_frame(frame)` detects events, monitors quality, admits attention-worthy events to durable memory (governed/classified), feeds audio into **multimodal fusion**, and reports hearing each step. Emits `hearing.event` / `hearing.voice` / `hearing.anomaly` / `hearing.quality`.
+- Verified on-device: silence / speech(VAD) / alarm(beep) / knock / unknown(anomaly) / impact; quality clip-saturation-silence-fault; a knock→alarm fed fusion as an `audio` modality, was admitted to memory, and reported in the step result.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/audio-hearing.json`.
+
+## Health & observability loop (status: IMPLEMENTED)
+
+- `MAC_BRAIN/observability.py` — implements docs/02-novi-brain/28:
+  - **Health**: PASS / WARN / FAIL / UNKNOWN checks over all brain subsystems with aggregate precedence `FAIL > WARN > PASS > UNKNOWN`; snapshots carry status, detail, individual checks, and wall-clock + monotonic timestamps. A failing check degrades to FAIL without crashing the brain.
+  - **Metrics**: deterministic in-process `MetricRegistry` (name, value, unit, normalized labels) with stable snapshot ordering; external exporters intentionally deferred (vendor-neutral).
+  - **Diagnostics**: bounded structured log (severity DEBUG/INFO/WARN/ERROR, message, structured context, wall-clock + monotonic time).
+- `MacBrain` runs the health loop + records metrics each cycle (`_update_observability`), exposes `health_report()` / `metrics_snapshot()` / `add_diagnostic()`, and emits `observability.health` / `observability.metrics` / `observability.diagnostic`. Health/metrics reported in the step result.
+- Verified on-device: FAIL dominates / WARN surfaces / PASS when healthy; a durable brain reports all 12 subsystems `PASS`; a non-durable brain correctly reports `WARN` (governance disabled — degraded but usable); metrics snapshot is deterministically ordered with labels preserved; diagnostics carry structured context + dual timestamps.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/observability.json`.
+
 ## Next implementation slice
 
 1. Real robot / Jetson port (deferred until physical hardware arrives).

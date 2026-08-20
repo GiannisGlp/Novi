@@ -1,0 +1,56 @@
+{
+  "health_precedence": {
+    "fail_dominates": "FAIL",
+    "warn_surfaces": "WARN",
+    "pass_when_healthy": "PASS"
+  },
+  "durable_brain_health": {
+    "status": "PASS",
+    "checks": {
+      "body": "PASS",
+      "cognition": "PASS",
+      "fusion": "PASS",
+      "goals": "PASS",
+      "governance": "PASS",
+      "hearing": "PASS",
+      "identity": "PASS",
+      "knowledge": "PASS",
+      "memory": "PASS",
+      "perception": "PASS",
+      "reasoning": "PASS",
+      "soul": "PASS"
+    }
+  },
+  "non_durable_degraded": "WARN",
+  "metrics": [
+    {
+      "name": "a",
+      "value": 4.0,
+      "unit": "count",
+      "labels": {
+        "who": "alice"
+      }
+    },
+    {
+      "name": "b",
+      "value": 2.0,
+      "unit": "s",
+      "labels": {}
+    }
+  ],
+  "diagnostic": {
+    "severity": "WARN",
+    "message": "low battery",
+    "context": {
+      "level": 0.1
+    },
+    "wallclock": "2026-08-20T22:59:42.433025+00:00",
+    "monotonic": 449105.22898
+  },
+  "observability_events": [
+    "observability.health",
+    "observability.metrics",
+    "observability.health",
+    "observability.diagnostic"
+  ]
+}

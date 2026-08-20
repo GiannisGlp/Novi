@@ -1,0 +1,126 @@
+{
+  "detection": {
+    "silence": {
+      "event_type": "silence",
+      "speech": false,
+      "confidence": 1.0,
+      "intensity": 0.0,
+      "direction_deg": null,
+      "novelty": 0.0,
+      "anomaly": false,
+      "source": "audio.sed",
+      "captured_at": "2026-08-20T22:57:17.794085+00:00"
+    },
+    "speech_vad": {
+      "event_type": "speech",
+      "speech": true,
+      "confidence": 0.8,
+      "intensity": 0.6,
+      "direction_deg": null,
+      "novelty": 0.0,
+      "anomaly": false,
+      "source": "audio.sed",
+      "captured_at": "2026-08-20T22:57:17.794291+00:00"
+    },
+    "alarm_beep": {
+      "event_type": "alarm",
+      "speech": false,
+      "confidence": 0.9,
+      "intensity": 0.8,
+      "direction_deg": null,
+      "novelty": 0.0,
+      "anomaly": false,
+      "source": "audio.sed",
+      "captured_at": "2026-08-20T22:57:17.794299+00:00"
+    },
+    "knock": {
+      "event_type": "knock",
+      "speech": false,
+      "confidence": 0.85,
+      "intensity": 0.6,
+      "direction_deg": null,
+      "novelty": 0.0,
+      "anomaly": false,
+      "source": "audio.sed",
+      "captured_at": "2026-08-20T22:57:17.794305+00:00"
+    },
+    "unknown_anomaly": {
+      "event_type": "unknown",
+      "speech": false,
+      "confidence": 0.5,
+      "intensity": 0.5,
+      "direction_deg": null,
+      "novelty": 0.9,
+      "anomaly": true,
+      "source": "audio.sed",
+      "captured_at": "2026-08-20T22:57:17.794309+00:00"
+    },
+    "impact_energy": {
+      "event_type": "impact",
+      "speech": false,
+      "confidence": 0.95,
+      "intensity": 0.95,
+      "direction_deg": null,
+      "novelty": 0.1,
+      "anomaly": false,
+      "source": "audio.sed",
+      "captured_at": "2026-08-20T22:57:17.794313+00:00"
+    }
+  },
+  "quality_monitoring": {
+    "clip_sat": {
+      "clip": true,
+      "saturation": true,
+      "silence": false,
+      "excess_noise": false,
+      "channel_fault": false
+    },
+    "silence": {
+      "clip": false,
+      "saturation": false,
+      "silence": true,
+      "excess_noise": false,
+      "channel_fault": false
+    },
+    "fault": {
+      "clip": false,
+      "saturation": false,
+      "silence": true,
+      "excess_noise": false,
+      "channel_fault": true
+    }
+  },
+  "brain_wiring": {
+    "ingested_event": {
+      "event_type": "alarm",
+      "speech": false,
+      "confidence": 0.9,
+      "intensity": 0.8,
+      "direction_deg": null,
+      "novelty": 0.0,
+      "anomaly": false,
+      "source": "audio.sed",
+      "captured_at": "2026-08-20T22:57:17.794495+00:00"
+    },
+    "admitted": 1,
+    "hearing_events_emitted": [
+      "hearing.event"
+    ],
+    "audio_fused": [
+      "alarm"
+    ],
+    "hearing_in_step": [
+      {
+        "event_type": "alarm",
+        "speech": false,
+        "confidence": 0.9,
+        "intensity": 0.8,
+        "direction_deg": null,
+        "novelty": 0.0,
+        "anomaly": false,
+        "source": "audio.sed",
+        "captured_at": "2026-08-20T22:57:17.794495+00:00"
+      }
+    ]
+  }
+}

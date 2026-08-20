@@ -1,0 +1,42 @@
+{
+  "classification": {
+    "credential": "credential",
+    "person": "personal",
+    "location": "location",
+    "derived": "derived",
+    "default": "operational"
+  },
+  "governed_admission": {
+    "purpose": "general",
+    "has_expiry": true
+  },
+  "erasure_propagation": {
+    "erased": [
+      "mem-e240513d61434bba4d197545"
+    ],
+    "propagated": [
+      "mem-ffbaf765d4efe3049672d61d"
+    ],
+    "base_gone": true,
+    "dependent_gone": true
+  },
+  "retrieval_gate": {
+    "allowed_public": true,
+    "allowed_personal": true,
+    "sensitive_blocked": true
+  },
+  "right_to_be_forgotten": {
+    "erased": 2
+  },
+  "restrict": "restricted",
+  "generalize": {
+    "privacy_class": "derived",
+    "content": {
+      "original_type": "utterance",
+      "summary": "coarsened_by_policy"
+    }
+  },
+  "retention_sweep": {
+    "expired_record_gone": true
+  }
+}

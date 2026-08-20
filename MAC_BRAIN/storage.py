@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS memory_records (
     state                TEXT NOT NULL DEFAULT 'active',
     last_accessed_at     TEXT,
     expires_at           TEXT,
+    purpose              TEXT,
+    consent              INTEGER NOT NULL DEFAULT 1,
     deleted              INTEGER NOT NULL DEFAULT 0
 );
 """
@@ -220,6 +222,10 @@ class DurableMemoryStore:
             self._conn.execute("ALTER TABLE memory_records ADD COLUMN last_accessed_at TEXT")
         if "expires_at" not in cols:
             self._conn.execute("ALTER TABLE memory_records ADD COLUMN expires_at TEXT")
+        if "purpose" not in cols:
+            self._conn.execute("ALTER TABLE memory_records ADD COLUMN purpose TEXT")
+        if "consent" not in cols:
+            self._conn.execute("ALTER TABLE memory_records ADD COLUMN consent INTEGER NOT NULL DEFAULT 1")
 
     # ---- memory ----
     def admit(
@@ -416,6 +422,93 @@ class DurableMemoryStore:
             self._embed_index.remove(memory_id)
         self._conn.commit()
         return cur.rowcount > 0
+
+    # ---- privacy / governance primitives ----
+    def hard_delete(self, memory_id: str) -> bool:
+        """Physically remove a record so deletion cannot be undone by recovery."""
+        cur = self._conn.execute("DELETE FROM memory_records WHERE memory_id=?", (memory_id,))
+        self._conn.execute("DELETE FROM memory_fts WHERE memory_id=?", (memory_id,))
+        self._conn.execute("DELETE FROM vectors WHERE memory_id=?", (memory_id,))
+        self._embed_index.remove(memory_id)
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    def update_memory(
+        self,
+        memory_id: str,
+        *,
+        content: Any = None,
+        privacy_class: str | None = None,
+        purpose: str | None = None,
+        consent: bool | None = None,
+        expires_at: str | None = None,
+        revision_bump: bool = True,
+    ) -> bool:
+        row = self._conn.execute("SELECT revision FROM memory_records WHERE memory_id=? AND deleted=0", (memory_id,)).fetchone()
+        if row is None:
+            return False
+        sets: list[str] = []
+        params: list[Any] = []
+        if content is not None:
+            sets.append("content=?")
+            params.append(_json(content))
+        if privacy_class is not None:
+            sets.append("privacy_class=?")
+            params.append(privacy_class)
+        if purpose is not None:
+            sets.append("purpose=?")
+            params.append(purpose)
+        if consent is not None:
+            sets.append("consent=?")
+            params.append(int(bool(consent)))
+        if expires_at is not None:
+            sets.append("expires_at=?")
+            params.append(expires_at)
+        if revision_bump:
+            sets.append("revision=revision+1")
+        if not sets:
+            return False
+        params.append(memory_id)
+        cur = self._conn.execute(f"UPDATE memory_records SET {', '.join(sets)} WHERE memory_id=? AND deleted=0", params)
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    def set_expiry(self, memory_id: str, expires_at: str) -> bool:
+        return self.update_memory(memory_id, expires_at=expires_at)
+
+    def records_by_entity(self, entity: str) -> list[dict[str, Any]]:
+        rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0 AND entity_refs LIKE ?", (f"%{entity}%",)).fetchall()
+        return [self._row_to_state(row) for row in rows]
+
+    def get_state_row(self, memory_id: str) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0", (memory_id,)).fetchone()
+        return self._row_to_state(row) if row else None
+
+    def dependent_ids(self, memory_id: str) -> tuple[str, ...]:
+        rows = self._conn.execute("SELECT memory_id FROM memory_records WHERE deleted=0 AND dependency_refs LIKE ?", (f"%{memory_id}%",)).fetchall()
+        return tuple(row["memory_id"] for row in rows)
+
+    def count_by_class(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for row in self._conn.execute("SELECT privacy_class, COUNT(*) AS n FROM memory_records WHERE deleted=0 GROUP BY privacy_class").fetchall():
+            counts[row["privacy_class"]] = int(row["n"])
+        return counts
+
+    def expired_ids(self, now: str) -> tuple[str, ...]:
+        rows = self._conn.execute("SELECT memory_id FROM memory_records WHERE deleted=0 AND state='active' AND expires_at IS NOT NULL AND expires_at <= ?", (now,)).fetchall()
+        return tuple(row["memory_id"] for row in rows)
+
+    def _row_to_state(self, row: sqlite3.Row) -> dict[str, Any]:
+        return {"memory_id": row["memory_id"], "memory_type": row["memory_type"], "content": _unjson(row["content"], ""), "privacy_class": row["privacy_class"], "purpose": row["purpose"], "consent": bool(row["consent"]), "expires_at": row["expires_at"], "state": row["state"], "dependency_refs": _unjson(row["dependency_refs"], ())}
+
+    def gate_governance(self, memory_ids: Iterable[str]) -> dict[str, dict[str, Any]]:
+        """Resolve privacy/purpose/consent for a set of ids in one query (retrieval gate)."""
+        ids = tuple(memory_ids)
+        if not ids:
+            return {}
+        marks = ",".join("?" for _ in ids)
+        rows = self._conn.execute(f"SELECT memory_id, privacy_class, purpose, consent FROM memory_records WHERE deleted=0 AND memory_id IN ({marks})", ids).fetchall()
+        return {r["memory_id"]: {"privacy_class": r["privacy_class"], "purpose": r["purpose"], "consent": bool(r["consent"])} for r in rows}
 
     @property
     def active_count(self) -> int:

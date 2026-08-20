@@ -31,5 +31,8 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Reasoning router + structured output | `20260820T223405Z/router-validation.json` | confidence-based routing (deterministic/llm/fallback), schema validation, invalid-output rejection |
 | Entity knowledge graph | `20260820T223629Z/kgraph.json` | triple learning, contradiction preservation, entity typing, durable graph |
 | Multi-step planning context | `20260820T224002Z/planner.json` | typed plan decomposition, step advancement, replan, plan resumption across restart |
+| Memory privacy & erasure governance | `20260820T224757Z/privacy-governance.json` | classification, retention/expiry, purpose+consent, erasure propagation, right-to-be-forgotten, retrieval gate |
+| Non-speech audio / hearing | `20260820T225717Z/audio-hearing.json` | VAD speech/non-speech, sound-event taxonomy, anomaly, quality monitoring, audio→fusion |
+| Health & observability loop | `20260820T225942Z/observability.json` | PASS/WARN/FAIL/UNKNOWN checks, metric registry, structured diagnostics |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
