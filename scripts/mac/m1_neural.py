@@ -10,6 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# Running a file under scripts/mac directly makes sys.path point at scripts/mac,
+# not the repository root. Add the root explicitly so the canonical MAC_BRAIN
+# package can always be imported from any working directory.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 RESULTS = ROOT / "mac_test_results" / "M1"
 
 
