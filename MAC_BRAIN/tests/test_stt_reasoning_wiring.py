@@ -5,7 +5,7 @@ from brain.b2_perception import Detection, DeterministicPerceptionBackend, Speci
 
 from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.models import DeterministicSTTProvider
-from MAC_BRAIN.runtime import MacBrain
+from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 
 
 class FakeCamera:
@@ -141,7 +141,8 @@ class ReasoningActionWiringTests(unittest.TestCase):
             def detect(self, frame):
                 return (Detection("person", 0.95, (0.0, 0.0, 1.0, 1.0)),)
 
-        brain = MacBrain(camera=FakeCamera(), perception=SpecialistPerception(PersonBackend()))
+        # curiosity disabled: assert the pure reactive conclusion->action mapping
+        brain = MacBrain(camera=FakeCamera(), perception=SpecialistPerception(PersonBackend()), config=MacBrainConfig(curiosity_enabled=False))
         brain.start()
         result = brain.step()
         brain.stop()

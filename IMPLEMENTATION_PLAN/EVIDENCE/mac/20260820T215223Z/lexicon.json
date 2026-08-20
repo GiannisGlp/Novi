@@ -1,0 +1,43 @@
+{
+  "lexicon_progression": [
+    {
+      "observe": 1,
+      "status": "observed",
+      "frequency": 1
+    },
+    {
+      "observe": 2,
+      "status": "validated",
+      "frequency": 2
+    },
+    {
+      "observe": 3,
+      "status": "adopted",
+      "frequency": 3
+    },
+    {
+      "observe": 4,
+      "status": "adopted",
+      "frequency": 4
+    }
+  ],
+  "global_final_status": "adopted",
+  "relationship_word": {
+    "status": "scoped",
+    "usable_private": true,
+    "usable_stranger_present": false,
+    "usable_by_other": false
+  },
+  "preference_confidence": [
+    0.3,
+    0.4,
+    0.65
+  ],
+  "correction_result": "detailed",
+  "default_for_other": "medium",
+  "context_override_wins": "medium",
+  "durable_across_restart": {
+    "scoped_status": "scoped",
+    "corrected_value": "detailed"
+  }
+}

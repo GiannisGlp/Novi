@@ -1,0 +1,59 @@
+{
+  "development_stages": [
+    {
+      "interaction": 1,
+      "category": "first_meeting",
+      "familiarity": 0.08
+    },
+    {
+      "interaction": 2,
+      "category": "visitor",
+      "familiarity": 0.16
+    },
+    {
+      "interaction": 6,
+      "category": "acquaintance",
+      "familiarity": 0.48
+    },
+    {
+      "interaction": 12,
+      "category": "friend",
+      "familiarity": 0.96
+    }
+  ],
+  "final_category": "friend",
+  "stranger_expression": {
+    "tone": "polite",
+    "warmth": 0.4,
+    "playful": false,
+    "formality": "high",
+    "reserved": true
+  },
+  "friend_expression": {
+    "tone": "warm",
+    "warmth": 0.75,
+    "playful": true,
+    "formality": "low",
+    "reserved": false
+  },
+  "friend_serious_expression": {
+    "tone": "calm",
+    "warmth": 0.75,
+    "playful": false,
+    "formality": "low",
+    "reserved": false
+  },
+  "participation_gate_addressed": {
+    "action": "participate",
+    "reason": "addressed"
+  },
+  "participation_gate_cooldown_silent": {
+    "action": "observe",
+    "reason": "recent_interaction_cooldown"
+  },
+  "durable_across_restart": {
+    "person": "alice",
+    "category": "friend",
+    "interactions": 16
+  }
+}

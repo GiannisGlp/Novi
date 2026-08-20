@@ -1,0 +1,41 @@
+{
+  "action_sequence": [
+    "observe",
+    "observe",
+    "observe",
+    "observe",
+    "observe",
+    "stop",
+    "wait",
+    "wait"
+  ],
+  "curiosity_triggered": [
+    {
+      "entity": "gizmo",
+      "goal_id": "goal-4285e8e0e682",
+      "max_steps": 5
+    }
+  ],
+  "goal_history": [
+    {
+      "kind": "investigate",
+      "status": "completed",
+      "steps_taken": 6
+    }
+  ],
+  "goal_outcomes_in_memory": [
+    {
+      "goal_id": "goal-4285e8e0e682",
+      "kind": "investigate",
+      "status": "completed",
+      "steps_taken": 6,
+      "target": "gizmo"
+    }
+  ],
+  "persisted_after_restart": [
+    {
+      "kind": "investigate",
+      "status": "completed"
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "cross_modal": [
+    {
+      "entity": "alice",
+      "value": "present",
+      "confidence": 0.84,
+      "modalities": [
+        "speech",
+        "vision"
+      ],
+      "conflict": false,
+      "captured_at": "2026-08-20T12:00:00Z",
+      "contributions": [
+        {
+          "modality": "vision",
+          "entity": "alice",
+          "value": "present",
+          "confidence": 0.6,
+          "captured_at": "2026-08-20T12:00:00Z",
+          "received_at": "2026-08-20T12:00:00Z",
+          "source": "vision"
+        },
+        {
+          "modality": "speech",
+          "entity": "alice",
+          "value": "present",
+          "confidence": 0.6,
+          "captured_at": "2026-08-20T12:00:00Z",
+          "received_at": "2026-08-20T12:00:00Z",
+          "source": "speech"
+        }
+      ]
+    }
+  ],
+  "conflict_handling": [
+    {
+      "entity": "light",
+      "value": "off",
+      "confidence": 0.5,
+      "modalities": [
+        "speech"
+      ],
+      "conflict": true,
+      "captured_at": "2026-08-20T12:00:00Z",
+      "contributions": [
+        {
+          "modality": "speech",
+          "entity": "light",
+          "value": "off",
+          "confidence": 0.9,
+          "captured_at": "2026-08-20T12:00:00Z",
+          "received_at": "2026-08-20T12:00:00Z",
+          "source": "speech"
+        }
+      ]
+    },
+    {
+      "entity": "light",
+      "value": "on",
+      "confidence": 0.5,
+      "modalities": [
+        "vision"
+      ],
+      "conflict": true,
+      "captured_at": "2026-08-20T12:00:00Z",
+      "contributions": [
+        {
+          "modality": "vision",
+          "entity": "light",
+          "value": "on",
+          "confidence": 0.9,
+          "captured_at": "2026-08-20T12:00:00Z",
+          "received_at": "2026-08-20T12:00:00Z",
+          "source": "vision"
+        }
+      ]
+    }
+  ],
+  "graceful_degradation": [
+    {
+      "entity": "lamp",
+      "value": "present",
+      "confidence": 0.7,
+      "modalities": [
+        "vision"
+      ],
+      "conflict": false,
+      "captured_at": "2026-08-20T12:00:00Z",
+      "contributions": [
+        {
+          "modality": "vision",
+          "entity": "lamp",
+          "value": "present",
+          "confidence": 0.7,
+          "captured_at": "2026-08-20T12:00:00Z",
+          "received_at": "2026-08-20T12:00:00Z",
+          "source": "vision"
+        }
+      ]
+    }
+  ],
+  "stale_rejected": [
+    {
+      "entity": "alice",
+      "value": "present",
+      "confidence": 0.7,
+      "modalities": [
+        "speech"
+      ],
+      "conflict": false,
+      "captured_at": "2026-08-20T12:00:00Z",
+      "contributions": [
+        {
+          "modality": "speech",
+          "entity": "alice",
+          "value": "present",
+          "confidence": 0.7,
+          "captured_at": "2026-08-20T12:00:00Z",
+          "received_at": "2026-08-20T12:00:00Z",
+          "source": "speech"
+        }
+      ]
+    }
+  ],
+  "deterministic_replay": true,
+  "durable_after_restart": {
+    "recent_count": 1,
+    "modalities": [
+      "speech",
+      "vision"
+    ]
+  }
+}

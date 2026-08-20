@@ -1,0 +1,38 @@
+{
+  "action_sequence": [
+    "observe",
+    "observe",
+    "stop",
+    "wait",
+    "wait",
+    "wait"
+  ],
+  "events": [
+    "goal.adopted",
+    "goal.queued"
+  ],
+  "goals_before_stop": [
+    {
+      "goal_id": "g-low",
+      "kind": "investigate",
+      "status": "superseded",
+      "steps_taken": 0
+    },
+    {
+      "goal_id": "g-high",
+      "kind": "investigate",
+      "status": "completed",
+      "steps_taken": 3
+    }
+  ],
+  "persisted_after_restart": [
+    {
+      "goal_id": "g-low",
+      "status": "superseded"
+    },
+    {
+      "goal_id": "g-high",
+      "status": "completed"
+    }
+  ]
+}

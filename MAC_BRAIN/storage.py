@@ -34,7 +34,20 @@ CREATE TABLE IF NOT EXISTS memory_records (
     spatial_context      TEXT,
     retention_policy_ref TEXT,
     dependency_refs      TEXT,
+    state                TEXT NOT NULL DEFAULT 'active',
+    last_accessed_at     TEXT,
+    expires_at           TEXT,
     deleted              INTEGER NOT NULL DEFAULT 0
+);
+"""
+
+SCHEMA_MEMORY_FTS = """
+CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
+    memory_id UNINDEXED,
+    content,
+    entity_refs,
+    memory_type,
+    tokenize = 'unicode61'
 );
 """
 
@@ -48,6 +61,76 @@ CREATE TABLE IF NOT EXISTS goals (
     created_cycle   INTEGER,
     status          TEXT,
     steps_taken     INTEGER
+);
+"""
+
+SCHEMA_SOUL = """
+CREATE TABLE IF NOT EXISTS soul (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_RELATIONSHIPS = """
+CREATE TABLE IF NOT EXISTS relationships (
+    person     TEXT PRIMARY KEY,
+    value      TEXT
+);
+"""
+
+SCHEMA_LEXICON = """
+CREATE TABLE IF NOT EXISTS lexicon (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_PREFERENCES = """
+CREATE TABLE IF NOT EXISTS preferences (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_BELIEFS = """
+CREATE TABLE IF NOT EXISTS beliefs (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_EXPECTATIONS = """
+CREATE TABLE IF NOT EXISTS expectations (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_TEMPORAL = """
+CREATE TABLE IF NOT EXISTS temporal (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_FUSION = """
+CREATE TABLE IF NOT EXISTS fusion (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_VECTORS = """
+CREATE TABLE IF NOT EXISTS vectors (
+    memory_id   TEXT PRIMARY KEY,
+    text        TEXT NOT NULL
+);
+"""
+
+SCHEMA_BODY = """
+CREATE TABLE IF NOT EXISTS body (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
 );
 """
 
@@ -70,20 +153,49 @@ def _unjson(value: str | None, default: Any) -> Any:
 class DurableMemoryStore:
     """SQLite-backed store exposing the same memory surface as ``DeterministicMemoryManager``."""
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, embedder: Any | None = None) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        from .vector import EmbeddingIndex, HashingEmbedding
+
+        self._embedder = embedder if embedder is not None else HashingEmbedding()
+        self._embed_index = EmbeddingIndex(self._embedder)
         self._conn = sqlite3.connect(str(self.path))
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.executescript(SCHEMA_MEMORY)
+        self._conn.executescript(SCHEMA_MEMORY_FTS)
         self._conn.executescript(SCHEMA_GOALS)
+        self._conn.executescript(SCHEMA_SOUL)
+        self._conn.executescript(SCHEMA_RELATIONSHIPS)
+        self._conn.executescript(SCHEMA_LEXICON)
+        self._conn.executescript(SCHEMA_PREFERENCES)
+        self._conn.executescript(SCHEMA_BELIEFS)
+        self._conn.executescript(SCHEMA_EXPECTATIONS)
+        self._conn.executescript(SCHEMA_TEMPORAL)
+        self._conn.executescript(SCHEMA_FUSION)
+        self._conn.executescript(SCHEMA_VECTORS)
+        self._conn.executescript(SCHEMA_BODY)
+        self._migrate()
+        # load persisted embeddings into the in-memory index
+        for row in self._conn.execute("SELECT memory_id, text FROM vectors").fetchall():
+            self._embed_index.add(row["memory_id"], row["text"])
         self._conn.commit()
 
     # ---- lifecycle ----
     def close(self) -> None:
         self._conn.commit()
         self._conn.close()
+
+    def _migrate(self) -> None:
+        """Add lifecycle columns to databases created before consolidation existed."""
+        cols = {row[1] for row in self._conn.execute("PRAGMA table_info(memory_records)").fetchall()}
+        if "state" not in cols:
+            self._conn.execute("ALTER TABLE memory_records ADD COLUMN state TEXT NOT NULL DEFAULT 'active'")
+        if "last_accessed_at" not in cols:
+            self._conn.execute("ALTER TABLE memory_records ADD COLUMN last_accessed_at TEXT")
+        if "expires_at" not in cols:
+            self._conn.execute("ALTER TABLE memory_records ADD COLUMN expires_at TEXT")
 
     # ---- memory ----
     def admit(
@@ -137,7 +249,7 @@ class DurableMemoryStore:
         return MemoryAdmission(True, memory_id, "STORE_EPISODE", "admitted")
 
     def _insert(self, record: MemoryRecord) -> None:
-        self._conn.execute(
+        cur = self._conn.execute(
             """INSERT OR IGNORE INTO memory_records
                (memory_id, memory_type, created_at, content, confidence, verification_status,
                 privacy_class, revision, provenance, event_refs, entity_refs,
@@ -163,7 +275,29 @@ class DurableMemoryStore:
                 _json(list(record.dependency_refs)),
             ),
         )
+        if cur.rowcount == 1:
+            self._fts_insert(record)
+            self._vector_insert(record)
         self._conn.commit()
+
+    def _vector_text(self, record: MemoryRecord) -> str:
+        text = json.dumps(record.content, sort_keys=True, default=str).lower()
+        return text + " " + " ".join(record.entity_refs)
+
+    def _vector_insert(self, record: MemoryRecord) -> None:
+        text = self._vector_text(record)
+        self._embed_index.add(record.memory_id, text)
+        self._conn.execute("INSERT OR IGNORE INTO vectors (memory_id, text) VALUES (?, ?)", (record.memory_id, text))
+
+    def _fts_document(self, record: MemoryRecord) -> str:
+        text = json.dumps(record.content, sort_keys=True, default=str).lower()
+        return text + " " + " ".join(record.entity_refs)
+
+    def _fts_insert(self, record: MemoryRecord) -> None:
+        self._conn.execute(
+            "INSERT INTO memory_fts (memory_id, content, entity_refs, memory_type) VALUES (?,?,?,?)",
+            (record.memory_id, self._fts_document(record), " ".join(record.entity_refs), record.memory_type),
+        )
 
     def _row_to_record(self, row: sqlite3.Row) -> MemoryRecord:
         return self._to_record(row)
@@ -175,7 +309,7 @@ class DurableMemoryStore:
     def retrieve(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
         if limit <= 0:
             return ()
-        rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0").fetchall()
+        rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0 AND state='active'").fetchall()
         terms = {term.lower() for term in query.split() if term}
         scored: list[tuple[int, str, MemoryRecord]] = []
         for row in rows:
@@ -193,20 +327,109 @@ class DurableMemoryStore:
         scored.sort(key=lambda item: (-item[0], item[1]))
         return tuple(item[2] for item in scored[:limit])
 
+    def retrieve_indexed(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+        """FTS5-backed retrieval: candidate memory_ids are found via MATCH, so only
+        the (small) matched subset is fetched and JSON-parsed instead of a full scan.
+
+        Falls back to the full-scan `retrieve` when there are no terms or the FTS
+        engine rejects a query, so it is always safe to call.
+        """
+        if limit <= 0:
+            return ()
+        terms = [t.lower() for t in query.split() if t]
+        if not terms:
+            return self.retrieve(query, entity=entity, memory_type=memory_type, limit=limit)
+        matcher = " OR ".join(f'"{t}"' for t in terms)
+        try:
+            wide = max(limit * 20, 50)
+            candidates = self._conn.execute(
+                "SELECT memory_id FROM memory_fts WHERE memory_fts MATCH ? ORDER BY rank LIMIT ?", (matcher, wide)
+            ).fetchall()
+        except Exception:
+            return self.retrieve(query, entity=entity, memory_type=memory_type, limit=limit)
+        scored: list[tuple[int, str, MemoryRecord]] = []
+        for (memory_id,) in candidates:
+            row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
+            if row is None:
+                continue
+            record = self._to_record(row)
+            if entity is not None and entity not in record.entity_refs:
+                continue
+            if memory_type is not None and memory_type != record.memory_type:
+                continue
+            haystack = self._fts_document(record)
+            score = sum(1 for term in terms if term in haystack)
+            if score == 0:
+                continue
+            scored.append((score, record.memory_id, record))
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return tuple(item[2] for item in scored[:limit])
+
+    def retrieve_semantic(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+        """Vector-similarity retrieval over the embedding index."""
+        if limit <= 0:
+            return ()
+        candidates = self._embed_index.search(query, limit=max(limit * 20, 50))
+        scored: list[tuple[float, MemoryRecord]] = []
+        for (memory_id, score) in candidates:
+            row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
+            if row is None:
+                continue
+            record = self._to_record(row)
+            if entity is not None and entity not in record.entity_refs:
+                continue
+            if memory_type is not None and memory_type != record.memory_type:
+                continue
+            scored.append((score, record))
+        scored.sort(key=lambda item: -item[0])
+        return tuple(item[1] for item in scored[:limit])
+
     def forget(self, memory_id: str) -> bool:
         cur = self._conn.execute("UPDATE memory_records SET deleted=1 WHERE memory_id=? AND deleted=0", (memory_id,))
+        if cur.rowcount > 0:
+            self._conn.execute("DELETE FROM memory_fts WHERE memory_id=?", (memory_id,))
+            self._conn.execute("DELETE FROM vectors WHERE memory_id=?", (memory_id,))
+            self._embed_index.remove(memory_id)
         self._conn.commit()
         return cur.rowcount > 0
 
     @property
     def active_count(self) -> int:
-        row = self._conn.execute("SELECT COUNT(*) FROM memory_records WHERE deleted=0").fetchone()
+        row = self._conn.execute("SELECT COUNT(*) FROM memory_records WHERE deleted=0 AND state='active'").fetchone()
         return int(row[0])
+
+    def get_state(self, memory_id: str) -> str | None:
+        row = self._conn.execute("SELECT state FROM memory_records WHERE memory_id=? AND deleted=0", (memory_id,)).fetchone()
+        return row["state"] if row else None
 
     @property
     def deleted_count(self) -> int:
         row = self._conn.execute("SELECT COUNT(*) FROM memory_records WHERE deleted=1").fetchone()
         return int(row[0])
+
+    # ---- lifecycle (consolidation) ----
+    def active_rows(self) -> list[dict[str, Any]]:
+        rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0 AND state='active'").fetchall()
+        return [
+            {
+                "record": self._to_record(row),
+                "state": row["state"],
+                "expires_at": row["expires_at"],
+                "last_accessed_at": row["last_accessed_at"],
+            }
+            for row in rows
+        ]
+
+    def set_state(self, memory_id: str, state: str) -> bool:
+        value = state.value if hasattr(state, "value") else state
+        cur = self._conn.execute("UPDATE memory_records SET state=? WHERE memory_id=? AND deleted=0", (str(value), memory_id))
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    def set_confidence(self, memory_id: str, confidence: float) -> bool:
+        cur = self._conn.execute("UPDATE memory_records SET confidence=? WHERE memory_id=? AND deleted=0", (float(confidence), memory_id))
+        self._conn.commit()
+        return cur.rowcount > 0
 
     # ---- goals ----
     def save_goal(self, *, goal_id: str, kind: str, target: Any, priority: float, max_steps: int, created_cycle: int, status: str, steps_taken: int) -> None:
@@ -231,6 +454,107 @@ class DurableMemoryStore:
             }
             for row in rows
         )
+
+    # ---- soul ----
+    def save_soul(self, snapshot: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO soul (key, value) VALUES ('state', ?)", (_json(snapshot),))
+        self._conn.commit()
+
+    def load_soul(self) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT value FROM soul WHERE key='state'").fetchone()
+        if row is None:
+            return None
+        return _unjson(row["value"], None)
+
+    # ---- relationships ----
+    def save_relationships(self, rows: list[dict[str, Any]]) -> None:
+        for row in rows:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO relationships (person, value) VALUES (?, ?)",
+                (row.get("person", ""), _json(row)),
+            )
+        self._conn.commit()
+
+    def load_relationships(self) -> list[dict[str, Any]]:
+        rows = self._conn.execute("SELECT value FROM relationships").fetchall()
+        return [_unjson(row["value"], {}) for row in rows if row["value"]]
+
+    # ---- lexicon ----
+    def save_lexicon(self, rows: list[dict[str, Any]]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO lexicon (key, value) VALUES ('state', ?)", (_json(rows),))
+        self._conn.commit()
+
+    def load_lexicon(self) -> list[dict[str, Any]]:
+        row = self._conn.execute("SELECT value FROM lexicon WHERE key='state'").fetchone()
+        if row is None:
+            return []
+        return _unjson(row["value"], [])
+
+    # ---- preferences ----
+    def save_preferences(self, rows: list[dict[str, Any]]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO preferences (key, value) VALUES ('state', ?)", (_json(rows),))
+        self._conn.commit()
+
+    def load_preferences(self) -> list[dict[str, Any]]:
+        row = self._conn.execute("SELECT value FROM preferences WHERE key='state'").fetchone()
+        if row is None:
+            return []
+        return _unjson(row["value"], [])
+
+    # ---- beliefs ----
+    def save_beliefs(self, rows: list[dict[str, Any]]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO beliefs (key, value) VALUES ('state', ?)", (_json(rows),))
+        self._conn.commit()
+
+    def load_beliefs(self) -> list[dict[str, Any]]:
+        row = self._conn.execute("SELECT value FROM beliefs WHERE key='state'").fetchone()
+        if row is None:
+            return []
+        return _unjson(row["value"], [])
+
+    # ---- expectations ----
+    def save_expectations(self, data: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO expectations (key, value) VALUES ('state', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_expectations(self) -> dict[str, Any]:
+        row = self._conn.execute("SELECT value FROM expectations WHERE key='state'").fetchone()
+        if row is None:
+            return {}
+        return _unjson(row["value"], {})
+
+    # ---- temporal ----
+    def save_temporal(self, data: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO temporal (key, value) VALUES ('state', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_temporal(self) -> dict[str, Any]:
+        row = self._conn.execute("SELECT value FROM temporal WHERE key='state'").fetchone()
+        if row is None:
+            return {}
+        return _unjson(row["value"], {})
+
+    # ---- fusion ----
+    def save_fusion(self, data: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO fusion (key, value) VALUES ('state', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_fusion(self) -> dict[str, Any]:
+        row = self._conn.execute("SELECT value FROM fusion WHERE key='state'").fetchone()
+        if row is None:
+            return {}
+        return _unjson(row["value"], {})
+
+    # ---- body pose ----
+    def save_body(self, snapshot: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO body (key, value) VALUES ('state', ?)", (_json(snapshot),))
+        self._conn.commit()
+
+    def load_body(self) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT value FROM body WHERE key='state'").fetchone()
+        if row is None:
+            return None
+        return _unjson(row["value"], None)
 
     def _to_record(self, row: sqlite3.Row) -> MemoryRecord:
         return MemoryRecord(

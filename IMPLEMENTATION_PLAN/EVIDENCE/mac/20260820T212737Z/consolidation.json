@@ -1,0 +1,20 @@
+{
+  "contradiction_and_expiry": {
+    "report": {
+      "expired": 1,
+      "superseded": 1
+    },
+    "states": {
+      "fact_old": "superseded",
+      "fact_new": "active",
+      "perception": "expired"
+    },
+    "active_facts": [
+      "temp is 24C"
+    ]
+  },
+  "confidence_decay": {
+    "state": "archived",
+    "archived_below_min_confidence": true
+  }
+}

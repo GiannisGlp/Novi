@@ -1,0 +1,35 @@
+{
+  "memory_active_after_restart": 6,
+  "goal_history": [],
+  "soul_identity": "Novi",
+  "alice_relationship": "friend",
+  "lexicon_buddy_status": "scoped",
+  "pref_response_length": "detailed",
+  "belief_lamp": {
+    "value": true,
+    "contradictions": 1,
+    "confidence": 0.75
+  },
+  "expectation_violations_fired": 2,
+  "final_tone": "warm",
+  "events_emitted": [
+    "MAC_BRAIN.started",
+    "action.completed",
+    "cognition.completed",
+    "cognition.expectation_violation",
+    "cognition.predicted",
+    "goal.adopted",
+    "goal.status",
+    "lexicon.observed",
+    "memory.admitted",
+    "memory.consolidated",
+    "memory.recall",
+    "perception.completed",
+    "preference.corrected",
+    "preference.learned",
+    "reasoning.completed",
+    "sensor.camera.frame",
+    "social.interaction",
+    "soul.updated"
+  ]
+}

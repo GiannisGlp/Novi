@@ -1,0 +1,469 @@
+{
+  "events": [
+    {
+      "cycle": 0,
+      "event_type": "MAC_BRAIN.started",
+      "payload": {
+        "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "image-1",
+        "height": 2658,
+        "metadata": {
+          "backend": "neural-image",
+          "input": "test-image.png"
+        },
+        "width": 4112
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 2,
+        "frame_id": "image-1",
+        "provenance": {
+          "backend": "NeuralPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "memory.admitted",
+      "payload": {
+        "accepted": true,
+        "entity": "tv",
+        "memory_id": "mem-3bb49ae48baf250f5c88e299",
+        "memory_type": "perception"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "memory.admitted",
+      "payload": {
+        "accepted": true,
+        "entity": "laptop",
+        "memory_id": "mem-74d1648b658d576a80925ea4",
+        "memory_type": "perception"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.6,
+        "cycle": 1,
+        "uncertainty": [
+          "low_confidence:laptop",
+          "low_confidence:tv"
+        ]
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "fusion.completed",
+      "payload": {
+        "captured_at": "2026-08-20T22:23:12.974865+00:00",
+        "confidence": 0.519,
+        "conflict": false,
+        "contributions": [
+          {
+            "captured_at": "2026-08-20T22:23:12.974865+00:00",
+            "confidence": 0.519,
+            "entity": "laptop",
+            "modality": "vision",
+            "received_at": "2026-08-20T22:23:12.974865+00:00",
+            "source": "camera",
+            "value": "present"
+          }
+        ],
+        "cycle": 1,
+        "entity": "laptop",
+        "modalities": [
+          "vision"
+        ],
+        "value": "present"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "fusion.completed",
+      "payload": {
+        "captured_at": "2026-08-20T22:23:12.974865+00:00",
+        "confidence": 0.563,
+        "conflict": false,
+        "contributions": [
+          {
+            "captured_at": "2026-08-20T22:23:12.974865+00:00",
+            "confidence": 0.563,
+            "entity": "tv",
+            "modality": "vision",
+            "received_at": "2026-08-20T22:23:12.974865+00:00",
+            "source": "camera",
+            "value": "present"
+          }
+        ],
+        "cycle": 1,
+        "entity": "tv",
+        "modalities": [
+          "vision"
+        ],
+        "value": "present"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "memory.recall",
+      "payload": {
+        "cycle": 1,
+        "query": "tv laptop",
+        "recalled": 2
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 1,
+        "rationale": "no_high_salience_change_detected (recalled 2 relevant memories)"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "goal.adopted",
+      "payload": {
+        "goal_id": "goal-55efb5b67f95",
+        "kind": "investigate",
+        "max_steps": 5,
+        "target": "tv"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "curiosity.triggered",
+      "payload": {
+        "entity": "tv",
+        "goal_id": "goal-55efb5b67f95",
+        "max_steps": 5
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.temporal",
+      "payload": {
+        "cycle": 1,
+        "expected": [
+          {
+            "cause": "laptop",
+            "confidence": 1.0,
+            "effect": "tv",
+            "evidence_count": 1,
+            "relation": "observed"
+          },
+          {
+            "cause": "laptop",
+            "confidence": 1.0,
+            "effect": "action:observe",
+            "evidence_count": 1,
+            "relation": "observed"
+          },
+          {
+            "cause": "tv",
+            "confidence": 1.0,
+            "effect": "laptop",
+            "evidence_count": 1,
+            "relation": "observed"
+          },
+          {
+            "cause": "tv",
+            "confidence": 1.0,
+            "effect": "action:observe",
+            "evidence_count": 1,
+            "relation": "observed"
+          }
+        ],
+        "timeline": [
+          {
+            "cycle": 1,
+            "events": [
+              "action:observe",
+              "laptop",
+              "tv"
+            ],
+            "now": "2026-08-20T22:23:12.974865+00:00"
+          }
+        ]
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "observe",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "observe",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "soul.updated",
+      "payload": {
+        "affect": {
+          "calm": 0.8,
+          "caution": 0.345,
+          "curiosity": 0.78,
+          "energy": 0.6,
+          "engagement": 0.635,
+          "frustration": 0.1,
+          "satisfaction": 0.3,
+          "social_comfort": 0.6
+        },
+        "cycle": 1,
+        "motivations": {
+          "connect": 0.7,
+          "continuity": 0.7,
+          "create": 0.6,
+          "explore": 0.8,
+          "help": 0.8,
+          "learn": 0.8,
+          "recover": 0.5,
+          "understand": 0.8
+        },
+        "tone": "curious"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "memory.admitted",
+      "payload": {
+        "accepted": true,
+        "entity_refs": [],
+        "memory_id": "mem-eb31b1ab59e2e8b805e68ef1",
+        "memory_type": "utterance"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "human_speech_observed",
+        "confidence": 0.6,
+        "cycle": 1,
+        "source": "audio.stt"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "speech.ingested",
+      "payload": {
+        "memory_id": "mem-eb31b1ab59e2e8b805e68ef1",
+        "reasoning": "human_speech_observed",
+        "text": "what do you see"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "live.round_completed",
+      "payload": {
+        "heard": "what do you see",
+        "reply": "That's interesting \u2014 I can see tv, laptop. You said: 'what do you see'. no_high_salience_change_detected",
+        "round": 0,
+        "tone": "curious"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    },
+    {
+      "cycle": 1,
+      "event_type": "MAC_BRAIN.stopped",
+      "payload": {
+        "cycles": 1,
+        "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+      },
+      "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c"
+    }
+  ],
+  "rounds": [
+    {
+      "heard": "what do you see",
+      "heard_reasoning": "human_speech_observed",
+      "index": 0,
+      "reply": "That's interesting \u2014 I can see tv, laptop. You said: 'what do you see'. no_high_salience_change_detected",
+      "steps": [
+        {
+          "action": "observe",
+          "authorized": true,
+          "cycle": 1,
+          "detections": [
+            "tv",
+            "laptop"
+          ],
+          "frame_id": "image-1",
+          "fusion": [
+            {
+              "captured_at": "2026-08-20T22:23:12.974865+00:00",
+              "confidence": 0.519,
+              "conflict": false,
+              "contributions": [
+                {
+                  "captured_at": "2026-08-20T22:23:12.974865+00:00",
+                  "confidence": 0.519,
+                  "entity": "laptop",
+                  "modality": "vision",
+                  "received_at": "2026-08-20T22:23:12.974865+00:00",
+                  "source": "camera",
+                  "value": "present"
+                }
+              ],
+              "entity": "laptop",
+              "modalities": [
+                "vision"
+              ],
+              "value": "present"
+            },
+            {
+              "captured_at": "2026-08-20T22:23:12.974865+00:00",
+              "confidence": 0.563,
+              "conflict": false,
+              "contributions": [
+                {
+                  "captured_at": "2026-08-20T22:23:12.974865+00:00",
+                  "confidence": 0.563,
+                  "entity": "tv",
+                  "modality": "vision",
+                  "received_at": "2026-08-20T22:23:12.974865+00:00",
+                  "source": "camera",
+                  "value": "present"
+                }
+              ],
+              "entity": "tv",
+              "modalities": [
+                "vision"
+              ],
+              "value": "present"
+            }
+          ],
+          "goal": {
+            "goal_id": "goal-55efb5b67f95",
+            "kind": "investigate",
+            "status": "active",
+            "steps_taken": 1
+          },
+          "reasoning": "no_high_salience_change_detected",
+          "reasoning_confidence": 0.6,
+          "run_id": "c51d40bd-9cdf-4744-beb3-b298be67de7c",
+          "social": {
+            "expression": null,
+            "person": null
+          },
+          "soul": {
+            "affect": {
+              "calm": 0.8,
+              "caution": 0.345,
+              "curiosity": 0.78,
+              "energy": 0.6,
+              "engagement": 0.635,
+              "frustration": 0.1,
+              "satisfaction": 0.3,
+              "social_comfort": 0.6
+            },
+            "identity": "Novi",
+            "tone": "curious"
+          },
+          "temporal": {
+            "expected": [
+              {
+                "cause": "laptop",
+                "confidence": 1.0,
+                "effect": "tv"
+              },
+              {
+                "cause": "laptop",
+                "confidence": 1.0,
+                "effect": "action:observe"
+              },
+              {
+                "cause": "tv",
+                "confidence": 1.0,
+                "effect": "laptop"
+              },
+              {
+                "cause": "tv",
+                "confidence": 1.0,
+                "effect": "action:observe"
+              }
+            ],
+            "top_links": [
+              {
+                "cause": "laptop",
+                "confidence": 1.0,
+                "effect": "tv",
+                "evidence_count": 1,
+                "relation": "observed"
+              },
+              {
+                "cause": "laptop",
+                "confidence": 1.0,
+                "effect": "action:observe",
+                "evidence_count": 1,
+                "relation": "observed"
+              },
+              {
+                "cause": "tv",
+                "confidence": 1.0,
+                "effect": "laptop",
+                "evidence_count": 1,
+                "relation": "observed"
+              }
+            ]
+          },
+          "virtual_body": {
+            "heading_deg": 0.0,
+            "last_action": "observe",
+            "velocity_mps": 0.0,
+            "x_m": 0.0,
+            "y_m": 0.0
+          }
+        }
+      ],
+      "tone": {
+        "energy": 0.6,
+        "playful": true,
+        "tone": "curious",
+        "warmth": 0.7
+      }
+    }
+  ]
+}

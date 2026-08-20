@@ -94,6 +94,13 @@ def main() -> int:
     parser.add_argument("--goal-steps", type=int, default=100, help="max step budget for the reach goal (bounds movement)")
     parser.add_argument("--store", type=str, default=None, metavar="PATH", help="enable durable storage: persist memory and goal history to a SQLite DB at PATH")
     parser.add_argument("--evidence", type=Path, default=Path("MAC_BRAIN_evidence.json"), help="write JSON evidence to this path")
+    parser.add_argument("--live", action="store_true", help="run the interactive live demo loop (camera + STT + decide + soul + TTS)")
+    parser.add_argument("--rounds", type=int, default=1, help="number of live rounds (default 1; use a large value for a sustained session)")
+    parser.add_argument("--live-steps", type=int, default=1, help="vision steps per live round")
+    parser.add_argument("--listen-seconds", type=float, default=3.0, help="seconds of microphone audio per live round")
+    parser.add_argument("--demo-hear", type=str, default=None, metavar="TEXT", help="inject a deterministic transcript instead of using the microphone (offline/test)")
+    parser.add_argument("--say", action="store_true", help="enable text-to-speech via macOS `say` (TTS)")
+    parser.add_argument("--say-voice", type=str, default=None, metavar="VOICE", help="macOS `say` voice name for TTS")
     args = parser.parse_args()
 
     image_source = bool(args.neural_image)
@@ -102,7 +109,7 @@ def main() -> int:
     if args.cycles <= 0:
         parser.error("--cycles must be > 0")
 
-    stt = WhisperSTTProvider(model_size=args.stt_model, device=args.stt_device) if (args.transcribe or args.listen) else None
+    stt = WhisperSTTProvider(model_size=args.stt_model, device=args.stt_device) if (args.transcribe or args.listen or (args.live and args.listen_seconds > 0 and args.demo_hear is None)) else None
 
     if args.neural_image is not None:
         camera = ImageCamera(args.neural_image)
@@ -117,9 +124,29 @@ def main() -> int:
         perception = SpecialistPerception(backend=backend)
 
     brain = MacBrain(camera=camera, perception=perception, stt=stt, reasoning=_build_reasoning(args), store_path=args.store)
+    brain.start()
+    if args.live:
+        from .io import MacSpeaker
+        from .live import LiveSession
+
+        speaker = MacSpeaker(voice=args.say_voice) if args.say else None
+        session = LiveSession(
+            brain=brain,
+            rounds=args.rounds,
+            per_round_steps=args.live_steps,
+            listen_seconds=args.listen_seconds,
+            demo_hear=args.demo_hear,
+            speaker=speaker,
+            on_round=lambda i, r: print(f"[round {i}] saw={r['steps'][-1].get('detections')} heard={r.get('heard')!r} tone={r['tone'].get('tone')} -> {r['reply']}"),
+        )
+        summary = session.run()
+        print(json.dumps(summary, indent=2, sort_keys=True, default=str))
+        if args.evidence:
+            args.evidence.parent.mkdir(parents=True, exist_ok=True)
+            args.evidence.write_text(json.dumps(summary, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+        return 0
     results = []
     transcriptions = []
-    brain.start()
     try:
         if args.goal_target:
             tx, ty = (float(v) for v in args.goal_target.split(","))

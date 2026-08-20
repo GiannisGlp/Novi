@@ -4,7 +4,7 @@ from brain.b2_perception import Detection, DeterministicPerceptionBackend, Speci
 from brain.runtime import Lifecycle
 
 from MAC_BRAIN.io import CameraFrame, VirtualBody
-from MAC_BRAIN.runtime import MacBrain
+from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 
 
 class FakeCamera:
@@ -35,7 +35,8 @@ class PersonBackend(DeterministicPerceptionBackend):
 class MacBrainTests(unittest.TestCase):
     def test_MAC_BRAIN_composes_existing_brain_runtime(self) -> None:
         camera = FakeCamera()
-        brain = MacBrain(camera=camera, perception=SpecialistPerception(PersonBackend()))
+        # curiosity disabled: exercise the pure reactive conclusion->action path
+        brain = MacBrain(camera=camera, perception=SpecialistPerception(PersonBackend()), config=MacBrainConfig(curiosity_enabled=False))
         brain.start()
         result = brain.step()
         brain.stop()

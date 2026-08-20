@@ -1,0 +1,64 @@
+{
+  "causal_links": {
+    "alice_present->light_on": {
+      "confidence": 1.0,
+      "count": 9,
+      "relation": "verified"
+    },
+    "door_open->alice_present": {
+      "confidence": 1.0,
+      "count": 9,
+      "relation": "verified"
+    },
+    "door_open->light_on": {
+      "confidence": 1.0,
+      "count": 9,
+      "relation": "verified"
+    },
+    "alice_present->door_open": {
+      "confidence": 0.89,
+      "count": 8,
+      "relation": "verified"
+    },
+    "light_on->alice_present": {
+      "confidence": 0.89,
+      "count": 8,
+      "relation": "verified"
+    }
+  },
+  "expected_after_door_open": [
+    {
+      "effect": "alice_present",
+      "confidence": 1.0
+    },
+    {
+      "effect": "light_on",
+      "confidence": 1.0
+    }
+  ],
+  "diluted_confidence": 0.5,
+  "recency": 0.95,
+  "is_stale": true,
+  "durable_after_restart": {
+    "alice_present->light_on": {
+      "relation": "verified",
+      "confidence": 1.0
+    },
+    "door_open->alice_present": {
+      "relation": "verified",
+      "confidence": 1.0
+    },
+    "door_open->light_on": {
+      "relation": "verified",
+      "confidence": 1.0
+    },
+    "alice_present->door_open": {
+      "relation": "verified",
+      "confidence": 0.89
+    },
+    "light_on->alice_present": {
+      "relation": "verified",
+      "confidence": 0.89
+    }
+  }
+}

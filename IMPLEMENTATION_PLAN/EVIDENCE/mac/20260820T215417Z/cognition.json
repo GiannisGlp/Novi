@@ -1,0 +1,29 @@
+{
+  "belief_confidence": [
+    0.9,
+    1.0,
+    1.0
+  ],
+  "single_contradiction": {
+    "value": true,
+    "unchanged": true,
+    "contradictions": 1,
+    "confidence": 0.85
+  },
+  "repeated_contradiction_flips": {
+    "value": false,
+    "contradictions": 0
+  },
+  "steady_expected_present": true,
+  "violations": [
+    {
+      "entity": "alice",
+      "kind": "expected_present_now_absent",
+      "expectation_confidence": 1.0
+    }
+  ],
+  "durable": {
+    "belief_value": false,
+    "expects_present": false
+  }
+}

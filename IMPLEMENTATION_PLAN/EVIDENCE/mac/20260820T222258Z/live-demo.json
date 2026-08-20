@@ -1,0 +1,814 @@
+{
+  "events": [
+    {
+      "cycle": 0,
+      "event_type": "MAC_BRAIN.started",
+      "payload": {
+        "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-1",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-1",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 1,
+        "uncertainty": []
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "memory.recall",
+      "payload": {
+        "cycle": 1,
+        "query": "",
+        "recalled": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 1,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "memory.consolidated",
+      "payload": {
+        "archived": 0,
+        "cycle": 1,
+        "decayed": 0,
+        "expired": 0,
+        "superseded": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 1,
+      "event_type": "soul.updated",
+      "payload": {
+        "affect": {
+          "calm": 0.8,
+          "caution": 0.3,
+          "curiosity": 0.6,
+          "energy": 0.6,
+          "engagement": 0.5,
+          "frustration": 0.1,
+          "satisfaction": 0.3,
+          "social_comfort": 0.6
+        },
+        "cycle": 1,
+        "motivations": {
+          "connect": 0.7,
+          "continuity": 0.7,
+          "create": 0.6,
+          "explore": 0.8,
+          "help": 0.8,
+          "learn": 0.8,
+          "recover": 0.5,
+          "understand": 0.8
+        },
+        "tone": "warm"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-2",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-2",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 2,
+        "uncertainty": []
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "memory.recall",
+      "payload": {
+        "cycle": 2,
+        "query": "",
+        "recalled": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 2,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "memory.consolidated",
+      "payload": {
+        "archived": 0,
+        "cycle": 2,
+        "decayed": 0,
+        "expired": 0,
+        "superseded": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "soul.updated",
+      "payload": {
+        "affect": {
+          "calm": 0.8,
+          "caution": 0.3,
+          "curiosity": 0.6,
+          "energy": 0.6,
+          "engagement": 0.5,
+          "frustration": 0.1,
+          "satisfaction": 0.3,
+          "social_comfort": 0.6
+        },
+        "cycle": 2,
+        "motivations": {
+          "connect": 0.7,
+          "continuity": 0.7,
+          "create": 0.6,
+          "explore": 0.8,
+          "help": 0.8,
+          "learn": 0.8,
+          "recover": 0.5,
+          "understand": 0.8
+        },
+        "tone": "warm"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "memory.admitted",
+      "payload": {
+        "accepted": true,
+        "entity_refs": [],
+        "memory_id": "mem-435c5bc239ac955bde2c3ce4",
+        "memory_type": "utterance"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "human_speech_observed",
+        "confidence": 0.8,
+        "cycle": 2,
+        "source": "audio.stt"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "speech.ingested",
+      "payload": {
+        "memory_id": "mem-435c5bc239ac955bde2c3ce4",
+        "reasoning": "human_speech_observed",
+        "text": "hello novi"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 2,
+      "event_type": "live.round_completed",
+      "payload": {
+        "heard": "hello novi",
+        "reply": "Hi \u2014 You said: 'hello novi'. no_high_salience_change_detected",
+        "round": 0,
+        "tone": "warm"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-3",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-3",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 3,
+        "uncertainty": []
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "fusion.completed",
+      "payload": {
+        "captured_at": "2026-08-20T22:22:58.867047+00:00",
+        "confidence": 1.0,
+        "conflict": false,
+        "contributions": [
+          {
+            "captured_at": "2026-08-20T22:22:58.867047+00:00",
+            "confidence": 1.0,
+            "entity": "speech",
+            "modality": "speech",
+            "received_at": "2026-08-20T22:22:58.867047+00:00",
+            "source": "audio.stt",
+            "value": "heard"
+          }
+        ],
+        "cycle": 3,
+        "entity": "speech",
+        "modalities": [
+          "speech"
+        ],
+        "value": "heard"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "memory.recall",
+      "payload": {
+        "cycle": 3,
+        "query": "",
+        "recalled": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 3,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "memory.consolidated",
+      "payload": {
+        "archived": 0,
+        "cycle": 3,
+        "decayed": 0,
+        "expired": 0,
+        "superseded": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 3,
+      "event_type": "soul.updated",
+      "payload": {
+        "affect": {
+          "calm": 0.8,
+          "caution": 0.3,
+          "curiosity": 0.6,
+          "energy": 0.6,
+          "engagement": 0.5,
+          "frustration": 0.1,
+          "satisfaction": 0.3,
+          "social_comfort": 0.6
+        },
+        "cycle": 3,
+        "motivations": {
+          "connect": 0.7,
+          "continuity": 0.7,
+          "create": 0.6,
+          "explore": 0.8,
+          "help": 0.8,
+          "learn": 0.8,
+          "recover": 0.5,
+          "understand": 0.8
+        },
+        "tone": "warm"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-4",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-4",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 4,
+        "uncertainty": []
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "memory.recall",
+      "payload": {
+        "cycle": 4,
+        "query": "",
+        "recalled": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 4,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "memory.consolidated",
+      "payload": {
+        "archived": 0,
+        "cycle": 4,
+        "decayed": 0,
+        "expired": 0,
+        "superseded": 0
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "soul.updated",
+      "payload": {
+        "affect": {
+          "calm": 0.8,
+          "caution": 0.3,
+          "curiosity": 0.6,
+          "energy": 0.6,
+          "engagement": 0.5,
+          "frustration": 0.1,
+          "satisfaction": 0.3,
+          "social_comfort": 0.6
+        },
+        "cycle": 4,
+        "motivations": {
+          "connect": 0.7,
+          "continuity": 0.7,
+          "create": 0.6,
+          "explore": 0.8,
+          "help": 0.8,
+          "learn": 0.8,
+          "recover": 0.5,
+          "understand": 0.8
+        },
+        "tone": "warm"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "memory.admitted",
+      "payload": {
+        "accepted": true,
+        "entity_refs": [],
+        "memory_id": "mem-435c5bc239ac955bde2c3ce4",
+        "memory_type": "utterance"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "human_speech_observed",
+        "confidence": 0.8,
+        "cycle": 4,
+        "source": "audio.stt"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "speech.ingested",
+      "payload": {
+        "memory_id": "mem-435c5bc239ac955bde2c3ce4",
+        "reasoning": "human_speech_observed",
+        "text": "hello novi"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "live.round_completed",
+      "payload": {
+        "heard": "hello novi",
+        "reply": "Hi \u2014 You said: 'hello novi'. no_high_salience_change_detected",
+        "round": 1,
+        "tone": "warm"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    },
+    {
+      "cycle": 4,
+      "event_type": "MAC_BRAIN.stopped",
+      "payload": {
+        "cycles": 4,
+        "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+      },
+      "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7"
+    }
+  ],
+  "rounds": [
+    {
+      "heard": "hello novi",
+      "heard_reasoning": "human_speech_observed",
+      "index": 0,
+      "reply": "Hi \u2014 You said: 'hello novi'. no_high_salience_change_detected",
+      "steps": [
+        {
+          "action": "wait",
+          "authorized": true,
+          "cycle": 1,
+          "detections": [],
+          "frame_id": "demo-1",
+          "fusion": [],
+          "goal": null,
+          "reasoning": "no_high_salience_change_detected",
+          "reasoning_confidence": 0.7,
+          "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7",
+          "social": {
+            "expression": null,
+            "person": null
+          },
+          "soul": {
+            "affect": {
+              "calm": 0.8,
+              "caution": 0.3,
+              "curiosity": 0.6,
+              "energy": 0.6,
+              "engagement": 0.5,
+              "frustration": 0.1,
+              "satisfaction": 0.3,
+              "social_comfort": 0.6
+            },
+            "identity": "Novi",
+            "tone": "warm"
+          },
+          "temporal": {
+            "expected": [],
+            "top_links": []
+          },
+          "virtual_body": {
+            "heading_deg": 0.0,
+            "last_action": "wait",
+            "velocity_mps": 0.0,
+            "x_m": 0.0,
+            "y_m": 0.0
+          }
+        },
+        {
+          "action": "wait",
+          "authorized": true,
+          "cycle": 2,
+          "detections": [],
+          "frame_id": "demo-2",
+          "fusion": [],
+          "goal": null,
+          "reasoning": "no_high_salience_change_detected",
+          "reasoning_confidence": 0.7,
+          "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7",
+          "social": {
+            "expression": null,
+            "person": null
+          },
+          "soul": {
+            "affect": {
+              "calm": 0.8,
+              "caution": 0.3,
+              "curiosity": 0.6,
+              "energy": 0.6,
+              "engagement": 0.5,
+              "frustration": 0.1,
+              "satisfaction": 0.3,
+              "social_comfort": 0.6
+            },
+            "identity": "Novi",
+            "tone": "warm"
+          },
+          "temporal": {
+            "expected": [],
+            "top_links": []
+          },
+          "virtual_body": {
+            "heading_deg": 0.0,
+            "last_action": "wait",
+            "velocity_mps": 0.0,
+            "x_m": 0.0,
+            "y_m": 0.0
+          }
+        }
+      ],
+      "tone": {
+        "energy": 0.5,
+        "playful": true,
+        "tone": "warm",
+        "warmth": 0.7
+      }
+    },
+    {
+      "heard": "hello novi",
+      "heard_reasoning": "human_speech_observed",
+      "index": 1,
+      "reply": "Hi \u2014 You said: 'hello novi'. no_high_salience_change_detected",
+      "steps": [
+        {
+          "action": "wait",
+          "authorized": true,
+          "cycle": 3,
+          "detections": [],
+          "frame_id": "demo-3",
+          "fusion": [
+            {
+              "captured_at": "2026-08-20T22:22:58.867047+00:00",
+              "confidence": 1.0,
+              "conflict": false,
+              "contributions": [
+                {
+                  "captured_at": "2026-08-20T22:22:58.867047+00:00",
+                  "confidence": 1.0,
+                  "entity": "speech",
+                  "modality": "speech",
+                  "received_at": "2026-08-20T22:22:58.867047+00:00",
+                  "source": "audio.stt",
+                  "value": "heard"
+                }
+              ],
+              "entity": "speech",
+              "modalities": [
+                "speech"
+              ],
+              "value": "heard"
+            }
+          ],
+          "goal": null,
+          "reasoning": "no_high_salience_change_detected",
+          "reasoning_confidence": 0.7,
+          "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7",
+          "social": {
+            "expression": null,
+            "person": null
+          },
+          "soul": {
+            "affect": {
+              "calm": 0.8,
+              "caution": 0.3,
+              "curiosity": 0.6,
+              "energy": 0.6,
+              "engagement": 0.5,
+              "frustration": 0.1,
+              "satisfaction": 0.3,
+              "social_comfort": 0.6
+            },
+            "identity": "Novi",
+            "tone": "warm"
+          },
+          "temporal": {
+            "expected": [],
+            "top_links": []
+          },
+          "virtual_body": {
+            "heading_deg": 0.0,
+            "last_action": "wait",
+            "velocity_mps": 0.0,
+            "x_m": 0.0,
+            "y_m": 0.0
+          }
+        },
+        {
+          "action": "wait",
+          "authorized": true,
+          "cycle": 4,
+          "detections": [],
+          "frame_id": "demo-4",
+          "fusion": [],
+          "goal": null,
+          "reasoning": "no_high_salience_change_detected",
+          "reasoning_confidence": 0.7,
+          "run_id": "07a82eb1-1da6-46e9-865e-9d82e18d44e7",
+          "social": {
+            "expression": null,
+            "person": null
+          },
+          "soul": {
+            "affect": {
+              "calm": 0.8,
+              "caution": 0.3,
+              "curiosity": 0.6,
+              "energy": 0.6,
+              "engagement": 0.5,
+              "frustration": 0.1,
+              "satisfaction": 0.3,
+              "social_comfort": 0.6
+            },
+            "identity": "Novi",
+            "tone": "warm"
+          },
+          "temporal": {
+            "expected": [],
+            "top_links": []
+          },
+          "virtual_body": {
+            "heading_deg": 0.0,
+            "last_action": "wait",
+            "velocity_mps": 0.0,
+            "x_m": 0.0,
+            "y_m": 0.0
+          }
+        }
+      ],
+      "tone": {
+        "energy": 0.5,
+        "playful": true,
+        "tone": "warm",
+        "warmth": 0.7
+      }
+    }
+  ]
+}

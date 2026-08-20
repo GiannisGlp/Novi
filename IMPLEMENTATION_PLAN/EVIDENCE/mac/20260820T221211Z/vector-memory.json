@@ -1,0 +1,29 @@
+{
+  "semantic_recall_by_query": {
+    "lamp": [
+      "alice carried the small lamp upstairs",
+      "the lamp in the living room is turned on",
+      "alice watered the green plants in the garden"
+    ],
+    "plant": [
+      "alice placed the plant near the window",
+      "alice watered the green plants in the garden",
+      "the lamp in the living room is turned on"
+    ],
+    "door": [
+      "bob closed the front door after leaving",
+      "alice watered the green plants in the garden",
+      "the lamp in the living room is turned on"
+    ]
+  },
+  "deterministic_vectors": true,
+  "cosine_ranks_similar_higher": true,
+  "index_5000_admit_seconds": 0.866,
+  "search_5000_seconds": 0.032,
+  "dimension": 256,
+  "counts": {
+    "lamp": 3,
+    "plant": 3,
+    "door": 3
+  }
+}

@@ -6,6 +6,17 @@
 **Scope:** Novi single-device / Stage-1 durable state  
 **Depends on:** `06_107_DURABLE_STATE_EVENT_LOG_EXECUTION_SEMANTICS.md`, `07_108_TRANSACTIONS_CONCURRENCY_CONSISTENCY_AND_CONFLICT_RESOLUTION.md`, `16_CANONICAL_SYSTEM_CONTRACTS.md`, `17_CONTRACT_IMPLEMENTATION_AND_SCHEMA_STANDARD.md`
 
+> **Validation evidence (2026-08-20):** the ARCH-CLOSE-003 gate
+> (`MAC_BRAIN/benchmarks/arch_close_003_gate.py`) was run against the real
+> `MAC_BRAIN.storage.DurableMemoryStore`. All six correctness/recovery checks
+> PASS (commit→reopen persistence, uncommitted rollback, duplicate idempotency,
+> checkpoint→reopen integrity, backup→restore, malformed-migration isolation),
+> giving an **ADOPT** decision; SQLite 3.53.4, WAL, write p99 ≈ 0.18 ms,
+> ~9.3k events/s, zero writer conflicts. See
+> `evidence/ARCH-CLOSE-003-MAC-NOVI-002-storage-benchmark-result.json`.
+> The PROPOSED→ADOPTED status change remains the architecture authority's call;
+> this evidence is the prerequisite that the gate requires.
+
 ---
 
 ## 1. Purpose

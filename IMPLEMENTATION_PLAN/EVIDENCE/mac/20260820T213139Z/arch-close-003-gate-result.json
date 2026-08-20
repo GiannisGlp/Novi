@@ -1,0 +1,88 @@
+{
+  "benchmark_id": "ARCH-CLOSE-003-MAC-NOVI-002",
+  "benchmark_revision": "1.0.0",
+  "timestamp_utc": "2026-08-20T21:31:41Z",
+  "decision": "ADOPT",
+  "target": "MAC_BRAIN.storage.DurableMemoryStore",
+  "environment": {
+    "host_id": "Mac.lan",
+    "os": "Darwin 25.5.0",
+    "machine": "arm64",
+    "processor": "arm",
+    "python": "3.14.7",
+    "sqlite": "3.53.4",
+    "filesystem": "unknown; record manually if material",
+    "novi_revision": "5e78908e0503cdbbd224c0308dbb2e042de74642"
+  },
+  "peak_rss_bytes": 40063991808,
+  "benchmark": {
+    "writes": 2000,
+    "write_wall_s": 0.215008,
+    "write_ms": {
+      "p50": 0.09704200783744454,
+      "p95": 0.1454652228858322,
+      "p99": 0.1830873201834038,
+      "mean": 0.10742666193982586,
+      "count": 2000
+    },
+    "read_ms": {
+      "p50": 16.422229498857632,
+      "p95": 17.19935978180729,
+      "p99": 33.83965035434813,
+      "mean": 16.862424208666198,
+      "count": 100
+    },
+    "events_throughput_per_s": 9302.0,
+    "storage_growth_bytes": {
+      "db": 430080,
+      "wal": 4124152
+    },
+    "journal_mode": "wal",
+    "writer_contention": {
+      "conflicts": 0,
+      "sample": []
+    },
+    "active_count_after": 3000
+  },
+  "correctness_gate": {
+    "passed": true,
+    "checks": [
+      {
+        "check": "commit_reopen_persistence",
+        "result": "PASS",
+        "detail": "mem-47d5a0eb102e7ec3699c50b7"
+      },
+      {
+        "check": "uncommitted_rollback",
+        "result": "PASS",
+        "detail": "uncommitted row absent after reopen"
+      },
+      {
+        "check": "duplicate_idempotent",
+        "result": "PASS",
+        "detail": "KEEP_EXISTING"
+      },
+      {
+        "check": "checkpoint_reopen_integrity",
+        "result": "PASS",
+        "detail": "active_count=100"
+      },
+      {
+        "check": "backup_restore",
+        "result": "PASS",
+        "detail": "restored_active=50"
+      },
+      {
+        "check": "malformed_migration_no_corruption",
+        "result": "PASS",
+        "detail": "source readable, active_count=1"
+      }
+    ]
+  },
+  "limitations": [
+    "No physical power-loss test on this host; crash simulated by abrupt close before commit.",
+    "Storage-full and permission-failure conditions not exercised on-device.",
+    "Deep concurrent conflict stress is single-host/serialized; multi-node is out of Stage-1 scope.",
+    "Resource thresholds are provisional (no ARCH-CLOSE-007 measured budget yet)."
+  ]
+}

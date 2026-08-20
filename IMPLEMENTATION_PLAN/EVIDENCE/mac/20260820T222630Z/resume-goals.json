@@ -1,0 +1,43 @@
+{
+  "before_shutdown": {
+    "active_goal_id": "resume-goal",
+    "steps_taken_before_shutdown": 3,
+    "pose_before": {
+      "x": 1.5,
+      "y": 0.0
+    }
+  },
+  "after_restart": {
+    "active_goal_id": "resume-goal",
+    "resumed_steps_taken": 3,
+    "restored_pose": {
+      "x": 1.5,
+      "y": 0.0
+    }
+  },
+  "continued_pursuit_from_restored_pose": [
+    {
+      "action": "move_forward",
+      "x": 2.0,
+      "steps_taken": 4
+    },
+    {
+      "action": "move_forward",
+      "x": 2.5,
+      "steps_taken": 5
+    },
+    {
+      "action": "move_forward",
+      "x": 3.0,
+      "steps_taken": 6
+    }
+  ],
+  "durable_goal_rows": [
+    {
+      "goal_id": "resume-goal",
+      "kind": "reach",
+      "status": "active",
+      "steps_taken": 6
+    }
+  ]
+}
