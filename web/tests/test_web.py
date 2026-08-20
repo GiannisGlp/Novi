@@ -132,6 +132,18 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_knowledge_context_recalls_learned_fact(self):
+        from MAC_BRAIN.models.stt import TranscriptionResult
+
+        s = self._server(auto_step=False)
+        s.start()
+        try:
+            s.brain.ingest_transcript(TranscriptionResult(text="alice moved the door", language="en", confidence=0.9, audio_path="", provider="web", model_id="web"))
+            ctx = s._knowledge_context("what do you know about alice?")
+            self.assertIn("alice moved door", ctx)
+        finally:
+            s.stop()
+
 
 if __name__ == "__main__":
     unittest.main()

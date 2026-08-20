@@ -203,16 +203,21 @@ class NoviWebServer:
     def _generate_reply(self, text: str) -> tuple[str | None, bool]:
         if not self.chat_llm or not self._llm_up():
             return None, False
-        who = "Novi"
         tone = self.brain.soul.tone({}).get("tone", "neutral")
         facts = self._knowledge_context(text)
         system = (
-            f"You are {who}, a curious embodied AI with your own mood and memory. "
-            "Answer the user conversationally in 1-3 short, natural sentences, as if speaking. "
-            "Ground your answer in the recalled facts when any are relevant; if you have no relevant memory, "
-            "say so honestly (e.g. 'I don't know that yet') and ask a clarifying question. Do not invent facts."
+            "You are Novi, a curious embodied AI who remembers things you have been told. "
+            "You are given a list of facts that you DO know. "
+            "If a fact is relevant to the user's question, ANSWER USING THAT FACT — say plainly what you know "
+            "(e.g. 'I remember that alice moved the door'). "
+            "Only say you don't know something when the facts list gives you nothing relevant. "
+            "Reply in 1-3 short, natural spoken sentences. Never invent facts beyond the ones provided."
         )
-        user_payload = {"user_says": text, "my_tone": tone, "i_know": facts or "nothing relevant yet"}
+        user_payload = {
+            "user_says": text,
+            "facts_i_know": facts.split("; ") if facts else [],
+            "my_tone": tone,
+        }
         try:
             reply = self._llm_chat(system=system, user=json.dumps(user_payload, sort_keys=True))
             return reply, True
