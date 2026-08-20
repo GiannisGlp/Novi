@@ -1,0 +1,249 @@
+{
+  "events": [
+    {
+      "cycle": 0,
+      "event_type": "MAC_BRAIN.started",
+      "payload": {
+        "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 1,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-20T20:32:57.759543Z",
+        "frame_id": "mac-camera-1",
+        "height": 480,
+        "metadata": {
+          "backend": "opencv",
+          "device": 0
+        },
+        "width": 640
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 1,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "mac-camera-1",
+        "provenance": {
+          "backend": "NeuralPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 1,
+        "uncertainty": []
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 1,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "inspect",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "inspect",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 2,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-20T20:33:03.583056Z",
+        "frame_id": "mac-camera-2",
+        "height": 480,
+        "metadata": {
+          "backend": "opencv",
+          "device": 0
+        },
+        "width": 640
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 2,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 1,
+        "frame_id": "mac-camera-2",
+        "provenance": {
+          "backend": "NeuralPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 2,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 2,
+        "uncertainty": []
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 2,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "inspect",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "inspect",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 3,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-20T20:33:03.710222Z",
+        "frame_id": "mac-camera-3",
+        "height": 480,
+        "metadata": {
+          "backend": "opencv",
+          "device": 0
+        },
+        "width": 640
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 3,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 1,
+        "frame_id": "mac-camera-3",
+        "provenance": {
+          "backend": "NeuralPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 3,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 3,
+        "uncertainty": []
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 3,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "inspect",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "inspect",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    },
+    {
+      "cycle": 3,
+      "event_type": "MAC_BRAIN.stopped",
+      "payload": {
+        "cycles": 3,
+        "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+      },
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+    }
+  ],
+  "mode": "live_camera",
+  "perception_backend": "neural",
+  "results": [
+    {
+      "action": "inspect",
+      "authorized": true,
+      "cycle": 1,
+      "detections": [],
+      "frame_id": "mac-camera-1",
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015",
+      "virtual_body": {
+        "heading_deg": 0.0,
+        "last_action": "inspect",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "inspect",
+      "authorized": true,
+      "cycle": 2,
+      "detections": [
+        "person"
+      ],
+      "frame_id": "mac-camera-2",
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015",
+      "virtual_body": {
+        "heading_deg": 0.0,
+        "last_action": "inspect",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "inspect",
+      "authorized": true,
+      "cycle": 3,
+      "detections": [
+        "person"
+      ],
+      "frame_id": "mac-camera-3",
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015",
+      "virtual_body": {
+        "heading_deg": 0.0,
+        "last_action": "inspect",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    }
+  ],
+  "run_id": "e3b7886b-e2b1-4a31-8a6e-8b6afcc79015"
+}

@@ -1,0 +1,25 @@
+{
+  "survived_memory_records": 3,
+  "alice_recalled_after_restart": [
+    {
+      "bbox": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "confidence": 0.95,
+      "label": "alice"
+    },
+    "alice said hello"
+  ],
+  "survived_goal_history": [
+    {
+      "goal_id": "goal-426e1c0a8254",
+      "kind": "reach",
+      "status": "completed",
+      "steps_taken": 12
+    }
+  ],
+  "journal_mode": "wal"
+}

@@ -1,0 +1,27 @@
+{
+  "recall_events": [
+    {
+      "event_type": "memory.recall",
+      "run_id": "7dcbb79a-0d48-431e-b625-5944505cdd19",
+      "cycle": 1,
+      "payload": {
+        "cycle": 1,
+        "query": "alice",
+        "recalled": 2
+      }
+    }
+  ],
+  "reasoning_events": [
+    {
+      "event_type": "reasoning.completed",
+      "run_id": "7dcbb79a-0d48-431e-b625-5944505cdd19",
+      "cycle": 1,
+      "payload": {
+        "cycle": 1,
+        "action": "observe",
+        "rationale": "person_alice_is_relevant_to_current_situation (recalled 2 relevant memories)"
+      }
+    }
+  ],
+  "memory_count": 2
+}

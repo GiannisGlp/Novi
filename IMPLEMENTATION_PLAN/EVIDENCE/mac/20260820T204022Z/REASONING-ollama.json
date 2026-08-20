@@ -4,9 +4,9 @@
       "cycle": 0,
       "event_type": "MAC_BRAIN.started",
       "payload": {
-        "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+        "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
       },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
     },
     {
       "cycle": 1,
@@ -21,7 +21,7 @@
         },
         "width": 4112
       },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
     },
     {
       "cycle": 1,
@@ -34,29 +34,7 @@
           "source": "specialist_perception"
         }
       },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
-    },
-    {
-      "cycle": 1,
-      "event_type": "memory.admitted",
-      "payload": {
-        "accepted": true,
-        "entity": "tv",
-        "memory_id": "mem-3bb49ae48baf250f5c88e299",
-        "memory_type": "perception"
-      },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
-    },
-    {
-      "cycle": 1,
-      "event_type": "memory.admitted",
-      "payload": {
-        "accepted": true,
-        "entity": "laptop",
-        "memory_id": "mem-74d1648b658d576a80925ea4",
-        "memory_type": "perception"
-      },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
     },
     {
       "cycle": 1,
@@ -70,50 +48,50 @@
           "low_confidence:tv"
         ]
       },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
     },
     {
       "cycle": 1,
       "event_type": "reasoning.completed",
       "payload": {
-        "action": "wait",
+        "action": "observe",
         "cycle": 1,
-        "rationale": "no_high_salience_change_detected"
+        "rationale": "llm:no_high_salience_change_detected"
       },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
     },
     {
       "cycle": 1,
       "event_type": "action.completed",
       "payload": {
-        "action": "wait",
+        "action": "observe",
         "authorized": true,
         "outcome": "mock execution completed",
         "virtual_body": {
           "heading_deg": 0.0,
-          "last_action": "wait",
+          "last_action": "observe",
           "velocity_mps": 0.0,
           "x_m": 0.0,
           "y_m": 0.0
         }
       },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
     },
     {
       "cycle": 1,
       "event_type": "MAC_BRAIN.stopped",
       "payload": {
         "cycles": 1,
-        "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+        "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
       },
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb"
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df"
     }
   ],
   "mode": "neural_image",
   "perception_backend": "neural",
   "results": [
     {
-      "action": "wait",
+      "action": "observe",
       "authorized": true,
       "cycle": 1,
       "detections": [
@@ -123,16 +101,16 @@
       "frame_id": "image-1",
       "reasoning": "no_high_salience_change_detected",
       "reasoning_confidence": 0.6,
-      "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb",
+      "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df",
       "virtual_body": {
         "heading_deg": 0.0,
-        "last_action": "wait",
+        "last_action": "observe",
         "velocity_mps": 0.0,
         "x_m": 0.0,
         "y_m": 0.0
       }
     }
   ],
-  "run_id": "0ca73afe-4df6-493c-a7da-a762b33a73eb",
+  "run_id": "365a18b7-2f83-4d7c-b262-dd4df2a455df",
   "transcriptions": []
 }

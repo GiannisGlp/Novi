@@ -41,7 +41,7 @@ class MacBrainTests(unittest.TestCase):
         brain.stop()
         self.assertEqual(result["cycle"], 1)
         self.assertEqual(result["detections"], ["person"])
-        self.assertEqual(result["action"], "inspect")
+        self.assertEqual(result["action"], "wait")
         self.assertTrue(result["authorized"])
         self.assertEqual(brain.brain.lifecycle, Lifecycle.SHUTTING_DOWN)
         self.assertTrue(camera.closed)
@@ -56,6 +56,7 @@ class MacBrainTests(unittest.TestCase):
         self.assertIn("sensor.camera.frame", event_types)
         self.assertIn("perception.completed", event_types)
         self.assertIn("cognition.completed", event_types)
+        self.assertIn("reasoning.completed", event_types)
         self.assertIn("action.completed", event_types)
         self.assertIn("MAC_BRAIN.stopped", event_types)
 

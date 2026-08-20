@@ -10,7 +10,7 @@ fi
 source .venv/bin/activate
 
 python -m pip install --upgrade pip
-python -m pip install torch torchvision pillow numpy opencv-python
+python -m pip install torch torchvision pillow numpy opencv-python sounddevice faster-whisper
 
 python - <<'PY'
 import torch
@@ -19,6 +19,11 @@ print("PyTorch:", torch.__version__)
 print("torchvision:", torchvision.__version__)
 print("MPS built:", torch.backends.mps.is_built())
 print("MPS available:", torch.backends.mps.is_available())
+try:
+    import faster_whisper
+    print("faster-whisper:", faster_whisper.__version__)
+except Exception as exc:
+    print("faster-whisper: unavailable", exc)
 PY
 
 echo "Neural runtime setup complete."

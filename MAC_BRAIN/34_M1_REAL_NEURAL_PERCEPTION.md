@@ -39,6 +39,46 @@ The current first candidate is `torchvision:ssdlite320_mobilenet_v3_large`. This
 
 M1 is perception-only. No physical motor control is introduced. The existing bounded virtual-action and safety policies remain in force.
 
+## Runtime integration (status: IMPLEMENTED)
+
+M1 now runs real neural perception **through the live `MacBrain` runtime**, not only as a standalone detector.
+
+- `MAC_BRAIN/models/neural_backend.py` — `NeuralPerceptionBackend` bridges the torchvision detector output (`MAC_BRAIN.models.Detection`, `bbox`) into the canonical `brain.b2_perception.PerceptionBackend` contract (`Detection`, `bbox_xyxy`).
+- `MAC_BRAIN/cli.py` — `--neural` selects the real backend; `--neural-image PATH` serves a static image (no camera required) for reproducible headless runs; `--neural --live-camera` runs real Mac camera + real detection.
+- Verified on-device (MPS): `python -m MAC_BRAIN.cli --neural --neural-image test-image.png --cycles 2` produced detections `["tv", "laptop"]` through perception → world state → cognition → authorized `inspect` action.
+
+```text
+Mac camera / static image
+   ↓
+NeuralPerceptionBackend (SSDLite320 MobileNetV3 on MPS)
+   ↓
+SpecialistPerception
+   ↓
+TemporalWorldModel
+   ↓
+DeterministicCognition
+   ↓
+BrainSupervisor / safety
+   ↓
+VirtualBody
+```
+
+## Live camera validation (status: PASS)
+
+Real Mac camera + real neural perception validated on-device through the runtime:
+
+```text
+python -m MAC_BRAIN.cli --neural --live-camera --cycles 3
+```
+
+- Camera device 0 opened via OpenCV (640×480).
+- Real SSDLite320-MobileNetV3 inference on MPS per frame.
+- 3-cycle detections: `[], ["person"], ["person"]` — the model detected a person in frames 2–3 (frame 1 had nothing above the confidence threshold).
+- Detections flowed perception → world state → cognition → authorized `inspect` action each cycle.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/M1-camera-runtime-latest.json`.
+
+Camera validation evidence is collected; review the raw detections/bboxes before declaring M1 fully accepted.
+
 ## Evidence
 
 The evidence should include:

@@ -1,0 +1,120 @@
+{
+  "events": [
+    {
+      "cycle": 0,
+      "event_type": "MAC_BRAIN.started",
+      "payload": {
+        "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+      },
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+    },
+    {
+      "cycle": 1,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-1",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+    },
+    {
+      "cycle": 1,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-1",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 1,
+        "uncertainty": []
+      },
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+    },
+    {
+      "cycle": 1,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 1,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+    },
+    {
+      "cycle": 1,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+    },
+    {
+      "cycle": 1,
+      "event_type": "MAC_BRAIN.stopped",
+      "payload": {
+        "cycles": 1,
+        "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+      },
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade"
+    }
+  ],
+  "mode": "deterministic_demo",
+  "perception_backend": "deterministic",
+  "results": [
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 1,
+      "detections": [],
+      "frame_id": "demo-1",
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade",
+      "virtual_body": {
+        "heading_deg": 0.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    }
+  ],
+  "run_id": "9f9950c8-37f5-4f03-8842-6f105a227ade",
+  "transcriptions": [
+    {
+      "audio_path": "mac_test_results/STT/speech-sample.wav",
+      "confidence": 0.9924721717834473,
+      "language": "en",
+      "model_id": "faster-whisper:base",
+      "path": "mac_test_results/STT/speech-sample.wav",
+      "provider": "whisper",
+      "source": "file",
+      "text": "Hello world this is a speech to text test."
+    }
+  ]
+}

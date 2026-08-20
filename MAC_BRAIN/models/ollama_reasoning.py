@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+import json
+import urllib.request
+from typing import Any, Callable
+
+from .provider import MacModelProvider, MacModelSpec
+from .reasoning import ActionIntent, LLMReasoningProvider
+
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
+DEFAULT_OLLAMA_MODEL = "qwen3.8"
+
+
+def _ollama_backend_fn(*, base_url: str, model: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
+    """Return a callable that runs a single-shot JSON completion via Ollama."""
+
+    def invoke(payload: dict[str, Any]) -> dict[str, Any]:
+        system = (
+            "You are Novi's bounded behavioral reasoner. Decide ONE action to take "
+            "from the allowed set. Respond ONLY with a JSON object of the form "
+            '{"action": "<name>", "parameters": {"<key>": "<value>"}}. '
+            "Never propose an action outside the allowed set."
+        )
+        user = json.dumps(payload, sort_keys=True)
+        body = json.dumps(
+            {
+                "model": model,
+                "system": system,
+                "prompt": user,
+                "format": "json",
+                "stream": False,
+            }
+        ).encode("utf-8")
+        request = urllib.request.Request(f"{base_url}/api/generate", data=body, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        raw = data.get("response", "{}")
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return {"action": str(parsed.get("action", "")), "parameters": dict(parsed.get("parameters", {}) or {})}
+
+    return invoke
+
+
+class OllamaReasoningProvider:
+    """Real local reasoning model running through Ollama and ``MacModelProvider``.
+
+    Routes the cognition conclusion through a local LLM (e.g. qwen3) and returns
+    a bounded ``ActionIntent``. The LLM is offered only a fixed allowlist and its
+    chosen action is re-validated, so it can never authorize an unbounded action.
+    """
+
+    def __init__(
+        self,
+        *,
+        model: str = DEFAULT_OLLAMA_MODEL,
+        base_url: str = DEFAULT_OLLAMA_URL,
+        allowed_actions: frozenset[str] = frozenset({"inspect", "observe", "wait", "stop", "move_forward", "turn_left", "turn_right"}),
+        default_action: str = "observe",
+    ) -> None:
+        spec = MacModelSpec(
+            capability="reasoning",
+            model_id=f"ollama:{model}",
+            model_version="1.0.0",
+            artifact_digest="sha256:local-ollama",
+            runtime="ollama",
+            runtime_version="0.32",
+            modalities=("text",),
+        )
+        backend = _ollama_backend_fn(base_url=base_url, model=model)
+        provider = MacModelProvider(spec, backend)
+        self._llm = LLMReasoningProvider(provider, allowed_actions=allowed_actions, default_action=default_action)
+        self.model_id = spec.model_id
+
+    def decide(self, *, conclusion: str, confidence: float, situation: Any, recall: Any = ()) -> ActionIntent:
+        return self._llm.decide(conclusion=conclusion, confidence=confidence, situation=situation, recall=recall)

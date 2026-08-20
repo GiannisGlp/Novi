@@ -41,16 +41,27 @@ class CognitiveState:
 class DeterministicCognition:
     """Initial bounded cognition implementation behind the Cognition domain boundary."""
 
+    SPEECH_ENTITY = "speech"
+
     def build_situation(self, state: WorldModelState, observations: Iterable[SensorObservation], *, cycle: int) -> Situation:
         observations = tuple(observations)
         evidence = tuple(EvidenceRef(item.source, item.entity, item.captured_cycle, item.confidence) for item in observations)
         entities = tuple(sorted(state.entities.values(), key=lambda item: item.entity))
-        salient = tuple(entity.entity for entity in entities if entity.entity == "alice" or entity.state in {"open", "moved"})
+        salient = {entity.entity for entity in entities if entity.entity == "alice" or entity.state in {"open", "moved"}}
+        # Speech is a transient event carried by the observation list, not a
+        # persistent world entity, so it is surfaced through the current cycle only.
+        if any(obs.entity == self.SPEECH_ENTITY for obs in observations):
+            salient.add(self.SPEECH_ENTITY)
+        salient_tuple = tuple(sorted(salient))
         uncertainty = tuple(sorted(f"low_confidence:{entity.entity}" for entity in entities if entity.confidence < 0.7))
-        return Situation(cycle, entities, salient, tuple(state.correlated_events[-3:]), uncertainty, evidence)
+        return Situation(cycle, entities, salient_tuple, tuple(state.correlated_events[-3:]), uncertainty, evidence)
 
     def reason(self, situation: Situation) -> ReasoningResult:
-        if "alice" in situation.salient_entities:
+        if self.SPEECH_ENTITY in situation.salient_entities:
+            conclusion = "human_speech_observed"
+            confidence = 0.8
+            basis = ("a person spoke to Novi",)
+        elif "alice" in situation.salient_entities:
             conclusion = "person_alice_is_relevant_to_current_situation"
             confidence = 0.95
             basis = ("alice is present in current world state",)

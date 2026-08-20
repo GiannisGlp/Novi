@@ -1,0 +1,205 @@
+{
+  "events": [
+    {
+      "cycle": 0,
+      "event_type": "MAC_BRAIN.started",
+      "payload": {
+        "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 1,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "image-1",
+        "height": 2658,
+        "metadata": {
+          "backend": "neural-image",
+          "input": "test-image.png"
+        },
+        "width": 4112
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 1,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 2,
+        "frame_id": "image-1",
+        "provenance": {
+          "backend": "NeuralPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.6,
+        "cycle": 1,
+        "uncertainty": [
+          "low_confidence:laptop",
+          "low_confidence:tv"
+        ]
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 1,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 1,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 1,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 2,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "image-2",
+        "height": 2658,
+        "metadata": {
+          "backend": "neural-image",
+          "input": "test-image.png"
+        },
+        "width": 4112
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 2,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 2,
+        "frame_id": "image-2",
+        "provenance": {
+          "backend": "NeuralPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 2,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.6,
+        "cycle": 2,
+        "uncertainty": [
+          "low_confidence:laptop",
+          "low_confidence:tv"
+        ]
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 2,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 2,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 2,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 0.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    },
+    {
+      "cycle": 2,
+      "event_type": "MAC_BRAIN.stopped",
+      "payload": {
+        "cycles": 2,
+        "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+      },
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447"
+    }
+  ],
+  "mode": "neural_image",
+  "perception_backend": "neural",
+  "results": [
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 1,
+      "detections": [
+        "tv",
+        "laptop"
+      ],
+      "frame_id": "image-1",
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.6,
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447",
+      "virtual_body": {
+        "heading_deg": 0.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 2,
+      "detections": [
+        "tv",
+        "laptop"
+      ],
+      "frame_id": "image-2",
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.6,
+      "run_id": "4619ba68-abcb-467b-a52b-32909d628447",
+      "virtual_body": {
+        "heading_deg": 0.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    }
+  ],
+  "run_id": "4619ba68-abcb-467b-a52b-32909d628447",
+  "transcriptions": []
+}

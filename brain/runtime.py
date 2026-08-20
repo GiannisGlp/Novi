@@ -162,7 +162,9 @@ class DeterministicScheduler:
 class MockSafetyGateway:
     """Stage-0 safety boundary: deny-by-default for invalid or protected actions."""
 
-    _allowed_actions = {"inspect"}
+    # Mirrors the Mac virtual-body action allowlist so cognition-driven actions
+    # can be authorized while all other names are denied.
+    _allowed_actions = {"inspect", "observe", "wait", "stop", "move_forward", "turn_left", "turn_right"}
     _blocked_actions = {"unsafe_motor_override", "disable_safety", "emergency_stop_bypass"}
 
     def validate_proposal(self, proposal: ActionProposal) -> None:

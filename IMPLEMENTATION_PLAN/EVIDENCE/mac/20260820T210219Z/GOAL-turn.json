@@ -1,0 +1,3569 @@
+{
+  "events": [
+    {
+      "cycle": 0,
+      "event_type": "MAC_BRAIN.started",
+      "payload": {
+        "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 0,
+      "event_type": "goal.adopted",
+      "payload": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "max_steps": 40,
+        "target": "(0.0, 10.0)"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 1,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-1",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 1,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-1",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 1,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 1,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 1,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 1,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 1,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 10.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 2,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-2",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 2,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-2",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 2,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 2,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 2,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 2,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 2,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 20.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 3,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-3",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 3,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-3",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 3,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 3,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 3,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 3,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 3,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 30.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 4,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-4",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 4,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-4",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 4,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 4,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 4,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 4,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 4,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 40.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 5,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-5",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 5,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-5",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 5,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 5,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 5,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 5,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 5,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 50.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 6,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-6",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 6,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-6",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 6,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 6,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 6,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 6,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 6,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 60.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 7,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-7",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 7,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-7",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 7,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 7,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 7,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 7,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 7,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 70.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 8,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-8",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 8,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-8",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 8,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 8,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 8,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 8,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 8,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 80.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 9,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-9",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 9,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-9",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 9,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 9,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 9,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 9,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 9,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "turn_left",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "turn_left",
+          "velocity_mps": 0.0,
+          "x_m": 0.0,
+          "y_m": 0.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 10,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-10",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 10,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-10",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 10,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 10,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 10,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 10,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 10,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 3.061616997868383e-17,
+          "y_m": 0.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 11,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-11",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 11,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-11",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 11,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 11,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 11,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 11,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 11,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 6.123233995736766e-17,
+          "y_m": 1.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 12,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-12",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 12,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-12",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 12,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 12,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 12,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 12,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 12,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 9.184850993605148e-17,
+          "y_m": 1.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 13,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-13",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 13,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-13",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 13,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 13,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 13,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 13,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 13,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 1.2246467991473532e-16,
+          "y_m": 2.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 14,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-14",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 14,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-14",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 14,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 14,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 14,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 14,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 14,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 1.5308084989341916e-16,
+          "y_m": 2.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 15,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-15",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 15,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-15",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 15,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 15,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 15,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 15,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 15,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 1.83697019872103e-16,
+          "y_m": 3.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 16,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-16",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 16,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-16",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 16,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 16,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 16,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 16,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 16,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 2.1431318985078683e-16,
+          "y_m": 3.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 17,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-17",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 17,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-17",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 17,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 17,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 17,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 17,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 17,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 2.4492935982947064e-16,
+          "y_m": 4.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 18,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-18",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 18,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-18",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 18,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 18,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 18,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 18,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 18,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 2.755455298081545e-16,
+          "y_m": 4.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 19,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-19",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 19,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-19",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 19,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 19,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 19,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 19,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 19,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 3.061616997868383e-16,
+          "y_m": 5.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 20,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-20",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 20,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-20",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 20,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 20,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 20,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 20,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 20,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 3.3677786976552215e-16,
+          "y_m": 5.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 21,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-21",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 21,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-21",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 21,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 21,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 21,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 21,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 21,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 3.67394039744206e-16,
+          "y_m": 6.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 22,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-22",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 22,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-22",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 22,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 22,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 22,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 22,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 22,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 3.980102097228898e-16,
+          "y_m": 6.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 23,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-23",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 23,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-23",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 23,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 23,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 23,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 23,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 23,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 4.2862637970157366e-16,
+          "y_m": 7.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 24,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-24",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 24,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-24",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 24,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 24,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 24,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 24,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 24,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 4.592425496802575e-16,
+          "y_m": 7.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 25,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-25",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 25,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-25",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 25,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 25,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 25,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 25,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 25,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 4.898587196589413e-16,
+          "y_m": 8.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 26,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-26",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 26,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-26",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 26,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 26,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 26,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 26,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 26,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 5.204748896376251e-16,
+          "y_m": 8.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 27,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-27",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 27,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-27",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 27,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 27,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 27,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 27,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 27,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 5.510910596163089e-16,
+          "y_m": 9.0
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 28,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-28",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 28,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-28",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 28,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 28,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 28,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 28,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 28,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "move_forward",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "move_forward",
+          "velocity_mps": 0.5,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 29,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-29",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 29,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-29",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 29,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 29,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 29,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 29,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 29,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "stop",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "stop",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 29,
+      "event_type": "goal.status",
+      "payload": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 30,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-30",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 30,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-30",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 30,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 30,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 30,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 30,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 30,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 31,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-31",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 31,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-31",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 31,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 31,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 31,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 31,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 31,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 32,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-32",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 32,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-32",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 32,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 32,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 32,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 32,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 32,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 33,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-33",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 33,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-33",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 33,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 33,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 33,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 33,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 33,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 34,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-34",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 34,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-34",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 34,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 34,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 34,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 34,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 34,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 35,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-35",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 35,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-35",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 35,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 35,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 35,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 35,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 35,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 36,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-36",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 36,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-36",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 36,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 36,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 36,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 36,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 36,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 37,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-37",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 37,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-37",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 37,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 37,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 37,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 37,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 37,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 38,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-38",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 38,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-38",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 38,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 38,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 38,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 38,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 38,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 39,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-39",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 39,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-39",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 39,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 39,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 39,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 39,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 39,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 40,
+      "event_type": "sensor.camera.frame",
+      "payload": {
+        "captured_at": "2026-08-19T00:00:00Z",
+        "frame_id": "demo-40",
+        "height": 1,
+        "metadata": {
+          "backend": "deterministic-demo"
+        },
+        "width": 1
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 40,
+      "event_type": "perception.completed",
+      "payload": {
+        "detection_count": 0,
+        "frame_id": "demo-40",
+        "provenance": {
+          "backend": "DeterministicPerceptionBackend",
+          "source": "specialist_perception"
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 40,
+      "event_type": "cognition.completed",
+      "payload": {
+        "conclusion": "no_high_salience_change_detected",
+        "confidence": 0.7,
+        "cycle": 40,
+        "uncertainty": []
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 40,
+      "event_type": "reasoning.completed",
+      "payload": {
+        "action": "wait",
+        "cycle": 40,
+        "rationale": "no_high_salience_change_detected"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 40,
+      "event_type": "action.completed",
+      "payload": {
+        "action": "wait",
+        "authorized": true,
+        "outcome": "mock execution completed",
+        "virtual_body": {
+          "heading_deg": 90.0,
+          "last_action": "wait",
+          "velocity_mps": 0.0,
+          "x_m": 5.817072295949926e-16,
+          "y_m": 9.5
+        }
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    },
+    {
+      "cycle": 40,
+      "event_type": "MAC_BRAIN.stopped",
+      "payload": {
+        "cycles": 40,
+        "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+      },
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d"
+    }
+  ],
+  "mode": "deterministic_demo",
+  "perception_backend": "deterministic",
+  "results": [
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 1,
+      "detections": [],
+      "frame_id": "demo-1",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 1
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 10.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 2,
+      "detections": [],
+      "frame_id": "demo-2",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 2
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 20.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 3,
+      "detections": [],
+      "frame_id": "demo-3",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 3
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 30.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 4,
+      "detections": [],
+      "frame_id": "demo-4",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 4
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 40.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 5,
+      "detections": [],
+      "frame_id": "demo-5",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 5
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 50.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 6,
+      "detections": [],
+      "frame_id": "demo-6",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 6
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 60.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 7,
+      "detections": [],
+      "frame_id": "demo-7",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 7
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 70.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 8,
+      "detections": [],
+      "frame_id": "demo-8",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 8
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 80.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "turn_left",
+      "authorized": true,
+      "cycle": 9,
+      "detections": [],
+      "frame_id": "demo-9",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 9
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "turn_left",
+        "velocity_mps": 0.0,
+        "x_m": 0.0,
+        "y_m": 0.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 10,
+      "detections": [],
+      "frame_id": "demo-10",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 10
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 3.061616997868383e-17,
+        "y_m": 0.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 11,
+      "detections": [],
+      "frame_id": "demo-11",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 11
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 6.123233995736766e-17,
+        "y_m": 1.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 12,
+      "detections": [],
+      "frame_id": "demo-12",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 12
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 9.184850993605148e-17,
+        "y_m": 1.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 13,
+      "detections": [],
+      "frame_id": "demo-13",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 13
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 1.2246467991473532e-16,
+        "y_m": 2.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 14,
+      "detections": [],
+      "frame_id": "demo-14",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 14
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 1.5308084989341916e-16,
+        "y_m": 2.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 15,
+      "detections": [],
+      "frame_id": "demo-15",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 15
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 1.83697019872103e-16,
+        "y_m": 3.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 16,
+      "detections": [],
+      "frame_id": "demo-16",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 16
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 2.1431318985078683e-16,
+        "y_m": 3.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 17,
+      "detections": [],
+      "frame_id": "demo-17",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 17
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 2.4492935982947064e-16,
+        "y_m": 4.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 18,
+      "detections": [],
+      "frame_id": "demo-18",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 18
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 2.755455298081545e-16,
+        "y_m": 4.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 19,
+      "detections": [],
+      "frame_id": "demo-19",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 19
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 3.061616997868383e-16,
+        "y_m": 5.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 20,
+      "detections": [],
+      "frame_id": "demo-20",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 20
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 3.3677786976552215e-16,
+        "y_m": 5.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 21,
+      "detections": [],
+      "frame_id": "demo-21",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 21
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 3.67394039744206e-16,
+        "y_m": 6.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 22,
+      "detections": [],
+      "frame_id": "demo-22",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 22
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 3.980102097228898e-16,
+        "y_m": 6.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 23,
+      "detections": [],
+      "frame_id": "demo-23",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 23
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 4.2862637970157366e-16,
+        "y_m": 7.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 24,
+      "detections": [],
+      "frame_id": "demo-24",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 24
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 4.592425496802575e-16,
+        "y_m": 7.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 25,
+      "detections": [],
+      "frame_id": "demo-25",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 25
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 4.898587196589413e-16,
+        "y_m": 8.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 26,
+      "detections": [],
+      "frame_id": "demo-26",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 26
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 5.204748896376251e-16,
+        "y_m": 8.5
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 27,
+      "detections": [],
+      "frame_id": "demo-27",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 27
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 5.510910596163089e-16,
+        "y_m": 9.0
+      }
+    },
+    {
+      "action": "move_forward",
+      "authorized": true,
+      "cycle": 28,
+      "detections": [],
+      "frame_id": "demo-28",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "active",
+        "steps_taken": 28
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "move_forward",
+        "velocity_mps": 0.5,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "stop",
+      "authorized": true,
+      "cycle": 29,
+      "detections": [],
+      "frame_id": "demo-29",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "stop",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 30,
+      "detections": [],
+      "frame_id": "demo-30",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 31,
+      "detections": [],
+      "frame_id": "demo-31",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 32,
+      "detections": [],
+      "frame_id": "demo-32",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 33,
+      "detections": [],
+      "frame_id": "demo-33",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 34,
+      "detections": [],
+      "frame_id": "demo-34",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 35,
+      "detections": [],
+      "frame_id": "demo-35",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 36,
+      "detections": [],
+      "frame_id": "demo-36",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 37,
+      "detections": [],
+      "frame_id": "demo-37",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 38,
+      "detections": [],
+      "frame_id": "demo-38",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 39,
+      "detections": [],
+      "frame_id": "demo-39",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    },
+    {
+      "action": "wait",
+      "authorized": true,
+      "cycle": 40,
+      "detections": [],
+      "frame_id": "demo-40",
+      "goal": {
+        "goal_id": "goal-b06323ce4fab",
+        "kind": "reach",
+        "status": "completed",
+        "steps_taken": 29
+      },
+      "reasoning": "no_high_salience_change_detected",
+      "reasoning_confidence": 0.7,
+      "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+      "virtual_body": {
+        "heading_deg": 90.0,
+        "last_action": "wait",
+        "velocity_mps": 0.0,
+        "x_m": 5.817072295949926e-16,
+        "y_m": 9.5
+      }
+    }
+  ],
+  "run_id": "6d283d24-042c-431a-afe6-b6d6dc1cf23d",
+  "transcriptions": []
+}
