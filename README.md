@@ -12,6 +12,77 @@ The end goal is:
 
 See [`docs/00-strategy/NOVI_NORTH_STAR.md`](docs/00-strategy/NOVI_NORTH_STAR.md).
 
+## Current Development Stage
+
+Novi has moved from architecture/pre-implementation preparation into **executable Brain implementation and Mac prototype validation**.
+
+The current focus is building the first working Novi Brain on a Mac before committing to final robot compute hardware.
+
+### Mac Brain prototype
+
+The root-level [`MAC_BRAIN/`](MAC_BRAIN/) directory is the canonical home for the Mac Brain prototype, its implementation, documentation, models, tests, scenarios and evidence.
+
+The Mac acts as Novi's temporary body:
+
+```text
+Mac camera ───────┐
+                  ▼
+             Perception
+                  │
+Microphone ──► Audio
+                  │
+                  ▼
+             World State
+                  │
+              Memory
+                  │
+              Cognition
+                  │
+        Reasoning / Planning
+                  │
+              Autonomy
+                  │
+           Action Proposal
+                  │
+             Virtual Body
+                  │
+        ┌─────────┴─────────┐
+        ▼                   ▼
+     Speakers        Virtual actions
+```
+
+The Mac prototype is **capability-first and model-agnostic**. Real Mac-compatible neural models are used where practical; NVIDIA-specific models and acceleration remain future deployment providers rather than Mac prerequisites.
+
+### Current Mac milestone
+
+**M1 — Real Neural Perception** is the current implementation milestone.
+
+The first concrete neural candidate is a Torchvision SSDLite320 MobileNetV3 object detector behind Novi's `ObjectDetector` capability interface. The model is deliberately replaceable: a candidate becomes an official Mac provider only after successful execution on the actual Mac with representative inputs and evidence.
+
+M1 progression:
+
+```text
+PyTorch / torchvision
+        ↓
+MPS verification
+        ↓
+SSDLite MobileNetV3
+        ↓
+test-image.png
+        ↓
+real detections
+        ↓
+Novi perception
+        ↓
+world state
+        ↓
+real Mac camera
+        ↓
+continuous perception
+```
+
+See [`MAC_BRAIN/34_M1_REAL_NEURAL_PERCEPTION.md`](MAC_BRAIN/34_M1_REAL_NEURAL_PERCEPTION.md) and [`MAC_BRAIN/33_MAC_FIRST_RUN_GUIDE.md`](MAC_BRAIN/33_MAC_FIRST_RUN_GUIDE.md).
+
 ## Cognitive Loop
 
 ```text
@@ -110,7 +181,7 @@ Physical robot
 
 The project explicitly follows **build the mind before the body**.
 
-Jetson AGX Orin 64GB is currently a reference hardware candidate, not a locked commitment. Current NVIDIA JetPack 7.2 supports the Jetson Orin family and uses Ubuntu 24.04/L4T 39.2. citeturn5search3
+Jetson AGX Orin 64GB remains a reference hardware candidate, not a locked commitment. Jetson AGX Thor remains under consideration. Final hardware selection will follow measured software workload, AI model requirements, power, thermal, sensor, synchronization and safety constraints.
 
 ## Technology Policy
 
@@ -119,6 +190,7 @@ See:
 - [`docs/TECHNOLOGY_REFERENCE.md`](docs/TECHNOLOGY_REFERENCE.md) — ecosystem catalog.
 - [`docs/TECHNOLOGY_STACK_BASELINE.md`](docs/TECHNOLOGY_STACK_BASELINE.md) — implementation-oriented stack baseline.
 - [`docs/00-strategy/NOVI_PRE_IMPLEMENTATION_READINESS_AUDIT.md`](docs/00-strategy/NOVI_PRE_IMPLEMENTATION_READINESS_AUDIT.md) — readiness and gap register.
+- [`MAC_BRAIN/31_MAC_MODEL_COMPATIBILITY_MATRIX.md`](MAC_BRAIN/31_MAC_MODEL_COMPATIBILITY_MATRIX.md) — Mac model compatibility policy.
 
 Technology decisions must follow:
 
@@ -138,6 +210,8 @@ ADR
 Adoption
 ```
 
+For Mac AI models specifically, installation alone does not establish compatibility. A model must execute a representative Novi workload on the actual Mac and produce valid outputs through the canonical capability interface.
+
 ## Hardware
 
 See:
@@ -148,13 +222,38 @@ See:
 
 The final physical BOM is deliberately deferred until the cognitive workload, robot geometry, power, thermal, sensor-FOV, synchronization and safety requirements are measured.
 
-## Documentation Status
+## Repository Structure
 
-Novi is currently in the **architecture, research and pre-implementation preparation phase**.
+```text
+MAC_BRAIN/
+├── implementation/runtime
+├── models/
+├── tests/
+├── scenarios/
+├── evidence/
+└── Mac Brain program documentation
 
-A documented capability is not necessarily implemented.
+docs/
+├── 00-strategy/
+├── 01-system-architecture/
+├── 02-autonomy/
+├── 03-cognition/
+├── 04-memory-and-knowledge/
+├── 05-hardware/
+├── TECHNOLOGY_REFERENCE.md
+└── TECHNOLOGY_STACK_BASELINE.md
 
-Use these statuses explicitly:
+scripts/
+└── Mac Brain setup, diagnostics and test runners
+```
+
+`MAC_BRAIN/` is the single canonical Mac Brain namespace. There is no separate lowercase `mac_brain/` package.
+
+## Validation Status
+
+The deterministic Mac Brain implementation and CI integration have been validated. The first real neural object-detection provider is implemented and the Mac validation campaign is now progressing through M1.
+
+The project distinguishes implementation from validation:
 
 ```text
 DESIGNED
@@ -170,18 +269,4 @@ BLOCKED
 DEPRECATED
 ```
 
-## Repository Structure
-
-```text
-docs/
-├── 00-strategy/
-├── 01-system-architecture/
-├── 02-autonomy/
-├── 03-cognition/
-├── 04-memory-and-knowledge/
-├── 05-hardware/
-├── TECHNOLOGY_REFERENCE.md
-└── TECHNOLOGY_STACK_BASELINE.md
-```
-
-The architecture domains remain authoritative for their respective subsystem semantics. Strategy documents define direction; technology references define candidates; ADRs define adopted implementation decisions.
+A documented capability is not automatically considered validated. Evidence from real execution is required before a capability is promoted to a higher validation state.
