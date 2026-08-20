@@ -1,0 +1,12 @@
+{
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "python_executable": "/Users/vanonatobaidze/projects/Novi/.venv/bin/python",
+  "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "torch": "2.13.0",
+  "mps_built": true,
+  "mps_available": true,
+  "torchvision": "0.28.0",
+  "pillow": "12.3.0",
+  "opencv": "5.0.0"
+}

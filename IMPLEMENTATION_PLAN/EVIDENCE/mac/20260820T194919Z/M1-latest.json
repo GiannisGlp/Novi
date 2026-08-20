@@ -1,0 +1,51 @@
+{
+  "timestamp_utc": "2026-08-20T19:49:07.623823Z",
+  "repository": "GiannisGlp/Novi",
+  "commit_sha": "50021bec4205f5d546794f56633719063ddc2717",
+  "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "pytorch": "2.13.0",
+  "torchvision": "0.28.0",
+  "mps_built": true,
+  "mps_available": true,
+  "test": "M1-image",
+  "input": "test-image.png",
+  "model_id": "torchvision:ssdlite320_mobilenet_v3_large",
+  "device": "mps",
+  "model_load_seconds": 0.219519,
+  "inference_seconds": 0.364226,
+  "detections": [
+    {
+      "label": "tv",
+      "confidence": 0.5625531673431396,
+      "bbox": [
+        6.668918132781982,
+        26.524839401245117,
+        4112.0,
+        2644.636474609375
+      ],
+      "provenance": {
+        "provider": "mac.local_neural",
+        "model_id": "torchvision:ssdlite320_mobilenet_v3_large",
+        "runtime": "pytorch/2.13.0+mps"
+      }
+    },
+    {
+      "label": "laptop",
+      "confidence": 0.5190906524658203,
+      "bbox": [
+        13.661360740661621,
+        13.195879936218262,
+        4108.462890625,
+        2635.313720703125
+      ],
+      "provenance": {
+        "provider": "mac.local_neural",
+        "model_id": "torchvision:ssdlite320_mobilenet_v3_large",
+        "runtime": "pytorch/2.13.0+mps"
+      }
+    }
+  ],
+  "status": "PASS"
+}

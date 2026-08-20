@@ -4,9 +4,9 @@
       "cycle": 0,
       "event_type": "MAC_BRAIN.started",
       "payload": {
-        "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+        "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
       },
-      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
     },
     {
       "cycle": 1,
@@ -20,7 +20,7 @@
         },
         "width": 1
       },
-      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
     },
     {
       "cycle": 1,
@@ -33,7 +33,7 @@
           "source": "specialist_perception"
         }
       },
-      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
     },
     {
       "cycle": 1,
@@ -44,7 +44,7 @@
         "cycle": 1,
         "uncertainty": []
       },
-      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
     },
     {
       "cycle": 1,
@@ -61,16 +61,16 @@
           "y_m": 0.0
         }
       },
-      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
     },
     {
       "cycle": 1,
       "event_type": "MAC_BRAIN.stopped",
       "payload": {
         "cycles": 1,
-        "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+        "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
       },
-      "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+      "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
     }
   ],
   "mode": "deterministic_demo",
@@ -83,7 +83,7 @@
       "frame_id": "demo-1",
       "reasoning": "no_high_salience_change_detected",
       "reasoning_confidence": 0.7,
-      "run_id": "46673264-ceb6-48be-9710-e498420f4717",
+      "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d",
       "virtual_body": {
         "heading_deg": 0.0,
         "last_action": "inspect",
@@ -93,5 +93,5 @@
       }
     }
   ],
-  "run_id": "46673264-ceb6-48be-9710-e498420f4717"
+  "run_id": "35d0910b-dad3-4dac-b5c6-9bc1f286a39d"
 }
