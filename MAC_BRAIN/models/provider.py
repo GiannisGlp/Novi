@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
 
-from brain.b2_model_runtime import ModelArtifact, ModelInvocationRequest, ModelResult, ModelRuntime
+from brain.b2_model_runtime import (
+    ModelArtifact,
+    ModelCapabilities,
+    ModelDescriptor,
+    ModelInvocationRequest,
+    ModelResult,
+    ModelRuntime,
+)
 from brain.b2_real_inference import InferencePolicy, RealModelInvoker
 
 
@@ -51,14 +58,19 @@ class MacModelProvider:
         self.spec = spec
         self.backend = CallableMacBackend(spec.model_id, fn)
         self.runtime = ModelRuntime(self.backend)
-        self.runtime.register(ModelArtifact(
+        artifact = ModelArtifact(
             model_id=spec.model_id,
             model_version=spec.model_version,
             artifact_digest=spec.artifact_digest,
             uri=f"local://{spec.model_id}",
             backend=spec.runtime,
             runtime_version=spec.runtime_version,
-        ))
+        )
+        descriptor = ModelDescriptor(
+            artifact=artifact,
+            capabilities=ModelCapabilities(modalities=spec.modalities),
+        )
+        self.runtime.register(descriptor)
         self.runtime.load(spec.model_id)
         self.invoker = RealModelInvoker(self.runtime, self.backend, policy)
 
