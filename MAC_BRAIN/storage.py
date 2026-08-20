@@ -183,7 +183,7 @@ class DurableMemoryStore:
 
         self._embedder = embedder if embedder is not None else HashingEmbedding()
         self._embed_index = EmbeddingIndex(self._embedder)
-        self._conn = sqlite3.connect(str(self.path))
+        self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.executescript(SCHEMA_MEMORY)

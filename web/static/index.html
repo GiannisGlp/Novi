@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novi — Mac Brain</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#12161f; --border:#232a36; --text:#d7dee8; --dim:#7d8a9a;
+          --accent:#4cc2ff; --good:#3fd07f; --warn:#f2c14e; --bad:#ff6b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:14px/1.45 -apple-system,"SF Mono",Menlo,Consolas,monospace; }
+  header { display:flex; align-items:center; gap:14px; padding:12px 20px;
+           border-bottom:1px solid var(--border); }
+  header h1 { margin:0; font-size:18px; letter-spacing:1px; color:#fff; }
+  header .dot { width:10px; height:10px; border-radius:50%; background:var(--good); box-shadow:0 0 8px var(--good); }
+  .badge { font-size:12px; color:var(--dim); }
+  #health { padding:2px 8px; border:1px solid var(--border); border-radius:4px; }
+  .layout { display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:14px; padding:14px 20px; height:calc(100vh - 55px); }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .panel h2 { margin:0; padding:8px 12px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); border-bottom:1px solid var(--border); }
+  .panel .body { padding:12px; overflow:auto; }
+  .kv { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #1c2230; }
+  .kv .k { color:var(--dim); }
+  .kv .v { color:#eaf2fb; text-align:right; max-width:60%; word-break:break-word; }
+  .affect { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .affect span { background:#1a2130; border:1px solid var(--border); border-radius:4px; padding:2px 7px; font-size:12px; }
+  button { background:#1a2130; color:var(--text); border:1px solid var(--border); border-radius:6px;
+           padding:7px 12px; cursor:pointer; font:inherit; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .actions .group { flex:1 1 100%; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-top:8px; }
+  textarea { width:100%; min-height:64px; background:#0d1118; color:var(--text); border:1px solid var(--border);
+             border-radius:6px; padding:8px; font:inherit; resize:vertical; }
+  input[type=number] { width:70px; background:#0d1118; color:var(--text); border:1px solid var(--border); border-radius:4px; padding:4px; font:inherit; }
+  .log { height:100%; overflow:auto; font-size:12px; }
+  .log .ev { padding:4px 8px; border-bottom:1px dashed #182030; display:flex; gap:8px; }
+  .log .ev .t { color:var(--dim); flex:0 0 120px; }
+  .log .ev .e { color:#cfd8e3; white-space:pre-wrap; word-break:break-word; }
+  .muted { color:var(--dim); font-size:12px; }
+  .health-PASS{color:var(--good)} .health-WARN{color:var(--warn)} .health-FAIL{color:var(--bad)}
+  .stack { display:flex; flex-direction:column; gap:14px; height:100%; }
+  .right { display:grid; grid-template-rows:auto auto 1fr; gap:14px; }
+  .msg { font-size:12px; color:var(--accent); margin-top:6px; }
+  .chat { height:240px; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+  .chat .turn { display:flex; flex-direction:column; gap:2px; }
+  .chat .who { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
+  .chat .who.user { color:var(--accent); }
+  .chat .who.novi { color:var(--good); }
+  .chat .bubble { background:#161d2a; border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:13px; }
+  .chat .bubble.user { background:#10243a; }
+  .chat .trace { font-size:12px; color:#aab6c4; margin-top:4px; }
+  .chat .trace b { color:#e7eef7; }
+  .chat .trace .row { padding:1px 0; }
+  .chat .route { display:inline-block; padding:0 6px; border:1px solid var(--border); border-radius:4px; font-size:11px; color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <h1>NOVI</h1>
+  <span class="badge" id="runid">…</span>
+  <span class="badge">cycle <b id="cycle">0</b></span>
+  <span class="badge" id="health" class="health-PASS">—</span>
+</header>
+<div class="layout">
+  <!-- LEFT: live state -->
+  <div class="stack">
+    <div class="panel"><h2>Reasoning</h2><div class="body" id="reasoning"><span class="muted">awaiting cycle…</span></div></div>
+    <div class="panel"><h2>Soul</h2><div class="body" id="soul"><span class="muted">…</span></div></div>
+    <div class="panel"><h2>Goals &amp; Plan</h2><div class="body" id="goals"><span class="muted">…</span></div></div>
+    <div class="panel"><h2>Knowledge &amp; Hearing</h2><div class="body" id="khearing"><span class="muted">…</span></div></div>
+  </div>
+  <!-- RIGHT: chat + actions + event log -->
+  <div class="right">
+    <div class="panel">
+      <h2>Live Chat — Novi's reasoning</h2>
+      <div class="body">
+        <div class="chat" id="chat"><span class="muted">say something to Novi below…</span></div>
+        <div style="margin-top:8px;">
+          <textarea id="say" placeholder='Ask Novi, e.g. "alice moved the door" …'></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <button id="sendBtn">Send</button>
+            <button id="stepBtn">Step once</button>
+            <span class="muted">confidence <input type="number" id="conf" value="0.9" step="0.05" min="0" max="1"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel"><h2>Actions</h2><div class="body">
+      <div class="actions">
+        <div class="group">Audio events</div>
+        <button data-audio="knock">🔨 Knock</button>
+        <button data-audio="alarm">🚨 Alarm</button>
+        <button data-audio="footstep">👣 Footstep</button>
+        <button data-audio="">✨ Unknown sound</button>
+        <div class="group">Goals</div>
+        <button data-goal="1,1">Reach (1,1)</button>
+        <button data-goal="3,0">Reach (3,0)</button>
+        <div class="group">System</div>
+        <button id="healthBtn">Health check</button>
+      </div>
+    </div></div>
+    <div class="panel"><h2>Live Event Log</h2><div class="body"><div class="log" id="log"><span class="muted">waiting for events…</span></div></div></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let after = 0;
+let chatAfter = 0;
+
+async function post(path, data) {
+  const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data||{})});
+  return r.json();
+}
+
+function h(sc) { return '<span class="health-'+sc+'">'+sc+'</span>'; }
+
+// ---- chat rendering ----
+function traceHtml(t) {
+  if (!t) return '';
+  const route = t.route || 'deterministic';
+  let s = '<div class="trace">';
+  s += '<div class="row"><b>conclusion:</b> '+esc(t.conclusion)+'</div>';
+  s += '<div class="row"><b>confidence:</b> '+(t.confidence||0).toFixed(2)+
+       ' &nbsp; <b>route:</b> <span class="route">'+esc(route)+'</span>'+(t.route_reason?' — '+esc(t.route_reason):'')+'</div>';
+  s += '<div class="row"><b>action:</b> '+esc(t.action)+'</div>';
+  s += '<div class="row"><b>rationale:</b> '+esc(t.rationale||'—')+'</div>';
+  s += '<div class="row"><b>recalled:</b> '+(t.recalled||0)+' memories &nbsp; <b>cycle:</b> '+t.cycle+'</div>';
+  if (t.detections && t.detections.length) s += '<div class="row"><b>seeing:</b> '+esc(t.detections.join(', '))+'</div>';
+  s += '</div>';
+  return s;
+}
+function esc(s){ return String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+async function refreshChat() {
+  try {
+    const r = await (await fetch('/api/chat?after='+chatAfter)).json();
+    chatAfter = r.after;
+    if (r.entries && r.entries.length) {
+      const chat = $('chat');
+      if (chat.firstChild && chat.firstChild.textContent.includes('say something')) chat.innerHTML = '';
+      for (const it of r.entries) {
+        const turn = document.createElement('div'); turn.className='turn';
+        if (it.role === 'user') {
+          turn.innerHTML = '<div class="who user">you</div><div class="bubble user">'+esc(it.text)+'</div>';
+        } else {
+          const t = it.trace || {};
+          turn.innerHTML = '<div class="who novi">novi · cycle '+it.cycle+'</div><div class="bubble">'+esc(it.text)+traceHtml(it.trace)+'</div>';
+        }
+        chat.appendChild(turn);
+      }
+      while (chat.children.length > 80) chat.removeChild(chat.firstChild);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  } catch(e) {}
+}
+
+async function refreshState() {
+  try {
+    const s = await (await fetch('/api/state')).json();
+    $('runid').textContent = s.run_id ? s.run_id.slice(0,8) : '—';
+    $('cycle').textContent = s.cycle;
+    // health
+    const hth = s.health || {};
+    $('health').innerHTML = h(hth.status||'UNKNOWN');
+    $('health').className = 'health-'+ (hth.status||'UNKNOWN');
+    // reasoning (prefer the trace: has rationale + route)
+    const rt = s.reasoning_trace || {};
+    const ls = s.last_step || {};
+    let rh = '';
+    if (rt.conclusion) {
+      rh += kv('conclusion', rt.conclusion);
+      rh += kv('confidence', (rt.confidence||0).toFixed(2));
+      rh += kv('route', rt.route + (rt.route_reason?' · '+rt.route_reason:''));
+      rh += kv('action', rt.action);
+      rh += kv('rationale', rt.rationale||'—');
+      rh += kv('recalled', (rt.recalled||0)+' memories');
+      rh += kv('detections', (rt.detections||ls.detections||[]).join(', ') || 'none');
+    } else { rh = '<span class="muted">awaiting first cycle…</span>'; }
+    $('reasoning').innerHTML = rh;
+    // soul
+    const so = s.soul || {};
+    let affect = '';
+    for (const [k,v] of Object.entries(so.affect||{})) affect += '<span>'+k+':'+v.toFixed(2)+'</span>';
+    $('soul').innerHTML = kv('identity', so.identity) + kv('tone', so.tone) + '<div class="affect">'+affect+'</div>';
+    // goals
+    let g = '';
+    if (s.active_goal) {
+      g += kv('active', s.active_goal.kind + ' → ' + s.active_goal.target);
+      g += kv('status', s.active_goal.status);
+      g += kv('steps', s.active_goal.steps_taken);
+    } else { g += kv('active', 'none'); }
+    g += kv('history', (s.goals_history||[]).map(x=>x.kind+':'+x.status).slice(-3).join(' | ') || 'none');
+    $('goals').innerHTML = g;
+    // knowledge + hearing
+    const kn = s.knowledge || {};
+    const hv = (s.hearing||[]).map(e=>e.event_type).join(', ') || 'silence';
+    $('khearing').innerHTML = kv('triples', kn.triples) + kv('entities', kn.entities) + kv('contradicted', kn.contradicted)
+      + kv('memory.active', s.memory && s.memory.active!=null ? s.memory.active : '—')
+      + kv('heard', hv);
+  } catch(e) { /* transient */ }
+}
+
+async function refreshEvents() {
+  try {
+    const r = await (await fetch('/api/events?after='+after)).json();
+    after = r.after;
+    if (r.events && r.events.length) {
+      const log = $('log');
+      if (log.firstChild && log.firstChild.textContent.includes('awaiting')) log.innerHTML = '';
+      for (const it of r.events) {
+        const ev = it.event;
+        const line = document.createElement('div'); line.className='ev';
+        line.innerHTML = '<span class="t">'+ (ev.cycle!=null?('c'+ev.cycle):'') +'</span>'
+                       + '<span class="e">'+ (ev.event_type||'event') +' ' + JSON.stringify(stripJson(ev)).slice(0,180) +'</span>';
+        log.appendChild(line);
+      }
+      while (log.children.length > 120) log.removeChild(log.firstChild);
+      log.scrollTop = log.scrollHeight;
+    }
+  } catch(e) {}
+}
+
+function stripJson(o){ const c={...o}; delete c.event_type; delete c.cycle; delete c.cycle_id; return c; }
+function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+
+$('sendBtn').onclick = async () => {
+  const text = $('say').value.trim();
+  if (!text) return;
+  $('say').value = '';
+  const chat = $('chat');
+  if (chat.firstChild && chat.firstChild.textContent.includes('say something')) chat.innerHTML = '';
+  const thinking = document.createElement('div'); thinking.className='turn';
+  thinking.innerHTML = '<div class="who novi">novi</div><div class="bubble">thinking…</div>';
+  chat.appendChild(thinking); chat.scrollTop = chat.scrollHeight;
+  $('sendBtn').disabled = true;
+  try {
+    await post('/api/chat', {text, confidence: parseFloat($('conf').value)});
+  } catch(e) { thinking.innerHTML = '<div class="who novi">novi</div><div class="bubble">(reply failed — is the model reachable?)</div>'; }
+  $('sendBtn').disabled = false;
+  refreshState(); refreshChat();
+};
+$('say').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sendBtn').click(); } });
+$('stepBtn').onclick = async () => { await post('/api/step'); refreshState(); refreshChat(); };
+$('healthBtn').onclick = async () => { await post('/api/health'); refreshState(); };
+document.querySelectorAll('[data-audio]').forEach(b => b.onclick = async () => {
+  const hint = b.getAttribute('data-audio');
+  const r = await post('/api/audio', {event_hint: hint||null, rms: 0.7, novelty: hint?0:0.9, confidence: 0.9});
+  refreshState();
+});
+document.querySelectorAll('[data-goal]').forEach(b => b.onclick = async () => {
+  const [x,y] = b.getAttribute('data-goal').split(',').map(Number);
+  await post('/api/goal', {x, y, max_steps: 60});
+  refreshState();
+});
+
+setInterval(refreshState, 1000);
+setInterval(refreshEvents, 1000);
+setInterval(refreshChat, 1500);
+refreshState(); refreshEvents(); refreshChat();
+</script>
+</body>
+</html>

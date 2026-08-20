@@ -197,6 +197,7 @@ class MacBrain:
         self._pending_audio: list[ModalityObservation] = []
         self._pending_speech: list[ModalityObservation] = []
         self._last_audio_events: list[dict[str, Any]] = []
+        self._last_reasoning_trace: dict[str, Any] = {"cycle": -1, "conclusion": "awaiting_cycle", "confidence": 0.0, "action": "none", "rationale": "", "route": "none", "route_reason": "", "recalled": 0, "situation": None, "detections": []}
         self.metrics = metrics or MetricRegistry()
         self.diagnostics = diagnostics or Diagnostics()
         self.health = health or HealthMonitor(default_health_checks())
@@ -273,6 +274,19 @@ class MacBrain:
             self._emit("reasoning.route", {"cycle": self._cycle, "route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")})
             route_info = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
         self._emit("reasoning.completed", {"cycle": self._cycle, "action": intent.action, "rationale": intent.rationale})
+
+        self._last_reasoning_trace = {
+            "cycle": self._cycle,
+            "conclusion": cognitive.reasoning.conclusion,
+            "confidence": round(cognitive.reasoning.confidence, 3),
+            "action": intent.action,
+            "rationale": getattr(intent, "rationale", intent.action),
+            "route": route_info.get("route", "deterministic"),
+            "route_reason": route_info.get("reason", ""),
+            "recalled": len(recall["memories"]),
+            "situation": situation if isinstance(situation, dict) else None,
+            "detections": [d.label for d in evidence.detections],
+        }
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)
 

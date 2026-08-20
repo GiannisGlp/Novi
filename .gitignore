@@ -17,3 +17,8 @@ htmlcov/
 .env.*
 !.env.example
 .DS_Store
+
+# Novi durable SQLite stores (runtime artifacts)
+*.db
+*.db-shm
+*.db-wal

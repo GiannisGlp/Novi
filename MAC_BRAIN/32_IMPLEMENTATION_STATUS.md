@@ -291,6 +291,20 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified on-device: FAIL dominates / WARN surfaces / PASS when healthy; a durable brain reports all 12 subsystems `PASS`; a non-durable brain correctly reports `WARN` (governance disabled — degraded but usable); metrics snapshot is deterministically ordered with labels preserved; diagnostics carry structured context + dual timestamps.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/observability.json`.
 
+## Live web app (status: IMPLEMENTED)
+
+- `web/server.py` — `NoviWebServer` + a stdlib-only HTTP server (no web framework, no installs) that owns a running `MacBrain` on a background auto-step thread and exposes a JSON API + a single-page browser UI. All brain access is serialized through a lock; the store connection is cross-thread safe for this serialized pattern.
+- `web/static/index.html` — dark terminal UI with all four requested interactions:
+  - **Live chat / "hear this"**: type what Novi hears → `POST /api/chat` → Novi replies with its reasoning trace.
+  - **Live chat + reasoning trace**: a running conversation (`POST /api/chat`, `GET /api/chat`); each message shows Novi's **conclusion, confidence, action, rationale, reasoning route** (deterministic vs local qwen), and how many memories it recalled — so you can follow exactly *how* Novi decided. When the local `qwen3.8` model (Ollama) is reachable, Novi generates a real conversational reply grounded in recalled knowledge and its current mood (`route: ollama:qwen3.8`, `action: respond`); if Ollama is offline it falls back to the deterministic conclusion. The UI shows a "thinking…" indicator while the model generates.
+  - **Live state dashboard**: reasoning (conclusion/confidence/action/route), Soul affect + tone, active goal + plan + history, knowledge counts, hearing, memory, and a live PASS/WARN/FAIL/UNKNOWN health badge — polled every second.
+  - **Action buttons**: step once, reach a goal, hear audio events (knock/alarm/footstep/unknown), health check.
+  - **Live event log**: every brain event (cognition, memory, hearing, privacy, knowledge, observability, …) streamed with per-event seq cursors.
+- Deterministic camera by default (no webcam permissions needed); durable store optional via `--store`.
+- `scripts/mac-web.sh` launcher (`http://127.0.0.1:8080`).
+- Verified on-device over real HTTP: served the UI, state cycle/health(PASS), `/api/hear` accepted `alice moved the door` → `human_speech_observed`, `/api/audio` heard `alarm`, `/api/goal` adopted reach(2,2) active, health report PASS, and the event log carried 20 distinct event types.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-app.json`.
+
 ## Next implementation slice
 
 1. Real robot / Jetson port (deferred until physical hardware arrives).

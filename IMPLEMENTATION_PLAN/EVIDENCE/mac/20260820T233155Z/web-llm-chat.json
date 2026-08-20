@@ -1,0 +1,10 @@
+{
+  "llm_used": true,
+  "novi_reply": "Hmm, I don't have anything about Alice in my memory yet. Who's Alice to you \u2014 a friend, a character, someone you're working with? I'd love to know more so I can actually be useful here.",
+  "trace": {
+    "route": "ollama:qwen3.8",
+    "action": "respond",
+    "confidence": 0.85,
+    "conclusion": "Hmm, I don't have anything about Alice in my memory yet. Who's Alice to you \u2014 a friend, a character, someone you're working with? I'd love to know more so I can actually be useful here."
+  }
+}

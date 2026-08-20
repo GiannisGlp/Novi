@@ -1,0 +1,59 @@
+{
+  "state": {
+    "cycle": 4,
+    "health": "PASS",
+    "run_id": "cfe28b55",
+    "reasoning": "no_high_salience_change_detected",
+    "action": "wait",
+    "knowledge": {
+      "entities": 0,
+      "triples": 0,
+      "contradicted": 0
+    }
+  },
+  "hear_result": {
+    "accepted": true,
+    "reasoning": "human_speech_observed"
+  },
+  "audio_result": {
+    "heard": [
+      "alarm"
+    ]
+  },
+  "goal_result": {
+    "kind": "reach",
+    "status": "active",
+    "target": [
+      2.0,
+      2.0
+    ]
+  },
+  "health_report": {
+    "status": "PASS"
+  },
+  "event_log": {
+    "count": 56,
+    "types": [
+      "MAC_BRAIN.started",
+      "action.completed",
+      "cognition.completed",
+      "goal.adopted",
+      "hearing.event",
+      "hearing.quality",
+      "identity.named",
+      "knowledge.updated",
+      "memory.admitted",
+      "memory.consolidated",
+      "memory.recall",
+      "observability.health",
+      "observability.metrics",
+      "perception.completed",
+      "plan.created",
+      "privacy.gate",
+      "reasoning.completed",
+      "sensor.camera.frame",
+      "soul.updated",
+      "speech.ingested"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "chat_turn_1": {
+    "user": "alice moved the door",
+    "novi_said": "human_speech_observed",
+    "trace": {
+      "cycle": 5,
+      "conclusion": "human_speech_observed",
+      "confidence": 0.8,
+      "action": "wait",
+      "rationale": "no_high_salience_change_detected",
+      "route": "deterministic",
+      "route_reason": "",
+      "recalled": 0,
+      "situation": null,
+      "detections": []
+    }
+  },
+  "chat_turn_2": {
+    "novi_said": "human_speech_observed"
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "text": "alice moved the door"
+    },
+    {
+      "role": "novi",
+      "text": "human_speech_observed"
+    },
+    {
+      "role": "user",
+      "text": "what do you see?"
+    },
+    {
+      "role": "novi",
+      "text": "human_speech_observed"
+    }
+  ],
+  "reasoning_trace_in_state": {
+    "conclusion": "no_high_salience_change_detected",
+    "route": "deterministic",
+    "action": "wait"
+  }
+}
