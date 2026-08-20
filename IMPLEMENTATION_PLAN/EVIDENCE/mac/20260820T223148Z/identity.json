@@ -1,0 +1,49 @@
+{
+  "detected_tier": {
+    "person": "person",
+    "name": null,
+    "confidence": 0.0,
+    "tier": "detected",
+    "evidence_count": 0,
+    "modalities": [],
+    "last_seen_cycle": 1
+  },
+  "after_naming_probable": {
+    "person": "person",
+    "name": "alice",
+    "confidence": 0.7,
+    "tier": "probable",
+    "evidence_count": 1,
+    "modalities": [
+      "speech"
+    ],
+    "last_seen_cycle": 2
+  },
+  "cross_modal_verified": {
+    "person": "person",
+    "name": "alice",
+    "confidence": 0.997,
+    "tier": "verified",
+    "evidence_count": 3,
+    "modalities": [
+      "speech",
+      "vision"
+    ],
+    "last_seen_cycle": 3
+  },
+  "uncertain_not_confirmed": {
+    "person": "person",
+    "name": "bob",
+    "confidence": 0.4,
+    "tier": "detected",
+    "evidence_count": 1,
+    "modalities": [
+      "speech"
+    ],
+    "last_seen_cycle": 1
+  },
+  "durable_after_restart": {
+    "tier": "verified",
+    "name": "alice"
+  }
+}

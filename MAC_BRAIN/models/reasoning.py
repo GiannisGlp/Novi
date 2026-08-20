@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from .provider import MacModelProvider
+from .validation import StructuredOutputValidator, ValidationResult, action_output_spec
 
 
 @dataclass(frozen=True)
@@ -60,18 +61,20 @@ class LLMReasoningProvider:
     """Real reasoning model behind ``MacModelProvider``.
 
     Delegates the conclusion→action decision to a local LLM reached through the
-    existing model runtime. Requires a ``MacModelProvider`` whose backend returns
-    a JSON payload of the form ``{"action": "<name>", "parameters": {...}}``.
+    existing model runtime. The model's JSON output is run through a
+    structured-output validator against the allowed-action schema; a failing or
+    out-of-allowlist result is rejected and replaced with the safe default action.
 
-    The model must only ever be offered a *bounded* set of actions; the returned
-    action is validated against the allowlist at decision time and Policy/Safety
-    still gates execution.
+    The model must only ever be offered a *bounded* set of actions; Policy/Safety
+    still gates every resulting action at execution time.
     """
 
     def __init__(self, provider: MacModelProvider, *, allowed_actions: frozenset[str], default_action: str = "observe") -> None:
         self.provider = provider
         self.allowed_actions = allowed_actions
         self.default_action = default_action
+        self._validator = StructuredOutputValidator(action_output_spec(allowed_actions))
+        self.last_validation: ValidationResult | None = None
 
     def decide(self, *, conclusion: str, confidence: float, situation: dict[str, Any], recall: Any = ()) -> ActionIntent:
         result = self.provider.invoke(
@@ -79,10 +82,13 @@ class LLMReasoningProvider:
             invocation_id="reasoning-llm",
         )
         raw = result.output if result.status == "completed_on_time" else {}
-        action = str(raw.get("action", self.default_action))
-        parameters = dict(raw.get("parameters", {})) if isinstance(raw.get("parameters"), dict) else {}
-        if action not in self.allowed_actions:
+        validation = self._validator.validate(raw)
+        self.last_validation = validation
+        if not validation.valid or not validation.value.get("action"):
             action = self.default_action
-            parameters = {}
+            parameters: dict[str, Any] = {}
+        else:
+            action = str(validation.value["action"])
+            parameters = dict(validation.value.get("parameters", {}))
         recalled = f" recalled={len(recall)}"
         return ActionIntent(action=action, parameters=parameters, rationale=f"llm:{conclusion}{recalled if recall else ''}")

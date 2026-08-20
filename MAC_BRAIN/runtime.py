@@ -17,7 +17,10 @@ from .autonomy import BoundedGoalController, Goal, GoalState, GoalStatus
 from .consolidation import ConsolidationConfig, MemoryConsolidator
 from .cognition import BeliefSystem, ExpectationSystem
 from .fusion import ModalityObservation, MultimodalFusion
+from .identity import PersonIdentity
 from .io import Camera, MacMicrophone, MacSpeaker, VirtualBody
+from .kgraph import EntityKnowledgeGraph
+from .planner import Plan, Planner
 from .lexicon import LearnedPreferences, Lexicon
 from .social import Relationships, SocialIntelligence
 from .soul import Soul
@@ -69,6 +72,9 @@ class MacBrain:
         expectations: ExpectationSystem | None = None,
         temporal: TemporalModel | None = None,
         fusion: MultimodalFusion | None = None,
+        identity: PersonIdentity | None = None,
+        knowledge: EntityKnowledgeGraph | None = None,
+        planner: Planner | None = None,
         config: MacBrainConfig | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
@@ -95,6 +101,15 @@ class MacBrain:
         self.goals = goals or BoundedGoalController()
         self._seen_entities: set[str] = set()
         self._persisted_terminal: set[str] = set()
+        self.planner = planner or Planner()
+        self._plans: dict[str, Plan] = {}
+        if isinstance(self.memory, DurableMemoryStore):
+            for snap in self.memory.load_plans():
+                try:
+                    plan = Plan.from_snapshot(snap)
+                    self._plans[plan.goal_id] = plan
+                except KeyError:
+                    continue
         if goals is None and isinstance(self.memory, DurableMemoryStore):
             self._load_goals()
         self.consolidator = MemoryConsolidator(self.memory, self.config.consolidation_config) if isinstance(self.memory, DurableMemoryStore) else None
@@ -155,6 +170,20 @@ class MacBrain:
             self.fusion = MultimodalFusion.from_snapshot(persisted) if persisted else MultimodalFusion()
         else:
             self.fusion = MultimodalFusion()
+        if identity is not None:
+            self.identity = identity
+        elif isinstance(self.memory, DurableMemoryStore):
+            persisted = self.memory.load_identity()
+            self.identity = PersonIdentity.from_snapshot(persisted) if persisted else PersonIdentity()
+        else:
+            self.identity = PersonIdentity()
+        if knowledge is not None:
+            self.knowledge = knowledge
+        elif isinstance(self.memory, DurableMemoryStore):
+            persisted = self.memory.load_knowledge()
+            self.knowledge = EntityKnowledgeGraph.from_snapshot(persisted) if persisted else EntityKnowledgeGraph()
+        else:
+            self.knowledge = EntityKnowledgeGraph()
         self._pending_speech: list[ModalityObservation] = []
         self._cycle = 0
         self.events: list[dict[str, Any]] = []
@@ -184,6 +213,11 @@ class MacBrain:
         present = {d.label for d in evidence.detections}
         for detection in evidence.detections:
             self.beliefs.observe(detection.label, True, confidence=detection.confidence, now=now)
+            if detection.label in {"person", "human", "face"}:
+                self.identity.observe("person", confidence=detection.confidence, modality="vision", cycle=self._cycle)
+        identity = self.identity.identity_for("person")
+        if identity is not None:
+            self._emit("identity.observed", {"cycle": self._cycle, "person": identity.person, "name": identity.name, "tier": identity.tier, "confidence": identity.confidence})
         self.expectations.update(present)
         violations = self.expectations.drain_violations()
         for v in violations:
@@ -205,12 +239,22 @@ class MacBrain:
         recall = self._recall_context(cognitive.situation, evidence.detections)
         self._emit("memory.recall", {"cycle": self._cycle, "query": " ".join(recall["query"]), "recalled": len(recall["memories"])})
 
+        route_info: dict[str, Any] = {}
+        plan_ctx: dict[str, Any] | None = None
+        if self.goals.active is not None and self.goals.active.goal.goal_id in self._plans:
+            plan_ctx = self._plans[self.goals.active.goal.goal_id].snapshot()
+        situation = cognitive.situation
+        if plan_ctx is not None and isinstance(situation, dict):
+            situation = {**situation, "plan": plan_ctx}
         intent = self.reasoning.decide(
             conclusion=cognitive.reasoning.conclusion,
             confidence=cognitive.reasoning.confidence,
-            situation=cognitive.situation,
+            situation=situation,
             recall=recall["memories"],
         )
+        if hasattr(self.reasoning, "last_route"):
+            self._emit("reasoning.route", {"cycle": self._cycle, "route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")})
+            route_info = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
         self._emit("reasoning.completed", {"cycle": self._cycle, "action": intent.action, "rationale": intent.rationale})
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)
@@ -225,6 +269,17 @@ class MacBrain:
             action = intent.action
             parameters = intent.parameters
             reason = intent.rationale
+
+        # Multi-step planning context: advance the active goal's plan one step per cycle.
+        active_plan: Plan | None = None
+        if self.goals.active is not None:
+            active_plan = self._plans.get(self.goals.active.goal.goal_id)
+            if active_plan is not None and active_plan.status == "running":
+                next_step = self.planner.advance(active_plan)
+                if next_step is not None:
+                    self._emit("plan.step", {"cycle": self._cycle, "goal_id": active_plan.goal_id, "description": next_step.description, "kind": next_step.kind})
+                elif active_plan.complete:
+                    self._emit("plan.completed", {"goal_id": active_plan.goal_id, "plan_id": active_plan.plan_id})
 
         # Temporal & causal cognition: record this cycle's observed + acted events.
         events = set(present) | {f"action:{action}"}
@@ -252,6 +307,14 @@ class MacBrain:
             self._emit("goal.status", {"goal_id": terminal.goal.goal_id, "kind": terminal.goal.kind, "status": terminal.status.value, "steps_taken": terminal.steps_taken})
             self._admit_goal_outcome(terminal)
             self._persist_goal(terminal)
+            terminal_plan = self._plans.get(terminal.goal.goal_id)
+            if terminal_plan is not None and terminal_plan.status == "running":
+                if terminal.status is GoalStatus.COMPLETED:
+                    terminal_plan.status = "completed"
+                    self._emit("plan.completed", {"goal_id": terminal.goal.goal_id, "plan_id": terminal_plan.plan_id})
+                else:
+                    self.planner.fail(terminal_plan)
+                    self._emit("plan.failed", {"goal_id": terminal.goal.goal_id, "plan_id": terminal_plan.plan_id})
         goal_info = None
         if self.goals.history:
             last = self.goals.history[-1]
@@ -278,14 +341,18 @@ class MacBrain:
             "detections": [d.label for d in evidence.detections],
             "reasoning": cognitive.reasoning.conclusion,
             "reasoning_confidence": cognitive.reasoning.confidence,
+            "reasoning_route": route_info,
             "action": action,
             "authorized": decision.authorized,
             "virtual_body": virtual_state,
             "goal": goal_info,
             "soul": {"tone": tone["tone"], "identity": self.soul.identity.name, "affect": self.soul.affect.dimensions},
+            "identity": identity.snapshot() if identity is not None else None,
             "social": {"person": person, "expression": social_expression},
             "temporal": {"expected": temporal_expected, "top_links": [l.snapshot() for l in self.temporal.top_links(limit=3)]},
             "fusion": fused_reported,
+            "knowledge": self.knowledge.counts(),
+            "plan": active_plan.snapshot() if active_plan is not None and active_plan.status == "running" else (active_plan.snapshot() if active_plan else None),
         }
 
     def consolidate(self, now: str | None = None) -> None:
@@ -299,9 +366,32 @@ class MacBrain:
         """Adopt a bounded goal for the autonomy layer to pursue."""
         cycle = self._cycle if cycle is None else cycle
         state = self.goals.adopt(goal)
+        plan = self.planner.plan(goal, cycle=cycle)
+        self.planner.start(plan)
+        self._plans[goal.goal_id] = plan
+        self._emit("plan.created", {"goal_id": goal.goal_id, "goal_kind": goal.kind, "plan_id": plan.plan_id, "steps": len(plan.steps)})
         self._emit("goal.adopted", {"goal_id": goal.goal_id, "kind": goal.kind, "target": str(goal.target), "max_steps": goal.max_steps})
         self._persist_goal(state)
         return state
+
+    def replan_goal(self, goal_id: str, *, cycle: int | None = None) -> Plan | None:
+        """Rebuild a fresh plan for a goal when assumptions are invalidated."""
+        cycle = self._cycle if cycle is None else cycle
+        state = self.goals.active if self.goals.active is not None and self.goals.active.goal.goal_id == goal_id else None
+        if state is None:
+            state = next((s for s in self.goals.pending_goals if s.goal.goal_id == goal_id), None)
+        if state is None:
+            return None
+        plan = self.planner.replan(state.goal, cycle=cycle)
+        self.planner.start(plan)
+        self._plans[goal_id] = plan
+        self._emit("plan.replanned", {"goal_id": goal_id, "plan_id": plan.plan_id, "steps": len(plan.steps)})
+        return plan
+
+    def current_plan(self) -> Plan | None:
+        if self.goals.active is None:
+            return None
+        return self._plans.get(self.goals.active.goal.goal_id)
 
     def enqueue_goal(self, goal: Goal, *, cycle: int | None = None) -> GoalState:
         """Queue a goal for priority-based pursuit (higher priority runs first).
@@ -383,6 +473,10 @@ class MacBrain:
         if active is not None:
             self.goals.active = active
             self.goals.history.append(active)
+            if active.goal.goal_id not in self._plans:
+                plan = self.planner.plan(active.goal, cycle=active.goal.created_cycle)
+                self.planner.start(plan)
+                self._plans[active.goal.goal_id] = plan
 
     def _spawn_curiosity_goals(self, detections: Any) -> None:
         """Autonomously create a bounded investigate goal for a novel entity.
@@ -419,6 +513,11 @@ class MacBrain:
     def ingest_transcript(self, transcription: TranscriptionResult) -> dict[str, Any]:
         """Feed a transcript into memory (durable) and cognition (transient speech event)."""
         entity_refs = self._entities_in_text(transcription.text)
+        name = next((ref for ref in entity_refs if self._is_person_name(ref)), None)
+        if name is not None:
+            self.identity.observe("person", name=name, confidence=transcription.confidence, modality="speech", cycle=self._cycle)
+            self._emit("identity.named", {"cycle": self._cycle, "name": name, "confidence": transcription.confidence})
+        self._learn_triples(transcription.text, entity_refs, transcription.confidence, source="audio.stt")
         admission = self.memory.admit(
             memory_type="utterance",
             content=transcription.text,
@@ -470,6 +569,29 @@ class MacBrain:
         known = set(self.world.state.entities) | {"alice", "door", "person", "table", "room", "kitchen", "object", "window"}
         lowered = text.lower()
         return tuple(sorted(name for name in known if name in lowered))
+
+    @staticmethod
+    def _is_person_name(ref: str) -> bool:
+        """Heuristic: a candidate entity is a person's name if it is not a known
+        object/place label. Identity tiering and verification still gate whether the
+        name becomes an asserted identity."""
+        non_names = {"door", "person", "table", "room", "kitchen", "object", "window", "lamp", "chair", "plant"}
+        return ref not in non_names and any(c.isalpha() for c in ref)
+
+    def _learn_triples(self, text: str, entity_refs: tuple[str, ...], confidence: float, *, source: str) -> None:
+        """Extract and admit entity→relation→entity triples from episodic content."""
+        for (subject, predicate, obj) in self.knowledge.extract_from_text(text, entity_refs):
+            triple = self.knowledge.add(subject, predicate, obj, confidence=confidence, source=source, cycle=self._cycle)
+            self._emit("knowledge.updated", {"cycle": self._cycle, "subject": subject, "predicate": predicate, "object": obj, "status": triple.status})
+            if triple.status == "contradicted":
+                self._emit("knowledge.contradiction", {"cycle": self._cycle, "subject": subject, "predicate": predicate, "object": obj})
+
+    def retrieve_knowledge(self, entity: str, *, limit: int = 10) -> dict[str, Any]:
+        """Return the knowledge-graph context around an entity."""
+        triples = self.knowledge.context(entity, limit=limit)
+        out = [t.snapshot() for t in triples]
+        self._emit("knowledge.recalled", {"entity": entity, "recalled": len(out)})
+        return {"entity": entity, "triples": out}
 
     def _admit_goal_outcome(self, state: Any) -> None:
         admission = self.memory.admit(
@@ -558,6 +680,9 @@ class MacBrain:
             self.memory.save_expectations(self.expectations.snapshot())
             self.memory.save_temporal(self.temporal.snapshot())
             self.memory.save_fusion(self.fusion.snapshot())
+            self.memory.save_identity(self.identity.snapshot())
+            self.memory.save_knowledge(self.knowledge.snapshot())
+            self.memory.save_plans([p.snapshot() for p in self._plans.values()])
             self.memory.save_body(
                 {"x_m": self.body.x_m, "y_m": self.body.y_m, "heading_deg": self.body.heading_deg, "velocity_mps": self.body.velocity_mps, "last_action": self.body.last_action}
             )

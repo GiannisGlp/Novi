@@ -1,0 +1,147 @@
+{
+  "reach_plan_steps": {
+    "plan_id": "plan-b52de28ab801",
+    "goal_id": "g1",
+    "goal_kind": "reach",
+    "status": "running",
+    "created_cycle": 0,
+    "current": "evaluate heading and distance to target",
+    "steps": [
+      {
+        "description": "evaluate heading and distance to target",
+        "kind": "evaluate",
+        "action": "observe",
+        "expected_outcome": "know_target_heading",
+        "status": "pending"
+      },
+      {
+        "description": "navigate toward the target",
+        "kind": "navigate",
+        "action": "move_forward",
+        "expected_outcome": "approach_target",
+        "status": "pending"
+      },
+      {
+        "description": "verify arrival within threshold",
+        "kind": "verify",
+        "action": "stop",
+        "expected_outcome": "goal_reached",
+        "status": "pending"
+      }
+    ]
+  },
+  "advance_progress": [
+    {
+      "current": "navigate toward the target",
+      "status": "running"
+    },
+    {
+      "current": "verify arrival within threshold",
+      "status": "running"
+    },
+    {
+      "current": null,
+      "status": "completed"
+    }
+  ],
+  "replan_fresh": {
+    "plan_id": "plan-cfee0c85c931",
+    "goal_id": "g2",
+    "goal_kind": "reach",
+    "status": "running",
+    "created_cycle": 0,
+    "current": "evaluate heading and distance to target",
+    "steps": [
+      {
+        "description": "evaluate heading and distance to target",
+        "kind": "evaluate",
+        "action": "observe",
+        "expected_outcome": "know_target_heading",
+        "status": "pending"
+      },
+      {
+        "description": "navigate toward the target",
+        "kind": "navigate",
+        "action": "move_forward",
+        "expected_outcome": "approach_target",
+        "status": "pending"
+      },
+      {
+        "description": "verify arrival within threshold",
+        "kind": "verify",
+        "action": "stop",
+        "expected_outcome": "goal_reached",
+        "status": "pending"
+      }
+    ]
+  },
+  "brain_step_plan": {
+    "plan_id": "plan-4505daedbc3b",
+    "goal_id": "brain-goal",
+    "goal_kind": "reach",
+    "status": "running",
+    "created_cycle": 0,
+    "current": "navigate toward the target",
+    "steps": [
+      {
+        "description": "evaluate heading and distance to target",
+        "kind": "evaluate",
+        "action": "observe",
+        "expected_outcome": "know_target_heading",
+        "status": "completed"
+      },
+      {
+        "description": "navigate toward the target",
+        "kind": "navigate",
+        "action": "move_forward",
+        "expected_outcome": "approach_target",
+        "status": "active"
+      },
+      {
+        "description": "verify arrival within threshold",
+        "kind": "verify",
+        "action": "stop",
+        "expected_outcome": "goal_reached",
+        "status": "pending"
+      }
+    ]
+  },
+  "brain_plan_events": [
+    "plan.created",
+    "plan.step",
+    "plan.step",
+    "plan.completed"
+  ],
+  "replanned_steps": 3,
+  "resumed_plan_after_restart": {
+    "plan_id": "plan-66ba00c193d2",
+    "goal_id": "persist",
+    "goal_kind": "reach",
+    "status": "running",
+    "created_cycle": 0,
+    "current": "navigate toward the target",
+    "steps": [
+      {
+        "description": "evaluate heading and distance to target",
+        "kind": "evaluate",
+        "action": "observe",
+        "expected_outcome": "know_target_heading",
+        "status": "completed"
+      },
+      {
+        "description": "navigate toward the target",
+        "kind": "navigate",
+        "action": "move_forward",
+        "expected_outcome": "approach_target",
+        "status": "active"
+      },
+      {
+        "description": "verify arrival within threshold",
+        "kind": "verify",
+        "action": "stop",
+        "expected_outcome": "goal_reached",
+        "status": "pending"
+      }
+    ]
+  }
+}

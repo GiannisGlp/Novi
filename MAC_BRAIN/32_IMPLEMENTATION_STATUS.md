@@ -230,6 +230,39 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified on-device: a reach goal at steps_taken=3 / pose x=1.5 shut down and, after restart with the same store, resumed as `active` with steps_taken=3, pose restored to x=1.5, and continued `move_forward` x=2.0→3.0 (no origin reset). Pending and terminal goals also resume correctly.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/resume-goals.json`.
 
+## Identity / person recognition (status: IMPLEMENTED)
+
+- `MAC_BRAIN/identity.py` — `PersonIdentity` + `IdentityBelief` implementing the Cognition person model (docs/03-cognition 03 example, docs/06-soul/04, docs/02-autonomy/03): combines camera detections, face observations, and naming (speech) into a per-person **identity belief** with explicit **detected / probable / verified** tiers, confidence, and per-modality provenance.
+- **Boundaries**: recognition confidence is never authorization; uncertain identity is preserved as uncertainty (a low-confidence name stays `detected`, never asserted); a tier is always revisable as evidence arrives.
+- `MacBrain` observes person presence from vision each `step()`, binds a spoken name from `ingest_transcript`, emits `identity.observed`/`identity.named`, reports `identity` in the result, and persists it durably.
+- Verified on-device: person present → `detected` (no name); naming raises to `probable`; vision+speech agreement → `verified` at 0.997 across {vision,speech}; a low-confidence name stayed `detected` (uncertainty preserved); verified identity survived restart.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/identity.json`.
+
+## Reasoning model router + structured output (status: IMPLEMENTED)
+
+- `MAC_BRAIN/models/router.py` — `ReasoningRouter` selects between the deterministic provider and the local LLM (Ollama/qwen) by task confidence: confident situations route to deterministic (fast/safe/explainable), uncertain situations escalate to the LLM; if the LLM is unavailable or errors, it degrades to deterministic. Route + reason are tracked (`reasoning.route` event, route counts).
+- `MAC_BRAIN/models/validation.py` — `StructuredOutputValidator` + `action_output_spec`: validates/coerces a reasoning model's JSON output against the allowed-action schema (required field, enum allowlist, type coercion, defaults). `LLMReasoningProvider` now runs every response through it; a failing/out-of-allowlist result is rejected and replaced with the safe default.
+- CLI: `--reasoning router [--route-threshold N]`. `MacBrain` emits `reasoning.route` and reports `reasoning_route` each step.
+- Verified on-device: confident 0.9 → deterministic; uncertain 0.4 → llm; llm unavailable → graceful deterministic fallback (`llm_error`); valid output accepted; `action:"hack"` rejected with error; missing required field rejected; invalid LLM output fell back to default `wait`. Route counts tracked. Brain wiring reports the route and emits events.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/router-validation.json`.
+
+## Entity knowledge graph (status: IMPLEMENTED)
+
+- `MAC_BRAIN/kgraph.py` — `EntityKnowledgeGraph` + `KnowledgeTriple` maintains a durable **entity→relation→entity** graph with confidence (noisy-OR over agreeing evidence), provenance, entity typing (person/place/object), and **contradiction handling** that preserves all evidence rather than overwriting (the highest-confidence object stays active; the rest are marked `contradicted`).
+- Deterministic **triple extraction** from episodic text/entity-refs via a small predicate lexicon (`extract_from_text`). Typed queries (`triples`, `leading`, `context`), conflict detection, and snapshot/from_snapshot persistence.
+- `MacBrain` learns triples from spoken utterances (`_learn_triples`), emits `knowledge.updated` / `knowledge.contradiction` / `knowledge.recalled`, exposes `retrieve_knowledge(entity)`, reports graph counts each step, and persists durably.
+- Boundaries (docs/04-memory-and-knowledge/12): learning is memory-level, never schema mutation; knowledge is evidence-backed and revisable; knowledge feeds reasoning, it is not authorization.
+- Verified on-device: speech → learned triple (alice→moved→door); `alice located_near kitchen` then `...garden` → conflict flagged, `kitchen` stays active, `garden` contradicted; extraction and typing correct; graph survived restart.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/kgraph.json`.
+
+## Multi-step planning context (status: IMPLEMENTED)
+
+- `MAC_BRAIN/planner.py` — `Planner`, `Plan`, `PlanStep`: decomposes a goal into an ordered, **typed** step plan (determine → execute → verify) with per-step expected outcomes, tracks each step's status (pending/active/completed/failed/cancelled), and supports **replanning/cancellation** when observations invalidate assumptions (docs/02-autonomy/01).
+- `MacBrain` generates a plan on `set_goal` (`plan.created`), advances it one step per cycle (`plan.step` → `plan.completed`/`plan.failed` on goal terminal), feeds the current plan into reasoning (situation context), exposes `current_plan()`/`replan_goal()`, reports the plan each step, and persists plans durably so a resumed goal keeps its plan.
+- Boundaries: plans are context; the controller and Policy/Safety still gate every executed action; a plan is always revisable.
+- Verified on-device: a reach goal decomposed into evaluate→navigate→verify (with expected outcomes); advancement moves through the steps and completes; replan yields a fresh plan; brain wiring reported the active step and emitted `plan.created`/`plan.step`/`plan.completed`; a resumed goal kept its plan across restart.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/planner.json`.
+
 ## Next implementation slice
 
 1. Real robot / Jetson port (deferred until physical hardware arrives).

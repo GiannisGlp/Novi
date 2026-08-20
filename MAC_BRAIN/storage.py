@@ -134,6 +134,27 @@ CREATE TABLE IF NOT EXISTS body (
 );
 """
 
+SCHEMA_IDENTITY = """
+CREATE TABLE IF NOT EXISTS identity (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_KNOWLEDGE = """
+CREATE TABLE IF NOT EXISTS knowledge (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_PLANS = """
+CREATE TABLE IF NOT EXISTS plans (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
 
 def _json(value: Any) -> str | None:
     if value is None:
@@ -176,6 +197,9 @@ class DurableMemoryStore:
         self._conn.executescript(SCHEMA_FUSION)
         self._conn.executescript(SCHEMA_VECTORS)
         self._conn.executescript(SCHEMA_BODY)
+        self._conn.executescript(SCHEMA_IDENTITY)
+        self._conn.executescript(SCHEMA_KNOWLEDGE)
+        self._conn.executescript(SCHEMA_PLANS)
         self._migrate()
         # load persisted embeddings into the in-memory index
         for row in self._conn.execute("SELECT memory_id, text FROM vectors").fetchall():
@@ -555,6 +579,39 @@ class DurableMemoryStore:
         if row is None:
             return None
         return _unjson(row["value"], None)
+
+    # ---- identity ----
+    def save_identity(self, snapshot: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO identity (key, value) VALUES ('state', ?)", (_json(snapshot),))
+        self._conn.commit()
+
+    def load_identity(self) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT value FROM identity WHERE key='state'").fetchone()
+        if row is None:
+            return None
+        return _unjson(row["value"], None)
+
+    # ---- knowledge graph ----
+    def save_knowledge(self, snapshot: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO knowledge (key, value) VALUES ('state', ?)", (_json(snapshot),))
+        self._conn.commit()
+
+    def load_knowledge(self) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT value FROM knowledge WHERE key='state'").fetchone()
+        if row is None:
+            return None
+        return _unjson(row["value"], None)
+
+    # ---- plans ----
+    def save_plans(self, data: list[dict[str, Any]]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO plans (key, value) VALUES ('all', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_plans(self) -> list[dict[str, Any]]:
+        row = self._conn.execute("SELECT value FROM plans WHERE key='all'").fetchone()
+        if row is None:
+            return []
+        return _unjson(row["value"], [])
 
     def _to_record(self, row: sqlite3.Row) -> MemoryRecord:
         return MemoryRecord(

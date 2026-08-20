@@ -27,5 +27,9 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Semantic/vector memory | `20260820T221211Z/vector-memory.json` | cosine retrieval, determinism, scale (5k docs, ~0.03s search), lexical-hashing provider + real-model seam |
 | Interactive live brain demo | `20260820T222258Z/live-demo.json` `live-neural.json` | `--live` loop (camera+STT+reason+soul+TTS); neural MPS round detected tv/laptop with curious tone |
 | Resume goals across restart | `20260820T222630Z/resume-goals.json` | active goal resumed w/ step budget + restored body pose, pursuit continues (no origin reset) |
+| Identity / person recognition | `20260820T223148Z/identity.json` | detected→probable→verified tiers, cross-modal (vision+speech) confirmation, uncertainty preserved |
+| Reasoning router + structured output | `20260820T223405Z/router-validation.json` | confidence-based routing (deterministic/llm/fallback), schema validation, invalid-output rejection |
+| Entity knowledge graph | `20260820T223629Z/kgraph.json` | triple learning, contradiction preservation, entity typing, durable graph |
+| Multi-step planning context | `20260820T224002Z/planner.json` | typed plan decomposition, step advancement, replan, plan resumption across restart |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

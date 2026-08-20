@@ -1,0 +1,49 @@
+{
+  "routing_by_confidence": {
+    "confident_0.9": {
+      "route": "deterministic",
+      "reason": "confident"
+    },
+    "uncertain_0.4": {
+      "route": "llm",
+      "reason": "low_confidence:0.400<0.6"
+    },
+    "llm_unavailable": {
+      "route": "deterministic",
+      "reason": "llm_error:RuntimeError"
+    }
+  },
+  "valid_output": {
+    "valid": true,
+    "errors": [],
+    "value": {
+      "action": "observe",
+      "parameters": {
+        "depth": "high"
+      },
+      "rationale": ""
+    }
+  },
+  "invalid_action_rejected": {
+    "valid": false,
+    "errors": [
+      "field 'action' failed validation: 'hack'"
+    ],
+    "value": {
+      "parameters": {},
+      "rationale": ""
+    }
+  },
+  "missing_field_rejected": {
+    "valid": false,
+    "errors": [
+      "missing required field 'action'"
+    ],
+    "value": {
+      "parameters": {},
+      "rationale": ""
+    }
+  },
+  "llm_schema_fallback_action": "wait",
+  "llm_last_validation_valid": false
+}

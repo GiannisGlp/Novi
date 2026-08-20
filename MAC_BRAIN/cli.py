@@ -68,6 +68,12 @@ def _build_reasoning(args) -> object:
         from .models import OllamaReasoningProvider
 
         return OllamaReasoningProvider(model=args.ollama_model or "qwen3.8")
+    if args.reasoning == "router":
+        from .models import OllamaReasoningProvider
+        from .models.router import ReasoningRouter
+
+        llm = OllamaReasoningProvider(model=args.ollama_model or "qwen3.8")
+        return ReasoningRouter(llm=llm, confidence_threshold=args.route_threshold)
     return None  # MacBrain defaults to DeterministicReasoningProvider
 
 
@@ -88,8 +94,9 @@ def main() -> int:
     parser.add_argument("--transcribe", type=Path, default=None, metavar="PATH", help="transcribe an existing audio file (no microphone needed)")
     parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for speech-to-text (tiny/base/small)")
     parser.add_argument("--stt-device", type=str, default="cpu", help="device for speech-to-text (cpu or mps)")
-    parser.add_argument("--reasoning", choices=["deterministic", "ollama"], default="deterministic", help="reasoning backend (deterministic symbolic, or a local LLM via Ollama)")
-    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model name for --reasoning ollama (default: qwen3.8)")
+    parser.add_argument("--reasoning", choices=["deterministic", "ollama", "router"], default="deterministic", help="reasoning backend: deterministic symbolic, a local LLM via Ollama, or a confidence-based router between them")
+    parser.add_argument("--route-threshold", type=float, default=0.6, help="confidence below which the router escalates to the local LLM")
+    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model name for --reasoning ollama/router (default: qwen3.8)")
     parser.add_argument("--goal-target", type=str, default=None, metavar="X,Y", help="adopt a bounded reach goal to (X, Y) in meters before running cycles")
     parser.add_argument("--goal-steps", type=int, default=100, help="max step budget for the reach goal (bounds movement)")
     parser.add_argument("--store", type=str, default=None, metavar="PATH", help="enable durable storage: persist memory and goal history to a SQLite DB at PATH")

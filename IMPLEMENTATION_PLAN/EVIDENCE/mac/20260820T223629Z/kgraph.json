@@ -1,0 +1,54 @@
+{
+  "learned_triples": [
+    {
+      "subject": "alice",
+      "predicate": "moved",
+      "object": "door",
+      "confidence": 0.9,
+      "evidence_count": 1,
+      "status": "active",
+      "source": "audio.stt",
+      "first_seen_cycle": 0,
+      "last_seen_cycle": 0
+    }
+  ],
+  "alice_context": [
+    {
+      "subject": "alice",
+      "predicate": "moved",
+      "object": "door",
+      "confidence": 0.9,
+      "evidence_count": 1,
+      "status": "active",
+      "source": "audio.stt",
+      "first_seen_cycle": 0,
+      "last_seen_cycle": 0
+    }
+  ],
+  "contradiction": {
+    "has_conflict": true,
+    "lead": "kitchen",
+    "contradicted_count": 1
+  },
+  "extraction": [
+    [
+      "alice",
+      "tends",
+      "plant"
+    ]
+  ],
+  "entity_types": {
+    "alice": "person",
+    "kitchen": "place",
+    "lamp": "object"
+  },
+  "counts": {
+    "entities": 2,
+    "triples": 1,
+    "contradicted": 0
+  },
+  "durable_after_restart": {
+    "triples": 2,
+    "lead": "kitchen"
+  }
+}
