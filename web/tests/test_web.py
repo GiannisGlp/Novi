@@ -107,6 +107,24 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_state_includes_consolidated_summaries(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False)
+            s.start()
+            try:
+                s.hear("alice moved the door")
+                s.hear("alice likes jazz")
+                s.brain.consolidate()
+                st = s.state()
+                self.assertIn("summaries", st["memory"])
+                self.assertTrue(st["memory"]["summaries"], "expected a consolidated summary in state")
+                self.assertIn("alice", st["memory"]["summaries"][0]["content"].lower())
+            finally:
+                s.stop()
+
     def test_chat_uses_local_llm_when_available(self):
         s = self._server(auto_step=False, chat_llm=True)
         s._llm_available = True

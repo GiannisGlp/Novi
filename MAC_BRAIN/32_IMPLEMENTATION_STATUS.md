@@ -414,6 +414,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests `MAC_BRAIN/tests/test_summarizer.py` (6); full suite **371 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/llm-summaries.json`.
 
+## Consolidation surfacing in the web UI (status: IMPLEMENTED)
+
+- `GET /api/state` now exposes `memory.summaries` (recent consolidated summary memories) via a new `_memory_summaries()` helper.
+- New **"Consolidated Memory"** panel on the State page renders each summary (entity + content), refreshed every second with the rest of the state.
+- Verified: taught "alice moved the door / alice likes jazz", consolidated → state returns the LLM summary "Alice likes jazz and moved a door."
+- New test `test_state_includes_consolidated_summaries` in `web/tests/test_web.py`; full suite **372 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-summaries.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

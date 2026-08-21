@@ -446,10 +446,24 @@ class NoviWebServer:
                 "goals_history": goals,
                 "knowledge": self.brain.knowledge.counts(),
                 "hearing": self.brain._last_audio_events,
-                "memory": {"active": getattr(self.brain.memory, "active_count", None)},
+                "memory": {"active": getattr(self.brain.memory, "active_count", None), "summaries": self._memory_summaries()},
                 "health": self.brain.health.run(self.brain).snapshot(),
                 "identity": self.brain.identity.snapshot() if hasattr(self.brain, "identity") else None,
             }
+
+
+    def _memory_summaries(self, limit: int = 5) -> list[dict[str, Any]]:
+        """Recent consolidated summary memories for the web UI."""
+        try:
+            rows = self.brain.memory.active_rows()
+        except Exception:  # noqa: BLE001 - summaries are best-effort UI data
+            return []
+        summaries = [r["record"] for r in rows if r["record"].memory_type == "summary"]
+        summaries.sort(key=lambda r: r.created_at, reverse=True)
+        return [
+            {"content": s.content, "confidence": s.confidence, "entity_refs": list(s.entity_refs)}
+            for s in summaries[:limit]
+        ]
 
 
 class Handler(BaseHTTPRequestHandler):

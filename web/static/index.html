@@ -169,6 +169,7 @@
         <canvas id="map" width="340" height="180"></canvas>
       </div></div>
       <div class="panel"><h2>Knowledge &amp; Hearing</h2><div class="body" id="khearing"><span class="muted">…</span></div></div>
+      <div class="panel"><h2>Consolidated Memory</h2><div class="body" id="summaries"><span class="muted">no summaries yet</span></div></div>
     </div>
     <div class="right">
       <div class="panel"><h2>Activity</h2><div class="body">
@@ -419,6 +420,10 @@ async function refreshState() {
     const hv = (s.hearing||[]).map(e=>e.event_type).join(', ') || 'silence';
     $('khearing').innerHTML = kv('triples', kn.triples) + kv('entities', kn.entities) + kv('contradicted', kn.contradicted)
       + kv('memory.active', s.memory && s.memory.active!=null ? s.memory.active : '—') + kv('heard', hv);
+    const sums = (s.memory && s.memory.summaries) || [];
+    $('summaries').innerHTML = sums.length
+      ? sums.map(x => '<div class="kv"><span class="k">'+esc((x.entity_refs||[]).join(',')||'summary')+'</span><span class="v">'+esc(x.content)+'</span></div>').join('')
+      : '<span class="muted">no summaries yet</span>';
     // stat cards
     $('statCycle').textContent = s.cycle;
     $('statHealth').textContent = hth.status||'UNKNOWN';

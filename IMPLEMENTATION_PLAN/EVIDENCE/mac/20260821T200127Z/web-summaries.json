@@ -1,0 +1,18 @@
+{
+  "slice": "Consolidation surfacing in the web UI",
+  "endpoint": "GET /api/state -> memory.summaries",
+  "memory_payload": {
+    "active": 3,
+    "summaries": [
+      {
+        "content": "Alice likes jazz and moved a door.",
+        "confidence": 0.9,
+        "entity_refs": [
+          "alice"
+        ]
+      }
+    ]
+  },
+  "ui": "new 'Consolidated Memory' panel on the State page renders each summary (entity + content)",
+  "mechanism": "server._memory_summaries() reads recent summary memories; frontend refreshState() renders them"
+}
