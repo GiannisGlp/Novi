@@ -136,6 +136,19 @@ class ComposeReplyTests(unittest.TestCase):
         # the forbidden phrase must never reach the user
         self.assertNotIn("how can i help", r["text"].lower())
 
+    def test_reply_carries_specific_reason(self):
+        b = self._brain()
+        r = b.compose_reply("do you remember what i like?", llm_chat=lambda **k: "you like jazz.")
+        self.assertEqual(r["text"], "you like jazz.")
+        self.assertIn("grounded", r["reason"].lower())
+
+    def test_followup_carries_reason(self):
+        b = self._brain()
+        r = b.compose_reply("what about the garden lights?", llm_chat=lambda **k: "[silence]")
+        self.assertIsNotNone(r["text"])
+        self.assertTrue(r["fallback"])
+        self.assertIn("follow-up", r["reason"].lower())
+
 
 class ExperienceLearningTests(unittest.TestCase):
     def _brain(self) -> MacBrain:

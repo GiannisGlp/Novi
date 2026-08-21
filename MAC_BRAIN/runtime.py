@@ -32,7 +32,7 @@ from .lexicon import LearnedPreferences, Lexicon
 from .social import Relationships, SocialIntelligence, TIER_EXPRESSION, SocialInitiative, InitiativeConfig
 from .soul import Soul
 from .storage import DurableMemoryStore
-from .dialogue import DialogueEngine, followup_question, natural_fallback
+from .dialogue import DialogueEngine, _extract_topic, followup_question, natural_fallback
 from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
 from .models import (
@@ -1284,15 +1284,24 @@ class MacBrain:
             if retry["text"] is not None:
                 out = retry
         if out["text"] is not None:
-            return {"text": out["text"], "fallback": False, "grounding": {"route": "dialogue", **out}}
+            n_facts = len(facts)
+            reason = (
+                f"Reply grounded in {n_facts} recalled fact(s)/summary(ies), "
+                f"{len(experience)} learned experience(s), and the conversation so far ({len(history or [])} prior turns)"
+            )
+            return {"text": out["text"], "fallback": False, "reason": reason, "grounding": {"route": "dialogue", **out}}
         # No usable reply. When the user said something we have nothing on, ask a
-        # logical, in-context question (never a canned assistant line). Otherwise
-        # fall back to a short natural acknowledgement.
+        # logical, in-context question (never a canned assistant line) — but only
+        # for a substantive topic; for a bare greeting/one-liner prefer a short
+        # natural acknowledgement.
         fq = followup_question(text)
-        if fq:
-            return {"text": fq, "fallback": True, "grounding": {"route": "followup", **out}}
+        topic = _extract_topic(text)
+        if fq and topic and len(topic) > 2:
+            reason = f"Had no grounded answer on '{topic}' — asked an in-context follow-up instead of guessing"
+            return {"text": fq, "fallback": True, "reason": reason, "grounding": {"route": "followup", **out}}
         fb = natural_fallback(self_state, surroundings, cycle=self._cycle)
-        return {"text": fb, "fallback": True, "grounding": {"route": "fallback", **out}}
+        reason = "No LLM reply available; used a brief tone-aware acknowledgement so the user is not left dry"
+        return {"text": fb, "fallback": True, "reason": reason, "grounding": {"route": "fallback", **out}}
 
     def _initiation_utterance(self, kind: str, person: str, cycle: int) -> str:
         """Deterministic, natural spontaneous remark (no LLM in the perception loop).

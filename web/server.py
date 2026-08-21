@@ -273,7 +273,7 @@ class NoviWebServer:
         if reply is not None:
             trace["conclusion"] = reply
             trace["action"] = "respond"
-            trace["rationale"] = "Natural reply grounded in recalled knowledge, relationships and self-state."
+            trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
             trace["route"] = f"ollama:{self.llm_model}"
             trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
             trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
@@ -320,6 +320,7 @@ class NoviWebServer:
             trace["route"] = f"ollama:{self.llm_model}"
             trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
             trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
+            trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
             novi_text, llm = reply, True
         else:
             novi_text, llm = result["reasoning"], False

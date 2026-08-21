@@ -548,6 +548,25 @@ Targets the objective's "must learn from patterns and previous experiences".
   web suite **24 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/experience-learning.json`.
 
+## Everything has a reason (reasoning/memory/cognition round 3) (status: IMPLEMENTED)
+
+Targets the objective's "everything must have a reason".
+
+- **Every chat reply now carries a specific, inspectable reason.** `compose_reply`
+  returns a `reason` per path:
+  - grounded reply → "Reply grounded in N recalled fact(s)/summary(ies), M learned
+    experience(s), and the conversation so far (K prior turns)";
+  - no grounded answer → "Had no grounded answer on '<topic>' — asked an
+    in-context follow-up instead of guessing" (only for a substantive topic; a
+    bare greeting uses the tone-aware acknowledgement);
+  - LLM unavailable/silent → "No LLM reply available; used a brief tone-aware
+    acknowledgement…".
+- `chat_send`/`listen` use this reason as the trace rationale (visible in the
+  reasoning trace UI), so the user can always see *why* Novi said what it said.
+- Tests: +2 in `MAC_BRAIN/tests/test_dialogue.py`; fast suites **415 passing**,
+  web suite **24 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reason-for-everything.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
