@@ -356,14 +356,26 @@ class NoviWebServer:
         except Exception:  # noqa: BLE001
             return []
 
+    def _memory_context(self, limit: int = 3) -> list[str]:
+        """Recent consolidated summary memories for chat grounding (summary recall)."""
+        try:
+            rows = self.brain.memory.active_rows()
+        except Exception:  # noqa: BLE001 - memory context is best-effort
+            return []
+        summaries = [r["record"] for r in rows if r["record"].memory_type == "summary"]
+        summaries.sort(key=lambda r: r.created_at, reverse=True)
+        return [s.content for s in summaries[:limit]]
+
     def _generate_reply(self, text: str) -> tuple[str | None, bool]:
         if not self.chat_llm or not self._llm_up():
             return None, False
         tone = self.brain.soul.tone({}).get("tone", "neutral")
         facts = self._knowledge_context(text)
+        facts_list = [f for f in facts.split("; ") if f]
+        facts_list.extend(self._memory_context())
         known = self._known_persons()
         if known:
-            facts = "; ".join([f for f in facts.split("; ") if f] + [f"I know the person named {p}" for p in known])
+            facts_list.extend(f"I know the person named {p}" for p in known)
         system = (
             "You are Novi, a curious embodied AI who remembers things you have been told. "
             "You are given a list of facts that you DO know. "
@@ -375,7 +387,7 @@ class NoviWebServer:
         )
         user_payload = {
             "user_says": text,
-            "facts_i_know": facts.split("; ") if facts else [],
+            "facts_i_know": facts_list,
             "my_tone": tone,
         }
         try:

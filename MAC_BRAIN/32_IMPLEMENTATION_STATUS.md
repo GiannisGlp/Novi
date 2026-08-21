@@ -439,6 +439,13 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests `MAC_BRAIN/tests/test_narrator.py` (6); full suite **381 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/llm-narrative.json`.
 
+## Summary recall in chat (status: IMPLEMENTED)
+
+- `_generate_reply` now appends the recent **consolidated summary memories** (`_memory_context()`) to the `facts_i_know` list, so Novi references its higher-level memories when replying.
+- Verified on-device with real nemotron-3.5-lightning: after teaching "alice moved the door / alice likes jazz" and consolidating, asking "what do you remember about alice?" → "I remember that alice moved the door and has a preference for jazz music."
+- New test `test_chat_recalls_consolidated_summaries` in `web/tests/test_web.py`; full suite **382 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/summary-recall-chat.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

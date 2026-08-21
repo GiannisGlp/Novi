@@ -125,6 +125,32 @@ class NoviWebServerTests(unittest.TestCase):
             finally:
                 s.stop()
 
+    def test_chat_recalls_consolidated_summaries(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False, chat_llm=True)
+            s._llm_available = True
+            captured: dict = {}
+
+            def fake_chat(**kw):
+                captured["user"] = kw.get("user", "")
+                return "I remember that alice moved the door."
+
+            s._llm_chat = fake_chat
+            s.start()
+            try:
+                s.hear("alice moved the door")
+                s.hear("alice likes jazz")
+                s.brain.consolidate()
+                self.assertTrue(s._memory_context(), "expected a consolidated summary in memory context")
+                s.chat_send("what do you remember about alice?")
+                self.assertIn("alice", captured["user"].lower())
+                self.assertIn("moved", captured["user"].lower())
+            finally:
+                s.stop()
+
     def test_chat_uses_local_llm_when_available(self):
         s = self._server(auto_step=False, chat_llm=True)
         s._llm_available = True

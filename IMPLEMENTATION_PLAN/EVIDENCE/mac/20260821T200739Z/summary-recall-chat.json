@@ -1,0 +1,10 @@
+{
+  "slice": "Summary recall in chat",
+  "consolidated_summaries_in_context": [
+    "Alice performed a physical action by moving the door, and she has a musical preference for jazz."
+  ],
+  "user_question": "what do you remember about alice?",
+  "novi_reply": "I remember that alice moved the door and has a preference for jazz music.",
+  "llm_used": true,
+  "mechanism": "_generate_reply appends _memory_context() (consolidated summaries) to facts_i_know so Novi references them"
+}
