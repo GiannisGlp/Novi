@@ -446,6 +446,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_chat_recalls_consolidated_summaries` in `web/tests/test_web.py`; full suite **382 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/summary-recall-chat.json`.
 
+## Narrative surfacing in the web UI (status: IMPLEMENTED)
+
+- `GET /api/state` now exposes `narrative` (the episodic "what happened" recap) via `brain._episodic_narrative()`.
+- New **"Recent Narrative"** panel on the State page renders the recap, refreshed every second with the rest of the state.
+- Verified: taught "alice moved the door / alice said hello" → state returns the LLM narrative "Alice said hello, and then Alice moved the door."
+- New test `test_state_includes_episodic_narrative` in `web/tests/test_web.py`; full suite **383 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-narrative.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

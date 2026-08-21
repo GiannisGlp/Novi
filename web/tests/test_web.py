@@ -125,6 +125,23 @@ class NoviWebServerTests(unittest.TestCase):
             finally:
                 s.stop()
 
+    def test_state_includes_episodic_narrative(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False)
+            s.start()
+            try:
+                s.hear("alice moved the door")
+                s.hear("alice said hello")
+                st = s.state()
+                self.assertIn("narrative", st)
+                self.assertTrue(st["narrative"], "expected an episodic narrative in state")
+                self.assertTrue(any("alice" in n.lower() for n in st["narrative"]), st["narrative"])
+            finally:
+                s.stop()
+
     def test_chat_recalls_consolidated_summaries(self):
         import tempfile
         from pathlib import Path

@@ -466,6 +466,7 @@ class NoviWebServer:
                 "knowledge": self.brain.knowledge.counts(),
                 "hearing": self.brain._last_audio_events,
                 "memory": {"active": getattr(self.brain.memory, "active_count", None), "summaries": self._memory_summaries()},
+                "narrative": self.brain._episodic_narrative(),
                 "health": self.brain.health.run(self.brain).snapshot(),
                 "identity": self.brain.identity.snapshot() if hasattr(self.brain, "identity") else None,
             }

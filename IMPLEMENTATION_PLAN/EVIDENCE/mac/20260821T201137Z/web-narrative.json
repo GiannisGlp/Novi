@@ -1,0 +1,9 @@
+{
+  "slice": "Narrative surfacing in the web UI",
+  "endpoint": "GET /api/state -> narrative",
+  "narrative_payload": [
+    "Alice said hello, and then Alice moved the door."
+  ],
+  "ui": "new 'Recent Narrative' panel on the State page renders the LLM 'what happened' recap",
+  "mechanism": "server.state() includes brain._episodic_narrative(); frontend refreshState() renders it"
+}

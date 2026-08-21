@@ -52,5 +52,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Multi-round deliberation (Reasoning 3.2) | `20260821T200247Z/multi-round-deliberation.json` | model critiques its own decision and confirms/revises it, bounded by max_rounds; real nemotron output |
 | LLM-enhanced episodic narrative (Memory 3.3) | `20260821T200449Z/llm-narrative.json` | LLMNarrator writes a natural 'what happened' recap via Ollama; deterministic fallback |
 | Summary recall in chat | `20260821T200739Z/summary-recall-chat.json` | _generate_reply appends consolidated summaries to facts_i_know; Novi references them in replies |
+| Narrative surfacing in the web UI | `20260821T201137Z/web-narrative.json` | GET /api/state exposes narrative; new 'Recent Narrative' panel renders the LLM recap |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

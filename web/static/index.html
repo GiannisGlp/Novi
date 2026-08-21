@@ -170,6 +170,7 @@
       </div></div>
       <div class="panel"><h2>Knowledge &amp; Hearing</h2><div class="body" id="khearing"><span class="muted">…</span></div></div>
       <div class="panel"><h2>Consolidated Memory</h2><div class="body" id="summaries"><span class="muted">no summaries yet</span></div></div>
+      <div class="panel"><h2>Recent Narrative</h2><div class="body" id="narrative"><span class="muted">nothing yet</span></div></div>
     </div>
     <div class="right">
       <div class="panel"><h2>Activity</h2><div class="body">
@@ -424,6 +425,8 @@ async function refreshState() {
     $('summaries').innerHTML = sums.length
       ? sums.map(x => '<div class="kv"><span class="k">'+esc((x.entity_refs||[]).join(',')||'summary')+'</span><span class="v">'+esc(x.content)+'</span></div>').join('')
       : '<span class="muted">no summaries yet</span>';
+    const narr = (s.narrative || []).join(' ');
+    $('narrative').innerHTML = narr ? '<div class="kv"><span class="v">'+esc(narr)+'</span></div>' : '<span class="muted">nothing yet</span>';
     // stat cards
     $('statCycle').textContent = s.cycle;
     $('statHealth').textContent = hth.status||'UNKNOWN';
