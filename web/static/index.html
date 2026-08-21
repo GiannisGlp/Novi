@@ -14,7 +14,7 @@
          font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
          display:flex; flex-direction:column; overflow:hidden;
          background:radial-gradient(1200px 600px at 20% -10%, #101a2b 0%, var(--bg) 55%); }
-  header { display:flex; align-items:center; gap:14px; padding:12px 22px;
+  header { display:flex; align-items:center; gap:14px; padding:10px 22px;
            border-bottom:1px solid var(--border);
            background:linear-gradient(180deg, rgba(255,255,255,.02), transparent); flex:0 0 auto; }
   header h1 { margin:0; font-size:17px; letter-spacing:2px; color:#fff; font-weight:700; }
@@ -27,24 +27,24 @@
   #modelSelect { background:#1a2130; color:var(--text); border:1px solid var(--border);
                  border-radius:4px; padding:4px 8px; font:inherit; font-size:12px; }
 
-  /* ---------- DASHBOARD LAYOUT ---------- */
-  .dash { flex:1 1 auto; min-height:0; display:grid;
-          grid-template-columns:minmax(0,1fr) 400px; gap:14px; padding:14px 20px; }
-  .chatcol { display:flex; flex-direction:column; min-height:0; }
-  .sidecol { display:flex; flex-direction:column; gap:14px; min-height:0;
-             overflow-y:auto; scrollbar-width:none; }
-  .sidecol::-webkit-scrollbar { display:none; }
+  /* ---------- LAYOUT: chat on top (50% height, full width), widgets below ---------- */
+  .dash { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:14px; padding:14px 20px; }
+  .chatcol { flex:0 0 50%; min-height:0; display:flex; }
+  .widgets { flex:1 1 auto; min-height:0; display:grid;
+             grid-template-columns:repeat(3,1fr); gap:14px; overflow-y:auto;
+             scrollbar-width:none; padding-bottom:4px; }
+  .widgets::-webkit-scrollbar { display:none; }
 
   .panel { background:linear-gradient(180deg, #141a26, #10151f); border:1px solid var(--border);
            border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.25); }
-  .panel h2 { margin:0; padding:9px 14px; font-size:11px; text-transform:uppercase; letter-spacing:1.2px;
-              color:var(--dim); border-bottom:1px solid var(--border); background:rgba(255,255,255,.015); }
+  .panel h2 { margin:0; padding:8px 14px; font-size:11px; text-transform:uppercase; letter-spacing:1.2px;
+              color:var(--dim); border-bottom:1px solid var(--border); background:rgba(255,255,255,.015); flex:0 0 auto; }
   .panel .body { padding:12px; overflow:auto; }
 
-  /* ---------- CHAT PANEL ---------- */
-  .chatpanel { display:flex; flex-direction:column; min-height:0; }
+  /* ---------- CHAT PANEL (top, full width, 50% height) ---------- */
+  .chatpanel { flex:1; display:flex; flex-direction:column; min-height:0; }
   .chatpanel .chatbody { flex:1 1 auto; min-height:0; overflow-y:auto; scrollbar-width:none;
-                         display:flex; flex-direction:column; gap:12px; padding:20px 24px; }
+                         display:flex; flex-direction:column; gap:12px; padding:18px 24px; }
   .chatpanel .chatbody::-webkit-scrollbar { display:none; }
   .empty { margin:auto; color:var(--dim); text-align:center; }
   .empty .ring { font-size:26px; animation:spin 2.4s linear infinite; display:inline-block; }
@@ -77,14 +77,14 @@
   .turn .trace .row.sub { padding-left:12px; color:#93a1b3; }
   .turn .route { display:inline-block; padding:0 6px; border:1px solid var(--border); border-radius:4px; font-size:11px; color:var(--accent); }
 
-  .chatinput { flex:0 0 auto; border-top:1px solid var(--border); padding:12px 24px 14px;
+  .chatinput { flex:0 0 auto; border-top:1px solid var(--border); padding:10px 24px 12px;
                background:var(--bg); }
-  .chatinput textarea { width:100%; min-height:48px; max-height:160px; background:#0d1118; color:var(--text);
-               border:1px solid var(--border); border-radius:10px; padding:10px 12px; font:inherit; resize:none; }
+  .chatinput textarea { width:100%; min-height:44px; max-height:140px; background:#0d1118; color:var(--text);
+               border:1px solid var(--border); border-radius:10px; padding:9px 12px; font:inherit; resize:none; }
   .chatinput textarea:focus { outline:none; border-color:var(--accent); }
   .row { display:flex; gap:8px; align-items:center; margin-top:8px; }
   button { background:#1a2130; color:var(--text); border:1px solid var(--border); border-radius:8px;
-           padding:8px 14px; cursor:pointer; font:inherit; display:inline-flex; align-items:center; gap:7px;
+           padding:7px 13px; cursor:pointer; font:inherit; display:inline-flex; align-items:center; gap:7px;
            transition:border-color .15s, color .15s, background .15s, transform .05s; }
   button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:#1c2536; }
   button:active:not(:disabled) { transform:translateY(1px); }
@@ -95,7 +95,9 @@
   input[type=number] { width:70px; background:#0d1118; color:var(--text); border:1px solid var(--border);
                        border-radius:4px; padding:4px; font:inherit; }
 
-  /* ---------- SIDEBAR PANELS ---------- */
+  /* ---------- WIDGETS (specific heights so info is never hidden) ---------- */
+  .widgets .panel { height:250px; display:flex; flex-direction:column; }
+  .widgets .panel .body { flex:1 1 auto; min-height:0; overflow:auto; }
   .kv { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #1c2230; }
   .kv .k { color:var(--dim); } .kv .v { color:#eaf2fb; text-align:right; max-width:62%; word-break:break-word; }
   .affect { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
@@ -114,8 +116,7 @@
   .stat .k { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
   .stat .v { font-size:20px; font-weight:700; color:#eaf2fb; line-height:1.1; }
 
-  .log { display:flex; flex-direction:column; font-size:12px; max-height:220px; overflow-y:auto; scrollbar-width:none; }
-  .log::-webkit-scrollbar { display:none; }
+  .log { display:flex; flex-direction:column; font-size:12px; }
   .log .ev { padding:4px 10px; border-bottom:1px dashed #182030; display:flex; gap:10px; animation:pop .15s ease; }
   .log .ev .t { color:var(--dim); flex:0 0 70px; }
   .log .ev .e { color:#cfd8e3; white-space:pre-wrap; word-break:break-word; }
@@ -135,7 +136,7 @@
 </header>
 
 <div class="dash">
-  <!-- LEFT: CHAT -->
+  <!-- CHAT: top, full width, 50% of browser height -->
   <div class="chatcol">
     <div class="panel chatpanel">
       <h2>Conversation</h2>
@@ -152,8 +153,8 @@
     </div>
   </div>
 
-  <!-- RIGHT: ACTIVITY DASHBOARD -->
-  <div class="sidecol">
+  <!-- WIDGETS: below the chat, 3-column grid, each with a specific height -->
+  <div class="widgets">
     <div class="panel"><h2>Activity</h2><div class="body">
       <div class="stats">
         <div class="stat"><span class="k">cycle</span><span class="v" id="statCycle">0</span></div>
@@ -172,7 +173,7 @@
 
     <div class="panel"><h2>Goals &amp; Plan</h2><div class="body">
       <div id="goals"><span class="muted">…</span></div>
-      <canvas id="map" width="340" height="180"></canvas>
+      <canvas id="map" width="340" height="150"></canvas>
     </div></div>
 
     <div class="panel"><h2>Memory</h2><div class="body">
@@ -209,6 +210,8 @@ const confHist = [], memHist = [], evHist = [];
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
 function h(sc) { return '<span class="health-'+sc+'">'+sc+'</span>'; }
+// Only touch the DOM when the content actually changed -> no flicker.
+function setHTML(el, html) { if (el && el.innerHTML !== html) el.innerHTML = html; }
 
 // ---- model switcher ----
 async function loadModels() {
@@ -366,11 +369,11 @@ function drawMap(s) {
 async function refreshState() {
   try {
     const s = await (await fetch('/api/state')).json();
-    $('runid').textContent = s.run_id ? s.run_id.slice(0,8) : '—';
-    $('cycle').textContent = s.cycle;
+    setHTML($('runid'), s.run_id ? s.run_id.slice(0,8) : '—');
+    setHTML($('cycle'), s.cycle);
     const hth = s.health || {};
-    $('health').innerHTML = h(hth.status||'UNKNOWN');
-    $('health').className = 'health-'+ (hth.status||'UNKNOWN');
+    setHTML($('health'), h(hth.status||'UNKNOWN'));
+    const hEl = $('health'); if (hEl) hEl.className = 'health-'+ (hth.status||'UNKNOWN');
     const rt = s.reasoning_trace || {};
     const ls = s.last_step || {};
     confHist.push(rt.confidence||0); if (confHist.length>60) confHist.shift();
@@ -384,11 +387,11 @@ async function refreshState() {
       rh += kv('recalled', (rt.recalled||0)+' memories');
       rh += kv('detections', (rt.detections||ls.detections||[]).join(', ') || 'none');
     } else { rh = '<span class="muted">awaiting first cycle…</span>'; }
-    $('reasoning').innerHTML = rh;
+    setHTML($('reasoning'), rh);
     const so = s.soul || {};
     let affect = '';
     for (const [k,v] of Object.entries(so.affect||{})) affect += '<span>'+k+':'+v.toFixed(2)+'</span>';
-    const soulEl = $('soul'); if (soulEl) soulEl.innerHTML = kv('identity', so.identity) + kv('tone', so.tone) + '<div class="affect">'+affect+'</div>';
+    const soulEl = $('soul'); if (soulEl) setHTML(soulEl, kv('identity', so.identity) + kv('tone', so.tone) + '<div class="affect">'+affect+'</div>');
     let g = '';
     if (s.active_goal) {
       g += kv('active', s.active_goal.kind + ' → ' + s.active_goal.target);
@@ -402,24 +405,24 @@ async function refreshState() {
       }
     } else { g += kv('active', 'none'); }
     g += kv('history', (s.goals_history||[]).map(x=>x.kind+':'+x.status).slice(-3).join(' | ') || 'none');
-    $('goals').innerHTML = g;
+    setHTML($('goals'), g);
     drawMap(s);
     const kn = s.knowledge || {};
     memHist.push(kn.triples||0); if (memHist.length>60) memHist.shift();
     const hv = (s.hearing||[]).map(e=>e.event_type).join(', ') || 'silence';
-    const kh = $('khearing'); if (kh) kh.innerHTML = kv('triples', kn.triples) + kv('entities', kn.entities) + kv('contradicted', kn.contradicted)
-      + kv('memory.active', s.memory && s.memory.active!=null ? s.memory.active : '—') + kv('heard', hv);
+    const kh = $('khearing'); if (kh) setHTML(kh, kv('triples', kn.triples) + kv('entities', kn.entities) + kv('contradicted', kn.contradicted)
+      + kv('memory.active', s.memory && s.memory.active!=null ? s.memory.active : '—') + kv('heard', hv));
     const sums = (s.memory && s.memory.summaries) || [];
-    $('summaries').innerHTML = sums.length
+    setHTML($('summaries'), sums.length
       ? sums.map(x => '<div class="kv"><span class="k">'+esc((x.entity_refs||[]).join(',')||'summary')+'</span><span class="v">'+esc(x.content)+'</span></div>').join('')
-      : '<span class="muted">no summaries yet</span>';
+      : '<span class="muted">no summaries yet</span>');
     const narr = (s.narrative || []).join(' ');
-    $('narrative').innerHTML = narr ? '<div class="kv"><span class="v">'+esc(narr)+'</span></div>' : '<span class="muted">nothing yet</span>';
-    $('statCycle').textContent = s.cycle;
-    $('statHealth').textContent = hth.status||'UNKNOWN';
-    $('statHealth').className = 'health-'+ (hth.status||'UNKNOWN');
-    $('statMem').textContent = (s.memory && s.memory.active!=null) ? s.memory.active : '—';
-    $('statTriples').textContent = kn.triples||0;
+    setHTML($('narrative'), narr ? '<div class="kv"><span class="v">'+esc(narr)+'</span></div>' : '<span class="muted">nothing yet</span>');
+    setHTML($('statCycle'), s.cycle);
+    setHTML($('statHealth'), hth.status||'UNKNOWN');
+    const sh = $('statHealth'); if (sh) sh.className = 'health-'+ (hth.status||'UNKNOWN');
+    setHTML($('statMem'), (s.memory && s.memory.active!=null) ? s.memory.active : '—');
+    setHTML($('statTriples'), kn.triples||0);
     drawSparks();
   } catch(e) {}
 }
@@ -475,7 +478,7 @@ $('sendBtn').onclick = async () => {
   refreshState(); refreshChat();
 };
 $('say').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sendBtn').click(); } });
-function autoGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,160)+'px'; }
+function autoGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,140)+'px'; }
 $('say').addEventListener('input', e => autoGrow(e.target));
 
 $('listenBtn').onclick = async () => {

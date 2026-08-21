@@ -1,0 +1,8 @@
+{
+  "slice": "Web dashboard layout + flicker fix",
+  "layout": "chat on top (full width, 50% of browser height); all widgets below in a 3-column grid",
+  "flicker_fix": "setHTML() only touches the DOM when content actually changes (no per-second innerHTML rewrite)",
+  "widget_heights": "each widget panel has a fixed 250px height with an internally-scrolling body so info is never hidden",
+  "widgets": ["Activity (stats + sparklines)", "Reasoning", "Goals & Plan (with map)", "Memory (summaries + narrative)", "Actions (buttons)", "Event Log"],
+  "verified": "served HTML contains chat-top/full-width, widgets-below grid, fixed heights, and setHTML flicker guard; server healthy (cycle 251, health PASS)"
+}
