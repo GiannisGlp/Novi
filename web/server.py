@@ -109,7 +109,21 @@ class NoviWebServer:
         self._chat_seq = 0
         self._chat: list[dict[str, Any]] = []
         self.brain = self._build_brain()
+        self._load_chat_history()
         self._last_step: dict[str, Any] | None = None
+
+    def _load_chat_history(self) -> None:
+        """Restore the chat thread from the durable store on restart (conversation persistence)."""
+        store = getattr(self.brain, "memory", None)
+        if store is None or not hasattr(store, "load_chat"):
+            return
+        try:
+            rows = store.load_chat()
+        except Exception:  # noqa: BLE001 - chat restore is best-effort
+            return
+        if rows:
+            self._chat = rows
+            self._chat_seq = max((int(r.get("seq", 0)) for r in rows), default=0)
 
     # ---- brain construction (real sensing / reasoning router) ----
     def _build_brain(self) -> MacBrain:
@@ -407,6 +421,17 @@ class NoviWebServer:
         self._chat.append({"seq": self._chat_seq, **entry})
         if len(self._chat) > 200:
             self._chat = self._chat[-200:]
+        self._persist_chat()
+
+    def _persist_chat(self) -> None:
+        """Persist the chat thread to the durable store (conversation persistence)."""
+        store = getattr(self.brain, "memory", None)
+        if store is None or not hasattr(store, "save_chat"):
+            return
+        try:
+            store.save_chat(self._chat)
+        except Exception:  # noqa: BLE001 - chat persistence is best-effort
+            pass
 
     def chat(self, after: int = 0) -> dict[str, Any]:
         entries = [c for c in self._chat if c["seq"] > after]

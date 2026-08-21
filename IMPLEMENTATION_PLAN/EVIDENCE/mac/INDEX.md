@@ -56,5 +56,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Deliberation rounds surfaced in the web UI | `20260821T201328Z/web-deliberation-rounds.json` | reasoning trace renders each round (analysis, evaluation, [confirmed], → action) |
 | Episodic narrative in chat | `20260821T201742Z/narrative-chat.json` | _generate_reply appends 'Recent events: <narrative>'; Novi recaps what happened |
 | Multi-turn chat memory | `20260821T202228Z/multi-turn-chat.json` | chat_send passes last 6 turns as conversation_so_far; Novi refers back across turns |
+| Conversation persistence across restart | `20260821T202540Z/conversation-persistence.json` | chat thread persisted to a durable chat table and restored on restart |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

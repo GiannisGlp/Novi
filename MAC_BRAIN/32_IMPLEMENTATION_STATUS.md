@@ -475,6 +475,13 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_chat_carries_conversation_history_across_turns` in `web/tests/test_web.py`; full suite **385 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/multi-turn-chat.json`.
 
+## Conversation persistence across restart (status: IMPLEMENTED)
+
+- New durable `chat` table in the store with `save_chat`/`load_chat`; the web server persists the chat thread on every turn and restores it on restart (`_load_chat_history`).
+- Verified: sent "my name is alice / what is my name?", restarted → the full thread is restored.
+- New test `test_chat_persists_across_restart` in `web/tests/test_web.py`; full suite **386 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/conversation-persistence.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

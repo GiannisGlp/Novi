@@ -1,0 +1,27 @@
+{
+  "slice": "Conversation persistence across restart",
+  "turns_before_restart": [
+    "my name is alice",
+    "what is my name?"
+  ],
+  "restored_chat_thread": [
+    {
+      "role": "user",
+      "text": "my name is alice"
+    },
+    {
+      "role": "novi",
+      "text": "human_speech_observed"
+    },
+    {
+      "role": "user",
+      "text": "what is my name?"
+    },
+    {
+      "role": "novi",
+      "text": "human_speech_observed"
+    }
+  ],
+  "persisted": true,
+  "mechanism": "server._append_chat persists to the durable chat table; _load_chat_history restores it on restart"
+}

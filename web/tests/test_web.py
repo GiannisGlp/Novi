@@ -214,6 +214,27 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_chat_persists_across_restart(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            db = str(Path(td) / "web.db")
+            s1 = NoviWebServer(port=0, store_path=db, auto_step=False, chat_llm=False)
+            s1.start()
+            try:
+                s1.chat_send("my name is alice")
+            finally:
+                s1.stop()
+
+            s2 = NoviWebServer(port=0, store_path=db, auto_step=False, chat_llm=False)
+            s2.start()
+            try:
+                self.assertTrue(s2._chat, "chat thread must be restored after restart")
+                self.assertIn("alice", s2._chat[0]["text"].lower())
+            finally:
+                s2.stop()
+
     def test_chat_uses_local_llm_when_available(self):
         s = self._server(auto_step=False, chat_llm=True)
         s._llm_available = True

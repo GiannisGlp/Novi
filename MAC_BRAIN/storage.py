@@ -155,6 +155,13 @@ CREATE TABLE IF NOT EXISTS plans (
     key         TEXT PRIMARY KEY,
     value       TEXT
 );
+
+CREATE TABLE IF NOT EXISTS chat (
+    seq         INTEGER PRIMARY KEY,
+    role        TEXT NOT NULL,
+    text        TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+);
 """
 
 
@@ -226,6 +233,25 @@ class DurableMemoryStore:
             self._conn.execute("ALTER TABLE memory_records ADD COLUMN purpose TEXT")
         if "consent" not in cols:
             self._conn.execute("ALTER TABLE memory_records ADD COLUMN consent INTEGER NOT NULL DEFAULT 1")
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS chat (seq INTEGER PRIMARY KEY, role TEXT NOT NULL, text TEXT NOT NULL, created_at TEXT NOT NULL)"
+        )
+        self._conn.commit()
+
+    # ---- chat (conversation persistence) ----
+    def save_chat(self, entries: list[dict[str, Any]]) -> None:
+        """Persist the chat thread (role/text turns) so it survives restart."""
+        self._conn.execute("DELETE FROM chat")
+        for entry in entries:
+            self._conn.execute(
+                "INSERT INTO chat (seq, role, text, created_at) VALUES (?, ?, ?, ?)",
+                (int(entry.get("seq", 0)), str(entry.get("role", "")), str(entry.get("text", "")), str(entry.get("created_at", ""))),
+            )
+        self._conn.commit()
+
+    def load_chat(self) -> list[dict[str, Any]]:
+        rows = self._conn.execute("SELECT seq, role, text, created_at FROM chat ORDER BY seq").fetchall()
+        return [{"seq": row["seq"], "role": row["role"], "text": row["text"], "created_at": row["created_at"]} for row in rows]
 
     # ---- memory ----
     def admit(
