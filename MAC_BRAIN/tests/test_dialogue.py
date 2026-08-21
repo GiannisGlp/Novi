@@ -132,6 +132,12 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertFalse(_is_introduction("hello"))
         self.assertFalse(_is_introduction(""))
 
+    def test_introduction_not_mistaken_for_state(self):
+        # "i'm <state>" is a status, not an introduction.
+        for s in ["i'm tired today", "i'm not sure", "i'm sorry", "i'm here",
+                  "i'm feeling tired", "i'm a bit cold"]:
+            self.assertFalse(_is_introduction(s), s)
+
     def test_joke_detection(self):
         self.assertTrue(_is_joke_request("tell me a joke"))
         self.assertTrue(_is_joke_request("can you make me laugh?"))

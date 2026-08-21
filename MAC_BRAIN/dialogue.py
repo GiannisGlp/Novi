@@ -215,9 +215,33 @@ _INTRO_REPLIES = [
 ]
 
 
+# Words that follow "i'm"/"i am" but signal a state/action, not a name —
+# "i'm tired", "i'm not sure", "i'm sorry", "i'm here" are not introductions.
+_STATE_WORDS = {
+    "tired", "hungry", "thirsty", "sad", "happy", "fine", "good", "well", "ok",
+    "okay", "sorry", "not", "just", "really", "here", "back", "home", "bored",
+    "excited", "scared", "cold", "hot", "done", "feeling", "trying", "looking",
+    "getting", "going", "being", "a", "the", "and", "today", "tonight", "now",
+    "sure", "serious", "curious", "tired", "upset", "angry", "busy",
+}
+
+
 def _extract_self_name(text: str) -> str:
     m = _INTRO.search(text)
-    return m.group(1).strip() if m else ""
+    if not m:
+        return ""
+    name = m.group(1).strip()
+    if not name:
+        return ""
+    words = name.split()
+    # A name is 1-3 alphabetic words; the first must not be a state/action word.
+    if not (1 <= len(words) <= 3):
+        return ""
+    if words[0].lower() in _STATE_WORDS:
+        return ""
+    if not all(w.replace("-", "").replace("'", "").isalpha() for w in words):
+        return ""
+    return name
 
 
 def _is_introduction(text: str) -> bool:

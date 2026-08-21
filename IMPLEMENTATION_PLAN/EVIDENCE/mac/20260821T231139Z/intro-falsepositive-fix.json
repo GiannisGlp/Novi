@@ -1,0 +1,22 @@
+{
+  "slice": "Natural conversation round 6: fix 'i'm <state>' misread as an introduction",
+  "false_positives_fixed": {
+    "i'm tired today": true,
+    "i'm not sure": true,
+    "i'm sorry": true,
+    "i'm here": true,
+    "i'm feeling tired": true
+  },
+  "true_introductions_still_detected": {
+    "my name is alice": true,
+    "i'm alice": true,
+    "i'm alice brown": true
+  },
+  "real_llm_before_fix": {
+    "i'm feeling tired today": "Feeling Tired Today \u2014 nice to put a name to you. I'll remember that."
+  },
+  "real_llm_after_fix": {
+    "i'm feeling tired today": "I hear you \u2014 tired can settle in deep. I'm feeling that too sometimes..."
+  },
+  "mechanism": "_extract_self_name rejects state/action words after 'i'm'/'i am' and requires a plausible 1-3-word alphabetic name, so 'i'm tired today' is treated as a status, not an introduction"
+}

@@ -660,6 +660,22 @@ that stops the conversation. Now:
   web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/continuation-natural.json`.
 
+## Fix "i'm \<state>" misread as an introduction (round 6 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing surfaced a false positive: the introduction detector matched
+"I'm" too broadly, so "i'm feeling tired today" was greeted as *"Feeling Tired
+Today — nice to put a name to you. I'll remember that."*
+
+- `_extract_self_name()` now rejects state/action words after "i'm"/"i am"
+  (tired, not sure, sorry, here, feeling, …) and requires a plausible 1-3-word
+  alphabetic name.
+- "i'm tired today", "i'm not sure", "i'm sorry", "i'm here" are no longer
+  introductions; "my name is alice", "i'm alice", "i'm alice brown" still are.
+- After the fix: "i'm feeling tired today" → a natural empathetic LLM reply
+  ("I hear you — tired can settle in deep…").
+- Tests: +1 regression test; fast suites **438 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/intro-falsepositive-fix.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
