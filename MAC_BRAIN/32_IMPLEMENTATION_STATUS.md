@@ -491,6 +491,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_conversation_summarization_trims_and_stores_summary` in `web/tests/test_web.py`; full suite **387 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/conversation-summarization.json`.
 
+## Web dashboard redesign (status: IMPLEMENTED)
+
+- Replaced the tabbed UI with a **single dashboard**: chat (left) + activity sidebar (right), so the most important activities and buttons are visible alongside the conversation.
+- Left: Conversation panel (chat thread + Send / Listen / Step once / confidence input).
+- Right sidebar: Activity stat cards + sparklines, Reasoning, Goals & Plan (with virtual floor map), Memory (consolidated summaries + recent narrative), Actions (audio events, goals, health check), and a live Event Log.
+- Verified: served HTML contains the dashboard grid, chat, stats, reasoning, goals+map, memory, actions, and event log; tabs removed; JS validated with `node --check`.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/dashboard-redesign.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -58,5 +58,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Multi-turn chat memory | `20260821T202228Z/multi-turn-chat.json` | chat_send passes last 6 turns as conversation_so_far; Novi refers back across turns |
 | Conversation persistence across restart | `20260821T202540Z/conversation-persistence.json` | chat thread persisted to a durable chat table and restored on restart |
 | Conversation summarization (Memory 3.4) | `20260821T202838Z/conversation-summarization.json` | long threads distilled into a durable conversation_summary memory and trimmed |
+| Web dashboard redesign | `20260821T203158Z/dashboard-redesign.json` | single dashboard: chat + key activities + buttons in one view; tabs removed |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

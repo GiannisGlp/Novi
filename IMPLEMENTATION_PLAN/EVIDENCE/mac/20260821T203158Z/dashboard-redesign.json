@@ -1,0 +1,15 @@
+{
+  "slice": "Web dashboard redesign: chat + key activities + buttons in one view",
+  "layout": "single dashboard grid: chat (left) + activity sidebar (right); tabs removed",
+  "left_column": ["Conversation panel (chat thread + input: Send / Listen / Step once / confidence)"],
+  "right_sidebar": [
+    "Activity: stat cards (cycle, health, mem, triples) + 3 sparklines",
+    "Reasoning: conclusion, confidence, route, action, rationale, recalled, detections",
+    "Goals & Plan: active goal, status, steps, distance, plan steps + virtual floor map",
+    "Memory: consolidated summaries + recent narrative",
+    "Actions: audio events (knock/alarm/footstep/unknown), goals (reach 1,1 / 3,0), health check",
+    "Event Log: live event stream (scrollable)"
+  ],
+  "verified": "served HTML contains dashboard grid, chat, stats, reasoning, goals+map, memory, actions, event log; tabs removed",
+  "mechanism": "single-page dashboard so the most important activities and buttons are visible alongside chat"
+}

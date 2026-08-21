@@ -23,30 +23,34 @@
   @keyframes glow { 0%,100%{box-shadow:0 0 4px var(--green);} 50%{box-shadow:0 0 14px var(--green);} }
   .badge { font-size:12px; color:var(--dim); }
   #health { padding:2px 8px; border:1px solid var(--border); border-radius:4px; }
-
-  .nav { display:flex; gap:6px; margin-left:18px; }
-  .nav button { background:transparent; border:1px solid transparent; color:var(--dim);
-                padding:6px 12px; border-radius:999px; cursor:pointer; font:inherit; font-size:13px; }
-  .nav button:hover { color:var(--text); }
-  .nav button.active { color:var(--accent); border-color:var(--accent); background:#10202f; }
-
   .modelwrap { margin-left:auto; display:flex; align-items:center; gap:8px; }
   #modelSelect { background:#1a2130; color:var(--text); border:1px solid var(--border);
                  border-radius:4px; padding:4px 8px; font:inherit; font-size:12px; }
 
-  .page { flex:1 1 auto; min-height:0; display:none; }
-  .page.active { display:flex; }
+  /* ---------- DASHBOARD LAYOUT ---------- */
+  .dash { flex:1 1 auto; min-height:0; display:grid;
+          grid-template-columns:minmax(0,1fr) 400px; gap:14px; padding:14px 20px; }
+  .chatcol { display:flex; flex-direction:column; min-height:0; }
+  .sidecol { display:flex; flex-direction:column; gap:14px; min-height:0;
+             overflow-y:auto; scrollbar-width:none; }
+  .sidecol::-webkit-scrollbar { display:none; }
 
-  /* ---------- CHAT PAGE (full window) ---------- */
-  #page-chat { flex-direction:column; }
-  .chatbody { flex:1 1 auto; min-height:0; overflow-y:auto; scrollbar-width:none;
-              display:flex; flex-direction:column; gap:12px; padding:20px 24px; }
-  .chatbody::-webkit-scrollbar { display:none; }
+  .panel { background:linear-gradient(180deg, #141a26, #10151f); border:1px solid var(--border);
+           border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .panel h2 { margin:0; padding:9px 14px; font-size:11px; text-transform:uppercase; letter-spacing:1.2px;
+              color:var(--dim); border-bottom:1px solid var(--border); background:rgba(255,255,255,.015); }
+  .panel .body { padding:12px; overflow:auto; }
+
+  /* ---------- CHAT PANEL ---------- */
+  .chatpanel { display:flex; flex-direction:column; min-height:0; }
+  .chatpanel .chatbody { flex:1 1 auto; min-height:0; overflow-y:auto; scrollbar-width:none;
+                         display:flex; flex-direction:column; gap:12px; padding:20px 24px; }
+  .chatpanel .chatbody::-webkit-scrollbar { display:none; }
   .empty { margin:auto; color:var(--dim); text-align:center; }
   .empty .ring { font-size:26px; animation:spin 2.4s linear infinite; display:inline-block; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
-  .turn { max-width:min(72%,620px); display:flex; gap:10px; align-items:flex-end;
+  .turn { max-width:min(78%,620px); display:flex; gap:10px; align-items:flex-end;
           animation:pop .22s ease; }
   @keyframes pop { from { opacity:0; transform:translateY(5px);} to {opacity:1; transform:none;} }
   .turn.start { align-self:flex-start; }   /* Novi: left */
@@ -91,16 +95,7 @@
   input[type=number] { width:70px; background:#0d1118; color:var(--text); border:1px solid var(--border);
                        border-radius:4px; padding:4px; font:inherit; }
 
-  /* ---------- STATE / LOG panels ---------- */
-  .layout { display:grid; grid-template-columns:minmax(300px,390px) 1fr; gap:14px;
-            padding:14px 20px; height:100%; width:100%; overflow:auto; }
-  .panel { background:linear-gradient(180deg, #141a26, #10151f); border:1px solid var(--border);
-           border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.25); }
-  .panel h2 { margin:0; padding:9px 14px; font-size:11px; text-transform:uppercase; letter-spacing:1.2px;
-              color:var(--dim); border-bottom:1px solid var(--border); background:rgba(255,255,255,.015); }
-  .panel .body { padding:12px; overflow:auto; }
-  .stack { display:flex; flex-direction:column; gap:14px; height:100%; min-height:0; }
-  .right { display:grid; grid-template-rows:auto auto 1fr; gap:14px; min-height:0; }
+  /* ---------- SIDEBAR PANELS ---------- */
   .kv { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #1c2230; }
   .kv .k { color:var(--dim); } .kv .v { color:#eaf2fb; text-align:right; max-width:62%; word-break:break-word; }
   .affect { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
@@ -119,9 +114,8 @@
   .stat .k { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
   .stat .v { font-size:20px; font-weight:700; color:#eaf2fb; line-height:1.1; }
 
-  .logpage { padding:14px 20px; overflow-y:auto; scrollbar-width:none; width:100%; }
-  .logpage::-webkit-scrollbar { display:none; }
-  .log { display:flex; flex-direction:column; font-size:12px; }
+  .log { display:flex; flex-direction:column; font-size:12px; max-height:220px; overflow-y:auto; scrollbar-width:none; }
+  .log::-webkit-scrollbar { display:none; }
   .log .ev { padding:4px 10px; border-bottom:1px dashed #182030; display:flex; gap:10px; animation:pop .15s ease; }
   .log .ev .t { color:var(--dim); flex:0 0 70px; }
   .log .ev .e { color:#cfd8e3; white-space:pre-wrap; word-break:break-word; }
@@ -131,11 +125,6 @@
 <body>
 <header>
   <div class="logo"><span class="dot"></span><h1>NOVI</h1></div>
-  <nav class="nav">
-    <button id="tabChat" class="active">Chat</button>
-    <button id="tabState">State</button>
-    <button id="tabLog">Event Log</button>
-  </nav>
   <span class="badge" id="runid">…</span>
   <span class="badge">cycle <b id="cycle">0</b></span>
   <span class="badge" id="health" class="health-PASS">—</span>
@@ -145,69 +134,71 @@
   </div>
 </header>
 
-<!-- CHAT PAGE -->
-<div class="page active" id="page-chat">
-  <div class="chatbody" id="chat"></div>
-  <div class="chatinput">
-    <textarea id="say" placeholder='Ask Novi, e.g. "alice moved the door" …' rows="1"></textarea>
-    <div class="row">
-      <button id="sendBtn" class="primary">Send</button>
-      <button id="listenBtn">🎤 Listen</button>
-      <button id="stepBtn">⏭ Step once</button>
-      <span class="muted">conf <input type="number" id="conf" value="0.9" step="0.05" min="0" max="1"></span>
+<div class="dash">
+  <!-- LEFT: CHAT -->
+  <div class="chatcol">
+    <div class="panel chatpanel">
+      <h2>Conversation</h2>
+      <div class="chatbody" id="chat"></div>
+      <div class="chatinput">
+        <textarea id="say" placeholder='Ask Novi, e.g. "alice moved the door" …' rows="1"></textarea>
+        <div class="row">
+          <button id="sendBtn" class="primary">Send</button>
+          <button id="listenBtn">🎤 Listen</button>
+          <button id="stepBtn">⏭ Step once</button>
+          <span class="muted">conf <input type="number" id="conf" value="0.9" step="0.05" min="0" max="1"></span>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- STATE PAGE -->
-<div class="page" id="page-state">
-  <div class="layout">
-    <div class="stack">
-      <div class="panel"><h2>Reasoning</h2><div class="body" id="reasoning"><span class="muted">awaiting cycle…</span></div></div>
-      <div class="panel"><h2>Soul</h2><div class="body" id="soul"><span class="muted">…</span></div></div>
-      <div class="panel"><h2>Goals &amp; Plan</h2><div class="body">
-        <div id="goals"><span class="muted">…</span></div>
-        <canvas id="map" width="340" height="180"></canvas>
-      </div></div>
-      <div class="panel"><h2>Knowledge &amp; Hearing</h2><div class="body" id="khearing"><span class="muted">…</span></div></div>
-      <div class="panel"><h2>Consolidated Memory</h2><div class="body" id="summaries"><span class="muted">no summaries yet</span></div></div>
-      <div class="panel"><h2>Recent Narrative</h2><div class="body" id="narrative"><span class="muted">nothing yet</span></div></div>
-    </div>
-    <div class="right">
-      <div class="panel"><h2>Activity</h2><div class="body">
-        <div class="stats">
-          <div class="stat"><span class="k">cycle</span><span class="v" id="statCycle">0</span></div>
-          <div class="stat"><span class="k">health</span><span class="v" id="statHealth">—</span></div>
-          <div class="stat"><span class="k">mem</span><span class="v" id="statMem">0</span></div>
-          <div class="stat"><span class="k">triples</span><span class="v" id="statTriples">0</span></div>
-        </div>
-        <div class="sparks">
-          <div class="spark"><label>Events / sec</label><canvas id="evSpark" width="560" height="34"></canvas></div>
-          <div class="spark"><label>Confidence</label><canvas id="confSpark" width="560" height="34"></canvas></div>
-          <div class="spark"><label>Knowledge (triples)</label><canvas id="memSpark" width="560" height="34"></canvas></div>
-        </div>
-      </div></div>
-      <div class="panel"><h2>Actions</h2><div class="body">
-        <div class="actions">
-          <div class="group">Audio events</div>
-          <button data-audio="knock">🔨 Knock</button>
-          <button data-audio="alarm">🚨 Alarm</button>
-          <button data-audio="footstep">👣 Footstep</button>
-          <button data-audio="">✨ Unknown sound</button>
-          <div class="group">Goals</div>
-          <button data-goal="1,1">Reach (1,1)</button>
-          <button data-goal="3,0">Reach (3,0)</button>
-          <div class="group">System</div>
-          <button id="healthBtn">Health check</button>
-        </div>
-      </div></div>
-    </div>
+  <!-- RIGHT: ACTIVITY DASHBOARD -->
+  <div class="sidecol">
+    <div class="panel"><h2>Activity</h2><div class="body">
+      <div class="stats">
+        <div class="stat"><span class="k">cycle</span><span class="v" id="statCycle">0</span></div>
+        <div class="stat"><span class="k">health</span><span class="v" id="statHealth">—</span></div>
+        <div class="stat"><span class="k">mem</span><span class="v" id="statMem">0</span></div>
+        <div class="stat"><span class="k">triples</span><span class="v" id="statTriples">0</span></div>
+      </div>
+      <div class="sparks">
+        <div class="spark"><label>Events / sec</label><canvas id="evSpark" width="560" height="34"></canvas></div>
+        <div class="spark"><label>Confidence</label><canvas id="confSpark" width="560" height="34"></canvas></div>
+        <div class="spark"><label>Knowledge (triples)</label><canvas id="memSpark" width="560" height="34"></canvas></div>
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>Reasoning</h2><div class="body" id="reasoning"><span class="muted">awaiting cycle…</span></div></div>
+
+    <div class="panel"><h2>Goals &amp; Plan</h2><div class="body">
+      <div id="goals"><span class="muted">…</span></div>
+      <canvas id="map" width="340" height="180"></canvas>
+    </div></div>
+
+    <div class="panel"><h2>Memory</h2><div class="body">
+      <div class="muted" style="margin-bottom:4px">Consolidated</div>
+      <div id="summaries"><span class="muted">no summaries yet</span></div>
+      <div class="muted" style="margin:10px 0 4px">Recent narrative</div>
+      <div id="narrative"><span class="muted">nothing yet</span></div>
+    </div></div>
+
+    <div class="panel"><h2>Actions</h2><div class="body">
+      <div class="actions">
+        <div class="group">Audio events</div>
+        <button data-audio="knock">🔨 Knock</button>
+        <button data-audio="alarm">🚨 Alarm</button>
+        <button data-audio="footstep">👣 Footstep</button>
+        <button data-audio="">✨ Unknown sound</button>
+        <div class="group">Goals</div>
+        <button data-goal="1,1">Reach (1,1)</button>
+        <button data-goal="3,0">Reach (3,0)</button>
+        <div class="group">System</div>
+        <button id="healthBtn">Health check</button>
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>Event Log</h2><div class="body"><div class="log" id="log"><span class="muted">waiting for events…</span></div></div></div>
   </div>
-</div>
-
-<!-- EVENT LOG PAGE -->
-<div class="page" id="page-log">
-  <div class="logpage"><div class="log" id="log"><span class="muted">waiting for events…</span></div></div>
 </div>
 
 <script>
@@ -218,16 +209,6 @@ const confHist = [], memHist = [], evHist = [];
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
 function h(sc) { return '<span class="health-'+sc+'">'+sc+'</span>'; }
-
-// ---- tabs ----
-function showPage(name){
-  ['chat','state','log'].forEach(p => $('page-'+p).classList.toggle('active', p===name));
-  ['Chat','State','Log'].forEach((t,i) => ['tabChat','tabState','tabLog'][i].classList.toggle('active', ['chat','state','log'][i]===name));
-  if (name==='state') drawSparks();
-}
-$('tabChat').onclick = () => showPage('chat');
-$('tabState').onclick = () => showPage('state');
-$('tabLog').onclick = () => showPage('log');
 
 // ---- model switcher ----
 async function loadModels() {
@@ -322,29 +303,24 @@ async function refreshChat() {
 function drawSpark(cv, vals, color) {
   const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
   ctx.clearRect(0,0,W,H);
-  // baseline
   ctx.strokeStyle = '#1a2230'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0,H-1); ctx.lineTo(W,H-1); ctx.stroke();
   if (!vals || vals.length === 0) return;
   const n = vals.length;
   const max = Math.max(...vals), min = Math.min(...vals);
-  // if the series is flat, center the line instead of pinning it to the bottom
   const span = (max - min) || 1;
   const pad = 4;
   const y = v => H - pad - ((v - min) / span) * (H - pad*2);
-  // area fill
   ctx.fillStyle = color + '22';
   ctx.beginPath(); ctx.moveTo(0, H-1);
   for (let i=0;i<n;i++) ctx.lineTo((i/(n-1))*W, y(vals[i]));
   ctx.lineTo(W, H-1); ctx.closePath(); ctx.fill();
-  // line
   ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
   for (let i=0;i<n;i++){
     const x = (i/(n-1))*W, yy = y(vals[i]);
     i===0 ? ctx.moveTo(x,yy) : ctx.lineTo(x,yy);
   }
   ctx.stroke();
-  // end dot
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(W, y(vals[n-1]), 2.5, 0, 2*Math.PI); ctx.fill();
 }
@@ -412,7 +388,7 @@ async function refreshState() {
     const so = s.soul || {};
     let affect = '';
     for (const [k,v] of Object.entries(so.affect||{})) affect += '<span>'+k+':'+v.toFixed(2)+'</span>';
-    $('soul').innerHTML = kv('identity', so.identity) + kv('tone', so.tone) + '<div class="affect">'+affect+'</div>';
+    const soulEl = $('soul'); if (soulEl) soulEl.innerHTML = kv('identity', so.identity) + kv('tone', so.tone) + '<div class="affect">'+affect+'</div>';
     let g = '';
     if (s.active_goal) {
       g += kv('active', s.active_goal.kind + ' → ' + s.active_goal.target);
@@ -431,7 +407,7 @@ async function refreshState() {
     const kn = s.knowledge || {};
     memHist.push(kn.triples||0); if (memHist.length>60) memHist.shift();
     const hv = (s.hearing||[]).map(e=>e.event_type).join(', ') || 'silence';
-    $('khearing').innerHTML = kv('triples', kn.triples) + kv('entities', kn.entities) + kv('contradicted', kn.contradicted)
+    const kh = $('khearing'); if (kh) kh.innerHTML = kv('triples', kn.triples) + kv('entities', kn.entities) + kv('contradicted', kn.contradicted)
       + kv('memory.active', s.memory && s.memory.active!=null ? s.memory.active : '—') + kv('heard', hv);
     const sums = (s.memory && s.memory.summaries) || [];
     $('summaries').innerHTML = sums.length
@@ -439,7 +415,6 @@ async function refreshState() {
       : '<span class="muted">no summaries yet</span>';
     const narr = (s.narrative || []).join(' ');
     $('narrative').innerHTML = narr ? '<div class="kv"><span class="v">'+esc(narr)+'</span></div>' : '<span class="muted">nothing yet</span>';
-    // stat cards
     $('statCycle').textContent = s.cycle;
     $('statHealth').textContent = hth.status||'UNKNOWN';
     $('statHealth').className = 'health-'+ (hth.status||'UNKNOWN');
@@ -465,7 +440,6 @@ async function refreshEvents() {
       }
       while (log.children.length > 500) log.removeChild(log.firstChild);
       log.scrollTop = log.scrollHeight;
-      // feed the Events/sec sparkline (spikes when Novi is active)
       evHist.push(r.events.length); if (evHist.length>60) evHist.shift();
       drawSparks();
     } else {
