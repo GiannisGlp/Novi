@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import threading
 import time
 import urllib.request
@@ -244,6 +245,17 @@ class NoviWebServer:
         adm = r["admission"]
         return {"accepted": adm.accepted, "memory_id": adm.memory_id, "reasoning": r["reasoning"], "confidence": r["confidence"]}
 
+    def _clean_chat_text(self, text: str) -> str:
+        """Strip the '[heard] ' display marker before text reaches the LLM/history,
+        so Novi doesn't think the user addressed 'the system' or a 'heard' marker."""
+        return re.sub(r"^\s*\[heard\]\s*", "", text)
+
+    def _build_history(self, limit: int = 12) -> list[dict[str, Any]]:
+        return [{"role": c["role"], "text": self._clean_chat_text(c["text"])} for c in self._chat[-limit:]]
+
+    def _recent_novi(self, limit: int = 4) -> list[str]:
+        return [self._clean_chat_text(c["text"]) for c in reversed(self._chat) if c.get("role") == "novi"][:limit]
+
     def chat_send(self, text: str, confidence: float = 0.9) -> dict[str, Any]:
         """Hear the user message, let the brain decide, and append a chat turn."""
         with self._lock:
@@ -258,10 +270,10 @@ class NoviWebServer:
         # communicative act grounded in soul/relationship/identity/memory and
         # enforces the no-assistant/no-repetition rules. The web layer only
         # supplies conversation history, the addressee, and the LLM transport.
-        history = [{"role": c["role"], "text": c["text"]} for c in self._chat[-12:]]
+        history = self._build_history(12)
         addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
         self.brain._learn_from_chat(text, addressee)
-        recent_novi = [c["text"] for c in reversed(self._chat) if c.get("role") == "novi"][:4]
+        recent_novi = self._recent_novi(4)
         last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
         transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
         reply_obj = self.brain.compose_reply(
@@ -308,10 +320,10 @@ class NoviWebServer:
             return {"heard": "", "accepted": True, "novi": None, "llm": False}
         addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
         self.brain._learn_from_chat(text, addressee)
-        recent_novi = [c["text"] for c in reversed(self._chat) if c.get("role") == "novi"][:4]
+        recent_novi = self._recent_novi(4)
         last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
         transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
-        reply_obj = self.brain.compose_reply(text, person=addressee, history=None, llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi)
+        reply_obj = self.brain.compose_reply(text, person=addressee, history=self._build_history(12), llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi)
         reply = reply_obj["text"]
         self._append_chat({"role": "user", "text": f"[heard] {text}"})
         if reply is not None:

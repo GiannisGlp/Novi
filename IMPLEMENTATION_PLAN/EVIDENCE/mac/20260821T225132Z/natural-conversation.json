@@ -1,0 +1,15 @@
+{
+  "slice": "Natural conversation: fix awkward greeting + meta-referential replies (round 1)",
+  "reported_example": {
+    "user_hello": "Hello.",
+    "old_novi": "Hello! I'm Novi, and it's nice to meet you. I noticed you greeted the system \u2014 I'm curious, what's on your mind today?",
+    "new_novi": "hey \u2014 good to see you.",
+    "reason": "You just greeted me, so I replied warmly and briefly \u2014 no need to over-explain.",
+    "old_bad_was_rejected_now": true
+  },
+  "meta_referential_now_rejected": true,
+  "whats_on_your_mind_forbidden": true,
+  "greeting_detected": true,
+  "sample_greeting_reply": "hey \u2014 good to see you.",
+  "mechanism": "pure greetings get a short warm reply; assistant openers ('what's on your mind', 'how can I help you today') are forbidden; meta-narration of the conversation is rejected; '[heard]' marker is stripped from LLM history"
+}

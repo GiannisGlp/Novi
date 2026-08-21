@@ -80,6 +80,12 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_clean_chat_text_strips_heard_marker(self):
+        s = self._server(auto_step=False)
+        self.assertEqual(s._clean_chat_text("[heard] Hello."), "Hello.")
+        self.assertEqual(s._clean_chat_text("  [heard] hi there"), "hi there")
+        self.assertEqual(s._clean_chat_text("plain message"), "plain message")
+
     def test_chat_send_reflects_message(self):
         s = self._server(auto_step=False)
         s.start()

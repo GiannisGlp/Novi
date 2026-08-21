@@ -46,8 +46,30 @@ _FORBIDDEN = [
         r"\bi (don'?t|do not|have no) (have )?feelings?\b",
         r"\bi('?m| am) (just )?a (?:large )?language model\b",
         r"\bis there anything else (i can )?help\b",
+        r"\bwhat('?s| is) on your mind\b",
+        r"\btell me what('?s| is) on your mind\b",
+        r"\bhow can i (?:help|assist) you today\b",
     )
 ]
+
+# Patterns that narrate/analyze the conversation itself rather than answering.
+# Natural people don't say "in our conversation…"; they just respond. A reply
+# that does this is rejected so compose_reply can nudge for a direct answer.
+_META_REFERENTIAL = [
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\bin our conversation\b",
+        r"\bin this conversation\b",
+        r"\bthat('?s| is) the main interaction\b",
+        r"\bthe main interaction we('?ve| have) had\b",
+        r"\byou greeted (me|the)\b",
+        r"\bthat('?s| is) all we('?ve| have) (talked|spoken) about\b",
+    )
+]
+
+
+def _is_meta_referential(text: str) -> bool:
+    return any(p.search(text) for p in _META_REFERENTIAL)
 
 _SENTENCE_END = re.compile(r"[.!?]\s")
 
@@ -109,6 +131,34 @@ _STOPWORDS = {
     "whenever", "somewhere", "anywhere", "anytime", "still", "also",
     "always", "never", "often", "sometimes", "really", "actually", "maybe",
 }
+
+
+_GREETING = re.compile(
+    r"^\s*(hi|hiya|hello|hey|heya|howdy|yo|hola|morning|good morning|good afternoon|good evening|greetings)"
+    r"( there| everyone| all| friend)?[!.?\s]*$",
+    re.IGNORECASE,
+)
+
+_GREETING_REPLIES = [
+    "hey — good to see you.",
+    "oh, hey, you're here.",
+    "hi there — glad you're around.",
+    "hey, nice to hear from you.",
+]
+
+
+def _is_greeting(text: str) -> bool:
+    """True when the user line is just a greeting (pure hello/hi/hey), no question."""
+    return bool(_GREETING.match(text.strip()))
+
+
+def greeting_reply(cycle: int = 0) -> str:
+    """A short, warm, natural greeting reply (no assistant phrasing, no intro).
+
+    Deterministic and cycle-varied so it is auditable, non-repetitive, and never
+    over-explains like 'I'm Novi, what's on your mind today?'.
+    """
+    return _GREETING_REPLIES[cycle % len(_GREETING_REPLIES)]
 
 
 def _extract_topic(text: str) -> str:
@@ -261,6 +311,8 @@ class DialogueEngine:
         if _is_repetitive(cleaned, last_novi_text):
             return {"text": None, "silent": False, "rejected": True}
         if _is_near_repetitive(cleaned, recent_novi):
+            return {"text": None, "silent": False, "rejected": True}
+        if _is_meta_referential(cleaned):
             return {"text": None, "silent": False, "rejected": True}
         cleaned = _reduce_name_repetition(cleaned, addressee_name)
         cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()

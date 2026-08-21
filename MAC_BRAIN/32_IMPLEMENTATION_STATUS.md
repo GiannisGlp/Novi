@@ -567,6 +567,26 @@ Targets the objective's "everything must have a reason".
   web suite **24 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reason-for-everything.json`.
 
+## Natural conversation (round 1 of the naturalness objective) (status: IMPLEMENTED)
+
+Targets the user's report that conversations don't feel natural, using the concrete
+example ("Hello." → "...I noticed you greeted the system — what's on your mind today?").
+
+- **Pure greetings get a short, warm reply.** `_is_greeting()` detects a bare
+  hello/hi/hey; `compose_reply` returns a brief greeting (`greeting_reply`) instead
+  of over-explaining or analyzing the greeting.
+- **Assistant openers forbidden.** Added "what's on your mind", "how can I help you
+  today" to the forbidden set.
+- **No meta-narration of the conversation.** `_is_meta_referential()` rejects
+  replies like "In our conversation, you greeted me…" and nudges toward a direct
+  answer.
+- **`[heard]` marker no longer leaks into LLM history.** The web layer strips the
+  display marker (`_clean_chat_text`) before building the conversation context, so
+  Novi doesn't think the user addressed "the system".
+- Verified: "Hello." now replies "hey — good to see you."; the previously awkward
+  reply would be rejected. Fast suites **421 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/natural-conversation.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

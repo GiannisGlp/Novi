@@ -32,7 +32,7 @@ from .lexicon import LearnedPreferences, Lexicon
 from .social import Relationships, SocialIntelligence, TIER_EXPRESSION, SocialInitiative, InitiativeConfig
 from .soul import Soul
 from .storage import DurableMemoryStore
-from .dialogue import DialogueEngine, _extract_topic, followup_question, natural_fallback
+from .dialogue import DialogueEngine, _extract_topic, _is_greeting, followup_question, greeting_reply, natural_fallback
 from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
 from .models import (
@@ -1185,6 +1185,8 @@ class MacBrain:
             "If you have learned something about the person over time (their likes, dislikes, preferences), use it naturally "
             "(e.g. 'you like jazz') rather than sounding like a stranger. "
             "If you have nothing relevant, say so briefly and honestly — never invent facts. "
+            "Never narrate or analyze the conversation itself (no 'in our conversation', 'you greeted me', 'the main interaction we've had') — just answer what was just said. "
+            "Do not ask 'what's on your mind?' or 'how can I help?'. "
             "Do not repeat what you already said, and do not say the person's name more than once unless it changes meaning. "
             "Reply in 1-3 short, natural spoken sentences. Vary your openings; no disclaimers, no chain of thought — just the answer."
             + caps_clause
@@ -1243,6 +1245,11 @@ class MacBrain:
         """
         if llm_chat is None:
             return {"text": None, "fallback": False, "grounding": {}}
+        # A pure greeting deserves a short, warm reply — not an analysis of the
+        # greeting ("I noticed you greeted the system") or "what's on your mind?".
+        if _is_greeting(text):
+            g = greeting_reply(cycle=self._cycle)
+            return {"text": g, "fallback": False, "reason": "You just greeted me, so I replied warmly and briefly — no need to over-explain.", "grounding": {"route": "greeting"}}
         self_state = self._chat_self_state()
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)

@@ -14,10 +14,13 @@ from MAC_BRAIN.dialogue import (
     DialogueEngine,
     _extract_topic,
     _is_forbidden,
+    _is_greeting,
+    _is_meta_referential,
     _is_near_repetitive,
     _is_repetitive,
     _reduce_name_repetition,
     followup_question,
+    greeting_reply,
     natural_fallback,
 )
 from MAC_BRAIN.runtime import MacBrain
@@ -77,6 +80,37 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(line)
             self.assertFalse(_is_forbidden(line))
 
+    def test_greeting_detection(self):
+        self.assertTrue(_is_greeting("Hello."))
+        self.assertTrue(_is_greeting("hey there"))
+        self.assertTrue(_is_greeting("good morning"))
+        self.assertFalse(_is_greeting("what is your name"))
+        self.assertFalse(_is_greeting(""))
+
+    def test_greeting_reply_is_short_and_natural(self):
+        for i in range(8):
+            g = greeting_reply(cycle=i)
+            self.assertTrue(g)
+            self.assertLess(len(g), 60)
+            self.assertFalse(_is_forbidden(g))
+
+    def test_meta_referential_reply_rejected(self):
+        self.assertTrue(_is_meta_referential("In our conversation, you greeted me and I responded warmly."))
+        self.assertTrue(_is_meta_referential("I'm not sure what you mean. That's the main interaction we've had."))
+        self.assertFalse(_is_meta_referential("I remember that alice moved the door."))
+
+    def test_engine_rejects_meta_referential_reply(self):
+        eng = DialogueEngine()
+        r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")
+        self.assertIsNone(r["text"])
+        self.assertTrue(r["rejected"])
+
+    def test_engine_rejects_whats_on_your_mind(self):
+        eng = DialogueEngine()
+        r = eng.reply(system="s", user="u", llm_chat=lambda **k: "What's on your mind today?")
+        self.assertIsNone(r["text"])
+        self.assertTrue(r["rejected"])
+
     def test_followup_question_is_in_context(self):
         q = followup_question("do you know anything about the garden lights?")
         self.assertIn("garden", q.lower())
@@ -129,12 +163,21 @@ class ComposeReplyTests(unittest.TestCase):
 
     def test_falls_back_naturally_when_reply_rejected(self):
         b = self._brain()
-        r = b.compose_reply("hi", llm_chat=lambda **k: "Hi I am Novi, how can I help you")
+        r = b.compose_reply("tell me about yourself", llm_chat=lambda **k: "Hi I am Novi, how can I help you")
         self.assertIsNotNone(r["text"])
         self.assertTrue(r["fallback"])
         self.assertFalse(_is_forbidden(r["text"]))
         # the forbidden phrase must never reach the user
         self.assertNotIn("how can i help", r["text"].lower())
+
+    def test_greeting_gets_short_warm_reply(self):
+        b = self._brain()
+        r = b.compose_reply("Hello.", llm_chat=lambda **kw: "ignored")
+        self.assertIsNotNone(r["text"])
+        self.assertFalse(r["fallback"])
+        self.assertLess(len(r["text"]), 60, "greeting reply should be short")
+        self.assertNotIn("what's on your mind", r["text"].lower())
+        self.assertNotIn("system", r["text"].lower())
 
     def test_reply_carries_specific_reason(self):
         b = self._brain()
