@@ -321,6 +321,15 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests: router built, listen gating, plan + goal distance in state (web tests → 14).
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-real-sensing-router-task.json`.
 
+## Learn names from discussion + incremental identity persistence (status: IMPLEMENTED)
+
+- **Entity extraction** (`MacBrain._entities_in_text`) previously only recognized a hardcoded handful (`alice`, `door`, …) — a brand-new name like `Vano` was invisible, so Novi couldn't learn people from conversation. It now also recognizes capitalized proper nouns (plus the known person-name labels and perceived world entities), so new people/places are learned from natural discussion.
+- **Identity persistence**: person-name bindings (who Novi has recognized) were only saved on graceful `stop()`; now `identity.observe` triggers `_persist_identity()` → `save_identity()` immediately (WAL), mirroring the incremental knowledge persistence.
+- **Chat recall**: the web reply context now includes known people, so Novi can say *"yes, I remember you — you're Vano."*
+- Verified on-device: told Novi *"Hi novi, its me Vano"* → identity recorded `person→vano`; then `SIGKILL` (no graceful stop) → a fresh process on the same store still held the binding.
+- New tests: name learned from conversation; identity persisted-before-stop and reloads-on-start (334 passing).
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/learn-names-identity-persistence.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

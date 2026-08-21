@@ -291,11 +291,27 @@ class NoviWebServer:
                 facts.append(f"{t.subject} {t.predicate} {t.object}")
         return "; ".join(facts)
 
+    def _known_persons(self) -> list[str]:
+        idn = getattr(self.brain, "identity", None)
+        if idn is None:
+            return []
+        try:
+            snap = idn.snapshot()
+            names: set[str] = set()
+            for binds in snap.get("bindings", {}).values():
+                names.update(binds.keys())
+            return sorted(names)
+        except Exception:  # noqa: BLE001
+            return []
+
     def _generate_reply(self, text: str) -> tuple[str | None, bool]:
         if not self.chat_llm or not self._llm_up():
             return None, False
         tone = self.brain.soul.tone({}).get("tone", "neutral")
         facts = self._knowledge_context(text)
+        known = self._known_persons()
+        if known:
+            facts = "; ".join([f for f in facts.split("; ") if f] + [f"I know the person named {p}" for p in known])
         system = (
             "You are Novi, a curious embodied AI who remembers things you have been told. "
             "You are given a list of facts that you DO know. "

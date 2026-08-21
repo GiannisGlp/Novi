@@ -177,6 +177,20 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_learns_user_name_from_conversation(self):
+        from MAC_BRAIN.models.stt import TranscriptionResult
+
+        s = self._server(auto_step=False)
+        s.start()
+        try:
+            s.brain.ingest_transcript(TranscriptionResult(text="Hi novi, its me Vano", language="en", confidence=0.9, audio_path="", provider="web", model_id="web"))
+            # entity extraction now recognizes the new proper noun
+            self.assertIn("vano", s.brain._entities_in_text("Hi novi, its me Vano"))
+            # identity binding is recorded and surfaced for chat replies
+            self.assertIn("vano", s._known_persons())
+        finally:
+            s.stop()
+
 
 if __name__ == "__main__":
     unittest.main()

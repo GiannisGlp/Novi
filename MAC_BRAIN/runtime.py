@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -237,6 +238,7 @@ class MacBrain:
             self.beliefs.observe(detection.label, True, confidence=detection.confidence, now=now)
             if detection.label in {"person", "human", "face"}:
                 self.identity.observe("person", confidence=detection.confidence, modality="vision", cycle=self._cycle)
+                self._persist_identity()
         identity = self.identity.identity_for("person")
         if identity is not None:
             self._emit("identity.observed", {"cycle": self._cycle, "person": identity.person, "name": identity.name, "tier": identity.tier, "confidence": identity.confidence})
@@ -556,6 +558,7 @@ class MacBrain:
         name = next((ref for ref in entity_refs if self._is_person_name(ref)), None)
         if name is not None:
             self.identity.observe("person", name=name, confidence=transcription.confidence, modality="speech", cycle=self._cycle)
+            self._persist_identity()
             self._emit("identity.named", {"cycle": self._cycle, "name": name, "confidence": transcription.confidence})
         self._learn_triples(transcription.text, entity_refs, transcription.confidence, source="audio.stt")
         classification = self.governance.classify(memory_type="utterance", content=transcription.text, entity_refs=entity_refs, modality="speech")
@@ -643,10 +646,43 @@ class MacBrain:
                 self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
             self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "perception", "accepted": admission.accepted, "entity": detection.label})
 
+    # Capitalized words that are not real proper nouns (start-of-sentence articles,
+    # pronouns, small function words) are not candidate entities.
+    _ENTITY_STOPWORDS = frozenset(
+        {
+            "the", "a", "an", "i", "my", "me", "you", "your", "yours", "he", "she", "his", "her",
+            "we", "us", "they", "them", "hi", "hello", "hey", "its", "it's", "do", "does", "did",
+            "is", "am", "are", "was", "were", "be", "been", "of", "to", "and", "or", "in", "on",
+            "at", "with", "what", "who", "when", "where", "how", "why", "remember", "name", "called",
+            "like", "love", "not", "no", "yes", "ok", "so", "just", "very", "really", "please",
+        }
+    )
+
     def _entities_in_text(self, text: str) -> tuple[str, ...]:
-        known = set(self.world.state.entities) | {"alice", "door", "person", "table", "room", "kitchen", "object", "window"}
-        lowered = text.lower()
-        return tuple(sorted(name for name in known if name in lowered))
+        """Entities mentioned in a message.
+
+        Starts from the known object/place labels, person-name labels, and
+        currently-perceived world entities, then adds capitalized proper nouns
+        (so brand-new people and places — like a user's name — are learned).
+        """
+        from .privacy import _PERSON_LABELS
+
+        known = set(self.world.state.entities) | {
+            "alice", "bob", "door", "person", "table", "room", "kitchen", "object", "window", "lamp", "chair", "plant",
+        } | set(_PERSON_LABELS)
+        found = {n.lower() for n in known if n in text.lower()}
+        tokens = re.findall(r"[A-Za-z][A-Za-z'-]*", text)
+        for idx, word in enumerate(tokens):
+            if not word or not word[0].isupper():
+                continue
+            low = word.lower()
+            if low in self._ENTITY_STOPWORDS or low in found:
+                continue
+            # skip the very first token when it is a bare sentence start ("Hi", "My", "The")
+            if idx == 0 and low in {"hi", "hello", "hey", "my", "the", "i", "you", "well", "yeah", "ok"}:
+                continue
+            found.add(low)
+        return tuple(sorted(found))
 
     @staticmethod
     def _is_person_name(ref: str) -> bool:
@@ -673,6 +709,13 @@ class MacBrain:
         """
         if isinstance(self.memory, DurableMemoryStore):
             self.memory.save_knowledge(self.knowledge.snapshot())
+
+    def _persist_identity(self) -> None:
+        """Persist person-identity bindings immediately (WAL-backed), mirroring
+        incremental knowledge persistence, so who Novi has recognized survives a
+        crash or hard kill rather than only a graceful stop()."""
+        if isinstance(self.memory, DurableMemoryStore):
+            self.memory.save_identity(self.identity.snapshot())
 
     def retrieve_knowledge(self, entity: str, *, limit: int = 10) -> dict[str, Any]:
         """Return the knowledge-graph context around an entity."""

@@ -1,0 +1,24 @@
+{
+  "learned_from_chat": "Hi novi, its me Vano",
+  "entity_extraction": "recognizes new proper nouns (Vano) via capitalized-noun heuristic + person-name labels",
+  "identity_persisted_after_hard_kill": {
+    "bindings": {
+      "person": {
+        "vano": {
+          "confidences": [
+            0.9
+          ],
+          "cycle": 3,
+          "modalities": [
+            "speech"
+          ]
+        }
+      }
+    },
+    "presence": {
+      "person": 3
+    }
+  },
+  "survived_crash": true,
+  "mechanism": "runtime._entities_in_text -> identity.observe -> _persist_identity -> save_identity (immediate WAL)"
+}

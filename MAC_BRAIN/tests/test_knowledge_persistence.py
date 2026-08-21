@@ -65,6 +65,37 @@ class IncrementalKnowledgePersistenceTests(unittest.TestCase):
         g.add("alice", "moved", "door", confidence=0.8, cycle=2)
         self.assertEqual(len(calls), 2)
 
+    def test_identity_persists_before_stop(self):
+        """Person-name bindings are written to the store immediately (not only on stop)."""
+        with tempfile.TemporaryDirectory() as td:
+            db = str(Path(td) / "id.db")
+            b1 = self._brain(db)
+            b1.start()
+            self._hear(b1, "Hi novi, its me Vano")
+            snap = b1.memory.load_identity()  # must already be persisted, before stop()
+            self.assertIsNotNone(snap)
+            names = {n for binds in snap.get("bindings", {}).values() for n in binds}
+            self.assertIn("vano", names)
+            b1.stop()
+
+    def test_identity_reloads_on_start(self):
+        """A fresh brain on the same store recognizes the person from a prior run."""
+        with tempfile.TemporaryDirectory() as td:
+            db = str(Path(td) / "id2.db")
+            b1 = self._brain(db)
+            b1.start()
+            self._hear(b1, "Hi novi, its me Vano")
+            b1.stop()
+            b2 = self._brain(db)
+            b2.start()
+            try:
+                belief = b2.identity.identity_for("person")
+                self.assertIsNotNone(belief)
+                binds = b2.identity.snapshot()["bindings"].get("person", {})
+                self.assertIn("vano", binds)
+            finally:
+                b2.stop()
+
 
 if __name__ == "__main__":
     unittest.main()
