@@ -398,6 +398,13 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests `MAC_BRAIN/tests/test_consolidation_summary.py` (4); full suite **364 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/consolidation-summary.json`.
 
+## Goal-resume across restart: mid-pursuit step-budget preservation (status: IMPLEMENTED)
+
+- Goal-resume across restart was already implemented (`_load_goals()` restores active/pending/terminal goals and the body pose). This slice closes the remaining gap: **active-goal step progress is now persisted each cycle during pursuit**, so a mid-pursuit kill (SIGKILL) resumes with the correct step budget instead of a reset one.
+- Verified on-device: adopted a reach goal, stepped 4×, killed without graceful stop → restarted brain resumes the same goal with `steps_taken=4` preserved.
+- New test `test_mid_pursuit_kill_preserves_step_budget` in `MAC_BRAIN/tests/test_resume_goals.py`; full suite **365 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/goal-resume.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

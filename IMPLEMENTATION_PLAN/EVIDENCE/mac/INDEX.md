@@ -46,5 +46,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Memory 2.0: importance-weighted retrieval + episodic narrative | `20260821T194400Z/memory2.json` | recall scores by relevance×recency×importance; reconstructs a short episodic narrative |
 | Multi-step LLM deliberation (Reasoning 3.0) | `20260821T194701Z/deliberation.json` | bounded structured deliberation: ANALYSIS→OPTIONS→DECISION, validated against the allowlist; real nemotron output |
 | Memory consolidation into higher-level summaries (Memory 3.0) | `20260821T195248Z/consolidation-summary.json` | groups episodic memories by entity and distills each into one summary memory; idempotent |
+| Goal-resume across restart: mid-pursuit step-budget preservation | `20260821T195616Z/goal-resume.json` | active goal progress persisted each cycle, so a SIGKILL resumes with the correct step budget |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

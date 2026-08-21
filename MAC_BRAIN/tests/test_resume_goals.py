@@ -37,6 +37,26 @@ class ResumeGoalTests(unittest.TestCase):
             self.assertEqual(b2.goals.active.steps_taken, 3, "resumed goal keeps its step budget")
             b2.stop()
 
+    def test_mid_pursuit_kill_preserves_step_budget(self):
+        with tempfile.TemporaryDirectory() as td:
+            db = str(Path(td) / "brain.db")
+            b1 = make_brain(db)
+            b1.start()
+            b1.set_goal(Goal.reach(10, 0, max_steps=100, goal_id="reach-kill"))
+            for _ in range(4):
+                b1.step()  # partial pursuit
+            self.assertEqual(b1.goals.active.steps_taken, 4)
+            # simulate SIGKILL: close the store WITHOUT the graceful stop() that
+            # persists the active goal, so only per-cycle progress was saved.
+            b1.memory.close()
+
+            b2 = make_brain(db)
+            b2.start()
+            self.assertIsNotNone(b2.goals.active, "active goal must be resumed after a mid-pursuit kill")
+            self.assertEqual(b2.goals.active.goal.goal_id, "reach-kill")
+            self.assertEqual(b2.goals.active.steps_taken, 4, "mid-pursuit kill must preserve the step budget")
+            b2.stop()
+
     def test_resumed_goal_keeps_pursuing_and_stays_bounded(self):
         with tempfile.TemporaryDirectory() as td:
             db = str(Path(td) / "brain.db")

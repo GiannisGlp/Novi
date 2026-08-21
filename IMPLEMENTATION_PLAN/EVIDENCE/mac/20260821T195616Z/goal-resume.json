@@ -1,0 +1,16 @@
+{
+  "slice": "Goal-resume across restart: mid-pursuit step-budget preservation",
+  "before_kill": {
+    "goal_id": "reach-kill",
+    "steps_taken": 4,
+    "max_steps": 100
+  },
+  "after_restart": {
+    "goal_id": "reach-kill",
+    "steps_taken": 4,
+    "max_steps": 100,
+    "status": "active"
+  },
+  "step_budget_preserved": true,
+  "mechanism": "active goal progress is persisted each cycle during pursuit, so a SIGKILL resumes with the correct step budget (not a reset one)"
+}

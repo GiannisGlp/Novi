@@ -337,6 +337,10 @@ class MacBrain:
             action = step_command.action
             parameters = step_command.parameters
             reason = "goal_pursuit"
+            # Persist the active goal's step progress each cycle so a mid-pursuit
+            # kill (SIGKILL) resumes with the correct step budget, not a reset one.
+            if self.goals.active is not None:
+                self._persist_goal(self.goals.active)
         else:
             action = intent.action
             parameters = intent.parameters
