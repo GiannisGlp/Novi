@@ -3,7 +3,7 @@ from .neural_backend import NeuralPerceptionBackend
 from .object_detection import Detection, DeterministicObjectDetector, ObjectDetector
 from .ollama_reasoning import OllamaReasoningProvider
 from .provider import CallableMacBackend, MacModelProvider, MacModelSpec
-from .reasoning import ActionIntent, DeterministicReasoningProvider, LLMReasoningProvider, ReasoningProvider
+from .reasoning import ActionIntent, DeliberativeReasoningProvider, DeterministicReasoningProvider, LLMReasoningProvider, ReasoningProvider
 from .stt import DeterministicSTTProvider, SpeechToTextProvider, TranscriptionResult, WhisperSTTProvider
 from .torchvision_detector import TorchvisionSSDLiteDetector
 from ..storage import DurableMemoryStore

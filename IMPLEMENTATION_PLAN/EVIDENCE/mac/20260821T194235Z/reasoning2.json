@@ -1,0 +1,38 @@
+{
+  "slice": "Reasoning 2.0: deliberative action selection + reflection/self-correction",
+  "default_provider": "DeliberativeReasoningProvider (situation-aware scoring)",
+  "actions_taken": [
+    "observe",
+    "observe",
+    "observe"
+  ],
+  "reflection_events": [
+    {
+      "cycle": 1,
+      "action": "observe",
+      "intent": "goal_pursuit",
+      "effective": true,
+      "note": "observe had its intended effect",
+      "confidence": 0.8
+    },
+    {
+      "cycle": 2,
+      "action": "observe",
+      "intent": "goal_pursuit",
+      "effective": true,
+      "note": "observe had its intended effect",
+      "confidence": 0.8
+    },
+    {
+      "cycle": 3,
+      "action": "observe",
+      "intent": "goal_pursuit",
+      "effective": true,
+      "note": "observe had its intended effect",
+      "confidence": 0.8
+    }
+  ],
+  "self_correction": "ineffective action is penalized and 'observe' boosted on the next decision",
+  "reflection_engine": "records action effectiveness; recent_ineffective() triggers adjustment",
+  "mechanism": "runtime.step() records outcome vs intent after each action and feeds the latest reflection into the next reasoning decision"
+}

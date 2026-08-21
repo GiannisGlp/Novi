@@ -361,6 +361,15 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests `MAC_BRAIN/tests/test_cognition2.py` (5); full suite **341 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/cognition2.json`.
 
+## Reasoning 2.0: deliberative action selection + reflection/self-correction (status: IMPLEMENTED)
+
+- New `DeliberativeReasoningProvider` (default) scores candidate actions from the full situation (conclusion, confidence, knowledge relations, goal context, recalled memories, latest reflection) instead of a single conclusion→action lookup.
+- New `ReflectionEngine` (`MAC_BRAIN/reflection.py`): after each action the runtime judges whether it had its intended observable effect (body moved for move/turn; something salient/inferred to attend for inspect/observe) and records a `reasoning.reflection` event.
+- The latest reflection is fed into the next reasoning decision: an ineffective action is penalized and `observe` boosted (self-correction).
+- Verified on-device: reflection events emitted each cycle with `effective`/`action`/`note`; deliberative provider picks `inspect` for causal change, `wait` for no salience, `observe` for person/speech, and avoids repeating an ineffective action.
+- New tests `MAC_BRAIN/tests/test_reasoning2.py` (7); full suite **348 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reasoning2.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

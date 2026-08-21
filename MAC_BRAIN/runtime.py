@@ -24,6 +24,7 @@ from .io import Camera, MacMicrophone, MacSpeaker, VirtualBody
 from .kgraph import EntityKnowledgeGraph
 from .planner import Plan, Planner
 from .privacy import PrivacyGovernance
+from .reflection import ReflectionEngine
 from .audio import AudioEvent, AudioFrame, Hearing
 from .observability import Diagnostics, HealthMonitor, MetricRegistry, default_health_checks
 from .lexicon import LearnedPreferences, Lexicon
@@ -32,6 +33,7 @@ from .soul import Soul
 from .storage import DurableMemoryStore
 from .temporal import TemporalModel
 from .models import (
+    DeliberativeReasoningProvider,
     DeterministicReasoningProvider,
     DeterministicSTTProvider,
     ReasoningProvider,
@@ -95,7 +97,8 @@ class MacBrain:
         self.microphone = microphone or MacMicrophone()
         self.brain = BrainSupervisor()
         self.perception = perception or SpecialistPerception()
-        self.reasoning = reasoning or DeterministicReasoningProvider()
+        self.reasoning = reasoning or DeliberativeReasoningProvider()
+        self.reflection = ReflectionEngine()
         self.stt = stt or DeterministicSTTProvider()
         self.world = TemporalWorldModel()
         self.memory = DurableMemoryStore(store_path) if store_path else DeterministicMemoryManager()
@@ -291,6 +294,9 @@ class MacBrain:
         situation = self._situation_dict(cognitive)
         if plan_ctx is not None:
             situation["plan"] = plan_ctx
+        last_reflection = self.reflection.last()
+        if last_reflection is not None:
+            situation["reflection"] = last_reflection.snapshot()
         intent = self.reasoning.decide(
             conclusion=cognitive.reasoning.conclusion,
             confidence=cognitive.reasoning.confidence,
@@ -351,6 +357,7 @@ class MacBrain:
             self._emit("cognition.temporal", {"cycle": self._cycle, "expected": [l.snapshot() for l in expected], "timeline": self.temporal.timeline(limit=3)})
         temporal_expected = [{"cause": l.cause, "effect": l.effect, "confidence": round(l.confidence, 3)} for l in expected]
 
+        body_before = self.body.snapshot()
         proposal = RuntimeActionProposal(action=action, parameters=parameters, reason=reason, correlation_id=str(uuid4()))
         decision = self.brain.propose(proposal)
         if decision.authorized:
@@ -360,6 +367,17 @@ class MacBrain:
             outcome = None
             virtual_state = self.body.snapshot()
         self._emit("action.completed", {"action": action, "authorized": decision.authorized, "outcome": outcome.detail if outcome else decision.reason, "virtual_body": virtual_state})
+        # Reflection / self-correction: judge whether the action had its intended effect.
+        body_after = self.body.snapshot()
+        effective = self._action_effective(action, body_before, body_after, decision.authorized, cognitive.situation.salient_entities, cognitive.reasoning.inferences)
+        reflection = self.reflection.record(
+            cycle=self._cycle,
+            action=action,
+            intent=reason,
+            effective=effective,
+            note=self._reflection_note(action, effective),
+        )
+        self._emit("reasoning.reflection", {"cycle": self._cycle, **reflection.snapshot()})
         soul_success: bool | None = None
         if goal_was_active and not self.goals.has_active:
             terminal = self.goals.history[-1]
@@ -847,6 +865,22 @@ class MacBrain:
         except Exception:  # noqa: BLE001
             pass
         return None
+
+    def _action_effective(self, action: str, body_before: dict[str, Any], body_after: dict[str, Any], authorized: bool, salient: Any, inferences: Any) -> bool:
+        """Judge whether an action had its intended observable effect (Reasoning 2.0)."""
+        if action in {"move_forward", "turn_left", "turn_right"}:
+            moved = body_before.get("x_m") != body_after.get("x_m") or body_before.get("y_m") != body_after.get("y_m")
+            turned = body_before.get("heading_deg") != body_after.get("heading_deg")
+            return bool(moved or turned)
+        if action in {"inspect", "observe"}:
+            # effective if there was something salient/inferred to attend to and it was authorized
+            return bool(authorized and (salient or inferences))
+        return True  # wait / stop are no-ops and always "effective"
+
+    def _reflection_note(self, action: str, effective: bool) -> str:
+        if effective:
+            return f"{action} had its intended effect"
+        return f"{action} had no observable effect"
 
     def _situation_dict(self, cognitive: Any) -> dict[str, Any]:
         """Serialize a CognitiveState's situation for the reasoning providers."""

@@ -42,5 +42,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Learn names from discussion + identity persistence | `20260821T184013Z/learn-names-identity-persistence.json` | recognizes new proper nouns (Vano) from chat; identity bound incrementally (WAL), survives hard kill |
 | Switchable LLM: qwen ⇄ NVIDIA Nemotron 3.5 Lightning | `20260821T190126Z/model-switch-nemotron.json` | runtime model dropdown/API; nemotron replies ~1.4s (think:false), qwen kept |
 | Cognition 2.0: situation understanding + memory-grounded reasoning | `20260821T194029Z/cognition2.json` | grounds reasoning in knowledge-graph relations, active-goal context, recalled memories; emits hypotheses + causal inferences |
+| Reasoning 2.0: deliberative action selection + reflection/self-correction | `20260821T194235Z/reasoning2.json` | situation-aware action scoring; reflection engine records action effectiveness and feeds self-correction into the next decision |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
