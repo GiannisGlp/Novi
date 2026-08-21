@@ -313,11 +313,15 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests: `MAC_BRAIN/tests/test_knowledge_persistence.py` (persisted-before-stop, reload-on-start, graph hook fires).
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/incremental-knowledge-persistence.json`.
 
+## Web: real sensing + reasoning router + live task view (status: IMPLEMENTED)
+
+- **Real sensing**: the web server accepts `--camera real` (live webcam instead of the demo camera) and, with it, real microphone speech-to-text via faster-whisper. A new **🎤 Listen** button (`POST /api/listen`) records from the mic, transcribes locally, ingests it, and replies in chat. `/api/listen` is gated on real sensing and degrades cleanly otherwise.
+- **Reasoning router in the web**: the server accepts `--reasoning {deterministic,ollama,router}` (+ `--route-threshold`); `router` builds the confidence-based `ReasoningRouter` so uncertain steps escalate to the local qwen, and the `reasoning_trace.route` in `/api/state` reflects which backend decided. Falls back to deterministic on LLM error.
+- **Live task view**: `state()` now exposes the active plan and `active_goal.distance_to_goal`; the UI adds a **Goals & Plan** panel with plan steps and a small **virtual floor map** (canvas) showing Novi's position/heading moving toward the goal target (green G) as it plans and navigates.
+- New tests: router built, listen gating, plan + goal distance in state (web tests → 14).
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-real-sensing-router-task.json`.
+
 ## Next implementation slice
-
-1. Real robot / Jetson port (deferred until physical hardware arrives).
-
-## Final integration review (status: PASS)
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
 - **End-to-end durable run** (`EVIDENCE/mac/<stamp>/integration.json`): a scripted perception sequence drove the whole pipeline (perception → memory admit/recall/consolidation → cognition → reasoning → goals → action → soul → social → lexicon/preferences/beliefs), then a **restart** re-opened the same store and every subsystem reported persisted state:

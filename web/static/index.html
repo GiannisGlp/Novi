@@ -68,7 +68,10 @@
   <div class="stack">
     <div class="panel"><h2>Reasoning</h2><div class="body" id="reasoning"><span class="muted">awaiting cycle…</span></div></div>
     <div class="panel"><h2>Soul</h2><div class="body" id="soul"><span class="muted">…</span></div></div>
-    <div class="panel"><h2>Goals &amp; Plan</h2><div class="body" id="goals"><span class="muted">…</span></div></div>
+    <div class="panel"><h2>Goals &amp; Plan</h2><div class="body">
+      <div id="goals"><span class="muted">…</span></div>
+      <canvas id="map" width="340" height="180" style="width:100%;height:auto;margin-top:8px;background:#0a0e15;border:1px solid var(--border);border-radius:6px;"></canvas>
+    </div></div>
     <div class="panel"><h2>Knowledge &amp; Hearing</h2><div class="body" id="khearing"><span class="muted">…</span></div></div>
   </div>
   <!-- RIGHT: chat + actions + event log -->
@@ -81,6 +84,7 @@
           <textarea id="say" placeholder='Ask Novi, e.g. "alice moved the door" …'></textarea>
           <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
             <button id="sendBtn">Send</button>
+            <button id="listenBtn">🎤 Listen</button>
             <button id="stepBtn">Step once</button>
             <span class="muted">confidence <input type="number" id="conf" value="0.9" step="0.05" min="0" max="1"></span>
           </div>
@@ -133,6 +137,50 @@ function traceHtml(t) {
   return s;
 }
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+// draw a small virtual floor map: Novi's position + goal target
+function drawMap(s) {
+  const cv = $('map'); if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+  // grid background, 10m x 6m world
+  ctx.strokeStyle = '#1a2230'; ctx.fillStyle = '#0a0e15'; ctx.fillRect(0,0,W,H);
+  const world = 10, grid=1, px = W/world, py = H/6;
+  for (let i=1;i<world;i++){ ctx.beginPath(); ctx.moveTo(i*px,0); ctx.lineTo(i*px,H); ctx.stroke(); }
+  for (let i=1;i<6;i++){ ctx.beginPath(); ctx.moveTo(0,i*py); ctx.lineTo(W,i*py); ctx.stroke(); }
+  ctx.font='9px monospace'; ctx.fillStyle='#5b6b7f';
+  ctx.fillText('0',2,H-4); ctx.fillText(world+'m',W-28,H-4); ctx.fillText('6m',2,12);
+  const pos = s.body||{};
+  const bx = pos.x_m||0, by = pos.y_m||0;
+  // goal
+  const goal = s.active_goal || {};
+  let tx=0, ty=0;
+  const m = /[(\[]?\s*(-?[\d.]+)\s*,?\s*(-?[\d.]+)/.exec(goal.target||'');
+  if (m){ tx=parseFloat(m[1]); ty=parseFloat(m[2]); }
+  // map meters -> canvas (world is 10m wide x 6m tall)
+  const px = W/world, py = H/6;
+  const cx = v => Math.max(3, Math.min(W-3, v*px));
+  const cy = v => Math.max(3, Math.min(H-3, H - v*py));
+  // goal marker
+  ctx.fillStyle='#f2c14e';
+  ctx.beginPath(); ctx.arc(cx(tx), cy(ty), 6, 0, 2*Math.PI); ctx.fill();
+  ctx.fillStyle='#0a0e15'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+  ctx.fillText('G', cx(tx), cy(ty)+3);
+  // origin marker
+  ctx.fillStyle='#3a4657'; ctx.fillRect(cx(0)-1.5, cy(0)-1.5, 3, 3);
+  // Novi position (robot-ish triangle/heading)
+  const hdg = (pos.heading_deg!=null? pos.heading_deg : 0) * Math.PI/180;
+  const nx=cx(bx), ny=cy(by);
+  ctx.fillStyle='#4cc2ff';
+  ctx.beginPath();
+  ctx.moveTo(nx + Math.cos(hdg)*8, ny - Math.sin(hdg)*8);
+  ctx.lineTo(nx + Math.cos(hdg+2.4)*5, ny - Math.sin(hdg+2.4)*5);
+  ctx.lineTo(nx + Math.cos(hdg-2.4)*5, ny - Math.sin(hdg-2.4)*5);
+  ctx.closePath(); ctx.fill();
+  ctx.textAlign='left'; ctx.fillStyle='#4cc2ff';
+  ctx.fillText('novi', nx+8, ny+14);
+}
 
 async function refreshChat() {
   try {
@@ -191,9 +239,17 @@ async function refreshState() {
       g += kv('active', s.active_goal.kind + ' → ' + s.active_goal.target);
       g += kv('status', s.active_goal.status);
       g += kv('steps', s.active_goal.steps_taken);
+      if (s.active_goal.distance_to_goal!=null) g += kv('distance', s.active_goal.distance_to_goal + ' m');
+      // plan steps
+      const plan = s.plan || {};
+      if (plan.steps && plan.steps.length) {
+        const steps = plan.steps.map(st => st.action + (st.done?' ✓':'')).join(' → ');
+        g += '<div class="kv"><span class="k">plan</span><span class="v">'+steps+'</span></div>';
+      }
     } else { g += kv('active', 'none'); }
     g += kv('history', (s.goals_history||[]).map(x=>x.kind+':'+x.status).slice(-3).join(' | ') || 'none');
     $('goals').innerHTML = g;
+    drawMap(s);
     // knowledge + hearing
     const kn = s.knowledge || {};
     const hv = (s.hearing||[]).map(e=>e.event_type).join(', ') || 'silence';
@@ -243,6 +299,23 @@ $('sendBtn').onclick = async () => {
   refreshState(); refreshChat();
 };
 $('say').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sendBtn').click(); } });
+$('listenBtn').onclick = async () => {
+  const chat = $('chat');
+  if (chat.firstChild && chat.firstChild.textContent.includes('say something')) chat.innerHTML = '';
+  const thinking = document.createElement('div'); thinking.className='turn';
+  thinking.innerHTML = '<div class="who novi">novi</div><div class="bubble">listening…</div>';
+  chat.appendChild(thinking); chat.scrollTop = chat.scrollHeight;
+  $('listenBtn').disabled = true;
+  try {
+    const r = await post('/api/listen', {});
+    if (r.error) throw new Error(r.error);
+    if (!r.result || !r.result.heard) thinking.innerHTML = '<div class="who novi">novi</div><div class="bubble">(nothing heard)</div>';
+  } catch(e) {
+    thinking.innerHTML = '<div class="who novi">novi</div><div class="bubble">(Listen needs real sensing — start with <b>--camera real</b>)</div>';
+  }
+  $('listenBtn').disabled = false;
+  refreshState(); refreshChat();
+};
 $('stepBtn').onclick = async () => { await post('/api/step'); refreshState(); refreshChat(); };
 $('healthBtn').onclick = async () => { await post('/api/health'); refreshState(); };
 document.querySelectorAll('[data-audio]').forEach(b => b.onclick = async () => {

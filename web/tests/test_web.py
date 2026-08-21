@@ -144,6 +144,39 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_reasoning_router_built(self):
+        from MAC_BRAIN.models.router import ReasoningRouter
+
+        s = NoviWebServer(port=0, store_path=None, auto_step=False, reasoning="router")
+        s.start()
+        try:
+            self.assertIsInstance(s.brain.reasoning, ReasoningRouter)
+        finally:
+            s.stop()
+
+    def test_listen_requires_real_sensing(self):
+        s = self._server(auto_step=False)
+        s.start()
+        try:
+            with self.assertRaises(RuntimeError):
+                s.listen(1.0)
+        finally:
+            s.stop()
+
+    def test_state_includes_plan_and_goal_distance(self):
+        s = self._server(auto_step=False)
+        s.start()
+        try:
+            s.set_goal(x=4.0, y=0.0)
+            s.step()
+            st = s.state()
+            self.assertIn("plan", st)
+            self.assertIsNotNone(st["active_goal"])
+            self.assertIn("distance_to_goal", st["active_goal"])
+            self.assertGreater(st["active_goal"]["distance_to_goal"], 0)
+        finally:
+            s.stop()
+
 
 if __name__ == "__main__":
     unittest.main()

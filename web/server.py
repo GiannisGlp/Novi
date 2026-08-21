@@ -61,7 +61,24 @@ class DemoCamera:
 class NoviWebServer:
     """Owns a MacBrain and drives it from HTTP requests."""
 
-    def __init__(self, *, host: str = "127.0.0.1", port: int = 8080, store_path: str | None = None, tick: float = 0.8, auto_step: bool = True, chat_llm: bool = True, llm_url: str = DEFAULT_OLLAMA_URL, llm_model: str = DEFAULT_OLLAMA_MODEL) -> None:
+    def __init__(
+        self,
+        *,
+        host: str = "127.0.0.1",
+        port: int = 8080,
+        store_path: str | None = None,
+        tick: float = 0.8,
+        auto_step: bool = True,
+        chat_llm: bool = True,
+        llm_url: str = DEFAULT_OLLAMA_URL,
+        llm_model: str = DEFAULT_OLLAMA_MODEL,
+        camera: str = "demo",
+        reasoning: str = "deterministic",
+        route_threshold: float = 0.6,
+        stt_model: str = "base",
+        stt_device: str = "cpu",
+        listen_seconds: float = 3.0,
+    ) -> None:
         self.host = host
         self.port = port
         self.store_path = store_path
@@ -70,6 +87,12 @@ class NoviWebServer:
         self.chat_llm = chat_llm
         self.llm_url = llm_url
         self.llm_model = llm_model
+        self.camera_mode = camera
+        self.reasoning_mode = reasoning
+        self.route_threshold = route_threshold
+        self.stt_model = stt_model
+        self.stt_device = stt_device
+        self.listen_seconds = listen_seconds
         self._llm_available: bool | None = None
         self._lock = threading.RLock()
         self._stop = threading.Event()
@@ -81,8 +104,41 @@ class NoviWebServer:
         # chat conversation (user <-> Novi reasoning responses)
         self._chat_seq = 0
         self._chat: list[dict[str, Any]] = []
-        self.brain = MacBrain(camera=DemoCamera(), store_path=store_path, config=MacBrainConfig())
+        self.brain = self._build_brain()
         self._last_step: dict[str, Any] | None = None
+
+    # ---- brain construction (real sensing / reasoning router) ----
+    def _build_brain(self) -> MacBrain:
+        if self.camera_mode == "real":
+            from MAC_BRAIN.io import MacCamera
+
+            cam: Any = MacCamera()
+        else:
+            cam = DemoCamera()
+        stt = self._build_stt() if self.camera_mode == "real" else None
+        reasoning = self._build_reasoning()
+        return MacBrain(camera=cam, stt=stt, reasoning=reasoning, store_path=self.store_path, config=MacBrainConfig())
+
+    def _build_reasoning(self) -> Any:
+        mode = self.reasoning_mode
+        if mode in ("ollama", "router"):
+            from MAC_BRAIN.models import OllamaReasoningProvider
+
+            llm = OllamaReasoningProvider(model=self.llm_model)
+            if mode == "router":
+                from MAC_BRAIN.models.router import ReasoningRouter
+
+                return ReasoningRouter(llm=llm, confidence_threshold=self.route_threshold)
+            return llm
+        return None  # MacBrain defaults to DeterministicReasoningProvider
+
+    def _build_stt(self) -> Any:
+        try:
+            from MAC_BRAIN.models.stt import WhisperSTTProvider
+
+            return WhisperSTTProvider(model_size=self.stt_model, device=self.stt_device)
+        except Exception:  # noqa: BLE001 - STT optional; brain falls back to deterministic
+            return None
 
     # ---- lifecycle ----
     def start(self) -> None:
@@ -167,6 +223,41 @@ class NoviWebServer:
         novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": bool(reply is not None)}
         self._append_chat(novi)
         return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": bool(reply is not None)}
+
+    def listen(self, seconds: float | None = None) -> dict[str, Any]:
+        """Record from the microphone, transcribe locally, and respond in chat.
+
+        Requires real sensing (the server must be started with the real camera/
+        STT so the brain has a non-deterministic STT provider).
+        """
+        seconds = seconds or self.listen_seconds
+        if self.camera_mode != "real":
+            raise RuntimeError("real speech-to-text is not enabled (start with --camera real)")
+        stt = getattr(self.brain, "stt", None)
+        if stt is None or not hasattr(stt, "transcribe"):
+            raise RuntimeError("real speech-to-text is not enabled (start with --camera real)")
+        with self._lock:
+            result = self.brain.listen(seconds)
+            text = result["transcription"].text
+            if text.strip():
+                step = self.brain.step()
+                trace = dict(self.brain._last_reasoning_trace)
+        if not text.strip():
+            return {"heard": "", "accepted": True, "novi": None, "llm": False}
+        reply, _used = self._generate_reply(text)
+        self._append_chat({"role": "user", "text": f"[heard] {text}"})
+        if reply is not None:
+            trace["conclusion"] = reply
+            trace["action"] = "respond"
+            trace["route"] = f"ollama:{self.llm_model}"
+            trace["route_reason"] = "local LLM"
+            trace["confidence"] = 0.85
+            novi_text, llm = reply, True
+        else:
+            novi_text, llm = result["reasoning"], False
+        novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
+        self._append_chat(novi)
+        return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
 
     def _llm_up(self) -> bool:
         if self._llm_available is None:
@@ -270,6 +361,17 @@ class NoviWebServer:
                 {"goal_id": s.goal.goal_id, "kind": s.goal.kind, "status": s.status.value, "steps_taken": s.steps_taken}
                 for s in list(self.brain.goals.history)[-5:]
             ]
+            plan = None
+            distance = None
+            if active_goal is not None:
+                p = self.brain._plans.get(active_goal.goal.goal_id)
+                if p is not None:
+                    plan = p.snapshot()
+                try:
+                    tx, ty = active_goal.goal.target[0], active_goal.goal.target[1]
+                    distance = round(((self.brain.body.x_m - tx) ** 2 + (self.brain.body.y_m - ty) ** 2) ** 0.5, 3)
+                except Exception:  # noqa: BLE001
+                    distance = None
             return {
                 "cycle": self.brain._cycle,
                 "run_id": self.brain.run_id,
@@ -277,7 +379,8 @@ class NoviWebServer:
                 "reasoning_trace": self.brain._last_reasoning_trace,
                 "body": body,
                 "soul": {"identity": self.brain.soul.identity.name, "tone": self.brain.soul.tone({}).get("tone"), "affect": self.brain.soul.affect.dimensions},
-                "active_goal": {"goal_id": active_goal.goal.goal_id, "kind": active_goal.goal.kind, "target": str(active_goal.goal.target), "steps_taken": active_goal.steps_taken, "status": active_goal.status.value} if active_goal is not None else None,
+                "active_goal": {"goal_id": active_goal.goal.goal_id, "kind": active_goal.goal.kind, "target": str(active_goal.goal.target), "steps_taken": active_goal.steps_taken, "status": active_goal.status.value, "distance_to_goal": distance} if active_goal is not None else None,
+                "plan": plan,
                 "goals_history": goals,
                 "knowledge": self.brain.knowledge.counts(),
                 "hearing": self.brain._last_audio_events,
@@ -369,6 +472,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"result": novi.chat_send(text, confidence=float(data.get("confidence", 0.9)))})
             elif path == "/api/audio":
                 self._json({"result": novi.hear_audio(event_hint=data.get("event_hint"), rms=data.get("rms", 0.6), novelty=data.get("novelty", 0.0), speech=bool(data.get("speech", False)), confidence=float(data.get("confidence", 0.0)))})
+            elif path == "/api/listen":
+                self._json({"result": novi.listen(float(data.get("seconds") or 0) or None)})
             elif path == "/api/step":
                 self._json({"result": novi.step()})
             elif path == "/api/goal":
@@ -396,12 +501,33 @@ def main() -> None:
     parser.add_argument("--store", default=None, help="durable SQLite DB path")
     parser.add_argument("--tick", type=float, default=0.8, help="seconds per auto-step")
     parser.add_argument("--no-auto-step", action="store_true", help="advance only on manual 'step'")
+    parser.add_argument("--camera", choices=["demo", "real"], default="demo", help="'demo' = no-hardware camera; 'real' = live webcam + real speech-to-text")
+    parser.add_argument("--reasoning", choices=["deterministic", "ollama", "router"], default="deterministic", help="brain decision backend; 'router' escalates uncertain steps to the local LLM")
+    parser.add_argument("--route-threshold", type=float, default=0.6, help="confidence below which the router escalates to the local LLM")
+    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: qwen3.8)")
+    parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for real microphone STT (tiny/base/small)")
+    parser.add_argument("--stt-device", type=str, default="cpu", help="STT device (cpu or mps)")
+    parser.add_argument("--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button")
     args = parser.parse_args()
 
-    novi = NoviWebServer(host=args.host, port=args.port, store_path=args.store, tick=args.tick, auto_step=not args.no_auto_step)
+    novi = NoviWebServer(
+        host=args.host,
+        port=args.port,
+        store_path=args.store,
+        tick=args.tick,
+        auto_step=not args.no_auto_step,
+        camera=args.camera,
+        reasoning=args.reasoning,
+        route_threshold=args.route_threshold,
+        llm_model=args.ollama_model or DEFAULT_OLLAMA_MODEL,
+        stt_model=args.stt_model,
+        stt_device=args.stt_device,
+        listen_seconds=args.listen_seconds,
+    )
     httpd = NoviWebHTTPServer((args.host, args.port), novi)
     novi.start()
     print(f"Novi live web app -> http://{args.host}:{args.port}")
+    print(f"  camera={args.camera} reasoning={args.reasoning} model={args.ollama_model or DEFAULT_OLLAMA_MODEL}")
     print("Ctrl-C to stop.")
     try:
         httpd.serve_forever()

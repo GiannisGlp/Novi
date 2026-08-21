@@ -1,0 +1,26 @@
+{
+  "feature_A_real_sensing": "implemented: --camera real (live webcam) + --stt real microphone STT; /api/listen gated on real sensing",
+  "feature_B_reasoning_router": {
+    "route": "deterministic"
+  },
+  "feature_C_task_view": {
+    "active_goal": {
+      "kind": "reach",
+      "status": "active",
+      "steps_taken": 4,
+      "distance_to_goal": 5.657
+    },
+    "plan_steps": 3,
+    "body": {
+      "x_m": 0.0,
+      "y_m": 0.0,
+      "heading_deg": 40.0,
+      "velocity_mps": 0.0,
+      "last_action": "turn_left"
+    }
+  },
+  "ui": {
+    "listen_button": true,
+    "map_canvas": true
+  }
+}
