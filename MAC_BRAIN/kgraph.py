@@ -14,7 +14,7 @@ Boundaries honored (docs/04-memory-and-knowledge/12):
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 ENTITY_TYPES = {"person", "place", "object", "concept"}
 _PLACE_LABELS = {"door", "room", "kitchen", "window", "table", "hall", "office", "garage", "garden"}
@@ -75,11 +75,20 @@ def infer_entity_type(entity: str) -> str:
 
 
 class EntityKnowledgeGraph:
-    def __init__(self) -> None:
+    def __init__(self, *, on_change: Callable[[], None] | None = None) -> None:
         self._entities: dict[str, str] = {}  # entity -> type
         self._triples: dict[tuple[str, str, str], KnowledgeTriple] = {}
+        self._on_change = on_change  # incremental-persistence hook (if any)
 
     # ---- graph construction ----
+    def set_on_change(self, callback: Callable[[], None]) -> None:
+        """Attach a callback invoked after every mutation, for incremental persistence."""
+        self._on_change = callback
+
+    def _notify_change(self) -> None:
+        if self._on_change is not None:
+            self._on_change()
+
     def add(self, subject: str, predicate: str, object: str, *, confidence: float, source: str = "", cycle: int = 0) -> KnowledgeTriple:
         subject, predicate, object = subject.strip(), predicate.strip(), object.strip()
         if not subject or not predicate or not object:
@@ -95,6 +104,7 @@ class EntityKnowledgeGraph:
         else:
             t = self._triples[key] = KnowledgeTriple(subject, predicate, object, _clamp01(confidence), 1, "active", source, cycle, cycle)
         self._reconcile_conflicts(subject, predicate)
+        self._notify_change()
         return t
 
     def _reconcile_conflicts(self, subject: str, predicate: str) -> None:
@@ -159,8 +169,8 @@ class EntityKnowledgeGraph:
         }
 
     @classmethod
-    def from_snapshot(cls, data: dict[str, Any]) -> "EntityKnowledgeGraph":
-        graph = cls()
+    def from_snapshot(cls, data: dict[str, Any], *, on_change: Callable[[], None] | None = None) -> "EntityKnowledgeGraph":
+        graph = cls(on_change=on_change)
         graph._entities = {k: v for k, v in data.get("entities", {}).items()}
         for row in data.get("triples", []):
             t = KnowledgeTriple(

@@ -192,6 +192,11 @@ class MacBrain:
             self.knowledge = EntityKnowledgeGraph.from_snapshot(persisted) if persisted else EntityKnowledgeGraph()
         else:
             self.knowledge = EntityKnowledgeGraph()
+        if isinstance(self.memory, DurableMemoryStore):
+            # Incremental knowledge persistence: persist every triple immediately
+            # (WAL-backed), so nothing is lost on a crash or hard kill.
+            self.knowledge.set_on_change(self._persist_knowledge)
+            self._persist_knowledge()
         self.governance = governance or PrivacyGovernance(self.memory if isinstance(self.memory, DurableMemoryStore) else None)
         self.hearing = hearing or Hearing()
         self._pending_audio: list[ModalityObservation] = []
@@ -658,6 +663,16 @@ class MacBrain:
             self._emit("knowledge.updated", {"cycle": self._cycle, "subject": subject, "predicate": predicate, "object": obj, "status": triple.status})
             if triple.status == "contradicted":
                 self._emit("knowledge.contradiction", {"cycle": self._cycle, "subject": subject, "predicate": predicate, "object": obj})
+
+    def _persist_knowledge(self) -> None:
+        """Persist the knowledge graph immediately after a mutation (WAL-backed).
+
+        Every triple learned is written to the durable store right away, so a
+        crash or hard kill cannot lose recently-learned knowledge. No-op with a
+        non-durable (deterministic) memory.
+        """
+        if isinstance(self.memory, DurableMemoryStore):
+            self.memory.save_knowledge(self.knowledge.snapshot())
 
     def retrieve_knowledge(self, entity: str, *, limit: int = 10) -> dict[str, Any]:
         """Return the knowledge-graph context around an entity."""

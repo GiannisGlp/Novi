@@ -1,0 +1,16 @@
+{
+  "learned": "alice moved the door",
+  "persisted_after_hard_kill": [
+    [
+      "alice",
+      "moved",
+      "door"
+    ]
+  ],
+  "survived_crash": true,
+  "mechanism": "EntityKnowledgeGraph.on_change -> runtime._persist_knowledge -> DurableMemoryStore.save_knowledge (immediate WAL commit)",
+  "counts": {
+    "alice": "person",
+    "door": "place"
+  }
+}

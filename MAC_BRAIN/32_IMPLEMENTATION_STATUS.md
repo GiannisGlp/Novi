@@ -305,6 +305,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified on-device over real HTTP: served the UI, state cycle/health(PASS), `/api/hear` accepted `alice moved the door` → `human_speech_observed`, `/api/audio` heard `alarm`, `/api/goal` adopted reach(2,2) active, health report PASS, and the event log carried 20 distinct event types.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-app.json`.
 
+## Incremental knowledge persistence (status: IMPLEMENTED)
+
+- The knowledge graph previously flushed to the durable store **only on graceful `stop()`**; a crash/hard kill lost anything learned since the last clean shutdown.
+- Now every triple is written **immediately** as it is learned: `EntityKnowledgeGraph` gained an `on_change` hook fired after each `add()` (covers reconcile/evidence bumps too), and `MacBrain` attaches it to a `_persist_knowledge()` that calls `DurableMemoryStore.save_knowledge()` (immediate WAL commit) whenever the memory is durable.
+- Verified on-device: told Novi "alice moved the door", then `SIGKILL`-ed the process (no graceful stop); a fresh process on the same store still had `(alice, moved, door)`. No knowledge lost on crash.
+- New tests: `MAC_BRAIN/tests/test_knowledge_persistence.py` (persisted-before-stop, reload-on-start, graph hook fires).
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/incremental-knowledge-persistence.json`.
+
 ## Next implementation slice
 
 1. Real robot / Jetson port (deferred until physical hardware arrives).
