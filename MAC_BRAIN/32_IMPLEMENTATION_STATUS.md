@@ -454,6 +454,13 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_state_includes_episodic_narrative` in `web/tests/test_web.py`; full suite **383 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-narrative.json`.
 
+## Deliberation rounds surfaced in the web UI (status: IMPLEMENTED)
+
+- The reasoning trace now renders the **multi-round deliberation** round-by-round: each round shows its analysis, self-critique evaluation, `[confirmed]` marker, and the resulting action.
+- Verified: a 2-round deliberation renders round 1 (analysis/options) and round 2 (evaluation + chosen action) in the trace.
+- Frontend-only change (`traceHtml()` iterates `t.deliberation.rounds`); full suite **383 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-deliberation-rounds.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

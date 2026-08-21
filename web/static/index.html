@@ -70,6 +70,7 @@
   .turn .trace { font-size:12px; color:#aab6c4; margin-top:6px; }
   .turn .trace b { color:#e7eef7; }
   .turn .trace .row { padding:1px 0; }
+  .turn .trace .row.sub { padding-left:12px; color:#93a1b3; }
   .turn .route { display:inline-block; padding:0 6px; border:1px solid var(--border); border-radius:4px; font-size:11px; color:var(--accent); }
 
   .chatinput { flex:0 0 auto; border-top:1px solid var(--border); padding:12px 24px 14px;
@@ -274,6 +275,17 @@ function traceHtml(t) {
   if (t.hypotheses && t.hypotheses.length) s += '<div class="row"><b>hypotheses:</b> '+esc(t.hypotheses.map(h=>h.hypothesis).join(' · '))+'</div>';
   if (t.deliberation && t.deliberation.analysis) s += '<div class="row"><b>deliberation:</b> '+esc(t.deliberation.analysis)+'</div>';
   if (t.deliberation && t.deliberation.decision && t.deliberation.decision.rationale) s += '<div class="row"><b>chose:</b> '+esc(t.deliberation.decision.rationale)+'</div>';
+  if (t.deliberation && t.deliberation.rounds && t.deliberation.rounds.length) {
+    s += '<div class="row"><b>deliberation rounds:</b></div>';
+    for (const r of t.deliberation.rounds) {
+      let rs = '<div class="row sub"><b>round '+r.round+':</b> ';
+      if (r.analysis) rs += esc(r.analysis);
+      if (r.evaluation) rs += (r.analysis?' — ':'')+'<i>'+esc(r.evaluation)+'</i>';
+      if (r.confirm) rs += ' <span class="route">[confirmed]</span>';
+      if (r.decision && r.decision.action) rs += ' → '+esc(r.decision.action);
+      s += rs+'</div>';
+    }
+  }
   s += '</div>';
   return s;
 }

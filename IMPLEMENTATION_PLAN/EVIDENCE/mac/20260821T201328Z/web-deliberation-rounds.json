@@ -1,0 +1,26 @@
+{
+  "slice": "Deliberation rounds surfaced in the web UI",
+  "trace_rendered_by_ui": {
+    "conclusion": "causal_change_inferred",
+    "action": "wait",
+    "route": "llm",
+    "deliberation_rounds": [
+      {
+        "round": 1,
+        "analysis": "",
+        "evaluation": "",
+        "confirm": false,
+        "decision_action": ""
+      },
+      {
+        "round": 2,
+        "analysis": "",
+        "evaluation": "The proposed decision is an empty object {}. The situation indicates a causal inference event with low confidence (0.4) where Alice moved a door. This is a data interpretation event, not a physical navigation task. No action is required from the allowed set to address the situation. The system should process the causal information rather than execute movement or inspection actions.",
+        "confirm": false,
+        "decision_action": "wait"
+      }
+    ]
+  },
+  "ui": "reasoning trace now renders each deliberation round (analysis, evaluation, [confirmed], -> action)",
+  "mechanism": "traceHtml() iterates t.deliberation.rounds and shows round-by-round self-critique"
+}
