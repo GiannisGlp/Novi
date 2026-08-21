@@ -388,6 +388,16 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests `MAC_BRAIN/tests/test_deliberation.py` (8); full suite **360 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/deliberation.json`.
 
+## Memory consolidation into higher-level summaries (Memory 3.0) (status: IMPLEMENTED)
+
+- New `SummaryConsolidator` (`MAC_BRAIN/consolidation.py`): groups active episodic memories (utterances/perceptions) by shared entity and distills each group into a single higher-level `summary` memory.
+- Summaries are retrievable by entity like any other memory, so recall surfaces the gist rather than a pile of raw episodes.
+- Deterministic and CI-safe (no LLM dependency); idempotent across restarts (an entity is only summarized once).
+- Wired into the runtime `consolidate()` pass; emits a `memory.summarized` event.
+- Verified on-device: taught 3 alice episodes → one summary "alice: alice moved the door; alice likes jazz; alice is in the hallway".
+- New tests `MAC_BRAIN/tests/test_consolidation_summary.py` (4); full suite **364 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/consolidation-summary.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

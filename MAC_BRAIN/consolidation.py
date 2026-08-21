@@ -44,6 +44,86 @@ class ConsolidationReport:
     superseded: int = 0
 
 
+@dataclass
+class SummaryReport:
+    created: int = 0
+    groups: int = 0
+
+
+class SummaryConsolidator:
+    """Episodic → semantic consolidation (Memory 3.0).
+
+    Groups active episodic memories (utterances/perceptions) by shared entity and
+    distills each group into a single higher-level ``summary`` memory. This gives
+    Novi a gist-level understanding instead of a pile of raw episodes, and the
+    summaries are retrievable by entity like any other memory.
+
+    Deterministic and CI-safe: no LLM dependency. Idempotent across restarts: an
+    entity is only summarized once (a summary already exists for it).
+    """
+
+    def __init__(
+        self,
+        store: Any,
+        *,
+        min_group_size: int = 2,
+        summary_types: tuple[str, ...] = ("utterance", "perception"),
+        summary_memory_type: str = "summary",
+    ) -> None:
+        self.store = store
+        self.min_group_size = min_group_size
+        self.summary_types = summary_types
+        self.summary_memory_type = summary_memory_type
+
+    def consolidate(self) -> SummaryReport:
+        rows = self.store.active_rows()
+        episodic = [item["record"] for item in rows if item["record"].memory_type in self.summary_types]
+        groups: dict[str, list[Any]] = {}
+        for record in episodic:
+            for entity in record.entity_refs:
+                groups.setdefault(entity, []).append(record)
+        report = SummaryReport()
+        for entity, records in groups.items():
+            if len(records) < self.min_group_size:
+                continue
+            if self._summary_exists(entity):
+                continue
+            summary = self._summarize(entity, records)
+            admission = self.store.admit(
+                memory_type=self.summary_memory_type,
+                content=summary,
+                confidence=min(0.9, max(float(r.confidence) for r in records)),
+                verification_status="consolidated",
+                privacy_class="public",
+                provenance={"source": "consolidation", "kind": "episodic_summary", "entity": entity, "folded": [r.memory_id for r in records]},
+                entity_refs=(entity,),
+                dependency_refs=tuple(r.memory_id for r in records),
+            )
+            report.groups += 1
+            if admission.accepted:
+                report.created += 1
+        return report
+
+    def _summary_exists(self, entity: str) -> bool:
+        for item in self.store.active_rows():
+            record = item["record"]
+            if record.memory_type == self.summary_memory_type and entity in record.entity_refs:
+                return True
+        return False
+
+    @staticmethod
+    def _summarize(entity: str, records: list[Any]) -> str:
+        seen: set[str] = set()
+        parts: list[str] = []
+        for record in sorted(records, key=lambda r: r.created_at):
+            content = record.content if isinstance(record.content, str) else str(record.content)
+            if content in seen:
+                continue
+            seen.add(content)
+            parts.append(content)
+        return f"{entity}: " + "; ".join(parts)
+
+
 def _parse_utc(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
 

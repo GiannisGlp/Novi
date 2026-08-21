@@ -15,7 +15,7 @@ from brain.runtime import ActionProposal as RuntimeActionProposal
 from brain.runtime import BrainSupervisor, Lifecycle
 
 from .autonomy import BoundedGoalController, Goal, GoalState, GoalStatus
-from .consolidation import ConsolidationConfig, MemoryConsolidator
+from .consolidation import ConsolidationConfig, MemoryConsolidator, SummaryConsolidator
 from .cognition import BeliefSystem, ExpectationSystem
 from .cognition2 import MacCognition
 from .fusion import ModalityObservation, MultimodalFusion
@@ -126,6 +126,7 @@ class MacBrain:
         if goals is None and isinstance(self.memory, DurableMemoryStore):
             self._load_goals()
         self.consolidator = MemoryConsolidator(self.memory, self.config.consolidation_config) if isinstance(self.memory, DurableMemoryStore) else None
+        self.summary_consolidator = SummaryConsolidator(self.memory) if isinstance(self.memory, DurableMemoryStore) else None
         if soul is not None:
             self.soul = soul
         elif isinstance(self.memory, DurableMemoryStore):
@@ -448,6 +449,10 @@ class MacBrain:
             return
         report = self.consolidator.consolidate(now=now)
         self._emit("memory.consolidated", {"cycle": self._cycle, "expired": report.expired, "archived": report.archived, "decayed": report.decayed, "superseded": report.superseded})
+        if self.summary_consolidator is not None:
+            summary = self.summary_consolidator.consolidate()
+            if summary.created:
+                self._emit("memory.summarized", {"cycle": self._cycle, "created": summary.created, "groups": summary.groups})
 
     def set_goal(self, goal: Goal, *, cycle: int | None = None) -> GoalState:
         """Adopt a bounded goal for the autonomy layer to pursue."""

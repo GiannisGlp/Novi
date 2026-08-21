@@ -1,0 +1,28 @@
+{
+  "slice": "Memory consolidation into higher-level summaries (Memory 3.0)",
+  "episodic_taught": [
+    "alice moved the door",
+    "alice likes jazz",
+    "alice is in the hallway"
+  ],
+  "summary_created": [
+    {
+      "content": "alice: alice moved the door; alice likes jazz; alice is in the hallway",
+      "confidence": 0.9,
+      "entity_refs": [
+        "alice"
+      ],
+      "provenance": {
+        "entity": "alice",
+        "folded": [
+          "mem-28cb5ec1d7f69bb486463d2a",
+          "mem-c15f8ca2dca9ecc4186129bc",
+          "mem-f4ed66267f90c7b4606716ed"
+        ],
+        "kind": "episodic_summary",
+        "source": "consolidation"
+      }
+    }
+  ],
+  "mechanism": "SummaryConsolidator groups episodic memories by entity and distills each group into one summary memory; idempotent across restarts"
+}
