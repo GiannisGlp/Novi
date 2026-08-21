@@ -69,5 +69,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Natural intro/joke/recall handlers | `20260821T230425Z/natural-turn-handlers.json` | introductions acknowledged by name; joke requests get a light quip; memory-recall answered honestly |
 | Engaged continuation prompts | `20260821T230745Z/continuation-natural.json` | 'why?'/'go on'/'tell me more' get an engaged reply instead of a flat "i'm here" |
 | Fix 'i'm \<state>' misread as introduction | `20260821T231139Z/intro-falsepositive-fix.json` | 'i'm tired today' no longer greeted as a name; real introductions still detected |
+| Honest capability for physical actions | `20260821T231551Z/physical-action-honesty.json` | no longer claims to flip switches; says it has no actuators and re-engages |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

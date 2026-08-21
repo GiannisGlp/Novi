@@ -21,6 +21,7 @@ from MAC_BRAIN.dialogue import (
     _is_joke_request,
     _is_meta_referential,
     _is_near_repetitive,
+    _is_physical_action_request,
     _is_recall_question,
     _is_repetitive,
     _reduce_name_repetition,
@@ -172,6 +173,13 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(c)
             self.assertFalse(_is_forbidden(c))
 
+    def test_physical_action_detection(self):
+        self.assertTrue(_is_physical_action_request("can you turn on the lights?"))
+        self.assertTrue(_is_physical_action_request("open the door"))
+        self.assertTrue(_is_physical_action_request("pick up the cup"))
+        self.assertFalse(_is_physical_action_request("what's the time?"))
+        self.assertFalse(_is_physical_action_request(""))
+
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
         r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")
@@ -312,6 +320,15 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertTrue(r["fallback"])
         self.assertNotEqual(r["text"].lower(), "hey, i'm here.")
         self.assertIn("continu", r["reason"].lower())
+
+    def test_physical_action_is_honest_not_overclaimed(self):
+        b = self._brain()
+        r = b.compose_reply("can you turn on the lights?", llm_chat=lambda **k: None)
+        self.assertIsNotNone(r["text"])
+        self.assertFalse(b._has_physical_action_capability())
+        self.assertIn("can't", r["text"].lower())
+        self.assertNotIn("i'll flip", r["text"].lower())
+        self.assertEqual(r["grounding"]["route"], "physical_honesty")
 
 
 class ExperienceLearningTests(unittest.TestCase):

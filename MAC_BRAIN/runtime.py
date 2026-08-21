@@ -40,6 +40,7 @@ from .dialogue import (
     _is_greeting,
     _is_introduction,
     _is_joke_request,
+    _is_physical_action_request,
     _is_recall_question,
     clarification_reply,
     continuation_reply,
@@ -48,6 +49,7 @@ from .dialogue import (
     introduction_reply,
     joke_reply,
     natural_fallback,
+    physical_action_honest_reply,
     recall_reply,
 )
 from .self_model import SelfModel, build_self_model
@@ -1231,6 +1233,15 @@ class MacBrain:
             + caps_clause
         )
 
+    def _has_physical_action_capability(self) -> bool:
+        """Whether the body can physically manipulate objects (turn on lights, open
+        doors). On the Mac/VirtualBody build this is False, so Novi must be honest."""
+        try:
+            caps = self.self_model().get("capabilities", {}) or {}
+            return caps.get("physical_actions") != "FAIL"
+        except Exception:  # noqa: BLE001
+            return False
+
     def self_model(self) -> dict[str, Any]:
         """Assemble a first-person self-model for dialogue/reasoning (docs/06-soul/01 §6)."""
         return build_self_model(self).snapshot()
@@ -1313,6 +1324,16 @@ class MacBrain:
         facts.extend(experience)
         system = self._dialogue_system_prompt(self_state, relationship, capabilities=self_model.get("capabilities"))
         is_clarification = _is_clarification(text)
+        is_physical_action = _is_physical_action_request(text)
+        can_physical = self._has_physical_action_capability()
+        if is_physical_action and not can_physical:
+            # Honesty (docs/06-soul/01 §7): don't hallucinate flipping switches.
+            system += (
+                " The user asked you to physically manipulate the environment (e.g. turn on a light, open a door, "
+                "move something). You do NOT have actuators for that in this build, so you cannot physically do it. "
+                "Say so honestly and briefly — don't pretend to flip switches, open doors, or move objects — and offer "
+                "what you can do instead (remember it, reason about it, talk it through)."
+            )
         if is_clarification:
             # The user is asking Novi to clarify/repeat something. Steer the model
             # to acknowledge naturally and re-engage, not to narrate the chat.
@@ -1371,6 +1392,9 @@ class MacBrain:
         if _is_continuation(text):
             reason = "You nudged me to continue, so I engaged conversationally and handed the thread back"
             return {"text": continuation_reply(cycle=self._cycle), "fallback": True, "reason": reason, "grounding": {"route": "continuation", **out}}
+        if is_physical_action and not can_physical:
+            reason = "You asked me to physically manipulate something, but I have no actuators in this build — I said so honestly rather than pretending"
+            return {"text": physical_action_honest_reply(), "fallback": True, "reason": reason, "grounding": {"route": "physical_honesty", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

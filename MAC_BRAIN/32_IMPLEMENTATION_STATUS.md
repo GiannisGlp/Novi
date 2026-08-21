@@ -676,6 +676,27 @@ Today — nice to put a name to you. I'll remember that."*
 - Tests: +1 regression test; fast suites **438 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/intro-falsepositive-fix.json`.
 
+## Honest capability for physical-action requests (round 7 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing surfaced an overclaim: "can you turn on the lights?" → "Sure, I
+can do that. I'll flip the switch." — but the Mac/VirtualBody build has no
+object-manipulation actuators.
+
+- `build_self_model` now exposes a `physical_actions` capability: `FAIL` when the
+  body's `ALLOWED_ACTIONS` lack open/close/turn_on/turn_off/move/pick_up (i.e.
+  the current Mac build).
+- `_is_physical_action_request` detects "turn on/off X", "open/close X", "pick up
+  X", "move X", "press the button", etc.
+- When a physical action is requested without actuators, a prompt clause steers
+  honest, brief disclosure ("I don't have actuators for that") plus a
+  deterministic honest fallback if the LLM is rejected/silent.
+- After: "can you turn on the lights?" → "I can't physically turn on lights — I
+  don't have actuators for that right now. But I can remember the request and
+  talk about lighting…".
+- Tests: +2, updated `test_self_model`; fast suites **440 passing**, web **25
+  passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/physical-action-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
