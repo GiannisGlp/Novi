@@ -378,6 +378,16 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests `MAC_BRAIN/tests/test_memory2.py` (4); full suite **352 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/memory2.json`.
 
+## Multi-step LLM deliberation (Reasoning 3.0) (status: IMPLEMENTED)
+
+- New `DeliberativeLLMReasoningProvider` (`MAC_BRAIN/models/deliberation.py`) replaces the single-shot LLM decision with a **bounded structured deliberation**: the model explicitly reasons through ANALYSIS → OPTIONS → DECISION before committing to one action.
+- The deliberation trace (analysis, options, decision) is captured on `last_deliberation`, emitted as a `reasoning.deliberation` event, and shown in the web reasoning trace.
+- The chosen action is re-validated against the fixed allowlist; an invalid/missing decision falls back to the safe default.
+- Wired into the web server as the LLM path for both `ollama` and `router` modes.
+- Verified on-device with real nemotron-3.5-lightning: given a causal-change situation it produced a rich analysis, 4 options with pros/cons, and a well-reasoned `observe` decision.
+- New tests `MAC_BRAIN/tests/test_deliberation.py` (8); full suite **360 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/deliberation.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

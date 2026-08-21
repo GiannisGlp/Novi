@@ -1,3 +1,4 @@
+from .deliberation import DeliberativeLLMReasoningProvider
 from .local_detector import LocalNeuralObjectDetector
 from .neural_backend import NeuralPerceptionBackend
 from .object_detection import Detection, DeterministicObjectDetector, ObjectDetector

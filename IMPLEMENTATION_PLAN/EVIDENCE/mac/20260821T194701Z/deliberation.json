@@ -1,0 +1,78 @@
+{
+  "slice": "Multi-step LLM deliberation (Reasoning 3.0)",
+  "model": "nemotron-3.5-lightning (local Ollama)",
+  "situation": {
+    "conclusion": "causal_change_inferred",
+    "confidence": 0.4,
+    "salient_entities": [
+      "alice",
+      "door"
+    ],
+    "relations": [
+      {
+        "subject": "alice",
+        "predicate": "moved",
+        "object": "door",
+        "confidence": 0.9
+      }
+    ],
+    "goal": {
+      "kind": "reach",
+      "target": [
+        3.0,
+        0.0
+      ],
+      "distance_to_goal": 3.0
+    },
+    "narrative": [
+      "utterance: alice moved the door"
+    ]
+  },
+  "deliberation": {
+    "analysis": "The system has inferred a causal change: Alice moved the door. The goal is to reach distance 3.0 at coordinates [3.0, 0.0]. The door's movement may affect navigation. Key entities are alice and door. The low confidence (0.4) in the causal inference suggests the environment state may be uncertain or dynamically changing.",
+    "options": [
+      {
+        "action": "inspect",
+        "pros": "Can examine the door's current state or position to see if it has moved as Alice indicated, providing concrete data for path planning.",
+        "cons": "Takes time and may not directly advance toward the goal if the door is not in the way.",
+        "parameters": {
+          "object": "door"
+        }
+      },
+      {
+        "action": "move_forward",
+        "pros": "Directly progresses toward the goal distance of 3.0, potentially reaching the target faster.",
+        "cons": "If the door has moved and blocks the path, moving forward could cause a collision or detour.",
+        "parameters": {
+          "direction": "forward"
+        }
+      },
+      {
+        "action": "observe",
+        "pros": "Surveys the surroundings to assess the door's new position and any obstacles, informing the next move.",
+        "cons": "Does not move the agent closer to the goal; requires a subsequent action.",
+        "parameters": {
+          "scope": "surroundings"
+        }
+      },
+      {
+        "action": "turn_right",
+        "pros": "Allows reorientation to check for the door or alternative paths without committing to forward movement.",
+        "cons": "Changes direction away from the goal, potentially increasing distance to target.",
+        "parameters": {
+          "direction": "right"
+        }
+      }
+    ],
+    "decision": {
+      "action": "observe",
+      "parameters": {
+        "scope": "surroundings"
+      },
+      "rationale": "Given the causal inference that Alice moved the door, it is prudent to first observe the current environment to understand the door's new position and any resulting obstacles. This information will inform whether moving forward is safe or if an alternative action (like inspecting or turning) is needed. Observing reduces the risk of collision and aligns with the low confidence in the causal change, ensuring the next step is based on accurate state estimation."
+    }
+  },
+  "chosen_action": "observe",
+  "rationale": "deliberated:causal_change_inferred -> observe (Given the causal inference that Alice moved the door, it is prudent to first observe the current environment to understand the door's new position and any resulting obstacles. This information will inform whether moving forward is safe or if an alternative action (like inspecting or turning) is needed. Observing reduces the risk of collision and aligns with the low confidence in the causal change, ensuring the next step is based on accurate state estimation.)",
+  "mechanism": "bounded structured deliberation: ANALYSIS -> OPTIONS -> DECISION, validated against the allowlist"
+}

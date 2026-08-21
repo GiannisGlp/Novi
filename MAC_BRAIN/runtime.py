@@ -308,6 +308,9 @@ class MacBrain:
             self._emit("reasoning.route", {"cycle": self._cycle, "route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")})
             route_info = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
         self._emit("reasoning.completed", {"cycle": self._cycle, "action": intent.action, "rationale": intent.rationale})
+        deliberation = getattr(self.reasoning, "last_deliberation", None)
+        if deliberation is not None:
+            self._emit("reasoning.deliberation", {"cycle": self._cycle, "action": intent.action, "deliberation": deliberation})
 
         self._last_reasoning_trace = {
             "cycle": self._cycle,
@@ -322,6 +325,7 @@ class MacBrain:
             "detections": [d.label for d in evidence.detections],
             "inferences": list(cognitive.reasoning.inferences),
             "hypotheses": list(cognitive.reasoning.hypotheses),
+            "deliberation": deliberation,
         }
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)

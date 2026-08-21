@@ -126,9 +126,9 @@ class NoviWebServer:
     def _build_reasoning(self) -> Any:
         mode = self.reasoning_mode
         if mode in ("ollama", "router"):
-            from MAC_BRAIN.models import OllamaReasoningProvider
+            from MAC_BRAIN.models import DeliberativeLLMReasoningProvider
 
-            llm = OllamaReasoningProvider(model=self.llm_model)
+            llm = DeliberativeLLMReasoningProvider(model=self.llm_model)
             if mode == "router":
                 from MAC_BRAIN.models.router import ReasoningRouter
 
