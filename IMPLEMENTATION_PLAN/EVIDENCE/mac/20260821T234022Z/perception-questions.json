@@ -1,0 +1,13 @@
+{
+  "slice": "Natural conversation round 13: honest answers to perception questions",
+  "replies": {
+    "can you hear me?": "Yeah, I can hear you fine.",
+    "are you listening?": "Yeah, I can hear you fine.",
+    "can you see me?": "I don't have a visual feed right now, so I couldn't see that.",
+    "did you see that?": "I don't have a visual feed right now, so I couldn't see that."
+  },
+  "before": {
+    "can you hear me?": "I don't have a good answer on hear yet \u2014 what's it like from your side?"
+  },
+  "mechanism": "perception questions ('can you hear/see me', 'are you listening', 'did you see/hear that') are answered honestly about Novi's actual senses (hearing available; vision depends on camera), never as a topic follow-up"
+}

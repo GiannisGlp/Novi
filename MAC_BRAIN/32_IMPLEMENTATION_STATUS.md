@@ -772,6 +772,21 @@ time-appropriate).
 - Tests: +2; fast suites **448 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/time-greetings.json`.
 
+## Honest answers to perception questions (round 13 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing: "can you hear me?" → "I don't have a good answer on hear yet —
+what's it like from your side?" — a nonsense topic follow-up for a question about
+Novi's own senses.
+
+- `_is_perception_question` detects "can you hear/see me", "are you listening",
+  "did you see/hear that".
+- `_perception_reply` answers honestly based on actual capabilities: hearing is
+  always available ("Yeah, I can hear you fine."); vision depends on whether a
+  camera is configured ("I don't have a visual feed right now…" / "I can see what's
+  in front of the camera.").
+- Tests: +2; fast suites **450 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/perception-questions.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

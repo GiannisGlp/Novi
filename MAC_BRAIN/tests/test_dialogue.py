@@ -23,6 +23,7 @@ from MAC_BRAIN.dialogue import (
     _is_meta_referential,
     _is_near_repetitive,
     _is_physical_action_request,
+    _is_perception_question,
     _is_realtime_data_question,
     _is_recall_question,
     _is_thanks,
@@ -215,6 +216,11 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertFalse(_is_time_greeting("what's up"))
         self.assertEqual(_time_greeting_part("good morning"), "morning")
 
+    def test_perception_question_detection(self):
+        for s in ["can you hear me?", "can you see me?", "are you listening?", "did you see that?"]:
+            self.assertTrue(_is_perception_question(s), s)
+        self.assertFalse(_is_perception_question("what's the time?"))
+
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
         r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")
@@ -398,6 +404,17 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIsNotNone(r["text"])
         self.assertEqual(r["grounding"]["route"], "time_greeting")
         self.assertIn("night", r["text"].lower())
+
+    def test_perception_question_gets_honest_reply_not_topic_followup(self):
+        b = self._brain()
+        r = b.compose_reply("can you hear me?", llm_chat=lambda **k: None)
+        self.assertIsNotNone(r["text"])
+        self.assertEqual(r["grounding"]["route"], "perception")
+        self.assertIn("hear", r["text"].lower())
+        self.assertNotIn("good answer", r["text"].lower())
+        # vision question answered honestly per availability
+        rv = b.compose_reply("did you see that?", llm_chat=lambda **k: None)
+        self.assertNotIn("good answer", rv["text"].lower())
 
 
 class ExperienceLearningTests(unittest.TestCase):

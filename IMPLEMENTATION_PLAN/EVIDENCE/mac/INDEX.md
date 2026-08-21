@@ -75,5 +75,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Empathetic handling of emotional statements | `20260821T232828Z/emotional-statement-handling.json` | 'i'm feeling down'/'i had a rough day' get warmth, not a dry topic follow-up |
 | Natural thanks + no program-speak | `20260821T233212Z/thanks-and-no-program-speak.json` | 'thanks' → 'anytime'; forbids 'AI model', 'processing data', 'I'm just a program' |
 | Time-of-day greetings | `20260821T233545Z/time-greetings.json` | 'good morning/night' get a matching warm reply, not a generic 'hey' |
+| Honest answers to perception questions | `20260821T234022Z/perception-questions.json` | 'can you hear/see me?' answered honestly, not as a topic follow-up |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

@@ -41,6 +41,7 @@ from .dialogue import (
     _is_greeting,
     _is_introduction,
     _is_joke_request,
+    _is_perception_question,
     _is_physical_action_request,
     _is_realtime_data_question,
     _is_recall_question,
@@ -1253,6 +1254,20 @@ class MacBrain:
         except Exception:  # noqa: BLE001
             return False
 
+    def _has_vision(self) -> bool:
+        """Whether a camera/vision feed is configured."""
+        return getattr(self, "camera", None) is not None
+
+    def _perception_reply(self, text: str) -> str:
+        """Honest, natural answer to a perception question ("can you hear/see me?")."""
+        t = text.lower()
+        if "see" in t or "watching" in t or "look" in t:
+            if self._has_vision():
+                return "I can see what's in front of the camera. What did you want me to look at?"
+            return "I don't have a visual feed right now, so I couldn't see that."
+        # hearing / listening
+        return "Yeah, I can hear you fine."
+
     def self_model(self) -> dict[str, Any]:
         """Assemble a first-person self-model for dialogue/reasoning (docs/06-soul/01 §6)."""
         return build_self_model(self).snapshot()
@@ -1428,6 +1443,9 @@ class MacBrain:
         if _is_emotional_statement(text):
             reason = "You shared how you're feeling, so I replied with warmth and opened a door to talk (instead of a dry topic follow-up)"
             return {"text": emotional_reply(cycle=self._cycle), "fallback": True, "reason": reason, "grounding": {"route": "emotion", **out}}
+        if _is_perception_question(text):
+            reason = "You asked whether I can hear/see, so I answered honestly about my senses (not a topic follow-up)"
+            return {"text": self._perception_reply(text), "fallback": True, "reason": reason, "grounding": {"route": "perception", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

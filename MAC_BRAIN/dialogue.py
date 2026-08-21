@@ -458,6 +458,19 @@ def thanks_reply(cycle: int = 0) -> str:
     return _THANKS_REPLIES[cycle % len(_THANKS_REPLIES)]
 
 
+# Perception questions ("can you hear me?", "can you see me?", "are you
+# listening?", "did you see that?") are about Novi's own senses, not a topic, so
+# they must not fall through to "I don't have a good answer on hear yet".
+_PERCEPTION_RE = re.compile(
+    r"\b(can you (?:hear|see)|are you (?:listening|watching)|did you (?:see|hear)|what can you (?:see|hear)|can you hear me|can you see me|do you hear|do you see)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_perception_question(text: str) -> bool:
+    return bool(text) and bool(_PERCEPTION_RE.search(text))
+
+
 def _extract_topic(text: str) -> str:
     """Pull the most likely topic noun from a user line (deterministic, no NLP).
 
