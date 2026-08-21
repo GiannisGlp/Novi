@@ -405,6 +405,15 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_mid_pursuit_kill_preserves_step_budget` in `MAC_BRAIN/tests/test_resume_goals.py`; full suite **365 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/goal-resume.json`.
 
+## LLM-enhanced memory summaries (Memory 3.1) (status: IMPLEMENTED)
+
+- New `LLMSummarizer` (`MAC_BRAIN/models/summarizer.py`): writes a true semantic gist for a group of episodic memories using the local Ollama model, instead of a deterministic concatenation.
+- `SummaryConsolidator` now accepts an optional `summarizer` callable; when it returns a summary it is used, otherwise it falls back to the deterministic concatenation (best-effort, CI-safe).
+- Wired into the web server: the brain is built with an LLM-backed `SummaryConsolidator` when Ollama is available.
+- Verified on-device with real nemotron-3.5-lightning: 3 alice episodes → "Alice is currently in the hallway and moved the door; she has an affinity for jazz music."
+- New tests `MAC_BRAIN/tests/test_summarizer.py` (6); full suite **371 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/llm-summaries.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

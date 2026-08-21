@@ -121,7 +121,15 @@ class NoviWebServer:
             cam = DemoCamera()
         stt = self._build_stt() if self.camera_mode == "real" else None
         reasoning = self._build_reasoning()
-        return MacBrain(camera=cam, stt=stt, reasoning=reasoning, store_path=self.store_path, config=MacBrainConfig())
+        summary_consolidator = self._build_summary_consolidator()
+        return MacBrain(camera=cam, stt=stt, reasoning=reasoning, store_path=self.store_path, summary_consolidator=summary_consolidator, config=MacBrainConfig())
+
+    def _build_summary_consolidator(self) -> Any:
+        """SummaryConsolidator with an LLM summarizer when Ollama is available."""
+        from MAC_BRAIN.consolidation import SummaryConsolidator
+        from MAC_BRAIN.models.summarizer import LLMSummarizer
+
+        return SummaryConsolidator(None, summarizer=LLMSummarizer(model=self.llm_model))
 
     def _build_reasoning(self) -> Any:
         mode = self.reasoning_mode

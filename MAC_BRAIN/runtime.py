@@ -87,6 +87,7 @@ class MacBrain:
         health: HealthMonitor | None = None,
         metrics: MetricRegistry | None = None,
         diagnostics: Diagnostics | None = None,
+        summary_consolidator: Any | None = None,
         config: MacBrainConfig | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
@@ -126,7 +127,9 @@ class MacBrain:
         if goals is None and isinstance(self.memory, DurableMemoryStore):
             self._load_goals()
         self.consolidator = MemoryConsolidator(self.memory, self.config.consolidation_config) if isinstance(self.memory, DurableMemoryStore) else None
-        self.summary_consolidator = SummaryConsolidator(self.memory) if isinstance(self.memory, DurableMemoryStore) else None
+        self.summary_consolidator = summary_consolidator or (SummaryConsolidator(self.memory) if isinstance(self.memory, DurableMemoryStore) else None)
+        if self.summary_consolidator is not None and getattr(self.summary_consolidator, "store", None) is None and isinstance(self.memory, DurableMemoryStore):
+            self.summary_consolidator.store = self.memory
         if soul is not None:
             self.soul = soul
         elif isinstance(self.memory, DurableMemoryStore):

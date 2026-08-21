@@ -69,11 +69,16 @@ class SummaryConsolidator:
         min_group_size: int = 2,
         summary_types: tuple[str, ...] = ("utterance", "perception"),
         summary_memory_type: str = "summary",
+        summarizer: Any | None = None,
     ) -> None:
         self.store = store
         self.min_group_size = min_group_size
         self.summary_types = summary_types
         self.summary_memory_type = summary_memory_type
+        # Optional callable (entity, records) -> str. When provided, it writes the
+        # summary text (e.g. an LLM gist); otherwise a deterministic concatenation
+        # is used. A summarizer that returns None/empty falls back to deterministic.
+        self.summarizer = summarizer
 
     def consolidate(self) -> SummaryReport:
         rows = self.store.active_rows()
@@ -89,6 +94,10 @@ class SummaryConsolidator:
             if self._summary_exists(entity):
                 continue
             summary = self._summarize(entity, records)
+            if self.summarizer is not None:
+                llm_summary = self._safe_summarize(entity, records)
+                if llm_summary:
+                    summary = llm_summary
             admission = self.store.admit(
                 memory_type=self.summary_memory_type,
                 content=summary,
@@ -103,6 +112,16 @@ class SummaryConsolidator:
             if admission.accepted:
                 report.created += 1
         return report
+
+    def _safe_summarize(self, entity: str, records: list[Any]) -> str | None:
+        """Run the optional summarizer, tolerating any failure (fall back to deterministic)."""
+        try:
+            result = self.summarizer(entity, records)
+            if result and str(result).strip():
+                return str(result).strip()
+        except Exception:  # noqa: BLE001 - summarizer is best-effort
+            return None
+        return None
 
     def _summary_exists(self, entity: str) -> bool:
         for item in self.store.active_rows():

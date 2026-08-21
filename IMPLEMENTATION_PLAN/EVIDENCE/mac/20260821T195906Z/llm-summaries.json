@@ -1,0 +1,12 @@
+{
+  "slice": "LLM-enhanced memory summaries (Memory 3.1)",
+  "model": "nemotron-3.5-lightning (local Ollama)",
+  "episodic_taught": [
+    "alice moved the door",
+    "alice likes jazz",
+    "alice is in the hallway"
+  ],
+  "llm_summary": "Alice is currently in the hallway and moved the door; she has an affinity for jazz music.",
+  "created": 1,
+  "mechanism": "LLMSummarizer writes a semantic gist via Ollama; SummaryConsolidator falls back to deterministic on failure"
+}
