@@ -744,6 +744,21 @@ an introduction).
 - Tests: +2; fast suites **444 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/emotional-statement-handling.json`.
 
+## Natural thanks + no program-speak (round 11 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing: "thanks" → "You're welcome. I'm glad I could help." (canned
+customer-service line), and "how are you?" drifted into program-speak ("I've been
+processing some interesting data lately").
+
+- `_is_thanks` / `thanks_reply`: "thanks", "thank you", "appreciate it" now get a
+  brief, warm line ("anytime." / "of course — glad it helped.") instead of
+  "I'm glad I could help."
+- Forbidden program-speak: "AI model/assistant", "training data", "processing
+  data", "I'm just a program", "I have no feelings", plus "what's been on your
+  mind" as an opener.
+- Tests: +2; fast suites **446 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/thanks-and-no-program-speak.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

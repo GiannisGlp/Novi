@@ -25,6 +25,7 @@ from MAC_BRAIN.dialogue import (
     _is_physical_action_request,
     _is_realtime_data_question,
     _is_recall_question,
+    _is_thanks,
     _is_repetitive,
     _reduce_name_repetition,
     clarification_reply,
@@ -47,6 +48,9 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertTrue(_is_forbidden("That's a great question."))
         self.assertTrue(_is_forbidden("I appreciate you sharing that."))
         self.assertTrue(_is_forbidden("Sounds like you're feeling a bit off."))
+        self.assertTrue(_is_forbidden("As an AI model, I can help."))
+        self.assertTrue(_is_forbidden("I've been processing some interesting data lately."))
+        self.assertTrue(_is_forbidden("I'm just a program."))
 
     def test_natural_reply_is_not_forbidden(self):
         self.assertFalse(_is_forbidden("I remember that alice moved the door."))
@@ -195,6 +199,12 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(_is_emotional_statement(s), s)
         for s in ["what's the time?", "tell me a joke", "my name is alice"]:
             self.assertFalse(_is_emotional_statement(s), s)
+
+    def test_thanks_detection(self):
+        for s in ["thanks", "thank you", "thx!", "appreciate it"]:
+            self.assertTrue(_is_thanks(s), s)
+        self.assertFalse(_is_thanks("thank you for nothing"))
+        self.assertFalse(_is_thanks(""))
 
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
@@ -364,6 +374,14 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertNotIn("good answer", r["text"].lower())
         # "i'm so stressed" must not be misread as an introduction.
         self.assertFalse(_is_introduction("i'm so stressed"))
+
+    def test_thanks_gets_brief_natural_reply(self):
+        b = self._brain()
+        r = b.compose_reply("thanks", llm_chat=lambda **k: "I'm glad I could help.")
+        self.assertIsNotNone(r["text"])
+        self.assertEqual(r["grounding"]["route"], "thanks")
+        self.assertNotIn("glad i could help", r["text"].lower())
+        self.assertLess(len(r["text"]), 40)
 
 
 class ExperienceLearningTests(unittest.TestCase):

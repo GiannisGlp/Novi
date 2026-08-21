@@ -47,6 +47,7 @@ _FORBIDDEN = [
         r"\bi('?m| am) (just )?a (?:large )?language model\b",
         r"\bis there anything else (i can )?help\b",
         r"\bwhat('?s| is) on your mind\b",
+        r"\bwhat('?s| is) been on your mind\b",
         r"\btell me what('?s| is) on your mind\b",
         r"\bhow can i (?:help|assist) you today\b",
         r"\bgreat question\b",
@@ -55,6 +56,13 @@ _FORBIDDEN = [
         r"\bi('?m| am) here (?:for|if) (you|anyone)\b",
         r"\bsounds like you('?re| are) feeling\b",
         r"\bthank you for (?:sharing|asking)\b",
+        r"\b(?:as an? )?ai (?:model|assistant|language model)\b",
+        r"\bbased on my (?:training data|training)\b",
+        r"\bmy (?:training data|neural network|programming|code|algorithm)\b",
+        r"\b(?:processing|running|executing|running on)\b.{0,30}\b(?:data|algorithms?|models?)\b",
+        r"\bas an ai\b",
+        r"\bi('?m| am) (?:just )?a program\b",
+        r"\bi have no feelings\b",
     )
 ]
 
@@ -405,6 +413,24 @@ def _is_emotional_statement(text: str) -> bool:
 
 def emotional_reply(cycle: int = 0) -> str:
     return _EMOTIONAL_REPLIES[cycle % len(_EMOTIONAL_REPLIES)]
+
+
+_THANKS = re.compile(r"^(thanks|thank you|thx|cheers|ty|appreciate it|thanks a lot|thank you so much|thank you for that)[.!?]*$", re.IGNORECASE)
+
+_THANKS_REPLIES = [
+    "anytime.",
+    "of course — glad it helped.",
+    "no problem.",
+    "you're welcome.",
+]
+
+
+def _is_thanks(text: str) -> bool:
+    return bool(text.strip()) and bool(_THANKS.match(text.strip()))
+
+
+def thanks_reply(cycle: int = 0) -> str:
+    return _THANKS_REPLIES[cycle % len(_THANKS_REPLIES)]
 
 
 def _extract_topic(text: str) -> str:

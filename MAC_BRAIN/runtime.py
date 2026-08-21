@@ -44,6 +44,7 @@ from .dialogue import (
     _is_physical_action_request,
     _is_realtime_data_question,
     _is_recall_question,
+    _is_thanks,
     clarification_reply,
     continuation_reply,
     emotional_reply,
@@ -55,6 +56,7 @@ from .dialogue import (
     physical_action_honest_reply,
     realtime_honest_reply,
     recall_reply,
+    thanks_reply,
 )
 from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
@@ -1316,6 +1318,9 @@ class MacBrain:
         # The user asks for a joke / something funny — give a light, clean quip.
         if _is_joke_request(text):
             return {"text": joke_reply(cycle=self._cycle), "fallback": False, "reason": "You asked for a joke, so I gave you a light, in-character one.", "grounding": {"route": "joke"}}
+        # A simple thank-you gets a brief, warm line — not "I'm glad I could help".
+        if _is_thanks(text):
+            return {"text": thanks_reply(cycle=self._cycle), "fallback": False, "reason": "You thanked me, so I acknowledged it warmly and briefly.", "grounding": {"route": "thanks"}}
         self_state = self._chat_self_state()
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)
