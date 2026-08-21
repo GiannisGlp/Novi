@@ -158,6 +158,9 @@ _GREETING_REPLIES = [
     "oh, hey, you're here.",
     "hi there — glad you're around.",
     "hey, nice to hear from you.",
+    "hey, good to hear your voice.",
+    "oh hi — wasn't expecting you, but nice.",
+    "hey, what's happening?",
 ]
 
 
@@ -204,6 +207,8 @@ _CLARIFICATION_REPLIES = [
     "Sorry — I think I got a bit ahead of myself. What would you like me to clear up?",
     "Ah, I muddled that. Ask me again and I'll be plainer.",
     "Sorry, I didn't land that well. What are you actually wondering about?",
+    "I think I got tangled in my own words there — what part did you want me to untangle?",
+    "Hmm, I overcomplicated that. What specifically would you like me to repeat?",
 ]
 
 
@@ -338,6 +343,8 @@ _CONTINUATION_REPLIES = [
     "that's where I was headed. what's your read on it?",
     "I'm listening — go on, what are you getting at?",
     "honestly, because it felt right. what's your thinking?",
+    "I've got more, but I'd rather you steer it — what's your take so far?",
+    "go on, I'm with you. what else is in your head?",
 ]
 
 
@@ -426,6 +433,8 @@ _EMOTIONAL_REPLIES = [
     "I hear you — that's a lot to carry. I'm here if you want to talk it out, or we can just sit with it.",
     "That sounds heavy. How long have you been feeling this way?",
     "I'm sorry it's been rough. Want to unpack it a bit, or would you rather not go into it right now?",
+    "That's fair to feel. What's been the hardest part?",
+    "I'm here — take your time. Do you want to tell me a bit more, or would you rather change the subject for now?",
 ]
 
 
@@ -447,6 +456,9 @@ _THANKS_REPLIES = [
     "of course — glad it helped.",
     "no problem.",
     "you're welcome.",
+    "happy to.",
+    "sure thing.",
+    "anytime — that's what I'm here for.",
 ]
 
 

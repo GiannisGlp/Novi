@@ -1,0 +1,11 @@
+{
+  "slice": "Natural conversation round 15: more variety in deterministic reply banks",
+  "unique_per_bank": {
+    "greeting": 7,
+    "clarification": 5,
+    "thanks": 7,
+    "emotional": 5,
+    "continuation": 6
+  },
+  "mechanism": "expanded the deterministic reply banks (greeting/clarification/thanks/emotional/continuation) so long conversations don't repeat the same canned line"
+}

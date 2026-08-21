@@ -77,5 +77,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Time-of-day greetings | `20260821T233545Z/time-greetings.json` | 'good morning/night' get a matching warm reply, not a generic 'hey' |
 | Honest answers to perception questions | `20260821T234022Z/perception-questions.json` | 'can you hear/see me?' answered honestly, not as a topic follow-up |
 | One question per reply | `20260821T234403Z/one-question-per-reply.json` | prompt steers natural one-thing-at-a-time instead of question lists |
+| More reply-bank variety | `20260821T234819Z/reply-bank-variety.json` | greeting/clarification/thanks/emotional/continuation banks expanded so long chats don't repeat |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

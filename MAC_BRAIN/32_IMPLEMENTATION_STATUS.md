@@ -798,6 +798,16 @@ People naturally ask one thing at a time.
 - Tests: updated prompt test; fast suites **450 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/one-question-per-reply.json`.
 
+## More variety in deterministic reply banks (round 15 of the naturalness objective) (status: IMPLEMENTED)
+
+Over long conversations the small deterministic reply banks (3-4 lines each)
+could repeat the same canned line. Expanded them so each rotates more:
+
+- greeting 4 → 7, clarification 3 → 5, thanks 4 → 7, emotional 3 → 5,
+  continuation 4 → 6 unique lines.
+- Tests: fast suites **450 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reply-bank-variety.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
