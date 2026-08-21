@@ -109,8 +109,15 @@ class NoviWebServer:
         self._chat_seq = 0
         self._chat: list[dict[str, Any]] = []
         self.brain = self._build_brain()
+        self.conversation_summarizer = self._build_conversation_summarizer()
         self._load_chat_history()
         self._last_step: dict[str, Any] | None = None
+
+    def _build_conversation_summarizer(self) -> Any:
+        """LLM conversation summarizer when Ollama is available."""
+        from MAC_BRAIN.models.conversation_summarizer import ConversationSummarizer
+
+        return ConversationSummarizer(model=self.llm_model)
 
     def _load_chat_history(self) -> None:
         """Restore the chat thread from the durable store on restart (conversation persistence)."""
@@ -378,7 +385,7 @@ class NoviWebServer:
             rows = self.brain.memory.active_rows()
         except Exception:  # noqa: BLE001 - memory context is best-effort
             return []
-        summaries = [r["record"] for r in rows if r["record"].memory_type == "summary"]
+        summaries = [r["record"] for r in rows if r["record"].memory_type in {"summary", "conversation_summary"}]
         summaries.sort(key=lambda r: r.created_at, reverse=True)
         return [s.content for s in summaries[:limit]]
 
@@ -421,6 +428,35 @@ class NoviWebServer:
         self._chat.append({"seq": self._chat_seq, **entry})
         if len(self._chat) > 200:
             self._chat = self._chat[-200:]
+        self._persist_chat()
+        self._maybe_summarize_chat()
+
+    def _maybe_summarize_chat(self, threshold: int = 20, keep_recent: int = 8) -> None:
+        """When the thread grows long, distill the older turns into a durable summary."""
+        if len(self._chat) <= threshold:
+            return
+        older = self._chat[:-keep_recent]
+        recent = self._chat[-keep_recent:]
+        summary: str | None = None
+        if self.conversation_summarizer is not None:
+            try:
+                summary = self.conversation_summarizer([{"role": c["role"], "text": c["text"]} for c in older])
+            except Exception:  # noqa: BLE001 - summarizer is best-effort
+                summary = None
+        if not summary:
+            summary = "Conversation: " + "; ".join(f"{c['role']}: {c['text']}" for c in older[-6:])
+        try:
+            self.brain.memory.admit(
+                memory_type="conversation_summary",
+                content=summary,
+                confidence=0.8,
+                verification_status="consolidated",
+                privacy_class="public",
+                provenance={"source": "conversation_summarization", "kind": "thread_summary"},
+            )
+        except Exception:  # noqa: BLE001 - summary admission is best-effort
+            pass
+        self._chat = recent
         self._persist_chat()
 
     def _persist_chat(self) -> None:

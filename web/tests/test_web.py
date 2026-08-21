@@ -235,6 +235,24 @@ class NoviWebServerTests(unittest.TestCase):
             finally:
                 s2.stop()
 
+    def test_conversation_summarization_trims_and_stores_summary(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False, chat_llm=False)
+            s.start()
+            try:
+                for i in range(8):
+                    s._append_chat({"role": "user", "text": f"message {i}"})
+                s._maybe_summarize_chat(threshold=5, keep_recent=2)
+                self.assertLessEqual(len(s._chat), 2, "thread should be trimmed to the recent turns")
+                summaries = [r["record"] for r in s.brain.memory.active_rows() if r["record"].memory_type == "conversation_summary"]
+                self.assertTrue(summaries, "expected a conversation summary memory")
+                self.assertIn("message", summaries[0].content)
+            finally:
+                s.stop()
+
     def test_chat_uses_local_llm_when_available(self):
         s = self._server(auto_step=False, chat_llm=True)
         s._llm_available = True

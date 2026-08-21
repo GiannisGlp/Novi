@@ -1,0 +1,32 @@
+{
+  "slice": "Conversation summarization (Memory 3.4)",
+  "model": "nemotron-3.5-lightning (local Ollama)",
+  "conversation_turns": [
+    {
+      "role": "user",
+      "text": "my name is alice"
+    },
+    {
+      "role": "novi",
+      "text": "hello alice"
+    },
+    {
+      "role": "user",
+      "text": "I like jazz"
+    },
+    {
+      "role": "novi",
+      "text": "noted"
+    },
+    {
+      "role": "user",
+      "text": "please move the door"
+    },
+    {
+      "role": "novi",
+      "text": "I'll inspect it"
+    }
+  ],
+  "llm_summary": "The user, Alice, introduced herself and expressed her liking for jazz. She then requested Novi to move the door, to which Novi acknowledged and committed to inspecting it.",
+  "mechanism": "when the thread exceeds a threshold, older turns are distilled into a durable conversation_summary memory and the thread is trimmed"
+}

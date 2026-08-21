@@ -482,6 +482,15 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_chat_persists_across_restart` in `web/tests/test_web.py`; full suite **386 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/conversation-persistence.json`.
 
+## Conversation summarization (Memory 3.4) (status: IMPLEMENTED)
+
+- New `ConversationSummarizer` (`MAC_BRAIN/models/conversation_summarizer.py`): distills a chat thread into a concise summary via the local Ollama model, with a deterministic fallback.
+- When the thread exceeds a threshold (20 turns), the web server summarizes the older turns into a durable `conversation_summary` memory and trims the thread to the recent turns.
+- Conversation summaries are included in the chat context (`_memory_context`), so Novi keeps the gist of a long conversation.
+- Verified on-device with real nemotron-3.5-lightning: a 6-turn thread → "The user, Alice, introduced herself and expressed her liking for jazz…"
+- New test `test_conversation_summarization_trims_and_stores_summary` in `web/tests/test_web.py`; full suite **387 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/conversation-summarization.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
