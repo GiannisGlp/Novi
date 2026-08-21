@@ -54,5 +54,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Summary recall in chat | `20260821T200739Z/summary-recall-chat.json` | _generate_reply appends consolidated summaries to facts_i_know; Novi references them in replies |
 | Narrative surfacing in the web UI | `20260821T201137Z/web-narrative.json` | GET /api/state exposes narrative; new 'Recent Narrative' panel renders the LLM recap |
 | Deliberation rounds surfaced in the web UI | `20260821T201328Z/web-deliberation-rounds.json` | reasoning trace renders each round (analysis, evaluation, [confirmed], → action) |
+| Episodic narrative in chat | `20260821T201742Z/narrative-chat.json` | _generate_reply appends 'Recent events: <narrative>'; Novi recaps what happened |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

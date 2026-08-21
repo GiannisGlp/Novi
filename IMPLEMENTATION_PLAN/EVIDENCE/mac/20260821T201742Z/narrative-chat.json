@@ -1,0 +1,10 @@
+{
+  "slice": "Episodic narrative in chat",
+  "episodic_narrative_in_context": [
+    "alice said hello, then moved the door."
+  ],
+  "user_question": "what happened?",
+  "novi_reply": "I remember that Alice first moved the door, then greeted with 'hello', and asked what happened.",
+  "llm_used": true,
+  "mechanism": "_generate_reply appends 'Recent events: <narrative>' to facts_i_know so Novi can recap what happened"
+}

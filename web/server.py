@@ -373,6 +373,9 @@ class NoviWebServer:
         facts = self._knowledge_context(text)
         facts_list = [f for f in facts.split("; ") if f]
         facts_list.extend(self._memory_context())
+        narrative = self.brain._episodic_narrative()
+        if narrative:
+            facts_list.append("Recent events: " + " ".join(narrative))
         known = self._known_persons()
         if known:
             facts_list.extend(f"I know the person named {p}" for p in known)

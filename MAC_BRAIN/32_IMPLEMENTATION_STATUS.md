@@ -461,6 +461,13 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Frontend-only change (`traceHtml()` iterates `t.deliberation.rounds`); full suite **383 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-deliberation-rounds.json`.
 
+## Episodic narrative in chat (status: IMPLEMENTED)
+
+- `_generate_reply` now appends the **episodic narrative** (`Recent events: <narrative>`) to the `facts_i_know` list, so Novi can recap what happened when asked.
+- Verified on-device with real nemotron-3.5-lightning: after "alice moved the door / alice said hello", asking "what happened?" → "I remember that Alice first moved the door, then greeted with 'hello'…"
+- New test `test_chat_includes_episodic_narrative` in `web/tests/test_web.py`; full suite **384 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/narrative-chat.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

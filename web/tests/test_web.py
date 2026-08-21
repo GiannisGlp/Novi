@@ -168,6 +168,30 @@ class NoviWebServerTests(unittest.TestCase):
             finally:
                 s.stop()
 
+    def test_chat_includes_episodic_narrative(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False, chat_llm=True)
+            s._llm_available = True
+            captured: dict = {}
+
+            def fake_chat(**kw):
+                captured["user"] = kw.get("user", "")
+                return "Alice moved the door, then said hello."
+
+            s._llm_chat = fake_chat
+            s.start()
+            try:
+                s.hear("alice moved the door")
+                s.hear("alice said hello")
+                s.chat_send("what happened?")
+                self.assertIn("Recent events", captured["user"])
+                self.assertIn("alice", captured["user"].lower())
+            finally:
+                s.stop()
+
     def test_chat_uses_local_llm_when_available(self):
         s = self._server(auto_step=False, chat_llm=True)
         s._llm_available = True
