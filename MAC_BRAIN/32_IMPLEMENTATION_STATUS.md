@@ -338,6 +338,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_model_switcher` (web/tests); 335 passing.
 - **Nemotron fix**: 3.5 Lightning is a chain-of-thought model; without a top-level `think:false` it exhausts the token budget thinking and returns an empty `content`. Set `think:false` in chat (`_llm_chat`) and the reasoning provider, with a CoT→`thinking`-parse fallback. Replies dropped from qwen's ~20–40s to **~1.4s**.
 
+## Web UI redesign (status: IMPLEMENTED)
+
+- Tabbed SPA: **Chat / State / Event Log**; Event Log moved to its own page.
+- **Live chat is now full-window**: your messages bubble on the **right**, Novi's on the **left** (with avatar + trace), scrollbar hidden but still scrollable (`scrollbar-width:none`), input pinned to the bottom.
+- Loaders & spinners: thinking spinner while Novi replies, spinner on the send button, pulsing Novi logo, fade-in bubble animation, rotating "awake" empty-state.
+- Live **graphs**: Confidence and Knowledge-growth sparklines on the State page.
+- Model dropdown moved to a tidy header control.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
