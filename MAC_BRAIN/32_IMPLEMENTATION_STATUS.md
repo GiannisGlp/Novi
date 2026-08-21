@@ -430,6 +430,15 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests in `MAC_BRAIN/tests/test_deliberation.py` (confirm-stops-early, revise-wins, max-rounds-bounds); full suite **375 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/multi-round-deliberation.json`.
 
+## LLM-enhanced episodic narrative (Memory 3.3) (status: IMPLEMENTED)
+
+- New `LLMNarrator` (`MAC_BRAIN/models/narrator.py`): writes a natural, coherent "what happened" recap of recent episodic memories using the local Ollama model, instead of a deterministic concatenation.
+- The runtime `_episodic_narrative()` uses the narrator when available and falls back to the deterministic list on failure (best-effort, CI-safe).
+- Wired into the web server: the brain is built with an LLM narrator when Ollama is available.
+- Verified on-device with real nemotron-3.5-lightning: 3 episodes → "Alice said hello, then she moved the door. As a result, the door is now open."
+- New tests `MAC_BRAIN/tests/test_narrator.py` (6); full suite **381 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/llm-narrative.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

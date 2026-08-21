@@ -1,0 +1,20 @@
+{
+  "slice": "LLM-enhanced episodic narrative (Memory 3.3)",
+  "model": "nemotron-3.5-lightning (local Ollama)",
+  "episodes": [
+    {
+      "memory_type": "utterance",
+      "content": "alice moved the door"
+    },
+    {
+      "memory_type": "utterance",
+      "content": "alice said hello"
+    },
+    {
+      "memory_type": "perception",
+      "content": "door is open"
+    }
+  ],
+  "llm_narrative": "Alice said hello, then she moved the door. As a result, the door is now open.",
+  "mechanism": "LLMNarrator writes a natural 'what happened' recap via Ollama; runtime falls back to deterministic on failure"
+}

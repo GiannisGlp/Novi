@@ -88,6 +88,7 @@ class MacBrain:
         metrics: MetricRegistry | None = None,
         diagnostics: Diagnostics | None = None,
         summary_consolidator: Any | None = None,
+        narrator: Any | None = None,
         config: MacBrainConfig | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
@@ -130,6 +131,7 @@ class MacBrain:
         self.summary_consolidator = summary_consolidator or (SummaryConsolidator(self.memory) if isinstance(self.memory, DurableMemoryStore) else None)
         if self.summary_consolidator is not None and getattr(self.summary_consolidator, "store", None) is None and isinstance(self.memory, DurableMemoryStore):
             self.summary_consolidator.store = self.memory
+        self.narrator = narrator
         if soul is not None:
             self.soul = soul
         elif isinstance(self.memory, DurableMemoryStore):
@@ -964,18 +966,30 @@ class MacBrain:
         return 0.5 * relevance + 0.3 * recency + 0.2 * importance
 
     def _episodic_narrative(self, limit: int = 5) -> list[str]:
-        """Reconstruct a short narrative from recent episodic memories (Memory 2.0)."""
+        """Reconstruct a short narrative from recent episodic memories (Memory 2.0).
+
+        When an LLM narrator is available it writes a natural "what happened"
+        recap; otherwise a deterministic concatenation is used.
+        """
         try:
             rows = self.memory.active_rows()
         except Exception:  # noqa: BLE001
             return []
         episodic = [item["record"] for item in rows if item["record"].memory_type in {"utterance", "perception"}]
         episodic.sort(key=lambda r: r.created_at)
-        narrative: list[str] = []
-        for record in episodic[-limit:]:
-            content = record.content if isinstance(record.content, str) else str(record.content)
-            narrative.append(f"{record.memory_type}: {content}")
-        return narrative
+        recent = episodic[-limit:]
+        if self.narrator is not None and recent:
+            episodes = [
+                {"memory_type": r.memory_type, "content": r.content if isinstance(r.content, str) else str(r.content)}
+                for r in recent
+            ]
+            try:
+                narrative = self.narrator(episodes)
+                if narrative:
+                    return [narrative]
+            except Exception:  # noqa: BLE001 - narrator is best-effort
+                pass
+        return [f"{r.memory_type}: {r.content if isinstance(r.content, str) else str(r.content)}" for r in recent]
 
     def recall_semantic(self, query: str, *, limit: int = 5) -> dict[str, Any]:
         """Semantic (vector) memory recall; falls back to empty when unavailable."""
