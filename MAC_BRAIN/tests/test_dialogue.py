@@ -16,14 +16,20 @@ from MAC_BRAIN.dialogue import (
     _is_clarification,
     _is_forbidden,
     _is_greeting,
+    _is_introduction,
+    _is_joke_request,
     _is_meta_referential,
     _is_near_repetitive,
+    _is_recall_question,
     _is_repetitive,
     _reduce_name_repetition,
     clarification_reply,
     followup_question,
     greeting_reply,
+    introduction_reply,
+    joke_reply,
     natural_fallback,
+    recall_reply,
 )
 from MAC_BRAIN.runtime import MacBrain
 
@@ -117,6 +123,32 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(c)
             self.assertFalse(_is_forbidden(c))
             self.assertNotIn("what's on your mind", c.lower())
+
+    def test_introduction_detection(self):
+        self.assertTrue(_is_introduction("my name is alice"))
+        self.assertTrue(_is_introduction("I'm Vano"))
+        self.assertFalse(_is_introduction("hello"))
+        self.assertFalse(_is_introduction(""))
+
+    def test_joke_detection(self):
+        self.assertTrue(_is_joke_request("tell me a joke"))
+        self.assertTrue(_is_joke_request("can you make me laugh?"))
+        self.assertFalse(_is_joke_request("what time is it"))
+
+    def test_joke_reply_is_clean(self):
+        for i in range(6):
+            j = joke_reply(cycle=i)
+            self.assertTrue(j)
+            self.assertFalse(_is_forbidden(j))
+
+    def test_recall_detection(self):
+        self.assertTrue(_is_recall_question("what do you remember about me?"))
+        self.assertTrue(_is_recall_question("what do you know about alice?"))
+        self.assertFalse(_is_recall_question("hello"))
+
+    def test_recall_reply_with_and_without_known(self):
+        self.assertIn("jazz", recall_reply(["I learned you like jazz"], "alice"))
+        self.assertIn("don't have much", recall_reply([], "alice"))
 
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
@@ -230,6 +262,26 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertTrue(r["fallback"])
         self.assertNotIn("system yet", r["text"].lower())
         self.assertIn("clarif", r["reason"].lower())
+
+    def test_introduction_in_compose_reply(self):
+        b = self._brain()
+        r = b.compose_reply("my name is alice", llm_chat=lambda **k: "ignored")
+        self.assertIsNotNone(r["text"])
+        self.assertIn("Alice", r["text"])
+        self.assertNotIn("good answer", r["text"].lower())
+
+    def test_joke_in_compose_reply(self):
+        b = self._brain()
+        r = b.compose_reply("tell me a joke", llm_chat=lambda **k: "ignored")
+        self.assertIsNotNone(r["text"])
+        self.assertNotIn("good answer", r["text"].lower())
+
+    def test_recall_in_compose_reply(self):
+        b = self._brain()
+        b._learn_from_chat("i like jazz", person="alice")
+        r = b.compose_reply("what do you remember about alice?", person="alice", llm_chat=lambda **k: None)
+        self.assertIsNotNone(r["text"])
+        self.assertIn("jazz", r["text"])
 
 
 class ExperienceLearningTests(unittest.TestCase):

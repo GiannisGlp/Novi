@@ -206,6 +206,66 @@ def clarification_reply(cycle: int = 0) -> str:
     return _CLARIFICATION_REPLIES[cycle % len(_CLARIFICATION_REPLIES)]
 
 
+_INTRO = re.compile(r"\b(?:my name is|i am|i'm|i am called) ([a-z][a-z\-' ]{1,30}?)(?:[.!?,]|$)", re.IGNORECASE)
+
+_INTRO_REPLIES = [
+    "{name} — nice to put a name to you. I'll remember that.",
+    "good to meet you, {name}.",
+    "{name}. got it — I'll remember you.",
+]
+
+
+def _extract_self_name(text: str) -> str:
+    m = _INTRO.search(text)
+    return m.group(1).strip() if m else ""
+
+
+def _is_introduction(text: str) -> bool:
+    return bool(_extract_self_name(text))
+
+
+def introduction_reply(text: str, cycle: int = 0) -> str:
+    name = _extract_self_name(text)
+    if not name:
+        return ""
+    return _INTRO_REPLIES[cycle % len(_INTRO_REPLIES)].replace("{name}", name.title())
+
+
+_JOKE_REQUEST = re.compile(
+    r"\b(tell|make|crack|hear|give) (me |us )?(a |one |some )?(joke|funny thing|something funny|a funny story)\b",
+    re.IGNORECASE,
+)
+
+_JOKES = [
+    "Why did the robot break up with the toaster? Too many sparks, not enough chemistry.",
+    "I tried to read a book about anti-gravity once — I just couldn't put it down.",
+    "Why don't robots ever panic? They're wired that way.",
+    "I asked the door if it wanted to open up about its feelings. It said no thanks, it's a bit stiff.",
+]
+
+
+def _is_joke_request(text: str) -> bool:
+    t = text.lower().strip()
+    return bool(_JOKE_REQUEST.search(t)) or "make me laugh" in t
+
+
+def joke_reply(cycle: int = 0) -> str:
+    return _JOKES[cycle % len(_JOKES)]
+
+
+def _is_recall_question(text: str) -> bool:
+    return bool(re.search(r"\bwhat do you (?:remember|know|recall)\b", text, re.IGNORECASE)) or bool(
+        re.search(r"\bdo you remember (me|my|about)\b", text, re.IGNORECASE)
+    )
+
+
+def recall_reply(known: list[str], person: str = "") -> str:
+    """Honest, natural answer to 'what do you remember about me?'."""
+    if known:
+        return f"What I've got on {person or 'you'}: " + "; ".join(known[:3]) + "."
+    return "Honestly, I don't have much on you yet — tell me a bit about yourself and I'll remember it."
+
+
 def _extract_topic(text: str) -> str:
     """Pull the most likely topic noun from a user line (deterministic, no NLP).
 

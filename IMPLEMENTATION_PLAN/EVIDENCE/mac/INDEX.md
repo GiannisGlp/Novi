@@ -66,5 +66,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Natural conversation (greeting + meta-narration fix) | `20260821T225132Z/natural-conversation.json` | pure greetings get short warm replies; 'what's on your mind' forbidden; meta-narration rejected; '[heard]' stripped from history |
 | Natural clarification for follow-up questions | `20260821T225613Z/clarification-natural.json` | 'what X?' / 'what do you mean?' / 'come again?' answered with a natural acknowledge-and-re-engage reply |
 | Distinct personality voice | `20260821T225921Z/personality-voice.json` | weaves persona traits + values into the prompt; forbids coach/therapist/customer-service filler |
+| Natural intro/joke/recall handlers | `20260821T230425Z/natural-turn-handlers.json` | introductions acknowledged by name; joke requests get a light quip; memory-recall answered honestly |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

@@ -1,0 +1,31 @@
+{
+  "slice": "Natural conversation round 4: intro, joke, and memory-recall handlers",
+  "cases": {
+    "my name is alice": {
+      "reply": "Alice \u2014 nice to put a name to you. I'll remember that.",
+      "reason": "You told me your name, so I acknowledged it and said I'd remember it.",
+      "route": "introduction"
+    },
+    "tell me a joke": {
+      "reply": "Why did the robot break up with the toaster? Too many sparks, not enough chemistry.",
+      "reason": "You asked for a joke, so I gave you a light, in-character one.",
+      "route": "joke"
+    },
+    "what do you remember about alice?": {
+      "reply": "What I've got on alice: I learned you like jazz.",
+      "reason": "You asked what I remember, so I told you what I actually know (or said honestly I don't know you yet)",
+      "route": "recall"
+    },
+    "what system?": {
+      "reply": "Sorry \u2014 I think I got a bit ahead of myself. What would you like me to clear up?",
+      "reason": "You asked me to clarify or repeat something, so I acknowledged and re-engaged rather than guessing",
+      "route": "clarification"
+    }
+  },
+  "before": {
+    "my name is alice": "I don't have a good answer on alice yet \u2014 what's it like from your side?",
+    "tell me a joke": "I don't have a good answer on joke yet \u2014 what's it like from your side?",
+    "what do you remember about me?": "I don't have a good answer on remember yet \u2014 what's it like from your side?"
+  },
+  "mechanism": "introductions acknowledged by name; joke requests get a light in-character quip; memory-recall questions answered honestly with learned facts (or an honest 'not much yet')"
+}

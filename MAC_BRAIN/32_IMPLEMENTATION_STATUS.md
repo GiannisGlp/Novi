@@ -626,6 +626,26 @@ customer-service tone. Two changes give Novi a consistent, natural voice:
   web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/personality-voice.json`.
 
+## Natural intro / joke / memory-recall handlers (round 4 of the naturalness objective) (status: IMPLEMENTED)
+
+A common naturalness break was the deterministic follow-up fallback firing on
+messages that aren't new topics: "my name is alice" → "I don't have a good answer
+on alice yet", "tell me a joke" → "I don't have a good answer on joke yet", and
+"what do you remember about me?" → "I don't have a good answer on remember yet".
+Three targeted handlers now cover these:
+
+- **Introductions** (`_is_introduction` / `introduction_reply`): "my name is X",
+  "I'm X" → "X — nice to put a name to you. I'll remember that."
+- **Joke requests** (`_is_joke_request` / `joke_reply`): "tell me a joke" → a
+  light, clean, in-character quip (directly addresses the "or joke or something"
+  in the objective).
+- **Memory recall** (`_is_recall_question` / `recall_reply`): "what do you
+  remember about me?" → honest listing of learned facts, or an honest "I don't
+  have much on you yet — tell me a bit about yourself and I'll remember it."
+- Tests: +8 in `MAC_BRAIN/tests/test_dialogue.py`; fast suites **434 passing**,
+  web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/natural-turn-handlers.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

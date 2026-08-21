@@ -32,7 +32,22 @@ from .lexicon import LearnedPreferences, Lexicon
 from .social import Relationships, SocialIntelligence, TIER_EXPRESSION, SocialInitiative, InitiativeConfig
 from .soul import Soul
 from .storage import DurableMemoryStore
-from .dialogue import DialogueEngine, _extract_topic, _is_clarification, _is_greeting, clarification_reply, followup_question, greeting_reply, natural_fallback
+from .dialogue import (
+    DialogueEngine,
+    _extract_topic,
+    _is_clarification,
+    _is_greeting,
+    _is_introduction,
+    _is_joke_request,
+    _is_recall_question,
+    clarification_reply,
+    followup_question,
+    greeting_reply,
+    introduction_reply,
+    joke_reply,
+    natural_fallback,
+    recall_reply,
+)
 from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
 from .models import (
@@ -1272,6 +1287,15 @@ class MacBrain:
         if _is_greeting(text):
             g = greeting_reply(cycle=self._cycle)
             return {"text": g, "fallback": False, "reason": "You just greeted me, so I replied warmly and briefly — no need to over-explain.", "grounding": {"route": "greeting"}}
+        # The user introduces themselves by name — acknowledge it warmly instead
+        # of saying "I don't have a good answer on <name> yet".
+        if _is_introduction(text):
+            ir = introduction_reply(text, cycle=self._cycle)
+            if ir:
+                return {"text": ir, "fallback": False, "reason": "You told me your name, so I acknowledged it and said I'd remember it.", "grounding": {"route": "introduction"}}
+        # The user asks for a joke / something funny — give a light, clean quip.
+        if _is_joke_request(text):
+            return {"text": joke_reply(cycle=self._cycle), "fallback": False, "reason": "You asked for a joke, so I gave you a light, in-character one.", "grounding": {"route": "joke"}}
         self_state = self._chat_self_state()
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)
@@ -1336,6 +1360,10 @@ class MacBrain:
         if is_clarification:
             reason = "You asked me to clarify or repeat something, so I acknowledged and re-engaged rather than guessing"
             return {"text": clarification_reply(cycle=self._cycle), "fallback": True, "reason": reason, "grounding": {"route": "clarification", **out}}
+        if _is_recall_question(text):
+            known = [f for f in experience if not f.startswith("I've noticed")]
+            reason = "You asked what I remember, so I told you what I actually know (or said honestly I don't know you yet)"
+            return {"text": recall_reply(known, person=person or addressee_name), "fallback": True, "reason": reason, "grounding": {"route": "recall", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:
