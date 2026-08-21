@@ -1068,6 +1068,56 @@ class MacBrain:
         summaries.sort(key=lambda r: r.created_at, reverse=True)
         return [s.content for s in summaries[:limit]]
 
+    def _learn_from_chat(self, text: str, person: str = "") -> list[tuple[str, str]]:
+        """Learn durable preferences from what the user says (pattern learning).
+
+        Detects explicit preference statements ("i like jazz", "i'd prefer …",
+        "i don't like …") and records them as scoped, evidence-backed preferences
+        so Novi references past experience instead of replying statelessly.
+        """
+        learned: list[tuple[str, str]] = []
+        m = re.search(r"\bi (?:really )?(?:like|love|enjoy|am into|am a fan of) (.+?)(?:[.!?]|$)", text, re.I)
+        if m and m.group(1).strip():
+            value = m.group(1).strip()
+            self.preferences.learn(person or "", "likes", value)
+            learned.append(("likes", value))
+        m = re.search(r"\bi(?:'d| would)? prefer (.+?)(?:[.!?]|$)", text, re.I)
+        if m and m.group(1).strip():
+            value = m.group(1).strip()
+            self.preferences.learn(person or "", "prefers", value)
+            learned.append(("prefers", value))
+        m = re.search(r"\bi (?:don'?t|do not) (?:like|care for|enjoy) (.+?)(?:[.!?]|$)", text, re.I)
+        if m and m.group(1).strip():
+            value = m.group(1).strip()
+            self.preferences.learn(person or "", "dislikes", value)
+            learned.append(("dislikes", value))
+        if learned:
+            self._emit("preference.learned_from_chat", {"cycle": self._cycle, "person": person or "", "learned": [{"kind": k, "value": v} for k, v in learned]})
+        return learned
+
+    def _chat_experience(self, person: str = "") -> list[str]:
+        """What Novi has learned from prior experience with this person -> dialogue.
+
+        Surfaces scoped learned preferences and a reflection-derived lesson about
+        repeating actions, so replies are grounded in past experience.
+        """
+        facts: list[str] = []
+        for p in self.preferences.snapshot():
+            if (p.get("person") or "") != (person or "") or not p.get("active", True):
+                continue
+            kind, value = p.get("kind"), p.get("value")
+            if not value:
+                continue
+            if kind == "likes":
+                facts.append(f"I learned you like {value}")
+            elif kind == "prefers":
+                facts.append(f"I learned you prefer {value}")
+            elif kind == "dislikes":
+                facts.append(f"I learned you don't like {value}")
+        if self.reflection.recent_ineffective(window=4):
+            facts.append("I've noticed repeating the same move hasn't been working, so I'm trying something different")
+        return facts
+
     def _chat_self_state(self) -> dict[str, Any]:
         """First-person self-state for dialogue (docs/06-soul/01 self-model)."""
         tone = self.soul.tone({})
@@ -1132,6 +1182,8 @@ class MacBrain:
             f"(warmth={expr.get('warmth', 0.5)}, formality={expr.get('formality', 'medium')}, playful={expr.get('playful', False)}). "
             "Adopt that register. You are given facts you DO know, recent events, and the conversation so far. "
             "If a fact or earlier turn is relevant, answer using it plainly (e.g. 'I remember that alice moved the door'). "
+            "If you have learned something about the person over time (their likes, dislikes, preferences), use it naturally "
+            "(e.g. 'you like jazz') rather than sounding like a stranger. "
             "If you have nothing relevant, say so briefly and honestly — never invent facts. "
             "Do not repeat what you already said, and do not say the person's name more than once unless it changes meaning. "
             "Reply in 1-3 short, natural spoken sentences. Vary your openings; no disclaimers, no chain of thought — just the answer."
@@ -1202,6 +1254,8 @@ class MacBrain:
             facts.append("Recent events: " + " ".join(narrative))
         known = self._chat_known_persons()
         facts.extend(f"I know the person named {p}" for p in known)
+        experience = self._chat_experience(person or addressee_name)
+        facts.extend(experience)
         system = self._dialogue_system_prompt(self_state, relationship, capabilities=self_model.get("capabilities"))
         user_payload = {
             "user_says": text,
@@ -1212,6 +1266,7 @@ class MacBrain:
             "surroundings": surroundings,
             "relationship": relationship,
             "self_model": self_model,
+            "experience": experience,
         }
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")

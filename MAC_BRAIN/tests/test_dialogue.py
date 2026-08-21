@@ -137,5 +137,55 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertNotIn("how can i help", r["text"].lower())
 
 
+class ExperienceLearningTests(unittest.TestCase):
+    def _brain(self) -> MacBrain:
+        return MacBrain()
+
+    def test_learns_like_from_chat(self):
+        b = self._brain()
+        learned = b._learn_from_chat("I like jazz", person="alice")
+        self.assertIn(("likes", "jazz"), learned)
+        self.assertIn("I learned you like jazz", b._chat_experience("alice"))
+
+    def test_learns_prefer_from_chat(self):
+        b = self._brain()
+        b._learn_from_chat("i'd prefer you call me alice", person="alice")
+        self.assertTrue(any("prefer" in f for f in b._chat_experience("alice")))
+
+    def test_learns_dislike_from_chat(self):
+        b = self._brain()
+        b._learn_from_chat("i don't like loud alarms", person="alice")
+        self.assertTrue(any("don't like" in f for f in b._chat_experience("alice")))
+
+    def test_experience_is_person_scoped(self):
+        b = self._brain()
+        b._learn_from_chat("i like jazz", person="alice")
+        self.assertEqual(b._chat_experience("bob"), [])
+
+    def test_experience_injected_into_reply_grounding(self):
+        b = self._brain()
+        b._learn_from_chat("i like jazz", person="alice")
+        captured = {}
+        def transport(**kw):
+            captured["user"] = kw["user"]
+            return "noted, jazz is nice."
+        r = b.compose_reply("do you remember anything i like?", person="alice", llm_chat=transport, addressee_name="alice")
+        self.assertIsNotNone(r["text"])
+        self.assertIn("jazz", captured["user"])
+
+    def test_reflection_lesson_surfaces_when_actions_ineffective(self):
+        b = self._brain()
+        for i in range(4):
+            b.reflection.record(cycle=i, action="inspect", intent="learn", effective=False, note="no change")
+        facts = b._chat_experience("")
+        self.assertTrue(any("repeating the same move" in f for f in facts))
+
+    def test_no_lesson_when_actions_effective(self):
+        b = self._brain()
+        for i in range(4):
+            b.reflection.record(cycle=i, action="inspect", intent="learn", effective=True, note="worked")
+        self.assertFalse(any("repeating the same move" in f for f in b._chat_experience("")))
+
+
 if __name__ == "__main__":
     unittest.main()

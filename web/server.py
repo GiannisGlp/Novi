@@ -260,6 +260,7 @@ class NoviWebServer:
         # supplies conversation history, the addressee, and the LLM transport.
         history = [{"role": c["role"], "text": c["text"]} for c in self._chat[-12:]]
         addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+        self.brain._learn_from_chat(text, addressee)
         recent_novi = [c["text"] for c in reversed(self._chat) if c.get("role") == "novi"][:4]
         last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
         transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
@@ -306,6 +307,7 @@ class NoviWebServer:
         if not text.strip():
             return {"heard": "", "accepted": True, "novi": None, "llm": False}
         addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+        self.brain._learn_from_chat(text, addressee)
         recent_novi = [c["text"] for c in reversed(self._chat) if c.get("role") == "novi"][:4]
         last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
         transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None

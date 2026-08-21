@@ -530,6 +530,24 @@ no good answer.
   web suite **24 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/conversational-coherence.json`.
 
+## Experience learning (Memory 3.5) (reasoning/memory/cognition round 2) (status: IMPLEMENTED)
+
+Targets the objective's "must learn from patterns and previous experiences".
+
+- **Learn preferences from chat:** `brain._learn_from_chat()` detects preference
+  statements ("i like jazz", "i'd prefer short replies", "i don't like loud
+  alarms") and records them as scoped, evidence-backed preferences. `chat_send`
+  and `listen` call it on every user message, so the web app learns as you talk.
+- **Reference past experience in replies:** `compose_reply` injects
+  `_chat_experience()` — the addressee's learned likes/prefers/dislikes plus a
+  reflection-derived lesson when recent actions were ineffective — into the
+  dialogue grounding and the system prompt. Verified on-device: after "i like
+  jazz / i'd prefer short replies", Novi replied "Right — you like jazz and
+  prefer short replies. I'll remember that."
+- Tests: +7 in `MAC_BRAIN/tests/test_dialogue.py`; fast suites **413 passing**,
+  web suite **24 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/experience-learning.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

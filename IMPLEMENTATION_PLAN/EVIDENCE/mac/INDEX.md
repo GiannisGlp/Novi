@@ -61,5 +61,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Web dashboard redesign | `20260821T203158Z/dashboard-redesign.json` | single dashboard: chat + key activities + buttons in one view; tabs removed |
 | Dashboard layout + flicker fix | `20260821T204529Z/dashboard-layout-fix.json` | chat on top (full width, 50% height), widgets below in a grid; setHTML flicker guard; fixed widget heights |
 | Conversational coherence | `20260821T223057Z/conversational-coherence.json` | near-repeat rejection across recent replies; in-context follow-up question; longer 12-turn dialog window |
+| Experience learning (Memory 3.5) | `20260821T223527Z/experience-learning.json` | learns likes/prefers/dislikes from chat; surfaces them + reflection lesson in replies |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

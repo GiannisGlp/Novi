@@ -1,0 +1,16 @@
+{
+  "slice": "Experience learning (Memory 3.5): learn from patterns and reference past experience",
+  "learned_from_chat": {
+    "likes": "jazz",
+    "prefers": "short replies",
+    "dislikes": "loud alarms"
+  },
+  "experience_grounding": [
+    "I learned you like jazz",
+    "I learned you prefer short replies",
+    "I learned you don't like loud alarms"
+  ],
+  "reply_grounding_payload_contains_experience": true,
+  "llm_reply": "Right \u2014 you like jazz and prefer short replies. I'll remember that.",
+  "mechanism": "chat_send calls brain._learn_from_chat() on each user message; compose_reply injects _chat_experience() (learned preferences + reflection lesson) into the dialogue grounding so replies are grounded in past experience"
+}
