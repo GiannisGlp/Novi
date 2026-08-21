@@ -10,12 +10,14 @@
           --user-bg:#12314a; --novi-bg:#161d2a; }
   * { box-sizing:border-box; }
   html,body { height:100%; }
-  body { margin:0; background:var(--bg); color:var(--text);
-         font:14px/1.45 -apple-system,"SF Mono",Menlo,Consolas,monospace;
-         display:flex; flex-direction:column; overflow:hidden; }
-  header { display:flex; align-items:center; gap:14px; padding:12px 20px;
-           border-bottom:1px solid var(--border); flex:0 0 auto; }
-  header h1 { margin:0; font-size:18px; letter-spacing:1px; color:#fff; }
+  body { margin:0; color:var(--text);
+         font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+         display:flex; flex-direction:column; overflow:hidden;
+         background:radial-gradient(1200px 600px at 20% -10%, #101a2b 0%, var(--bg) 55%); }
+  header { display:flex; align-items:center; gap:14px; padding:12px 22px;
+           border-bottom:1px solid var(--border);
+           background:linear-gradient(180deg, rgba(255,255,255,.02), transparent); flex:0 0 auto; }
+  header h1 { margin:0; font-size:17px; letter-spacing:2px; color:#fff; font-weight:700; }
   .logo { display:flex; align-items:center; gap:9px; animation:glow 3s ease-in-out infinite; }
   .logo .dot { width:11px; height:11px; border-radius:50%; background:var(--green); box-shadow:0 0 10px var(--green); }
   @keyframes glow { 0%,100%{box-shadow:0 0 4px var(--green);} 50%{box-shadow:0 0 14px var(--green);} }
@@ -77,8 +79,10 @@
   .chatinput textarea:focus { outline:none; border-color:var(--accent); }
   .row { display:flex; gap:8px; align-items:center; margin-top:8px; }
   button { background:#1a2130; color:var(--text); border:1px solid var(--border); border-radius:8px;
-           padding:8px 14px; cursor:pointer; font:inherit; display:inline-flex; align-items:center; gap:7px; }
-  button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+           padding:8px 14px; cursor:pointer; font:inherit; display:inline-flex; align-items:center; gap:7px;
+           transition:border-color .15s, color .15s, background .15s, transform .05s; }
+  button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:#1c2536; }
+  button:active:not(:disabled) { transform:translateY(1px); }
   button:disabled { opacity:.5; cursor:default; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#06131f; font-weight:600; }
   button.primary:hover:not(:disabled) { background:#6bd0ff; }
@@ -89,9 +93,10 @@
   /* ---------- STATE / LOG panels ---------- */
   .layout { display:grid; grid-template-columns:minmax(300px,390px) 1fr; gap:14px;
             padding:14px 20px; height:100%; width:100%; overflow:auto; }
-  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-  .panel h2 { margin:0; padding:8px 12px; font-size:11px; text-transform:uppercase; letter-spacing:1px;
-              color:var(--dim); border-bottom:1px solid var(--border); }
+  .panel { background:linear-gradient(180deg, #141a26, #10151f); border:1px solid var(--border);
+           border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .panel h2 { margin:0; padding:9px 14px; font-size:11px; text-transform:uppercase; letter-spacing:1.2px;
+              color:var(--dim); border-bottom:1px solid var(--border); background:rgba(255,255,255,.015); }
   .panel .body { padding:12px; overflow:auto; }
   .stack { display:flex; flex-direction:column; gap:14px; height:100%; min-height:0; }
   .right { display:grid; grid-template-rows:auto auto 1fr; gap:14px; min-height:0; }
@@ -103,10 +108,15 @@
   .actions .group { flex:1 1 100%; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-top:8px; }
   canvas { max-width:100%; }
   #map { width:100%; height:auto; margin-top:8px; background:#0a0e15; border:1px solid var(--border); border-radius:6px; }
-  .sparks { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+  .sparks { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
   .spark { display:flex; flex-direction:column; gap:2px; }
   .spark label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
   .spark canvas { width:100%; height:34px; background:#0a0e15; border:1px solid var(--border); border-radius:5px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .stat { background:#0d1118; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+          display:flex; flex-direction:column; gap:2px; }
+  .stat .k { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
+  .stat .v { font-size:20px; font-weight:700; color:#eaf2fb; line-height:1.1; }
 
   .logpage { padding:14px 20px; overflow-y:auto; scrollbar-width:none; width:100%; }
   .logpage::-webkit-scrollbar { display:none; }
@@ -162,9 +172,16 @@
     </div>
     <div class="right">
       <div class="panel"><h2>Activity</h2><div class="body">
+        <div class="stats">
+          <div class="stat"><span class="k">cycle</span><span class="v" id="statCycle">0</span></div>
+          <div class="stat"><span class="k">health</span><span class="v" id="statHealth">—</span></div>
+          <div class="stat"><span class="k">mem</span><span class="v" id="statMem">0</span></div>
+          <div class="stat"><span class="k">triples</span><span class="v" id="statTriples">0</span></div>
+        </div>
         <div class="sparks">
-          <div class="spark"><label>Confidence (recent reasoning)</label><canvas id="confSpark" width="560" height="34"></canvas></div>
-          <div class="spark"><label>Knowledge growth (triples)</label><canvas id="memSpark" width="560" height="34"></canvas></div>
+          <div class="spark"><label>Events / sec</label><canvas id="evSpark" width="560" height="34"></canvas></div>
+          <div class="spark"><label>Confidence</label><canvas id="confSpark" width="560" height="34"></canvas></div>
+          <div class="spark"><label>Knowledge (triples)</label><canvas id="memSpark" width="560" height="34"></canvas></div>
         </div>
       </div></div>
       <div class="panel"><h2>Actions</h2><div class="body">
@@ -193,7 +210,7 @@
 <script>
 const $ = id => document.getElementById(id);
 let after = 0, chatAfter = 0;
-const confHist = [], memHist = [];
+const confHist = [], memHist = [], evHist = [];
 
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
@@ -287,22 +304,37 @@ async function refreshChat() {
 function drawSpark(cv, vals, color) {
   const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
   ctx.clearRect(0,0,W,H);
+  // baseline
   ctx.strokeStyle = '#1a2230'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0,H-1); ctx.lineTo(W,H-1); ctx.stroke();
-  if (!vals || vals.length < 2) return;
-  const max = Math.max(1, ...vals), min = Math.min(0, ...vals), n = vals.length;
+  if (!vals || vals.length === 0) return;
+  const n = vals.length;
+  const max = Math.max(...vals), min = Math.min(...vals);
+  // if the series is flat, center the line instead of pinning it to the bottom
+  const span = (max - min) || 1;
+  const pad = 4;
+  const y = v => H - pad - ((v - min) / span) * (H - pad*2);
+  // area fill
+  ctx.fillStyle = color + '22';
+  ctx.beginPath(); ctx.moveTo(0, H-1);
+  for (let i=0;i<n;i++) ctx.lineTo((i/(n-1))*W, y(vals[i]));
+  ctx.lineTo(W, H-1); ctx.closePath(); ctx.fill();
+  // line
   ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
   for (let i=0;i<n;i++){
-    const x = (i/(n-1))*W;
-    const y = H-2 - ((vals[i]-min)/(max-min))*(H-6);
-    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    const x = (i/(n-1))*W, yy = y(vals[i]);
+    i===0 ? ctx.moveTo(x,yy) : ctx.lineTo(x,yy);
   }
   ctx.stroke();
   // end dot
   ctx.fillStyle = color;
-  ctx.beginPath(); ctx.arc(W, H-2-((vals[n-1]-min)/(max-min))*(H-6), 2.5, 0, 2*Math.PI); ctx.fill();
+  ctx.beginPath(); ctx.arc(W, y(vals[n-1]), 2.5, 0, 2*Math.PI); ctx.fill();
 }
-function drawSparks(){ drawSpark($('confSpark'), confHist, '#4cc2ff'); drawSpark($('memSpark'), memHist, '#3fd07f'); }
+function drawSparks(){
+  drawSpark($('evSpark'), evHist, '#f2c14e');
+  drawSpark($('confSpark'), confHist, '#4cc2ff');
+  drawSpark($('memSpark'), memHist, '#3fd07f');
+}
 
 // ---- virtual floor map ----
 function drawMap(s) {
@@ -347,6 +379,7 @@ async function refreshState() {
     $('health').className = 'health-'+ (hth.status||'UNKNOWN');
     const rt = s.reasoning_trace || {};
     const ls = s.last_step || {};
+    confHist.push(rt.confidence||0); if (confHist.length>60) confHist.shift();
     let rh = '';
     if (rt.conclusion) {
       rh += kv('conclusion', rt.conclusion);
@@ -356,7 +389,6 @@ async function refreshState() {
       rh += kv('rationale', rt.rationale||'—');
       rh += kv('recalled', (rt.recalled||0)+' memories');
       rh += kv('detections', (rt.detections||ls.detections||[]).join(', ') || 'none');
-      confHist.push(rt.confidence||0); if (confHist.length>60) confHist.shift();
     } else { rh = '<span class="muted">awaiting first cycle…</span>'; }
     $('reasoning').innerHTML = rh;
     const so = s.soul || {};
@@ -383,6 +415,12 @@ async function refreshState() {
     const hv = (s.hearing||[]).map(e=>e.event_type).join(', ') || 'silence';
     $('khearing').innerHTML = kv('triples', kn.triples) + kv('entities', kn.entities) + kv('contradicted', kn.contradicted)
       + kv('memory.active', s.memory && s.memory.active!=null ? s.memory.active : '—') + kv('heard', hv);
+    // stat cards
+    $('statCycle').textContent = s.cycle;
+    $('statHealth').textContent = hth.status||'UNKNOWN';
+    $('statHealth').className = 'health-'+ (hth.status||'UNKNOWN');
+    $('statMem').textContent = (s.memory && s.memory.active!=null) ? s.memory.active : '—';
+    $('statTriples').textContent = kn.triples||0;
     drawSparks();
   } catch(e) {}
 }
@@ -403,6 +441,11 @@ async function refreshEvents() {
       }
       while (log.children.length > 500) log.removeChild(log.firstChild);
       log.scrollTop = log.scrollHeight;
+      // feed the Events/sec sparkline (spikes when Novi is active)
+      evHist.push(r.events.length); if (evHist.length>60) evHist.shift();
+      drawSparks();
+    } else {
+      evHist.push(0); if (evHist.length>60) evHist.shift();
     }
   } catch(e) {}
 }
