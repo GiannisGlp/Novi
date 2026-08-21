@@ -62,6 +62,7 @@
   <span class="badge" id="runid">…</span>
   <span class="badge">cycle <b id="cycle">0</b></span>
   <span class="badge" id="health" class="health-PASS">—</span>
+  <select id="modelSelect" title="chat/reasoning model" style="margin-left:auto;background:#1a2130;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font:inherit;font-size:12px;"></select>
 </header>
 <div class="layout">
   <!-- LEFT: live state -->
@@ -118,6 +119,29 @@ async function post(path, data) {
   const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data||{})});
   return r.json();
 }
+
+// ---- model switcher ----
+async function loadModels() {
+  try {
+    const r = await (await fetch('/api/model')).json();
+    const sel = $('modelSelect');
+    sel.innerHTML = '';
+    for (const m of (r.available||[])) {
+      const o = document.createElement('option'); o.value = m; o.textContent = m;
+      if (m === r.current) o.selected = true;
+      sel.appendChild(o);
+    }
+  } catch(e) {}
+}
+$('modelSelect').addEventListener('change', async e => {
+  await post('/api/model', {model: e.target.value});
+  const m = e.target.value;
+  const chat = $('chat');
+  const note = document.createElement('div'); note.className='turn';
+  note.innerHTML = '<div class="who novi">novi</div><div class="bubble">switched to model: '+esc(m)+'</div>';
+  if (chat.firstChild && chat.firstChild.textContent.includes('say something')) chat.innerHTML = '';
+  chat.appendChild(note); chat.scrollTop = chat.scrollHeight;
+});
 
 function h(sc) { return '<span class="health-'+sc+'">'+sc+'</span>'; }
 
@@ -331,7 +355,7 @@ document.querySelectorAll('[data-goal]').forEach(b => b.onclick = async () => {
 setInterval(refreshState, 1000);
 setInterval(refreshEvents, 1000);
 setInterval(refreshChat, 1500);
-refreshState(); refreshEvents(); refreshChat();
+refreshState(); refreshEvents(); refreshChat(); loadModels();
 </script>
 </body>
 </html>

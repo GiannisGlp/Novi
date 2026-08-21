@@ -40,5 +40,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Incremental knowledge persistence | `20260821T175717Z/incremental-knowledge-persistence.json` | triples persisted immediately (WAL) via graph on_change hook; survives hard kill |
 | Web: real sensing + router + task view | `20260821T181102Z/web-real-sensing-router-task.json` | optional real webcam/mic STT, reasoning router in web, live plan/task + virtual map |
 | Learn names from discussion + identity persistence | `20260821T184013Z/learn-names-identity-persistence.json` | recognizes new proper nouns (Vano) from chat; identity bound incrementally (WAL), survives hard kill |
+| Switchable LLM: qwen ⇄ NVIDIA Nemotron 3.5 Lightning | `20260821T190126Z/model-switch-nemotron.json` | runtime model dropdown/API; nemotron replies ~1.4s (think:false), qwen kept |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

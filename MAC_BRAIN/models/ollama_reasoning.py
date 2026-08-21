@@ -22,26 +22,50 @@ def _ollama_backend_fn(*, base_url: str, model: str) -> Callable[[dict[str, Any]
             "Never propose an action outside the allowed set."
         )
         user = json.dumps(payload, sort_keys=True)
-        body = json.dumps(
-            {
-                "model": model,
-                "system": system,
-                "prompt": user,
-                "format": "json",
-                "stream": False,
-            }
-        ).encode("utf-8")
-        request = urllib.request.Request(f"{base_url}/api/generate", data=body, headers={"Content-Type": "application/json"})
+        body: dict[str, Any] = {
+            "model": model,
+            "system": system,
+            "prompt": user,
+            "format": "json",
+            "stream": False,
+            "options": {"num_predict": 400},
+        }
+        if "nemotron" in model.lower():
+            # Nemotron 3.5 Lightning is a chain-of-thought model; disable thinking
+            # (top-level) so the structured decision is returned directly instead of
+            # sitting in the `thinking` field.
+            body["think"] = False
+        request = urllib.request.Request(f"{base_url}/api/generate", data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(request, timeout=60) as response:
             data = json.loads(response.read().decode("utf-8"))
         raw = data.get("response", "{}")
+        if not (raw or "").strip():
+            # Chain-of-thought fallback: the JSON decision may sit in `thinking`.
+            raw = _extract_json_from_thinking(data.get("thinking", ""))
         try:
-            parsed = json.loads(raw)
+            parsed = json.loads(raw or "{}")
         except json.JSONDecodeError:
             return {}
         return {"action": str(parsed.get("action", "")), "parameters": dict(parsed.get("parameters", {}) or {})}
 
     return invoke
+
+
+def _extract_json_from_thinking(thinking: str) -> str:
+    """Best-effort pull of the first JSON object embedded in a CoT dump."""
+    if not thinking:
+        return ""
+    depth = 0
+    for i, ch in enumerate(thinking):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return thinking[start : i + 1]
+    return ""
 
 
 class OllamaReasoningProvider:

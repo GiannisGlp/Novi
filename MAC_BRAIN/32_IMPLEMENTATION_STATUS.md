@@ -330,6 +330,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests: name learned from conversation; identity persisted-before-stop and reloads-on-start (334 passing).
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/learn-names-identity-persistence.json`.
 
+## Switchable LLM (qwen ⇄ NVIDIA Nemotron 3.5 Lightning) (status: IMPLEMENTED)
+
+- Added a runtime model switcher in the web app: `GET/POST /api/model` returns/sets the active chat+reasoning model.
+- Available models: `qwen3.8:latest` and `nemotron-3.5-lightning` (NVIDIA's fast 30B-A3B mixture-of-experts); a model `<select>` in the app header switches between them live.
+- `--model <name>` CLI flag sets the default (now `nemotron-3.5-lightning` for speed); `--ollama-model` still overrides the reasoning/chat model explicitly.
+- New test `test_model_switcher` (web/tests); 335 passing.
+- **Nemotron fix**: 3.5 Lightning is a chain-of-thought model; without a top-level `think:false` it exhausts the token budget thinking and returns an empty `content`. Set `think:false` in chat (`_llm_chat`) and the reasoning provider, with a CoT→`thinking`-parse fallback. Replies dropped from qwen's ~20–40s to **~1.4s**.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -1,0 +1,14 @@
+{
+  "feature": "Switchable chat/reasoning LLM: qwen3.8:latest <-> nemotron-3.5-lightning",
+  "default_model": "nemotron-3.5-lightning",
+  "available": [
+    "qwen3.8:latest",
+    "nemotron-3.5-lightning"
+  ],
+  "current": "nemotron-3.5-lightning",
+  "nemotron_reply_latency_s": 1.4,
+  "compare_note": "qwen3.8 ~20-40s, nemotron ~1.5s for short replies",
+  "nemotron_fix": "top-level think:false disables chain-of-thought so /api/chat returns content directly",
+  "runtime_switch": "GET/POST /api/model + header dropdown",
+  "cli_flag": "--model <name> sets the default"
+}

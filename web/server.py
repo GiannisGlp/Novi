@@ -78,6 +78,7 @@ class NoviWebServer:
         stt_model: str = "base",
         stt_device: str = "cpu",
         listen_seconds: float = 3.0,
+        available_models: tuple[str, ...] = ("qwen3.8:latest", "nemotron-3.5-lightning"),
     ) -> None:
         self.host = host
         self.port = port
@@ -86,6 +87,9 @@ class NoviWebServer:
         self.auto_step = auto_step
         self.chat_llm = chat_llm
         self.llm_url = llm_url
+        self.available_models = list(available_models)
+        if llm_model not in self.available_models and llm_model != DEFAULT_OLLAMA_MODEL:
+            self.available_models.insert(0, llm_model)
         self.llm_model = llm_model
         self.camera_mode = camera
         self.reasoning_mode = reasoning
@@ -269,12 +273,45 @@ class NoviWebServer:
                 self._llm_available = False
         return self._llm_available
 
-    def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 90) -> str | None:
-        body = json.dumps({"model": self.llm_model, "system": system, "prompt": user, "stream": False, "options": {"temperature": temperature, "num_predict": 180}}).encode("utf-8")
-        req = urllib.request.Request(f"{self.llm_url}/api/generate", data=body, headers={"Content-Type": "application/json"})
+    def model(self) -> dict[str, Any]:
+        return {"current": self.llm_model, "available": list(self.available_models)}
+
+    def switch_model(self, name: str) -> dict[str, Any]:
+        """Switch the chat/reasoning LLM at runtime (kept models: qwen + nemotron)."""
+        name = name.strip()
+        if name not in self.available_models:
+            raise ValueError(f"unknown model '{name}'; available: {self.available_models}")
+        self.llm_model = name
+        self._llm_available = None  # re-probe availability for the new model
+        return {"current": self.llm_model, "available": list(self.available_models)}
+
+    def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
+        options: dict[str, Any] = {"temperature": temperature, "num_predict": 512}
+        payload: dict[str, Any] = {
+            "model": self.llm_model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "stream": False,
+            "options": options,
+        }
+        if "nemotron" in self.llm_model.lower():
+            # NVIDIA Nemotron 3.5 Lightning is a chain-of-thought model; set the
+            # top-level `think:false` so chat replies are instant instead of
+            # exhausting the token budget mid-thought (empty content field).
+            payload["think"] = False
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
-        return (data.get("response") or "").strip() or None
+        message = data.get("message", {}) or {}
+        reply = (message.get("content") or "").strip()
+        if reply:
+            return reply
+        # Reasoning models (e.g. NVIDIA Nemotron 3.5 Lightning) may emit only a
+        # chain-of-thought; surface its final line as a fallback.
+        thinking = (message.get("thinking") or "").strip()
+        if thinking:
+            return thinking.splitlines()[-1].strip() or None
+        return None
 
     def _knowledge_context(self, text: str, limit: int = 6) -> str:
         kg = self.brain.knowledge
@@ -318,7 +355,8 @@ class NoviWebServer:
             "If a fact is relevant to the user's question, ANSWER USING THAT FACT — say plainly what you know "
             "(e.g. 'I remember that alice moved the door'). "
             "Only say you don't know something when the facts list gives you nothing relevant. "
-            "Reply in 1-3 short, natural spoken sentences. Never invent facts beyond the ones provided."
+            "Reply in 1-3 short, natural spoken sentences. Never invent facts beyond the ones provided. "
+            "Do NOT show a chain of thought or reasoning — output only the final answer, directly."
         )
         user_payload = {
             "user_says": text,
@@ -449,6 +487,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/state":
             self._json(self.server.novi.state())
             return
+        if path == "/api/model":
+            self._json(self.server.novi.model())
+            return
         if path.startswith("/api/chat") and "after=" in self.path:
             try:
                 after = int(self.path.split("after=")[-1].split("&")[0])
@@ -490,6 +531,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"result": novi.hear_audio(event_hint=data.get("event_hint"), rms=data.get("rms", 0.6), novelty=data.get("novelty", 0.0), speech=bool(data.get("speech", False)), confidence=float(data.get("confidence", 0.0)))})
             elif path == "/api/listen":
                 self._json({"result": novi.listen(float(data.get("seconds") or 0) or None)})
+            elif path == "/api/model":
+                try:
+                    self._json({"result": novi.switch_model(str(data.get("model", "")))})
+                except ValueError as exc:
+                    self._json({"error": str(exc)}, status=400)
             elif path == "/api/step":
                 self._json({"result": novi.step()})
             elif path == "/api/goal":
@@ -520,7 +566,8 @@ def main() -> None:
     parser.add_argument("--camera", choices=["demo", "real"], default="demo", help="'demo' = no-hardware camera; 'real' = live webcam + real speech-to-text")
     parser.add_argument("--reasoning", choices=["deterministic", "ollama", "router"], default="deterministic", help="brain decision backend; 'router' escalates uncertain steps to the local LLM")
     parser.add_argument("--route-threshold", type=float, default=0.6, help="confidence below which the router escalates to the local LLM")
-    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: qwen3.8)")
+    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: nemotron-3.5-lightning)")
+    parser.add_argument("--model", dest="model", type=str, default="nemotron-3.5-lightning", help="default chat model (switch at runtime via the UI)")
     parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for real microphone STT (tiny/base/small)")
     parser.add_argument("--stt-device", type=str, default="cpu", help="STT device (cpu or mps)")
     parser.add_argument("--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button")
@@ -535,7 +582,7 @@ def main() -> None:
         camera=args.camera,
         reasoning=args.reasoning,
         route_threshold=args.route_threshold,
-        llm_model=args.ollama_model or DEFAULT_OLLAMA_MODEL,
+        llm_model=args.ollama_model or args.model,
         stt_model=args.stt_model,
         stt_device=args.stt_device,
         listen_seconds=args.listen_seconds,
@@ -543,7 +590,7 @@ def main() -> None:
     httpd = NoviWebHTTPServer((args.host, args.port), novi)
     novi.start()
     print(f"Novi live web app -> http://{args.host}:{args.port}")
-    print(f"  camera={args.camera} reasoning={args.reasoning} model={args.ollama_model or DEFAULT_OLLAMA_MODEL}")
+    print(f"  camera={args.camera} reasoning={args.reasoning} model={args.ollama_model or args.model}")
     print("Ctrl-C to stop.")
     try:
         httpd.serve_forever()

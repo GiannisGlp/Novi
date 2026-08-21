@@ -191,6 +191,59 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_llm_chat_disables_thinking_for_nemotron(self):
+        import urllib.request
+        import json as _json
+
+        captured = {}
+        real = urllib.request.urlopen
+
+        def fake(req, timeout=120):
+            captured["body"] = _json.loads(req.data)
+
+            class Resp:
+                def read(self):
+                    return b'{"message":{"content":"hello"}}'
+                def __enter__(self):
+                    return self
+                def __exit__(self, *exc):
+                    return False
+            return Resp()
+
+        s = self._server(auto_step=False)
+        s.start()
+        try:
+            urllib.request.urlopen = fake
+            # Nemotron (a chain-of-thought model) must send top-level think:false
+            s.llm_model = "nemotron-3.5-lightning"
+            s._llm_chat(system="sys", user="u")
+            self.assertIs(captured["body"].get("think"), False)
+            # qwen is not a CoT model -> no think field
+            s.llm_model = "qwen3.8:latest"
+            s._llm_chat(system="sys", user="u")
+            self.assertNotIn("think", captured["body"])
+        finally:
+            urllib.request.urlopen = real
+            s.stop()
+
+    def test_model_switcher(self):
+        s = self._server(auto_step=False)
+        s.start()
+        try:
+            m = s.model()
+            self.assertIn("available", m)
+            self.assertTrue(any(s.llm_model == a or s.llm_model + ":latest" == a for a in m["available"]))
+            # switch to the first available model and back
+            target = [x for x in s.available_models if x != s.llm_model]
+            if target:
+                r = s.switch_model(target[0])
+                self.assertEqual(r["current"], target[0])
+            # unknown model must be rejected
+            with self.assertRaises(ValueError):
+                s.switch_model("does-not-exist")
+        finally:
+            s.stop()
+
 
 if __name__ == "__main__":
     unittest.main()
