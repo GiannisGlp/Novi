@@ -338,6 +338,45 @@ def physical_action_honest_reply() -> str:
             "for that. But I can keep track of it or talk it through. What's the situation?")
 
 
+# Real-time data Novi cannot verify offline (live prices, weather, news, scores).
+# Without live access it must say so honestly instead of inventing a current number.
+# Real-time data Novi cannot verify offline (live prices, weather, news, live
+# scores). Without live access it must say so honestly instead of inventing a
+# current number. Historical facts ("who won the 2022 World Cup") are NOT real-time.
+_REALTIME_RE = [
+    re.compile(
+        r"\b(?:bitcoin|crypto|cryptocurrency|ethereum|eth|btc|stock|share|gold|oil|silver)\b.*?\b(?:price|value|worth|quote|cost|how much)\b"
+        r"|\b(?:price|value|worth|quote|cost|how much)\b.*?\b(?:bitcoin|crypto|cryptocurrency|ethereum|stock|gold|oil|silver)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b(?:weather|forecast|temperature|raining|snowing|degrees)\b", re.IGNORECASE),
+    re.compile(r"\b(?:breaking news|headlines|latest news|top stories|what'?s happening|current news)\b", re.IGNORECASE),
+    re.compile(r"\b(?:score|who won|final score|result)\b.*?\b(?:today|last night|yesterday|right now|now|this (?:week|season|game)|live|current)\b", re.IGNORECASE),
+]
+
+_REALTIME_HINT_WORDS = {"bitcoin", "crypto", "cryptocurrency", "ether", "ethereum", "btc", "stock", "shares", "gold",
+                        "oil", "weather", "forecast", "temperature", "breaking", "headlines", "latest news"}
+
+
+def _is_realtime_data_question(text: str) -> bool:
+    t = text.lower()
+    if not t:
+        return False
+    if any(p.search(t) for p in _REALTIME_RE):
+        return True
+    # "how much is bitcoin right now?"-style without the exact pattern.
+    if re.search(r"\b(how much is|what's the (?:current )?price of)\b", t) and any(
+        w in t for w in ("bitcoin", "crypto", "stock", "gold", "oil", "eth", "btc", "shares")
+    ):
+        return True
+    return False
+
+
+def realtime_honest_reply() -> str:
+    return ("I'm offline, so I can't pull live prices, weather, or news — I'd rather not "
+            "guess and hand you a wrong number. Tell me more about what you're after and I'll help with it.")
+
+
 def _extract_topic(text: str) -> str:
     """Pull the most likely topic noun from a user line (deterministic, no NLP).
 

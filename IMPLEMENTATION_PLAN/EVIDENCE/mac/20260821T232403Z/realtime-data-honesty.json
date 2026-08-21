@@ -1,0 +1,19 @@
+{
+  "slice": "Natural conversation round 9: don't hallucinate real-time data",
+  "detected": {
+    "what's the latest price of bitcoin?": true,
+    "what's the weather today?": true,
+    "who won the world cup in 2022?": false,
+    "what's the capital of france?": false
+  },
+  "real_llm_before_fix": {
+    "what's the latest price of bitcoin?": "Bitcoin's around $67,000 right now, give or take..."
+  },
+  "real_llm_after_fix": {
+    "what's the latest price of bitcoin?": "I can't pull live market data right now \u2014 I'm offline on that front..."
+  },
+  "historical_fact_still_answered": {
+    "who won the world cup in 2022?": "Argentina won the 2022 World Cup..."
+  },
+  "mechanism": "detect real-time-data questions (live prices/weather/news/scores); a prompt steer + honest fallback stop Novi from inventing current numbers, while settled historical facts are still answered"
+}

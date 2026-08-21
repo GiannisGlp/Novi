@@ -22,6 +22,7 @@ from MAC_BRAIN.dialogue import (
     _is_meta_referential,
     _is_near_repetitive,
     _is_physical_action_request,
+    _is_realtime_data_question,
     _is_recall_question,
     _is_repetitive,
     _reduce_name_repetition,
@@ -180,6 +181,13 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertFalse(_is_physical_action_request("what's the time?"))
         self.assertFalse(_is_physical_action_request(""))
 
+    def test_realtime_data_detection(self):
+        for q in ["what's the latest price of bitcoin?", "how much is bitcoin right now?",
+                  "what's the weather today?", "what's the temperature outside?"]:
+            self.assertTrue(_is_realtime_data_question(q), q)
+        for q in ["who won the world cup in 2022?", "what's the capital of france?", "do you like jazz?"]:
+            self.assertFalse(_is_realtime_data_question(q), q)
+
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
         r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")
@@ -331,6 +339,14 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIn("can't", r["text"].lower())
         self.assertNotIn("i'll flip", r["text"].lower())
         self.assertEqual(r["grounding"]["route"], "physical_honesty")
+
+    def test_realtime_question_is_honest_not_invented(self):
+        b = self._brain()
+        r = b.compose_reply("what's the latest price of bitcoin?", llm_chat=lambda **k: None)
+        self.assertIsNotNone(r["text"])
+        self.assertNotIn("$", r["text"])
+        self.assertIn("offline", r["text"].lower())
+        self.assertEqual(r["grounding"]["route"], "realtime_honesty")
 
 
 class ExperienceLearningTests(unittest.TestCase):

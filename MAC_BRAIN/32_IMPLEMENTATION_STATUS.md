@@ -710,6 +710,23 @@ do…"). This is the classic meta-referential over-description that reads roboti
 - Tests: updated prompt test; fast suites **440 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/no-identity-overexplain.json`.
 
+## Don't hallucinate real-time data (round 9 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing: "what's the latest price of bitcoin?" → "Bitcoin's around
+$67,000 right now…" — an invented current number. Novi is offline and cannot
+verify live data, so it must not fabricate it.
+
+- `_is_realtime_data_question()` detects live-price / weather / news / live-score
+  questions (order-agnostic), while correctly NOT flagging settled history
+  ("who won the 2022 World Cup?") or ordinary facts ("capital of France").
+- A prompt steer + deterministic honest fallback make Novi say it can't pull live
+  data rather than invent a number.
+- After: "what's the latest price of bitcoin?" → "I can't pull live market data
+  right now — I'm offline on that front…"; historical facts still answered.
+- Tests: +2 in `MAC_BRAIN/tests/test_dialogue.py`; fast suites **442 passing**,
+  web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/realtime-data-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

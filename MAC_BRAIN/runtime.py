@@ -41,6 +41,7 @@ from .dialogue import (
     _is_introduction,
     _is_joke_request,
     _is_physical_action_request,
+    _is_realtime_data_question,
     _is_recall_question,
     clarification_reply,
     continuation_reply,
@@ -50,6 +51,7 @@ from .dialogue import (
     joke_reply,
     natural_fallback,
     physical_action_honest_reply,
+    realtime_honest_reply,
     recall_reply,
 )
 from .self_model import SelfModel, build_self_model
@@ -1328,7 +1330,15 @@ class MacBrain:
         system = self._dialogue_system_prompt(self_state, relationship, capabilities=self_model.get("capabilities"))
         is_clarification = _is_clarification(text)
         is_physical_action = _is_physical_action_request(text)
+        is_realtime = _is_realtime_data_question(text)
         can_physical = self._has_physical_action_capability()
+        if is_realtime:
+            # Don't hallucinate a live price/score/weather number Novi can't verify.
+            system += (
+                " The user asked about live/real-time data (a current price, weather, news, or score). "
+                "You are offline and cannot fetch live data, so do NOT give a specific current number or "
+                "invent one. Say you can't pull live data and offer to help with what you can."
+            )
         if is_physical_action and not can_physical:
             # Honesty (docs/06-soul/01 §7): don't hallucinate flipping switches.
             system += (
@@ -1398,6 +1408,9 @@ class MacBrain:
         if is_physical_action and not can_physical:
             reason = "You asked me to physically manipulate something, but I have no actuators in this build — I said so honestly rather than pretending"
             return {"text": physical_action_honest_reply(), "fallback": True, "reason": reason, "grounding": {"route": "physical_honesty", **out}}
+        if is_realtime:
+            reason = "You asked about live data I can't fetch offline — I said so honestly instead of inventing a current number"
+            return {"text": realtime_honest_reply(), "fallback": True, "reason": reason, "grounding": {"route": "realtime_honesty", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:
