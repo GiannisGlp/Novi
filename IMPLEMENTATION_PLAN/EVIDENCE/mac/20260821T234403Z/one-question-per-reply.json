@@ -1,0 +1,5 @@
+{
+  "slice": "Natural conversation round 14: one question per reply",
+  "prompt_clause_present": true,
+  "mechanism": "a system-prompt clause tells Novi to ask at most one question per reply, matching natural one-thing-at-a-time conversation instead of question lists"
+}

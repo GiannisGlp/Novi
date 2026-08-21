@@ -787,6 +787,17 @@ Novi's own senses.
 - Tests: +2; fast suites **450 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/perception-questions.json`.
 
+## One question per reply (round 14 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing showed Novi sometimes asking two or three questions in a single
+reply ("How's the sun on your balcony? And are you watering them regularly…?").
+People naturally ask one thing at a time.
+
+- Added a system-prompt clause: "Ask at most one question per reply — people
+  naturally ask one thing at a time, not a list."
+- Tests: updated prompt test; fast suites **450 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/one-question-per-reply.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

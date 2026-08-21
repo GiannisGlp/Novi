@@ -284,6 +284,8 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIn("not like a neutral narrator", prompt)
         # Must not over-explain identity/embodiment unless asked.
         self.assertIn("Don't over-explain", prompt)
+        # Natural conversations ask one thing at a time.
+        self.assertIn("at most one question", prompt)
 
     def test_no_transport_returns_none_for_deterministic_fallback(self):
         # CI / no-LLM path: the brain does not fabricate a reply.
