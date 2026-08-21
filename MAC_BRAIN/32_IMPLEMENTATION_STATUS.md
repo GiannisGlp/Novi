@@ -422,6 +422,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_state_includes_consolidated_summaries` in `web/tests/test_web.py`; full suite **372 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/web-summaries.json`.
 
+## Multi-round deliberation (Reasoning 3.2): self-critique + refinement (status: IMPLEMENTED)
+
+- `DeliberativeLLMReasoningProvider` now runs a **bounded multi-round loop**: after the initial ANALYSIS→OPTIONS→DECISION, the model critiques its own decision and either confirms it or revises it, up to `max_rounds` (default 2).
+- The full multi-round trace is captured on `last_deliberation["rounds"]`; the final decision is re-validated against the allowlist.
+- Verified on-device with real nemotron-3.5-lightning: round 1 proposed `inspect`; round 2 critiqued it (evaluated as sound) and re-confirmed `inspect`.
+- New tests in `MAC_BRAIN/tests/test_deliberation.py` (confirm-stops-early, revise-wins, max-rounds-bounds); full suite **375 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/multi-round-deliberation.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

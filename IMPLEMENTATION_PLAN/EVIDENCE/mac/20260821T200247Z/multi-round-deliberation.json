@@ -1,0 +1,47 @@
+{
+  "slice": "Multi-round deliberation (Reasoning 3.2): self-critique + refinement",
+  "model": "nemotron-3.5-lightning (local Ollama)",
+  "max_rounds": 2,
+  "rounds": [
+    {
+      "round": 1,
+      "analysis": "The environment contains a salient 'door' entity and 'alice'. A recalled utterance with high confidence (0.9) indicates that Alice moved the door. The system has inferred a causal change but with low confidence (0.4) regarding the overall situation. The goal is to reach a target at [3.0, 0.0] with a remaining distance of 3.0 units. Given the presence of the door and Alice's interaction with it, the immediate priority is to understand the door's current state and Alice's relationship to it before proceeding toward the goal.",
+      "options": [
+        {
+          "action": "wait",
+          "pros": "Allows time for additional information to emerge or for the environment to stabilize without risking erroneous movement.",
+          "cons": "Delays progress toward the goal; does not resolve the immediate ambiguity about the door's state."
+        }
+      ],
+      "decision": {
+        "action": "inspect",
+        "parameters": {
+          "object": "door"
+        },
+        "rationale": "Inspecting the door is the most informative first step. The recalled memory that 'alice moved the door' combined with the low confidence in the causal inference suggests the door's state is the key unknown. Understanding whether the door is open, closed, or moved will clarify if the path to the goal is obstructed and how Alice's action affects navigation. This knowledge will enable a more informed subsequent move_forward or observe action, reducing the risk of collision and improving the efficiency of reaching the target."
+      }
+    },
+    {
+      "round": 2,
+      "evaluation": "The proposed 'inspect' action on the door is sound and well-justified. The situation reveals a 'causal_change_inferred' with only 0.4 confidence, but a strong relation indicating Alice moved the door (confidence 0.9). This discrepancy makes the door's current state the critical unknown. Inspecting the door will resolve whether it is open, closed, or in a moved position, directly informing the path to the goal and mitigating collision risks for subsequent navigation actions.",
+      "confirm": false,
+      "decision": {
+        "action": "inspect",
+        "parameters": {
+          "object": "door"
+        },
+        "rationale": "Inspecting the door is the most informative first step. The recalled memory that 'alice moved the door' combined with the low confidence in the causal inference suggests the door's state is the key unknown. Understanding whether the door is open, closed, or moved will clarify if the path to the goal is obstructed and how Alice's action affects navigation. This knowledge will enable a more informed subsequent move_forward or observe action, reducing the risk of collision and improving the efficiency of reaching the target."
+      }
+    }
+  ],
+  "final_decision": {
+    "action": "inspect",
+    "parameters": {
+      "object": "door"
+    },
+    "rationale": "Inspecting the door is the most informative first step. The recalled memory that 'alice moved the door' combined with the low confidence in the causal inference suggests the door's state is the key unknown. Understanding whether the door is open, closed, or moved will clarify if the path to the goal is obstructed and how Alice's action affects navigation. This knowledge will enable a more informed subsequent move_forward or observe action, reducing the risk of collision and improving the efficiency of reaching the target."
+  },
+  "chosen_action": "inspect",
+  "rationale": "deliberated:causal_change_inferred -> inspect (2 rounds) (Inspecting the door is the most informative first step. The recalled memory that 'alice moved the door' combined with the low confidence in the causal inference suggests the door's state is the key unknown. Understanding whether the door is open, closed, or moved will clarify if the path to the goal is obstructed and how Alice's action affects navigation. This knowledge will enable a more informed subsequent move_forward or observe action, reducing the risk of collision and improving the efficiency of reaching the target.)",
+  "mechanism": "initial ANALYSIS->OPTIONS->DECISION, then the model critiques its own decision and confirms or revises it, bounded by max_rounds"
+}

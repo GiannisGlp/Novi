@@ -72,6 +72,11 @@ class DeliberativeLLMReasoningProvider:
     Drop-in for ``OllamaReasoningProvider``: same ``decide`` signature, but the
     model is prompted to reason through multiple steps and the structured
     deliberation is captured on ``last_deliberation`` for the reasoning trace.
+
+    Multi-round (Reasoning 3.2): after the initial decision the model critiques
+    its own choice and either confirms it or revises it, up to ``max_rounds``
+    total rounds. The loop is bounded and the final decision is re-validated
+    against the allowlist.
     """
 
     def __init__(
@@ -81,19 +86,49 @@ class DeliberativeLLMReasoningProvider:
         base_url: str = DEFAULT_OLLAMA_URL,
         allowed_actions: frozenset[str] = DEFAULT_ALLOWED,
         default_action: str = "observe",
+        max_rounds: int = 2,
     ) -> None:
         self.model = model
         self.base_url = base_url
         self.allowed_actions = allowed_actions
         self.default_action = default_action
+        self.max_rounds = max(1, int(max_rounds))
         self.last_deliberation: dict[str, Any] | None = None
 
     def decide(self, *, conclusion: str, confidence: float, situation: Any, recall: Any = ()) -> ActionIntent:
         situation = situation if isinstance(situation, dict) else {}
         payload = {"conclusion": conclusion, "confidence": confidence, "situation": situation}
-        raw = self._invoke(payload, recall)
+        raw = self._invoke(_deliberation_prompt(situation, recall, self.allowed_actions))
         deliberation = _extract_json(raw)
         decision = deliberation.get("decision") or {}
+        rounds: list[dict[str, Any]] = [
+            {
+                "round": 1,
+                "analysis": str(deliberation.get("analysis", "")),
+                "options": list(deliberation.get("options", []) or []),
+                "decision": decision,
+            }
+        ]
+        # Self-critique rounds: the model evaluates its own decision and either
+        # confirms it or revises it. Bounded by max_rounds.
+        for r in range(2, self.max_rounds + 1):
+            critique_raw = self._invoke(_critique_prompt(decision, situation, recall, self.allowed_actions))
+            critique = _extract_json(critique_raw)
+            confirmed = bool(critique.get("confirm", False))
+            revised = critique.get("decision") or {}
+            rounds.append(
+                {
+                    "round": r,
+                    "evaluation": str(critique.get("evaluation", "")),
+                    "confirm": confirmed,
+                    "decision": revised,
+                }
+            )
+            if confirmed:
+                break
+            if revised.get("action"):
+                decision = revised
+
         action = str(decision.get("action", ""))
         if action not in self.allowed_actions:
             action = self.default_action
@@ -104,19 +139,19 @@ class DeliberativeLLMReasoningProvider:
             "analysis": str(deliberation.get("analysis", "")),
             "options": list(deliberation.get("options", []) or []),
             "decision": {"action": action, "parameters": parameters, "rationale": str(decision.get("rationale", ""))},
+            "rounds": rounds,
         }
-        rationale = f"deliberated:{conclusion} -> {action}"
+        rationale = f"deliberated:{conclusion} -> {action} ({len(rounds)} rounds)"
         if decision.get("rationale"):
             rationale += f" ({decision['rationale']})"
         return ActionIntent(action=action, parameters=parameters, rationale=rationale)
 
-    def _invoke(self, payload: dict[str, Any], recall: Any) -> str:
+    def _invoke(self, user_prompt: str) -> str:
         system = "You are Novi's bounded deliberative reasoner. Respond ONLY with the requested JSON."
-        user = _deliberation_prompt(payload.get("situation", {}), recall, self.allowed_actions)
         body: dict[str, Any] = {
             "model": self.model,
             "system": system,
-            "prompt": user,
+            "prompt": user_prompt,
             "format": "json",
             "stream": False,
             "options": {"num_predict": 600},
@@ -134,3 +169,17 @@ class DeliberativeLLMReasoningProvider:
         if not (raw or "").strip():
             raw = data.get("thinking", "")
         return raw
+
+
+def _critique_prompt(decision: dict[str, Any], situation: dict[str, Any], recall: Any, allowed: frozenset[str]) -> str:
+    allowed_list = ", ".join(sorted(allowed))
+    return (
+        "You are Novi's deliberative reasoner. You proposed this decision:\n"
+        + json.dumps(decision, sort_keys=True) + "\n"
+        "Critically evaluate it against the situation. If it is sound, confirm it. "
+        "If a better action from the allowed set exists, revise it.\n"
+        "Allowed actions: " + allowed_list + ".\n"
+        "Situation: " + json.dumps(situation, sort_keys=True) + "\n"
+        'Respond ONLY with JSON: {"evaluation": "...", "confirm": true/false, '
+        '"decision": {"action": "...", "parameters": {"<key>": "<value>"}, "rationale": "..."}}'
+    )

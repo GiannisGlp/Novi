@@ -49,5 +49,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Goal-resume across restart: mid-pursuit step-budget preservation | `20260821T195616Z/goal-resume.json` | active goal progress persisted each cycle, so a SIGKILL resumes with the correct step budget |
 | LLM-enhanced memory summaries (Memory 3.1) | `20260821T195906Z/llm-summaries.json` | LLMSummarizer writes a semantic gist via Ollama; deterministic fallback on failure |
 | Consolidation surfacing in the web UI | `20260821T200127Z/web-summaries.json` | GET /api/state exposes memory.summaries; new 'Consolidated Memory' panel renders them |
+| Multi-round deliberation (Reasoning 3.2) | `20260821T200247Z/multi-round-deliberation.json` | model critiques its own decision and confirms/revises it, bounded by max_rounds; real nemotron output |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

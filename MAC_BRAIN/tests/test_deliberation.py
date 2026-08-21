@@ -89,6 +89,44 @@ class DeliberativeProviderTests(unittest.TestCase):
         self.assertEqual(intent.action, "wait")
 
 
+def _queue_urlopen(responses):
+    """Fake urlopen that returns each response in turn (one per LLM round)."""
+    it = iter(responses)
+
+    def _urlopen(request, timeout=60):
+        return _FakeResp(json.dumps({"response": json.dumps(next(it))}).encode("utf-8"))
+
+    return _urlopen
+
+
+class MultiRoundDeliberationTests(unittest.TestCase):
+    def test_critique_confirms_and_stops_early(self):
+        round1 = {"analysis": "a", "options": [], "decision": {"action": "inspect", "parameters": {}, "rationale": "r1"}}
+        critique = {"evaluation": "sound", "confirm": True, "decision": {"action": "inspect", "parameters": {}, "rationale": "confirmed"}}
+        with mock.patch("urllib.request.urlopen", _queue_urlopen([round1, critique])):
+            p = DeliberativeLLMReasoningProvider(max_rounds=3)
+            intent = p.decide(conclusion="causal_change_inferred", confidence=0.4, situation={}, recall=())
+        self.assertEqual(intent.action, "inspect")
+        self.assertEqual(len(p.last_deliberation["rounds"]), 2, "confirmation should stop the loop early")
+
+    def test_critique_revises_decision(self):
+        round1 = {"analysis": "a", "options": [], "decision": {"action": "inspect", "parameters": {}, "rationale": "r1"}}
+        critique = {"evaluation": "inspect is risky", "confirm": False, "decision": {"action": "observe", "parameters": {}, "rationale": "revised"}}
+        with mock.patch("urllib.request.urlopen", _queue_urlopen([round1, critique])):
+            p = DeliberativeLLMReasoningProvider(max_rounds=2)
+            intent = p.decide(conclusion="causal_change_inferred", confidence=0.4, situation={}, recall=())
+        self.assertEqual(intent.action, "observe", "revised decision should win")
+
+    def test_max_rounds_bounds_loop(self):
+        round1 = {"analysis": "a", "options": [], "decision": {"action": "inspect", "parameters": {}, "rationale": "r1"}}
+        critique = {"evaluation": "keep revising", "confirm": False, "decision": {"action": "observe", "parameters": {}, "rationale": "r2"}}
+        with mock.patch("urllib.request.urlopen", _queue_urlopen([round1, critique])):
+            p = DeliberativeLLMReasoningProvider(max_rounds=2)
+            intent = p.decide(conclusion="causal_change_inferred", confidence=0.4, situation={}, recall=())
+        self.assertEqual(len(p.last_deliberation["rounds"]), 2, "loop must be bounded by max_rounds")
+        self.assertEqual(intent.action, "observe")
+
+
 class AliceBackend(DeterministicPerceptionBackend):
     def detect(self, frame):
         return (Detection("alice", 0.9, (0.0, 0.0, 1.0, 1.0)),)
