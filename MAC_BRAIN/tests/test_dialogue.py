@@ -15,6 +15,7 @@ from MAC_BRAIN.dialogue import (
     _extract_topic,
     _is_clarification,
     _is_continuation,
+    _is_emotional_statement,
     _is_forbidden,
     _is_greeting,
     _is_introduction,
@@ -188,6 +189,13 @@ class DialogueFilterTests(unittest.TestCase):
         for q in ["who won the world cup in 2022?", "what's the capital of france?", "do you like jazz?"]:
             self.assertFalse(_is_realtime_data_question(q), q)
 
+    def test_emotional_statement_detection(self):
+        for s in ["i've been feeling really down lately", "i feel sad", "i'm so tired",
+                  "i had a rough day", "i'm stressed out", "i'm happy today"]:
+            self.assertTrue(_is_emotional_statement(s), s)
+        for s in ["what's the time?", "tell me a joke", "my name is alice"]:
+            self.assertFalse(_is_emotional_statement(s), s)
+
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
         r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")
@@ -347,6 +355,15 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertNotIn("$", r["text"])
         self.assertIn("offline", r["text"].lower())
         self.assertEqual(r["grounding"]["route"], "realtime_honesty")
+
+    def test_emotional_statement_gets_warm_reply_not_topic_followup(self):
+        b = self._brain()
+        r = b.compose_reply("i've been feeling really down lately", llm_chat=lambda **k: None)
+        self.assertIsNotNone(r["text"])
+        self.assertEqual(r["grounding"]["route"], "emotion")
+        self.assertNotIn("good answer", r["text"].lower())
+        # "i'm so stressed" must not be misread as an introduction.
+        self.assertFalse(_is_introduction("i'm so stressed"))
 
 
 class ExperienceLearningTests(unittest.TestCase):

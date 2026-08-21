@@ -37,6 +37,7 @@ from .dialogue import (
     _extract_topic,
     _is_clarification,
     _is_continuation,
+    _is_emotional_statement,
     _is_greeting,
     _is_introduction,
     _is_joke_request,
@@ -45,6 +46,7 @@ from .dialogue import (
     _is_recall_question,
     clarification_reply,
     continuation_reply,
+    emotional_reply,
     followup_question,
     greeting_reply,
     introduction_reply,
@@ -1411,6 +1413,9 @@ class MacBrain:
         if is_realtime:
             reason = "You asked about live data I can't fetch offline — I said so honestly instead of inventing a current number"
             return {"text": realtime_honest_reply(), "fallback": True, "reason": reason, "grounding": {"route": "realtime_honesty", **out}}
+        if _is_emotional_statement(text):
+            reason = "You shared how you're feeling, so I replied with warmth and opened a door to talk (instead of a dry topic follow-up)"
+            return {"text": emotional_reply(cycle=self._cycle), "fallback": True, "reason": reason, "grounding": {"route": "emotion", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

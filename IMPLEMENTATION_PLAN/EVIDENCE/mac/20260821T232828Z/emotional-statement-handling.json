@@ -1,0 +1,19 @@
+{
+  "slice": "Natural conversation round 10: empathetic handling of emotional statements",
+  "detected": {
+    "i've been feeling really down lately": true,
+    "i feel sad": true,
+    "i'm so tired": true,
+    "i had a rough day": true,
+    "i'm stressed out": true
+  },
+  "replies": {
+    "i've been feeling really down lately": "I hear you \u2014 that's a lot to carry. I'm here if you want to talk it out, or we can just sit with it.",
+    "i had a rough day": "I hear you \u2014 that's a lot to carry. I'm here if you want to talk it out, or we can just sit with it."
+  },
+  "before": {
+    "i've been feeling really down lately": "I don't have a good answer on feeling yet \u2014 what's it like from your side?",
+    "i'm so stressed": "So Stressed \u2014 nice to put a name to you. I'll remember that."
+  },
+  "mechanism": "detect emotional/situational statements and reply with warmth (opening a door to talk) instead of a dry topic follow-up; also fixes 'i'm so <state>' being misread as an introduction"
+}

@@ -727,6 +727,23 @@ verify live data, so it must not fabricate it.
   web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/realtime-data-honesty.json`.
 
+## Empathetic handling of emotional statements (round 10 of the naturalness objective) (status: IMPLEMENTED)
+
+Multi-turn LLM testing: "i've been feeling really down lately" → "I don't have a
+good answer on feeling yet — what's it like from your side?" — a dry topic
+follow-up for an emotional statement (and "i'm so stressed" was even misread as
+an introduction).
+
+- `_is_emotional_statement()` detects emotional/situational statements ("i'm
+  feeling down", "i feel sad", "i'm so tired", "i had a rough day", "i'm
+  stressed").
+- `emotional_reply()` replies with warmth and opens a door to talk ("I hear you —
+  that's a lot to carry. I'm here if you want to talk it out…").
+- Expanded the intro blocklist so "i'm so <state>", "i'm really <state>" are not
+  read as names.
+- Tests: +2; fast suites **444 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/emotional-statement-handling.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -72,5 +72,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Honest capability for physical actions | `20260821T231551Z/physical-action-honesty.json` | no longer claims to flip switches; says it has no actuators and re-engages |
 | Stop over-explaining identity/embodiment | `20260821T231953Z/no-identity-overexplain.json` | doesn't narrate 'I'm a transparent being' / 'I have no eyes' unless asked |
 | Don't hallucinate real-time data | `20260821T232403Z/realtime-data-honesty.json` | no invented live prices/weather; settled historical facts still answered |
+| Empathetic handling of emotional statements | `20260821T232828Z/emotional-statement-handling.json` | 'i'm feeling down'/'i had a rough day' get warmth, not a dry topic follow-up |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

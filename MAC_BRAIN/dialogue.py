@@ -219,10 +219,12 @@ _INTRO_REPLIES = [
 # "i'm tired", "i'm not sure", "i'm sorry", "i'm here" are not introductions.
 _STATE_WORDS = {
     "tired", "hungry", "thirsty", "sad", "happy", "fine", "good", "well", "ok",
-    "okay", "sorry", "not", "just", "really", "here", "back", "home", "bored",
-    "excited", "scared", "cold", "hot", "done", "feeling", "trying", "looking",
-    "getting", "going", "being", "a", "the", "and", "today", "tonight", "now",
-    "sure", "serious", "curious", "tired", "upset", "angry", "busy",
+    "okay", "sorry", "not", "just", "really", "very", "so", "pretty", "quite",
+    "here", "back", "home", "bored", "excited", "scared", "cold", "hot", "done",
+    "feeling", "trying", "looking", "getting", "going", "being", "a", "the",
+    "and", "today", "tonight", "now", "sure", "serious", "curious", "upset",
+    "angry", "busy", "stressed", "anxious", "exhausted", "overwhelmed", "lonely",
+    "depressed", "down",
 }
 
 
@@ -375,6 +377,34 @@ def _is_realtime_data_question(text: str) -> bool:
 def realtime_honest_reply() -> str:
     return ("I'm offline, so I can't pull live prices, weather, or news — I'd rather not "
             "guess and hand you a wrong number. Tell me more about what you're after and I'll help with it.")
+
+
+# Emotional/situational statements ("i'm feeling down", "i had a rough day", "i'm
+# stressed") deserve an empathetic reply, never a topic follow-up ("I don't have a
+# good answer on feeling yet").
+_EMOTIONAL_RE = [
+    re.compile(r"\bi(?:'m| am)?\s*(?:have been |'ve been |am |'m )?(?:feeling|been feeling|feel|feel so)\s+", re.IGNORECASE),
+    re.compile(r"\bi(?:'m| am)?\s+(?:really |so |feeling )?(?:sad|down|depressed|stressed|anxious|tired|exhausted|overwhelmed|lonely|scared|nervous|hopeless|ok|fine|happy|great|good|bored)\b", re.IGNORECASE),
+    re.compile(r"\bi(?:'m|'ve )?\s*(?:had|been having) (?:a |a really )?(?:rough|long|hard|terrible|awful|bad) (?:day|week|time)\b", re.IGNORECASE),
+    re.compile(r"\bi(?:'m| am)?\s+(?:struggling|not doing well|having a hard time)\b", re.IGNORECASE),
+]
+
+_EMOTIONAL_REPLIES = [
+    "I hear you — that's a lot to carry. I'm here if you want to talk it out, or we can just sit with it.",
+    "That sounds heavy. How long have you been feeling this way?",
+    "I'm sorry it's been rough. Want to unpack it a bit, or would you rather not go into it right now?",
+]
+
+
+def _is_emotional_statement(text: str) -> bool:
+    t = text.strip()
+    if not t:
+        return False
+    return any(p.search(t) for p in _EMOTIONAL_RE)
+
+
+def emotional_reply(cycle: int = 0) -> str:
+    return _EMOTIONAL_REPLIES[cycle % len(_EMOTIONAL_REPLIES)]
 
 
 def _extract_topic(text: str) -> str:
