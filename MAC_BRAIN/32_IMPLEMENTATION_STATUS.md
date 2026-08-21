@@ -697,6 +697,19 @@ object-manipulation actuators.
   passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/physical-action-honesty.json`.
 
+## Stop over-explaining identity/embodiment (round 8 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing showed Novi repeatedly narrating what it is even when not asked
+("I'm a transparent, non-deceptive embodied being…", "I don't have eyes like you
+do…"). This is the classic meta-referential over-description that reads robotic.
+
+- Added a system-prompt clause: "Don't over-explain what you are, your 'system',
+  or your embodiment unless directly asked — just answer what the person said."
+- After: "where are you?" → "I'm right here with you. My body's here in this
+  space, and my attention is on you." instead of a self-describing monologue.
+- Tests: updated prompt test; fast suites **440 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/no-identity-overexplain.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

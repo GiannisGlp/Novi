@@ -1,0 +1,11 @@
+{
+  "slice": "Natural conversation round 8: stop over-explaining identity/embodiment",
+  "prompt_guardrail_present": true,
+  "before": {
+    "where are you?": "I'm right here in the room with you, sitting at my usual spot. I don't have eyes like you do, but I'm aware of the space around me..."
+  },
+  "after": {
+    "where are you?": "I'm right here with you. My body's here in this space, and my attention is on you. What brings you to check in?"
+  },
+  "mechanism": "a system-prompt clause tells Novi not to over-explain what it is, its 'system', or its embodiment unless directly asked \u2014 it answers what the person said instead"
+}

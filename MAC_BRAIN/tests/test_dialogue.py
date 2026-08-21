@@ -241,6 +241,8 @@ class ComposeReplyTests(unittest.TestCase):
         prompt = b._dialogue_system_prompt(b._chat_self_state(), {"tier": "friend", "expression": {"warmth": 0.8, "formality": "low", "playful": True}})
         self.assertIn("real, consistent character", prompt)
         self.assertIn("not like a neutral narrator", prompt)
+        # Must not over-explain identity/embodiment unless asked.
+        self.assertIn("Don't over-explain", prompt)
 
     def test_no_transport_returns_none_for_deterministic_fallback(self):
         # CI / no-LLM path: the brain does not fabricate a reply.
