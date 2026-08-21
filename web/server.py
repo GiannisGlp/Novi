@@ -144,7 +144,7 @@ class NoviWebServer:
         reasoning = self._build_reasoning()
         summary_consolidator = self._build_summary_consolidator()
         narrator = self._build_narrator()
-        return MacBrain(camera=cam, stt=stt, reasoning=reasoning, store_path=self.store_path, summary_consolidator=summary_consolidator, narrator=narrator, config=MacBrainConfig())
+        return MacBrain(camera=cam, stt=stt, reasoning=reasoning, store_path=self.store_path, summary_consolidator=summary_consolidator, narrator=narrator, config=MacBrainConfig(initiative_enabled=True))
 
     def _build_narrator(self) -> Any:
         """LLM narrator for episodic "what happened" recaps when Ollama is available."""
@@ -210,7 +210,7 @@ class NoviWebServer:
     # ---- brain operations (all under lock) ----
     def _record_event(self, event: dict[str, Any]) -> None:
         self._seq += 1
-        self._log.append({"seq": self._seq, "event": event})
+        self._log.append({"seq": self._seq, "ts": time.time(), "event": event})
         if len(self._log) > 500:
             self._log = self._log[-500:]
 
@@ -221,7 +221,17 @@ class NoviWebServer:
             self._seen = len(self.brain.events)
             for ev in new:
                 self._seq += 1
-                self._log.append({"seq": self._seq, "event": ev})
+                self._log.append({"seq": self._seq, "ts": time.time(), "event": ev})
+                if ev.get("event_type") == "speech.initiated":
+                    # Surface Novi's unprompted remark as a conversation turn so
+                    # the chat UI shows it (rule 5). Appended directly (no LLM
+                    # summarizer here) to avoid a model call under the runtime lock.
+                    p = ev.get("payload", {})
+                    self._chat_seq += 1
+                    self._chat.append({"seq": self._chat_seq, "role": "novi", "text": str(p.get("text", "")), "trace": {"action": "initiate", "route": "initiative", "conclusion": str(p.get("text", "")), "rationale": str(p.get("reason", "")), "cycle": ev.get("cycle")}, "cycle": ev.get("cycle"), "llm": False})
+                    if len(self._chat) > 200:
+                        self._chat = self._chat[-200:]
+                    self._persist_chat()
             if len(self._log) > 500:
                 self._log = self._log[-500:]
             if self._seen > 10000:
@@ -244,19 +254,28 @@ class NoviWebServer:
             step = self.brain.step()
             trace = dict(self.brain._last_reasoning_trace)
 
-        # A real, meaningful reply via the local LLM (falls back to the
-        # deterministic conclusion if Ollama is unreachable). Multi-turn memory:
-        # pass the recent conversation so Novi can refer back to earlier turns.
-        history = [{"role": c["role"], "text": c["text"]} for c in self._chat[-6:]]
-        reply, llm_trace = self._generate_reply(text, history=history)
+        # The brain owns the reply (docs/06-soul/07 §2): it renders a natural
+        # communicative act grounded in soul/relationship/identity/memory and
+        # enforces the no-assistant/no-repetition rules. The web layer only
+        # supplies conversation history, the addressee, and the LLM transport.
+        history = [{"role": c["role"], "text": c["text"]} for c in self._chat[-12:]]
+        addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+        recent_novi = [c["text"] for c in reversed(self._chat) if c.get("role") == "novi"][:4]
+        last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
+        transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+        reply_obj = self.brain.compose_reply(
+            text, person=addressee, history=history, llm_chat=transport,
+            last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi,
+        )
+        reply = reply_obj["text"]
         self._append_chat({"role": "user", "text": text})
         if reply is not None:
             trace["conclusion"] = reply
             trace["action"] = "respond"
-            trace["rationale"] = "Generated a conversational reply with the local qwen model, grounded in recalled knowledge and my current self-state."
+            trace["rationale"] = "Natural reply grounded in recalled knowledge, relationships and self-state."
             trace["route"] = f"ollama:{self.llm_model}"
-            trace["route_reason"] = "local LLM"
-            trace["confidence"] = 0.85
+            trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
+            trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
             novi_text = reply
         else:
             trace["conclusion"] = conclusion  # deterministic conclusion
@@ -286,14 +305,19 @@ class NoviWebServer:
                 trace = dict(self.brain._last_reasoning_trace)
         if not text.strip():
             return {"heard": "", "accepted": True, "novi": None, "llm": False}
-        reply, _used = self._generate_reply(text)
+        addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+        recent_novi = [c["text"] for c in reversed(self._chat) if c.get("role") == "novi"][:4]
+        last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
+        transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+        reply_obj = self.brain.compose_reply(text, person=addressee, history=None, llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi)
+        reply = reply_obj["text"]
         self._append_chat({"role": "user", "text": f"[heard] {text}"})
         if reply is not None:
             trace["conclusion"] = reply
             trace["action"] = "respond"
             trace["route"] = f"ollama:{self.llm_model}"
-            trace["route_reason"] = "local LLM"
-            trace["confidence"] = 0.85
+            trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
+            trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
             novi_text, llm = reply, True
         else:
             novi_text, llm = result["reasoning"], False
@@ -352,76 +376,16 @@ class NoviWebServer:
         return None
 
     def _knowledge_context(self, text: str, limit: int = 6) -> str:
-        kg = self.brain.knowledge
-        if kg is None:
-            return ""
-        known = {e for e in kg.entity_types()} if hasattr(kg, "entity_types") else set()
-        words = {w.strip(".,!?") for w in text.split()}
-        hits = [w for w in words if w and w.lower() in {k.lower() for k in known}]
-        if not hits:
-            hits = list(known)[:2]
-        facts: list[str] = []
-        for e in hits[:4]:
-            for t in kg.context(e, limit=limit):
-                facts.append(f"{t.subject} {t.predicate} {t.object}")
-        return "; ".join(facts)
+        # Brain-owned grounding (docs/06-soul/07 §2); the web layer is a caller
+        # of the mind, not an owner of it.
+        return self.brain._chat_knowledge(text, limit=limit)
 
     def _known_persons(self) -> list[str]:
-        idn = getattr(self.brain, "identity", None)
-        if idn is None:
-            return []
-        try:
-            snap = idn.snapshot()
-            names: set[str] = set()
-            for binds in snap.get("bindings", {}).values():
-                names.update(binds.keys())
-            return sorted(names)
-        except Exception:  # noqa: BLE001
-            return []
+        return self.brain._chat_known_persons()
 
     def _memory_context(self, limit: int = 3) -> list[str]:
         """Recent consolidated summary memories for chat grounding (summary recall)."""
-        try:
-            rows = self.brain.memory.active_rows()
-        except Exception:  # noqa: BLE001 - memory context is best-effort
-            return []
-        summaries = [r["record"] for r in rows if r["record"].memory_type in {"summary", "conversation_summary"}]
-        summaries.sort(key=lambda r: r.created_at, reverse=True)
-        return [s.content for s in summaries[:limit]]
-
-    def _generate_reply(self, text: str, history: list[dict[str, Any]] | None = None) -> tuple[str | None, bool]:
-        if not self.chat_llm or not self._llm_up():
-            return None, False
-        tone = self.brain.soul.tone({}).get("tone", "neutral")
-        facts = self._knowledge_context(text)
-        facts_list = [f for f in facts.split("; ") if f]
-        facts_list.extend(self._memory_context())
-        narrative = self.brain._episodic_narrative()
-        if narrative:
-            facts_list.append("Recent events: " + " ".join(narrative))
-        known = self._known_persons()
-        if known:
-            facts_list.extend(f"I know the person named {p}" for p in known)
-        system = (
-            "You are Novi, a curious embodied AI who remembers things you have been told. "
-            "You are given a list of facts that you DO know, plus the recent conversation. "
-            "If a fact or earlier turn is relevant to the user's question, ANSWER USING THAT — say plainly what you know "
-            "(e.g. 'I remember that alice moved the door'). "
-            "Only say you don't know something when the facts and conversation give you nothing relevant. "
-            "Reply in 1-3 short, natural spoken sentences. Never invent facts beyond the ones provided. "
-            "Do NOT show a chain of thought or reasoning — output only the final answer, directly."
-        )
-        user_payload = {
-            "user_says": text,
-            "facts_i_know": facts_list,
-            "conversation_so_far": history or [],
-            "my_tone": tone,
-        }
-        try:
-            reply = self._llm_chat(system=system, user=json.dumps(user_payload, sort_keys=True))
-            return reply, True
-        except Exception:  # noqa: BLE001 - offline / model error -> deterministic fallback
-            return None, False
+        return self.brain._chat_memory_summaries(limit=limit)
 
     def _append_chat(self, entry: dict[str, Any]) -> None:
         self._chat_seq += 1
@@ -473,6 +437,14 @@ class NoviWebServer:
         entries = [c for c in self._chat if c["seq"] > after]
         next_after = self._chat[-1]["seq"] if self._chat else after
         return {"entries": entries, "after": next_after}
+
+    def clear_chat(self) -> dict[str, Any]:
+        """Drop the live conversation thread (durable store is updated)."""
+        with self._lock:
+            self._chat = []
+            self._chat_seq = 0
+            self._persist_chat()
+        return {"cleared": True}
 
     def hear_audio(self, *, event_hint: str | None, rms: float, novelty: float = 0.0, speech: bool = False, confidence: float = 0.0) -> dict[str, Any]:
         frame = AudioFrame(rms=float(rms), speech=speech, event_hint=event_hint, hint_confidence=float(confidence) if confidence else 0.0, novelty=float(novelty))
@@ -526,7 +498,14 @@ class NoviWebServer:
                 "last_step": step,
                 "reasoning_trace": self.brain._last_reasoning_trace,
                 "body": body,
-                "soul": {"identity": self.brain.soul.identity.name, "tone": self.brain.soul.tone({}).get("tone"), "affect": self.brain.soul.affect.dimensions},
+                "soul": {
+                    "identity": self.brain.soul.identity.name,
+                    "persona": self.brain.soul.identity.persona,
+                    "tone": self.brain.soul.tone({}).get("tone"),
+                    "traits": dict(self.brain.soul.personality.traits),
+                    "values": dict(self.brain.soul.personality.values),
+                    "affect": dict(self.brain.soul.affect.dimensions),
+                },
                 "active_goal": {"goal_id": active_goal.goal.goal_id, "kind": active_goal.goal.kind, "target": str(active_goal.goal.target), "steps_taken": active_goal.steps_taken, "status": active_goal.status.value, "distance_to_goal": distance} if active_goal is not None else None,
                 "plan": plan,
                 "goals_history": goals,
@@ -536,6 +515,7 @@ class NoviWebServer:
                 "narrative": self.brain._episodic_narrative(),
                 "health": self.brain.health.run(self.brain).snapshot(),
                 "identity": self.brain.identity.snapshot() if hasattr(self.brain, "identity") else None,
+                "self_model": self.brain.self_model(),
             }
 
 
@@ -645,6 +625,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"result": novi.switch_model(str(data.get("model", "")))})
                 except ValueError as exc:
                     self._json({"error": str(exc)}, status=400)
+            elif path == "/api/chat/clear":
+                self._json({"result": novi.clear_chat()})
+                return
             elif path == "/api/step":
                 self._json({"result": novi.step()})
             elif path == "/api/goal":

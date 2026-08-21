@@ -507,6 +507,29 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified: served HTML contains the chat-top/full-width layout, widgets-below grid, fixed heights, and the flicker guard; server healthy (cycle 251, health PASS).
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/dashboard-layout-fix.json`.
 
+## Conversational coherence (reasoning/memory/cognition round 1) (status: IMPLEMENTED)
+
+Targets the objective: answers that make sense in context, follow long dialogs,
+avoid repeating themselves, and ask a logical in-context question when they have
+no good answer.
+
+- **No repeated answers across recent turns:** `DialogueEngine.reply` now takes
+  `recent_novi` and rejects a short reply that is word-for-word inside any of the
+  last few Novi lines (`_is_near_repetitive`) — so Novi never stutters "hello!"
+  every cycle. Substantive restatements of a fact (user asked again) are still
+  allowed.
+- **In-context follow-up when nothing good:** when a reply is rejected/silent,
+  `compose_reply` now asks a logical follow-up built from the user's topic
+  (`followup_question` + `_extract_topic`), e.g. "do you know anything about the
+  garden lights?" → "I don't have a good answer on garden yet — what's it like
+  from your side?", falling back to the tone-aware `natural_fallback` otherwise.
+- **Longer dialog window:** `chat_send`/`listen` now pass the last **12** turns
+  (was 6) plus the last 4 Novi replies as `recent_novi`, so long dialogs stay in
+  context and repetition spans more than the immediate prior turn.
+- Tests: +6 in `MAC_BRAIN/tests/test_dialogue.py`; fast suites **406 passing**,
+  web suite **24 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/conversational-coherence.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

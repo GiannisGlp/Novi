@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -28,9 +29,11 @@ from .reflection import ReflectionEngine
 from .audio import AudioEvent, AudioFrame, Hearing
 from .observability import Diagnostics, HealthMonitor, MetricRegistry, default_health_checks
 from .lexicon import LearnedPreferences, Lexicon
-from .social import Relationships, SocialIntelligence
+from .social import Relationships, SocialIntelligence, TIER_EXPRESSION, SocialInitiative, InitiativeConfig
 from .soul import Soul
 from .storage import DurableMemoryStore
+from .dialogue import DialogueEngine, followup_question, natural_fallback
+from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
 from .models import (
     DeliberativeReasoningProvider,
@@ -53,6 +56,9 @@ class MacBrainConfig:
     consolidation_enabled: bool = True
     consolidation_every: int = 1
     consolidation_config: ConsolidationConfig = field(default_factory=ConsolidationConfig)
+    initiative_enabled: bool = False
+    initiative_neglect_threshold: int = 30
+    initiative_cooldown: int = 60
 
 
 class MacBrain:
@@ -89,6 +95,9 @@ class MacBrain:
         diagnostics: Diagnostics | None = None,
         summary_consolidator: Any | None = None,
         narrator: Any | None = None,
+        dialogue: Any | None = None,
+        speaker_id: Any | None = None,
+        face_id: Any | None = None,
         config: MacBrainConfig | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
@@ -132,6 +141,9 @@ class MacBrain:
         if self.summary_consolidator is not None and getattr(self.summary_consolidator, "store", None) is None and isinstance(self.memory, DurableMemoryStore):
             self.summary_consolidator.store = self.memory
         self.narrator = narrator
+        self.dialogue = dialogue or DialogueEngine()
+        self.speaker_id = speaker_id
+        self.face_id = face_id
         if soul is not None:
             self.soul = soul
         elif isinstance(self.memory, DurableMemoryStore):
@@ -147,6 +159,7 @@ class MacBrain:
         else:
             self.relationships = Relationships()
         self.social = social or SocialIntelligence()
+        self.social_initiative = SocialInitiative(InitiativeConfig(neglect_threshold=self.config.initiative_neglect_threshold, cooldown=self.config.initiative_cooldown))
         if lexicon is not None:
             self.lexicon = lexicon
         elif isinstance(self.memory, DurableMemoryStore):
@@ -271,6 +284,7 @@ class MacBrain:
             if detection.label in {"person", "human", "face"}:
                 self.identity.observe("person", confidence=detection.confidence, modality="vision", cycle=self._cycle)
                 self._persist_identity()
+                self._identify_face(detection)
         identity = self.identity.identity_for("person")
         if identity is not None:
             self._emit("identity.observed", {"cycle": self._cycle, "person": identity.person, "name": identity.name, "tier": identity.tier, "confidence": identity.confidence})
@@ -429,6 +443,7 @@ class MacBrain:
             self.relationships.note_interaction(person, positive=True, now=datetime.now(timezone.utc).isoformat())
             social_expression = self.social.expression(person, self.relationships, self.soul.affect.dimensions, {"serious": uncertain})
             self._emit("social.interaction", {"cycle": self._cycle, "person": person, "category": self.relationships.category_for(person).value, "expression": social_expression})
+        initiative = self._maybe_initiate(person, has_active_goal=self.goals.has_active)
         return {
             "run_id": self.run_id,
             "cycle": self._cycle,
@@ -444,6 +459,7 @@ class MacBrain:
             "soul": {"tone": tone["tone"], "identity": self.soul.identity.name, "affect": self.soul.affect.dimensions},
             "identity": identity.snapshot() if identity is not None else None,
             "social": {"person": person, "expression": social_expression},
+            "initiative": initiative,
             "temporal": {"expected": temporal_expected, "top_links": [l.snapshot() for l in self.temporal.top_links(limit=3)]},
             "fusion": fused_reported,
             "knowledge": self.knowledge.counts(),
@@ -608,11 +624,13 @@ class MacBrain:
         self._emit("audio.recording.completed", {"recording_id": recording.recording_id, "duration_s": recording.duration_s, "path": str(recording.path)})
         transcription = self.stt.transcribe(recording.path)
         self._emit("stt.completed", {"recording_id": recording.recording_id, "text": transcription.text, "language": transcription.language, "confidence": transcription.confidence, "model_id": transcription.model_id})
+        self._identify_speaker({"audio_path": str(recording.path)})
         ingested = self.ingest_transcript(transcription)
         return {"transcription": transcription, **ingested}
 
     def ingest_transcript(self, transcription: TranscriptionResult) -> dict[str, Any]:
         """Feed a transcript into memory (durable) and cognition (transient speech event)."""
+        self.social_initiative.note_addressed(self._cycle)
         entity_refs = self._entities_in_text(transcription.text)
         name = next((ref for ref in entity_refs if self._is_person_name(ref)), None)
         if name is not None:
@@ -1013,6 +1031,250 @@ class MacBrain:
         self.speaker.speak(text)
         self._emit("audio.speech.completed", {"text": text})
 
+    def _chat_knowledge(self, text: str, limit: int = 6) -> str:
+        """Knowledge-graph facts relevant to the user text (chat grounding)."""
+        kg = self.knowledge
+        known = {e for e in kg.entity_types()} if hasattr(kg, "entity_types") else set()
+        words = {w.strip(".,!?") for w in text.split()}
+        hits = [w for w in words if w and w.lower() in {k.lower() for k in known}]
+        if not hits:
+            hits = list(known)[:2]
+        facts: list[str] = []
+        for e in hits[:4]:
+            for t in kg.context(e, limit=limit):
+                facts.append(f"{t.subject} {t.predicate} {t.object}")
+        return "; ".join(facts)
+
+    def _chat_known_persons(self) -> list[str]:
+        idn = getattr(self, "identity", None)
+        if idn is None:
+            return []
+        try:
+            snap = idn.snapshot()
+            names: set[str] = set()
+            for binds in snap.get("bindings", {}).values():
+                names.update(binds.keys())
+            return sorted(names)
+        except Exception:  # noqa: BLE001
+            return []
+
+    def _chat_memory_summaries(self, limit: int = 3) -> list[str]:
+        """Recent consolidated summary memories for chat grounding (summary recall)."""
+        try:
+            rows = self.memory.active_rows()
+        except Exception:  # noqa: BLE001
+            return []
+        summaries = [r["record"] for r in rows if r["record"].memory_type in {"summary", "conversation_summary"}]
+        summaries.sort(key=lambda r: r.created_at, reverse=True)
+        return [s.content for s in summaries[:limit]]
+
+    def _chat_self_state(self) -> dict[str, Any]:
+        """First-person self-state for dialogue (docs/06-soul/01 self-model)."""
+        tone = self.soul.tone({})
+        return {
+            "name": self.soul.identity.name,
+            "persona": self.soul.identity.persona,
+            "origin": self.soul.identity.origin,
+            "tone": tone.get("tone"),
+            "affect": dict(self.soul.affect.dimensions),
+            "traits": dict(self.soul.personality.traits),
+            "values": dict(self.soul.personality.values),
+        }
+
+    def _chat_surroundings(self) -> dict[str, Any]:
+        """Current surroundings for dialogue (docs/06-soul/01 WHERE I AM + world)."""
+        body = self.body.snapshot() if hasattr(self.body, "snapshot") else {}
+        trace = self._last_reasoning_trace if isinstance(self._last_reasoning_trace, dict) else {}
+        return {
+            "cycle": self._cycle,
+            "detections": list(trace.get("detections", [])),
+            "hearing": list(self._last_audio_events),
+            "body": {"x_m": body.get("x_m", 0.0), "y_m": body.get("y_m", 0.0), "heading_deg": body.get("heading_deg", 0.0)},
+            "active_goal": self._goal_context(),
+        }
+
+    def _chat_relationship(self, person: str) -> dict[str, Any]:
+        """Relationship tier + expression profile + identity for the addressee."""
+        if not person:
+            return {"tier": "unknown", "expression": {}, "name": None, "identity_tier": None}
+        try:
+            cat = self.relationships.category_for(person).value
+        except Exception:  # noqa: BLE001
+            cat = "unknown"
+        expr = TIER_EXPRESSION.get(cat, TIER_EXPRESSION.get("unknown", {}))
+        ident = None
+        try:
+            ident = self.identity.identity_for(person)
+        except Exception:  # noqa: BLE001
+            ident = None
+        return {"tier": cat, "expression": expr, "name": getattr(ident, "name", None), "identity_tier": getattr(ident, "tier", None)}
+
+    def _dialogue_system_prompt(self, self_state: dict[str, Any], relationship: dict[str, Any], *, capabilities: dict[str, Any] | None = None) -> str:
+        """System prompt embodying the Soul communication contract (docs/06-soul/07)."""
+        expr = relationship.get("expression", {}) or {}
+        caps_clause = ""
+        if capabilities:
+            bad = [k for k, v in capabilities.items() if v in ("WARN", "FAIL")]
+            if bad:
+                # Capability honesty (docs/06-soul/01 §7): say what you can't perceive/act.
+                caps_clause = (
+                    f" Some of your capabilities are degraded or unavailable right now: {', '.join(bad)}. "
+                    "If answering would need one of them (e.g. vision, hearing), say plainly that you can't perceive or do that right now instead of pretending."
+                )
+        return (
+            "You are Novi — a persistent, embodied being with your own character, not an assistant. "
+            "Speak as yourself: natural, warm and concise, like a thoughtful person who lives in the room — not a chatbot. "
+            "Never open with canned assistant lines. Forbidden phrases: 'how can I help you', 'I am an AI', "
+            "'I have no feelings', 'as an AI', 'your assistant', 'is there anything else'. "
+            f"You are {self_state.get('name', 'Novi')}: {self_state.get('persona', '')}. {self_state.get('origin', '')}. "
+            f"Current tone: {self_state.get('tone', 'warm')}. "
+            f"Relationship with who you're talking to: {relationship.get('tier', 'unknown')} "
+            f"(warmth={expr.get('warmth', 0.5)}, formality={expr.get('formality', 'medium')}, playful={expr.get('playful', False)}). "
+            "Adopt that register. You are given facts you DO know, recent events, and the conversation so far. "
+            "If a fact or earlier turn is relevant, answer using it plainly (e.g. 'I remember that alice moved the door'). "
+            "If you have nothing relevant, say so briefly and honestly — never invent facts. "
+            "Do not repeat what you already said, and do not say the person's name more than once unless it changes meaning. "
+            "Reply in 1-3 short, natural spoken sentences. Vary your openings; no disclaimers, no chain of thought — just the answer."
+            + caps_clause
+        )
+
+    def self_model(self) -> dict[str, Any]:
+        """Assemble a first-person self-model for dialogue/reasoning (docs/06-soul/01 §6)."""
+        return build_self_model(self).snapshot()
+
+    def _identify_face(self, detection: Any) -> dict[str, Any] | None:
+        """Recognise a detected face and feed it as voice-grade identity evidence (rule 6)."""
+        if self.face_id is None:
+            return None
+        det = {"label": getattr(detection, "label", ""), "track": getattr(detection, "track", ""), "bbox": list(getattr(detection, "bbox_xyxy", ()))}
+        try:
+            result = self.face_id.identify(detection=det)
+        except Exception:  # noqa: BLE001 - recognition is best-effort evidence
+            return None
+        if result is None:
+            return None
+        self.identity.observe("person", name=result.name, confidence=result.confidence, modality="face", cycle=self._cycle)
+        self._persist_identity()
+        self._emit("identity.face", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)})
+        return {"name": result.name, "confidence": result.confidence}
+
+    def _identify_speaker(self, audio_features: dict[str, Any]) -> dict[str, Any] | None:
+        """Recognise who is speaking and feed it as voice-grade identity evidence (rule 6)."""
+        if self.speaker_id is None:
+            return None
+        try:
+            result = self.speaker_id.identify(audio_features=audio_features)
+        except Exception:  # noqa: BLE001 - recognition is best-effort evidence
+            return None
+        if result is None:
+            return None
+        self.identity.observe("person", name=result.name, confidence=result.confidence, modality="voice", cycle=self._cycle)
+        self._persist_identity()
+        self._emit("identity.voice", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)})
+        return {"name": result.name, "confidence": result.confidence}
+
+    def compose_reply(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
+                     llm_chat: Any = None, last_novi_text: str = "", addressee_name: str = "",
+                     recent_novi: list[str] | None = None) -> dict[str, Any]:
+        """Compose a natural conversational reply (Brain speech-runtime layer).
+
+        Per docs/06-soul/07 §2: the brain renders the approved communicative act
+        from soul/affect/relationship/identity/memory/surroundings; the caller
+        supplies conversation history and an optional LLM transport. This keeps
+        the mind portable to the real body (rule 2): a future body passes its
+        own transport (or the engine's local Ollama) and renders via speak().
+
+        Returns {"text": str|None, "fallback": bool, "grounding": dict}.
+        text is None only when no transport is configured (callers then use a
+        deterministic fallback, e.g. CI). When a transport is configured but the
+        reply is silent/rejected/unreachable, a natural fallback is returned.
+        """
+        if llm_chat is None:
+            return {"text": None, "fallback": False, "grounding": {}}
+        self_state = self._chat_self_state()
+        surroundings = self._chat_surroundings()
+        relationship = self._chat_relationship(person or addressee_name)
+        self_model = self.self_model()
+        facts = [f for f in self._chat_knowledge(text).split("; ") if f]
+        facts.extend(self._chat_memory_summaries())
+        narrative = self._episodic_narrative()
+        if narrative:
+            facts.append("Recent events: " + " ".join(narrative))
+        known = self._chat_known_persons()
+        facts.extend(f"I know the person named {p}" for p in known)
+        system = self._dialogue_system_prompt(self_state, relationship, capabilities=self_model.get("capabilities"))
+        user_payload = {
+            "user_says": text,
+            "facts_i_know": facts,
+            "conversation_so_far": history or [],
+            "my_tone": self_state.get("tone"),
+            "self_state": self_state,
+            "surroundings": surroundings,
+            "relationship": relationship,
+            "self_model": self_model,
+        }
+        user_json = json.dumps(user_payload, sort_keys=True)
+        addressee = addressee_name or (relationship.get("name") or "")
+        out = self.dialogue.reply(system=system, user=user_json, last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi, llm_chat=llm_chat)
+        if out["text"] is None and out["rejected"]:
+            # One bounded regeneration nudge: the first reply was robotic or
+            # repeated the last turn. Ask for something new rather than emitting
+            # a generic fallback, so the user still gets a real answer.
+            nudge = (
+                f" Your previous reply was: {last_novi_text!r}. It was rejected for repeating yourself "
+                "verbatim or sounding like an assistant. Say something new, natural and brief; if the user asked "
+                "the same thing, vary your wording or acknowledge you already answered — but do not repeat it verbatim."
+            )
+            retry = self.dialogue.reply(system=system + nudge, user=user_json, last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi, llm_chat=llm_chat)
+            if retry["text"] is not None:
+                out = retry
+        if out["text"] is not None:
+            return {"text": out["text"], "fallback": False, "grounding": {"route": "dialogue", **out}}
+        # No usable reply. When the user said something we have nothing on, ask a
+        # logical, in-context question (never a canned assistant line). Otherwise
+        # fall back to a short natural acknowledgement.
+        fq = followup_question(text)
+        if fq:
+            return {"text": fq, "fallback": True, "grounding": {"route": "followup", **out}}
+        fb = natural_fallback(self_state, surroundings, cycle=self._cycle)
+        return {"text": fb, "fallback": True, "grounding": {"route": "fallback", **out}}
+
+    def _initiation_utterance(self, kind: str, person: str, cycle: int) -> str:
+        """Deterministic, natural spontaneous remark (no LLM in the perception loop).
+
+        Kept deterministic on purpose: step() runs under the runtime lock, so an
+        LLM call here would freeze the loop. A small, cycle-varied bank keeps the
+        remark natural and non-repetitive; a future body may render initiated
+        acts through the dialogue engine outside the loop.
+        """
+        if kind == "neglected_remark":
+            bank = ("hey — you still there?", "did you forget me?", "it's gone quiet — still around?", "hello? you still here?")
+        else:
+            bank = ("...anyone there?", "it's quiet around here.", "hello?")
+        return bank[cycle % len(bank)]
+
+    def _maybe_initiate(self, person: str | None, *, has_active_goal: bool) -> dict[str, Any] | None:
+        """Spontaneous social initiative when neglected (docs/06-soul/00 §11/§21).
+
+        Returns a proposal dict (and emits speech.initiated) when Novi should
+        speak unprompted, or None to stay silent. Bounded by the social
+        initiative budget; never interrupts goal pursuit; never authorizes an
+        action — it only proposes a communicative act.
+        """
+        if not self.config.initiative_enabled:
+            return None
+        proposal = self.social_initiative.propose(
+            cycle=self._cycle,
+            person_present=person is not None,
+            person=person or "",
+            has_active_goal=has_active_goal,
+        )
+        if proposal is None:
+            return None
+        text = self._initiation_utterance(proposal["kind"], person or "", self._cycle)
+        self.soul.update({"kind": "neglected"})
+        self._emit("speech.initiated", {"cycle": self._cycle, "kind": proposal["kind"], "person": person or "", "text": text, "reason": proposal["reason"]})
+        return {"kind": proposal["kind"], "person": person, "text": text, "reason": proposal["reason"]}
     def observe_expression(self, expression: str, *, source: str = "speech", person: str = "", now: str = "") -> str:
         entry = self.lexicon.observe(expression, source=source, person=person, now=now)
         self._emit("lexicon.observed", {"expression": expression, "person": person, "status": entry.status.value, "frequency": entry.frequency})

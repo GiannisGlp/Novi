@@ -1,0 +1,9 @@
+{
+  "slice": "Conversational coherence: context-aware, non-repetitive, in-context follow-up",
+  "followup_in_context": "I don't have a good answer on garden yet \u2014 what's it like from your side?",
+  "topic_extraction": "panels",
+  "near_repeat_rejected": true,
+  "fact_restatement_allowed": false,
+  "engine_rejects_repeat_across_recent": true,
+  "longer_dialog_window": "chat_send now passes the last 12 turns (was 6) plus the last 4 Novi replies as recent_novi"
+}

@@ -1,0 +1,292 @@
+"""Natural conversational dialogue engine for the Mac Brain.
+
+Implements the Soul communication contract (docs/06-soul/07_COMMUNICATION_AND_LIVING_LEXICON):
+Novi expresses a persistent individual, not an assistant script. This module is
+the Brain speech-runtime layer that *renders an approved communicative act* — it
+does not decide intent (that is Autonomy/Cognition) and it never produces an
+ActionProposal or bypasses authorization.
+
+It is deliberately portable: it depends only on a local Ollama-compatible
+endpoint (like the narrator/summarizer), never on the web server, so it travels
+with the mind to the real body.
+
+Quality guardrails (rules 8/9/10):
+  - No assistant persona: forbidden openers ("how can I help you", "I am an AI",
+    "I have no feelings", "your personal assistant", ...) are stripped or rejected.
+  - No repetition: a reply that repeats the last Novi turn is rejected; an
+    addressee's name is not repeated more than once without reason.
+  - Natural, concise, relationship- and context-sensitive (the prompt is built
+    by the brain from soul/affect/relationship/identity/memory/surroundings).
+  - Silence is a valid act: the model may answer "[silence]"; the brain then
+    chooses a minimal natural acknowledgement so a chat user is never left dry.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import urllib.request
+from typing import Any
+
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
+DEFAULT_OLLAMA_MODEL = "qwen3.8"
+
+# Rule 8 — patterns that make Novi sound like a scripted assistant/AI. A reply
+# whose first sentence matches one of these is stripped; a reply that still
+# matches after stripping is rejected in favour of a natural fallback.
+_FORBIDDEN = [
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\bhow (can|may) i (help|assist) (you|today)\b",
+        r"\bwhat can i do for you\b",
+        r"\bi('?m| am) novi,?\b.{0,40}\b(assistant|help|serve)\b",
+        r"\byour (personal )?assistant\b",
+        r"\bi('?m| am) (just )?an? ai\b",
+        r"\bas an ai\b",
+        r"\bi (don'?t|do not|have no) (have )?feelings?\b",
+        r"\bi('?m| am) (just )?a (?:large )?language model\b",
+        r"\bis there anything else (i can )?help\b",
+    )
+]
+
+_SENTENCE_END = re.compile(r"[.!?]\s")
+
+
+def _split_first_sentence(text: str) -> tuple[str, str]:
+    m = _SENTENCE_END.search(text)
+    if m is None:
+        return text, ""
+    return text[: m.start() + 1], text[m.end():]
+
+
+def _is_forbidden(text: str) -> bool:
+    return any(p.search(text) for p in _FORBIDDEN)
+
+
+def _strip_forbidden_opener(text: str) -> str | None:
+    """Remove a leading assistant-style sentence; reject if the rest is still bad."""
+    text = text.strip()
+    if not text:
+        return None
+    first, rest = _split_first_sentence(text)
+    if _is_forbidden(first):
+        text = rest.strip()
+    if not text:
+        return None
+    if _is_forbidden(text):
+        return None
+    return text
+
+
+def _normalize(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", "", text.lower())).strip()
+
+
+def _is_repetitive(text: str, last_novi_text: str) -> bool:
+    """Rule 9: reject a reply that verbatim repeats what Novi just said.
+
+    Only exact (normalized) duplicates are rejected — re-mentioning a fact when
+    the user asks again is reasonable and natural; verbatim repetition is not.
+    Name over-use is handled separately by _reduce_name_repetition.
+    """
+    if not last_novi_text:
+        return False
+    a, b = _normalize(text), _normalize(last_novi_text)
+    if not a or not b:
+        return False
+    return a == b
+
+
+_STOPWORDS = {
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "do", "does", "did", "i", "you", "me", "my", "we", "our", "us", "it",
+    "that", "this", "these", "those", "what", "why", "how", "who", "when",
+    "to", "for", "of", "in", "on", "with", "and", "or", "but", "not", "no",
+    "have", "has", "had", "about", "can", "could", "would", "should", "will",
+    "just", "really", "like", "so", "if", "then", "there", "here", "now",
+    "anything", "something", "everything", "nothing", "someone", "anyone",
+    "somebody", "anybody", "everybody", "nobody", "whoever", "whatever",
+    "whenever", "somewhere", "anywhere", "anytime", "still", "also",
+    "always", "never", "often", "sometimes", "really", "actually", "maybe",
+}
+
+
+def _extract_topic(text: str) -> str:
+    """Pull the most likely topic noun from a user line (deterministic, no NLP).
+
+    Chooses the longest substantive (non-stopword) token, favouring a concrete
+    subject over connective words. Returns "" when there is nothing useful.
+    """
+    words = [w.strip(".,!?;:\"'()[]{}") for w in text.split()]
+    cands = [w for w in words if w and w.lower() not in _STOPWORDS and not w.isdigit()]
+    if not cands:
+        return ""
+    return max(cands, key=lambda w: (len(w), len(set(w))))
+
+
+def followup_question(text: str) -> str:
+    """A logical, in-context question Novi asks when it has no better answer.
+
+    Requirement: 'when it does not have a good answer must come up with a good
+    logical and in context question'. Deterministic and testable; never names the
+    user and never sounds like an assistant.
+    """
+    topic = _extract_topic(text)
+    if topic:
+        return f"I don't have a good answer on {topic} yet — what's it like from your side?"
+    return "I don't have a good answer to that yet — what made you bring it up?"
+
+
+def _is_near_repetitive(text: str, recent_novi: list[str] | None) -> bool:
+    """Rule 9b: reject a reply that repeats a recent Novi line (not only the last).
+
+    A short reply (<=6 words) that is almost word-for-word inside a recent reply
+    is a habitual repeat — the kind of stutter the objective forbids ('shouldn't
+    be repeating the same thing again and again'). Longer replies restating a
+    fact are allowed (the user may be asking again).
+    """
+    if not recent_novi:
+        return False
+    a = _normalize(text)
+    if not a:
+        return False
+    a_words = a.split()
+    if len(a_words) < 2 or len(a_words) > 6:
+        return False
+    a_set = set(a_words)
+    for prev in recent_novi:
+        b = _normalize(prev)
+        if not b:
+            continue
+        b_set = set(b.split())
+        if not b_set:
+            continue
+        if a_set <= b_set:  # every word of the short reply appears in the prior line
+            return True
+    return False
+
+
+def _reduce_name_repetition(text: str, name: str) -> str:
+    """Rule 9: do not say the addressee's name more than once without reason."""
+    if not name:
+        return text
+    low = name.lower()
+    # case-insensitive count, preserve the first occurrence
+    count = 0
+    out: list[str] = []
+    i = 0
+    pattern = re.compile(re.escape(name), re.IGNORECASE)
+    for m in pattern.finditer(text):
+        out.append(text[i : m.start()])
+        count += 1
+        if count == 1:
+            out.append(m.group(0))
+        # extra occurrences are dropped
+        i = m.end()
+    out.append(text[i:])
+    if count <= 1:
+        return text
+    return re.sub(r"\s{2,}", " ", "".join(out)).strip()
+
+# ---- deterministic natural fallback (used when the LLM is silent/unreachable) ----
+_FALLBACK_CURIOUS = ["oh? tell me more.", "hmm — go on.", "that's interesting, keep going."]
+_FALLBACK_WARM = ["hey, i'm here.", "yeah, i'm listening.", "go ahead."]
+_FALLBACK_NEUTRAL = ["mm.", "ok.", "i hear you."]
+_FALLBACK_SERIOUS = ["understood.", "right — what's the situation?", "got it."]
+
+
+def natural_fallback(self_state: dict[str, Any], surroundings: dict[str, Any], *, cycle: int = 0) -> str:
+    """A short, natural, non-robotic line when no LLM reply is available.
+
+    Deterministic (cycle-seeded) so it is auditable and testable. It never uses
+    an assistant opener and never names the user.
+    """
+    tone = (self_state or {}).get("tone", "warm")
+    bank = _FALLBACK_SERIOUS if tone in {"cautious", "recovering"} else (
+        _FALLBACK_CURIOUS if tone == "curious" else (
+            _FALLBACK_NEUTRAL if tone in {"calm"} else _FALLBACK_WARM
+        )
+    )
+    return bank[cycle % len(bank)]
+
+
+class DialogueEngine:
+    """Portable LLM dialogue renderer with quality guardrails.
+
+    The brain builds the system/user prompt from its own state; this engine runs
+    the local model call and enforces the communication rules on the output.
+    """
+
+    def __init__(self, *, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL, timeout: int = 120) -> None:
+        self.model = model
+        self.base_url = base_url
+        self.timeout = timeout
+
+    def reply(
+        self,
+        *,
+        system: str,
+        user: str,
+        last_novi_text: str = "",
+        addressee_name: str = "",
+        recent_novi: list[str] | None = None,
+        llm_chat: Any = None,
+    ) -> dict[str, Any]:
+        """Run the model and return a cleaned reply.
+
+        ``llm_chat`` is an optional callable ``llm_chat(system=, user=)`` used as
+        the transport (e.g. the web server's _llm_chat, or a test stub). When
+        omitted the engine calls its own local Ollama endpoint. The brain always
+        owns the prompt and the quality filters; the transport is injectable so
+        the same mind runs on the web UI and on a future body.
+
+        Returns a dict with: text (str|None), silent (bool), rejected (bool).
+        text is None when the reply should be replaced by a natural fallback.
+        """
+        if llm_chat is not None:
+            raw = llm_chat(system=system, user=user)
+        else:
+            raw = self._chat(system, user)
+        if raw is None:
+            return {"text": None, "silent": False, "rejected": False}
+        text = raw.strip()
+        if not text:
+            return {"text": None, "silent": False, "rejected": False}
+        low = text.lower().strip(" .!")
+        if low == "[silence]" or low == "silence" or low == "(silence)":
+            return {"text": None, "silent": True, "rejected": False}
+        cleaned = _strip_forbidden_opener(text)
+        if cleaned is None:
+            return {"text": None, "silent": False, "rejected": True}
+        if _is_repetitive(cleaned, last_novi_text):
+            return {"text": None, "silent": False, "rejected": True}
+        if _is_near_repetitive(cleaned, recent_novi):
+            return {"text": None, "silent": False, "rejected": True}
+        cleaned = _reduce_name_repetition(cleaned, addressee_name)
+        cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+        if not cleaned:
+            return {"text": None, "silent": False, "rejected": True}
+        return {"text": cleaned, "silent": False, "rejected": False}
+
+    def _chat(self, system: str, user: str) -> str | None:
+        """Single-shot Ollama /api/chat call; best-effort, returns None on failure."""
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "stream": False,
+            "options": {"temperature": 0.6, "num_predict": 320},
+        }
+        if "nemotron" in self.model.lower():
+            payload["think"] = False
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(f"{self.base_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=self.timeout) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        message = data.get("message", {}) or {}
+        reply = (message.get("content") or "").strip()
+        if reply:
+            return reply
+        thinking = (message.get("thinking") or "").strip()
+        if thinking:
+            return thinking.splitlines()[-1].strip() or None
+        return None
