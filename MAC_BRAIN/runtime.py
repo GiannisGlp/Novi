@@ -32,7 +32,7 @@ from .lexicon import LearnedPreferences, Lexicon
 from .social import Relationships, SocialIntelligence, TIER_EXPRESSION, SocialInitiative, InitiativeConfig
 from .soul import Soul
 from .storage import DurableMemoryStore
-from .dialogue import DialogueEngine, _extract_topic, _is_greeting, followup_question, greeting_reply, natural_fallback
+from .dialogue import DialogueEngine, _extract_topic, _is_clarification, _is_greeting, clarification_reply, followup_question, greeting_reply, natural_fallback
 from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
 from .models import (
@@ -1264,6 +1264,16 @@ class MacBrain:
         experience = self._chat_experience(person or addressee_name)
         facts.extend(experience)
         system = self._dialogue_system_prompt(self_state, relationship, capabilities=self_model.get("capabilities"))
+        is_clarification = _is_clarification(text)
+        if is_clarification:
+            # The user is asking Novi to clarify/repeat something. Steer the model
+            # to acknowledge naturally and re-engage, not to narrate the chat.
+            system += (
+                " The user is asking you to clarify or repeat something you said or meant. "
+                "Acknowledge briefly and in your own voice (e.g. 'sorry, I may have muddled that'), "
+                "then re-engage — ask what they'd like cleared up or re-state it plainer. "
+                "Do not say 'I'm not sure what you're referring to' and do not describe the conversation."
+            )
         user_payload = {
             "user_says": text,
             "facts_i_know": facts,
@@ -1297,10 +1307,13 @@ class MacBrain:
                 f"{len(experience)} learned experience(s), and the conversation so far ({len(history or [])} prior turns)"
             )
             return {"text": out["text"], "fallback": False, "reason": reason, "grounding": {"route": "dialogue", **out}}
-        # No usable reply. When the user said something we have nothing on, ask a
-        # logical, in-context question (never a canned assistant line) — but only
-        # for a substantive topic; for a bare greeting/one-liner prefer a short
-        # natural acknowledgement.
+        # No usable reply. A clarification request ("what system?", "what do you
+        # mean?") is answered by acknowledging + re-engaging, never by guessing at
+        # a topic. Otherwise, when we have nothing on a substantive topic, ask a
+        # logical in-context question; for a bare one-liner prefer a short ack.
+        if is_clarification:
+            reason = "You asked me to clarify or repeat something, so I acknowledged and re-engaged rather than guessing"
+            return {"text": clarification_reply(cycle=self._cycle), "fallback": True, "reason": reason, "grounding": {"route": "clarification", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

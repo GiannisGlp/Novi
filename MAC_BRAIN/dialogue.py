@@ -161,6 +161,45 @@ def greeting_reply(cycle: int = 0) -> str:
     return _GREETING_REPLIES[cycle % len(_GREETING_REPLIES)]
 
 
+_CLARIFICATION_REPLIES = [
+    "Sorry — I think I got a bit ahead of myself. What would you like me to clear up?",
+    "Ah, I muddled that. Ask me again and I'll be plainer.",
+    "Sorry, I didn't land that well. What are you actually wondering about?",
+]
+
+
+def _is_clarification(text: str) -> bool:
+    """True when the user is asking Novi to clarify/repeat something (a follow-up
+    question like "what system?", "what do you mean?", "come again?"). These are
+    requests about the conversation, not new topics, so a topic-based follow-up
+    question ("I don't have a good answer on system yet") would be wrong.
+    """
+    t = text.strip().lower().rstrip("!.?")
+    if not t:
+        return False
+    _EXACT = {
+        "what", "what do you mean", "what does that mean", "what was that",
+        "come again", "huh", "sorry", "repeat", "pardon", "excuse me",
+        "say that again", "i don't get it", "i don't follow", "explain",
+        "explain that", "rephrase", "what's that", "what is that",
+    }
+    if t in _EXACT:
+        return True
+    # "what <single word>?" style clarifying question, e.g. "what system?"
+    if re.match(r"^what\s+[a-z]+\s*$", t):
+        return True
+    return False
+
+
+def clarification_reply(cycle: int = 0) -> str:
+    """Natural in-context reply when the user asks Novi to clarify something.
+
+    Acknowledges the possible muddle and re-engages with the person, rather than
+    guessing at a topic or narrating the conversation.
+    """
+    return _CLARIFICATION_REPLIES[cycle % len(_CLARIFICATION_REPLIES)]
+
+
 def _extract_topic(text: str) -> str:
     """Pull the most likely topic noun from a user line (deterministic, no NLP).
 

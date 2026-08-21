@@ -13,12 +13,14 @@ import unittest
 from MAC_BRAIN.dialogue import (
     DialogueEngine,
     _extract_topic,
+    _is_clarification,
     _is_forbidden,
     _is_greeting,
     _is_meta_referential,
     _is_near_repetitive,
     _is_repetitive,
     _reduce_name_repetition,
+    clarification_reply,
     followup_question,
     greeting_reply,
     natural_fallback,
@@ -98,6 +100,20 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertTrue(_is_meta_referential("In our conversation, you greeted me and I responded warmly."))
         self.assertTrue(_is_meta_referential("I'm not sure what you mean. That's the main interaction we've had."))
         self.assertFalse(_is_meta_referential("I remember that alice moved the door."))
+
+    def test_clarification_detection(self):
+        self.assertTrue(_is_clarification("what system?"))
+        self.assertTrue(_is_clarification("what do you mean?"))
+        self.assertTrue(_is_clarification("come again?"))
+        self.assertFalse(_is_clarification("what's up"))
+        self.assertFalse(_is_clarification("what time is it"))
+
+    def test_clarification_reply_is_natural(self):
+        for i in range(6):
+            c = clarification_reply(cycle=i)
+            self.assertTrue(c)
+            self.assertFalse(_is_forbidden(c))
+            self.assertNotIn("what's on your mind", c.lower())
 
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
@@ -191,6 +207,14 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIsNotNone(r["text"])
         self.assertTrue(r["fallback"])
         self.assertIn("follow-up", r["reason"].lower())
+
+    def test_clarification_fallback_in_compose_reply(self):
+        b = self._brain()
+        r = b.compose_reply("what system?", llm_chat=lambda **k: "I'm not sure what you're referring to. In our conversation, you greeted me.")
+        self.assertIsNotNone(r["text"])
+        self.assertTrue(r["fallback"])
+        self.assertNotIn("system yet", r["text"].lower())
+        self.assertIn("clarif", r["reason"].lower())
 
 
 class ExperienceLearningTests(unittest.TestCase):

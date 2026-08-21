@@ -587,6 +587,27 @@ example ("Hello." → "...I noticed you greeted the system — what's on your mi
   reply would be rejected. Fast suites **421 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/natural-conversation.json`.
 
+## Natural clarification for follow-up questions (round 2 of the naturalness objective) (status: IMPLEMENTED)
+
+Targets the second half of the reported example: after the awkward greeting, the
+user asked "what system?" and Novi replied vaguely/meta. Even with the greeting
+fix, brief clarifying follow-ups ("what X?", "what do you mean?", "come again?")
+previously got awkward topic-based replies ("I don't have a good answer on mean
+yet").
+
+- **Clarification-request detection** (`_is_clarification`): recognizes "what
+  <word>?", "what do you mean?", "come again?", "huh?", etc. — requests about the
+  conversation, not new topics (and correctly does NOT match "what's up").
+- **Natural reply** (`clarification_reply`): "Sorry — I think I got a bit ahead of
+  myself. What would you like me to clear up?" — acknowledges and re-engages.
+- **Prompt steering + fallback**: for clarification requests a hint is appended to
+  the system prompt, and if the LLM is rejected/silent the reply falls back to the
+  natural clarification line instead of guessing at a topic.
+- Verified: "what system?" now replies "Sorry — I think I got a bit ahead of
+  myself…" with reason "You asked me to clarify…". Fast suites **424 passing**,
+  web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/clarification-natural.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

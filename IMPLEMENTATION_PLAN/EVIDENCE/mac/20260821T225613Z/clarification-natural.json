@@ -1,0 +1,19 @@
+{
+  "slice": "Natural conversation round 2: natural clarification for follow-up questions",
+  "reported_followup": {
+    "user": "what system?",
+    "old_novi": "I'm not sure what you're referring to. In our conversation, you greeted me and I responded warmly \u2014 that's the main interaction we've had so far."
+  },
+  "new_replies": {
+    "what system?": "Sorry \u2014 I think I got a bit ahead of myself. What would you like me to clear up?",
+    "what do you mean?": "Sorry \u2014 I think I got a bit ahead of myself. What would you like me to clear up?",
+    "come again?": "Sorry \u2014 I think I got a bit ahead of myself. What would you like me to clear up?"
+  },
+  "detected_clarifications": {
+    "what system?": true,
+    "what do you mean?": true,
+    "come again?": true,
+    "what's up": false
+  },
+  "mechanism": "clarification requests (what X?, what do you mean?, come again?) are detected and answered with a natural acknowledge-and-re-engage reply instead of guessing at a topic or narrating the conversation"
+}
