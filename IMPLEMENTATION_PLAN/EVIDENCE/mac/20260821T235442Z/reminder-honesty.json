@@ -1,0 +1,16 @@
+{
+  "slice": "Natural conversation round 16: honest reminder handling (no false promise)",
+  "detected": {
+    "remind me to water the plants": true,
+    "don't forget to call my mom": true,
+    "what's the time?": false
+  },
+  "deterministic_honest_reply": "Got it \u2014 I'll keep that in mind. I can't ping you at a set time in this build, but I'll remember it and bring it up when we talk.",
+  "persisted_so_recall_works": [
+    "I should remember to water the plants"
+  ],
+  "before": {
+    "remind me to water the plants tomorrow": "Sure thing \u2014 I'll remind you about the plants tomorrow. (a timed push it cannot actually send)"
+  },
+  "mechanism": "reminder requests are answered honestly (keep in mind, no timed push) and persisted as a recallable fact, instead of over-promising a scheduled alert"
+}

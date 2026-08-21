@@ -26,6 +26,7 @@ from MAC_BRAIN.dialogue import (
     _is_perception_question,
     _is_realtime_data_question,
     _is_recall_question,
+    _is_reminder_request,
     _is_thanks,
     _is_time_greeting,
     _is_repetitive,
@@ -220,6 +221,12 @@ class DialogueFilterTests(unittest.TestCase):
         for s in ["can you hear me?", "can you see me?", "are you listening?", "did you see that?"]:
             self.assertTrue(_is_perception_question(s), s)
         self.assertFalse(_is_perception_question("what's the time?"))
+
+    def test_reminder_detection(self):
+        for s in ["remind me to water the plants", "don't forget to call my mom",
+                  "set me a reminder for tomorrow"]:
+            self.assertTrue(_is_reminder_request(s), s)
+        self.assertFalse(_is_reminder_request("what's the time?"))
 
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
@@ -417,6 +424,16 @@ class ComposeReplyTests(unittest.TestCase):
         # vision question answered honestly per availability
         rv = b.compose_reply("did you see that?", llm_chat=lambda **k: None)
         self.assertNotIn("good answer", rv["text"].lower())
+
+    def test_reminder_is_honest_and_persisted(self):
+        b = self._brain()
+        r = b.compose_reply("remind me to water the plants", llm_chat=lambda **k: None)
+        self.assertIsNotNone(r["text"])
+        self.assertEqual(r["grounding"]["route"], "reminder_honesty")
+        self.assertNotIn("water the plants", r["text"])  # no false timed promise
+        # persists so it can be recalled later
+        b._learn_from_chat("remind me to water the plants", person="alice")
+        self.assertTrue(any("water the plants" in e for e in b._chat_experience("alice")))
 
 
 class ExperienceLearningTests(unittest.TestCase):

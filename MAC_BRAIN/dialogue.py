@@ -483,6 +483,24 @@ def _is_perception_question(text: str) -> bool:
     return bool(text) and bool(_PERCEPTION_RE.search(text))
 
 
+# Reminder / to-do requests ("remind me to water the plants", "don't forget to X",
+# "set me a reminder"). Novi can remember these conversationally, but it cannot
+# push a timed notification, so it must not over-promise ("I'll remind you at 8am").
+_REMINDER_RE = re.compile(
+    r"\b(?:remind me to|remember to remind|set (?:me )?a reminder|don'?t forget to|add .* to (?:my )?(?:reminders?|list|to-do))\b",
+    re.IGNORECASE,
+)
+
+
+def _is_reminder_request(text: str) -> bool:
+    return bool(text) and bool(_REMINDER_RE.search(text))
+
+
+def reminder_reply() -> str:
+    return ("Got it — I'll keep that in mind. I can't ping you at a set time in this build, "
+            "but I'll remember it and bring it up when we talk.")
+
+
 def _extract_topic(text: str) -> str:
     """Pull the most likely topic noun from a user line (deterministic, no NLP).
 

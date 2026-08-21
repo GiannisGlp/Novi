@@ -45,6 +45,7 @@ from .dialogue import (
     _is_physical_action_request,
     _is_realtime_data_question,
     _is_recall_question,
+    _is_reminder_request,
     _is_thanks,
     _is_time_greeting,
     clarification_reply,
@@ -58,6 +59,7 @@ from .dialogue import (
     physical_action_honest_reply,
     realtime_honest_reply,
     recall_reply,
+    reminder_reply,
     thanks_reply,
     time_greeting_reply,
 )
@@ -1119,6 +1121,13 @@ class MacBrain:
             value = m.group(1).strip()
             self.preferences.learn(person or "", "dislikes", value)
             learned.append(("dislikes", value))
+        # Reminder/to-do requests ("remind me to X", "don't forget to X") are
+        # persisted so Novi can bring them up later in conversation.
+        m = re.search(r"\b(?:remind me to|don'?t forget to|remember to remind me to) (.+?)(?:[.!?]|$)", text, re.I)
+        if m and m.group(1).strip():
+            value = m.group(1).strip()
+            self.preferences.learn(person or "", "reminders", value)
+            learned.append(("reminders", value))
         if learned:
             self._emit("preference.learned_from_chat", {"cycle": self._cycle, "person": person or "", "learned": [{"kind": k, "value": v} for k, v in learned]})
         return learned
@@ -1142,6 +1151,8 @@ class MacBrain:
                 facts.append(f"I learned you prefer {value}")
             elif kind == "dislikes":
                 facts.append(f"I learned you don't like {value}")
+            elif kind == "reminders":
+                facts.append(f"I should remember to {value}")
         if self.reflection.recent_ineffective(window=4):
             facts.append("I've noticed repeating the same move hasn't been working, so I'm trying something different")
         return facts
@@ -1361,7 +1372,15 @@ class MacBrain:
         is_clarification = _is_clarification(text)
         is_physical_action = _is_physical_action_request(text)
         is_realtime = _is_realtime_data_question(text)
+        is_reminder = _is_reminder_request(text)
         can_physical = self._has_physical_action_capability()
+        if is_reminder:
+            # Don't promise a timed push notification Novi can't deliver.
+            system += (
+                " The user asked you to remember/remind them of something. You can remember it and bring it "
+                "up in conversation, but you cannot send a timed push notification in this build. Say you'll "
+                "keep it in mind without promising a scheduled alert."
+            )
         if is_realtime:
             # Don't hallucinate a live price/score/weather number Novi can't verify.
             system += (
@@ -1447,6 +1466,9 @@ class MacBrain:
         if _is_perception_question(text):
             reason = "You asked whether I can hear/see, so I answered honestly about my senses (not a topic follow-up)"
             return {"text": self._perception_reply(text), "fallback": True, "reason": reason, "grounding": {"route": "perception", **out}}
+        if is_reminder:
+            reason = "You asked me to remind you of something, so I said I'd keep it in mind without over-promising a timed alert"
+            return {"text": reminder_reply(), "fallback": True, "reason": reason, "grounding": {"route": "reminder_honesty", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

@@ -808,6 +808,21 @@ could repeat the same canned line. Expanded them so each rotates more:
 - Tests: fast suites **450 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reply-bank-variety.json`.
 
+## Honest reminder handling (round 16 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing: "remind me to water the plants tomorrow" → "Sure thing — I'll
+remind you about the plants tomorrow." — but the web build has no timed push
+notification, so that's a false promise (like the physical-action overclaim).
+
+- `_is_reminder_request` detects "remind me to X", "don't forget to X", "set me a
+  reminder".
+- A prompt steer + deterministic fallback answer honestly: keep it in mind, no
+  timed alert ("I can't ping you at a set time in this build…").
+- Persists the reminder via `_learn_from_chat` (a "reminders" preference) so it's
+  surfaced later ("I should remember to water the plants").
+- Tests: +2; fast suites **452 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reminder-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
