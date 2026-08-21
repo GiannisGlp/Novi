@@ -468,6 +468,13 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New test `test_chat_includes_episodic_narrative` in `web/tests/test_web.py`; full suite **384 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/narrative-chat.json`.
 
+## Multi-turn chat memory (status: IMPLEMENTED)
+
+- `chat_send` now passes the last 6 chat turns as `conversation_so_far` to `_generate_reply`, so Novi can refer back to earlier turns instead of replying statelessly.
+- Verified on-device with real nemotron-3.5-lightning: "my name is alice" → "what is my name?" → "You're alice. I remember that from earlier."
+- New test `test_chat_carries_conversation_history_across_turns` in `web/tests/test_web.py`; full suite **385 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/multi-turn-chat.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

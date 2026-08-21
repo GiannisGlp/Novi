@@ -1,0 +1,26 @@
+{
+  "slice": "Multi-turn chat memory",
+  "turn1_user": "my name is alice",
+  "turn1_novi": "I remember that you're alice.",
+  "turn2_user": "what is my name?",
+  "turn2_novi": "You're alice. I remember that from earlier.",
+  "conversation_context_passed": [
+    {
+      "role": "user",
+      "text": "my name is alice"
+    },
+    {
+      "role": "novi",
+      "text": "I remember that you're alice."
+    },
+    {
+      "role": "user",
+      "text": "what is my name?"
+    },
+    {
+      "role": "novi",
+      "text": "You're alice. I remember that from earlier."
+    }
+  ],
+  "mechanism": "chat_send passes the last 6 turns as conversation_so_far to _generate_reply so Novi can refer back"
+}

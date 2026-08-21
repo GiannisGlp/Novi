@@ -224,8 +224,10 @@ class NoviWebServer:
             trace = dict(self.brain._last_reasoning_trace)
 
         # A real, meaningful reply via the local LLM (falls back to the
-        # deterministic conclusion if Ollama is unreachable).
-        reply, llm_trace = self._generate_reply(text)
+        # deterministic conclusion if Ollama is unreachable). Multi-turn memory:
+        # pass the recent conversation so Novi can refer back to earlier turns.
+        history = [{"role": c["role"], "text": c["text"]} for c in self._chat[-6:]]
+        reply, llm_trace = self._generate_reply(text, history=history)
         self._append_chat({"role": "user", "text": text})
         if reply is not None:
             trace["conclusion"] = reply
@@ -366,7 +368,7 @@ class NoviWebServer:
         summaries.sort(key=lambda r: r.created_at, reverse=True)
         return [s.content for s in summaries[:limit]]
 
-    def _generate_reply(self, text: str) -> tuple[str | None, bool]:
+    def _generate_reply(self, text: str, history: list[dict[str, Any]] | None = None) -> tuple[str | None, bool]:
         if not self.chat_llm or not self._llm_up():
             return None, False
         tone = self.brain.soul.tone({}).get("tone", "neutral")
@@ -381,16 +383,17 @@ class NoviWebServer:
             facts_list.extend(f"I know the person named {p}" for p in known)
         system = (
             "You are Novi, a curious embodied AI who remembers things you have been told. "
-            "You are given a list of facts that you DO know. "
-            "If a fact is relevant to the user's question, ANSWER USING THAT FACT — say plainly what you know "
+            "You are given a list of facts that you DO know, plus the recent conversation. "
+            "If a fact or earlier turn is relevant to the user's question, ANSWER USING THAT — say plainly what you know "
             "(e.g. 'I remember that alice moved the door'). "
-            "Only say you don't know something when the facts list gives you nothing relevant. "
+            "Only say you don't know something when the facts and conversation give you nothing relevant. "
             "Reply in 1-3 short, natural spoken sentences. Never invent facts beyond the ones provided. "
             "Do NOT show a chain of thought or reasoning — output only the final answer, directly."
         )
         user_payload = {
             "user_says": text,
             "facts_i_know": facts_list,
+            "conversation_so_far": history or [],
             "my_tone": tone,
         }
         try:

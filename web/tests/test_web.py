@@ -192,6 +192,28 @@ class NoviWebServerTests(unittest.TestCase):
             finally:
                 s.stop()
 
+    def test_chat_carries_conversation_history_across_turns(self):
+        s = self._server(auto_step=False, chat_llm=True)
+        s._llm_available = True
+        captured: dict = {}
+
+        def fake_chat(**kw):
+            captured["user"] = kw.get("user", "")
+            return "I remember that."
+
+        s._llm_chat = fake_chat
+        s.start()
+        try:
+            s.chat_send("my name is alice")
+            s.chat_send("what is my name?")
+            payload = json.loads(captured["user"])
+            self.assertIn("conversation_so_far", payload)
+            self.assertTrue(payload["conversation_so_far"], "expected prior turns in the conversation context")
+            self.assertEqual(payload["conversation_so_far"][0]["role"], "user")
+            self.assertIn("alice", payload["conversation_so_far"][0]["text"].lower())
+        finally:
+            s.stop()
+
     def test_chat_uses_local_llm_when_available(self):
         s = self._server(auto_step=False, chat_llm=True)
         s._llm_available = True
