@@ -608,6 +608,24 @@ yet").
   web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/clarification-natural.json`.
 
+## Distinct personality voice (round 3 of the naturalness objective) (status: IMPLEMENTED)
+
+Conversations feel flat when the model drifts to a neutral narrator, coach, or
+customer-service tone. Two changes give Novi a consistent, natural voice:
+
+- **Character woven into the prompt.** `_character_clause()` turns the soul's
+  persona traits and value names into a sentence ("you're curiosity: 0.85,
+  warmth: 0.8 …; you value honesty, respect, curiosity …") that is injected into
+  the system prompt, alongside an explicit instruction to *show* a real,
+  consistent character through concrete reactions (warmth, curiosity, dry humour)
+  rather than describing it or narrating like a therapist/coach/agent.
+- **Coach/therapist/customer-service filler forbidden.** Added "great question",
+  "I appreciate you sharing", "I'm here for you", "sounds like you're feeling…",
+  "thank you for sharing" to the forbidden set so they never reach the user.
+- Tests: +3 in `MAC_BRAIN/tests/test_dialogue.py`; fast suites **426 passing**,
+  web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/personality-voice.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

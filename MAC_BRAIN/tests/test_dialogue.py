@@ -33,6 +33,9 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertTrue(_is_forbidden("Hi, I am Novi, how can I help you today?"))
         self.assertTrue(_is_forbidden("As an AI, I have no feelings."))
         self.assertTrue(_is_forbidden("I'm your personal assistant."))
+        self.assertTrue(_is_forbidden("That's a great question."))
+        self.assertTrue(_is_forbidden("I appreciate you sharing that."))
+        self.assertTrue(_is_forbidden("Sounds like you're feeling a bit off."))
 
     def test_natural_reply_is_not_forbidden(self):
         self.assertFalse(_is_forbidden("I remember that alice moved the door."))
@@ -164,6 +167,18 @@ class DialogueFilterTests(unittest.TestCase):
 class ComposeReplyTests(unittest.TestCase):
     def _brain(self) -> MacBrain:
         return MacBrain()
+
+    def test_character_clause_weaves_traits_and_values(self):
+        b = self._brain()
+        clause = b._character_clause({"traits": {"curious": 0.8, "warm": 0.7}, "values": {"kindness": "kindness", "honesty": "honesty"}})
+        self.assertIn("curious", clause)
+        self.assertIn("kindness", clause)
+
+    def test_system_prompt_includes_character_and_reactions(self):
+        b = self._brain()
+        prompt = b._dialogue_system_prompt(b._chat_self_state(), {"tier": "friend", "expression": {"warmth": 0.8, "formality": "low", "playful": True}})
+        self.assertIn("real, consistent character", prompt)
+        self.assertIn("not like a neutral narrator", prompt)
 
     def test_no_transport_returns_none_for_deterministic_fallback(self):
         # CI / no-LLM path: the brain does not fabricate a reply.

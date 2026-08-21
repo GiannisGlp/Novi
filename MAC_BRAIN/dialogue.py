@@ -49,6 +49,12 @@ _FORBIDDEN = [
         r"\bwhat('?s| is) on your mind\b",
         r"\btell me what('?s| is) on your mind\b",
         r"\bhow can i (?:help|assist) you today\b",
+        r"\bgreat question\b",
+        r"\bthat('?s| is) a great question\b",
+        r"\bi appreciate you (sharing|asking|telling|reaching)\b",
+        r"\bi('?m| am) here (?:for|if) (you|anyone)\b",
+        r"\bsounds like you('?re| are) feeling\b",
+        r"\bthank you for (?:sharing|asking)\b",
     )
 ]
 

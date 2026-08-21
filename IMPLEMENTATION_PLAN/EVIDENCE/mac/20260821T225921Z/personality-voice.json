@@ -1,0 +1,12 @@
+{
+  "slice": "Natural conversation round 3: distinct, consistent personality voice",
+  "character_clause": "you're curiosity: 0.85, warmth: 0.8, patience: 0.85, playfulness: 0.6, expressiveness: 0.7, thoughtfulness: 0.9, caution: 0.5; you value honesty, respect, curiosity, care, learning, coherence, humility, non harm",
+  "prompt_has_character_instruction": true,
+  "prompt_avoids_neutral_narrator": true,
+  "coach_filler_now_forbidden": {
+    "That's a great question.": true,
+    "I appreciate you sharing that.": true,
+    "Sounds like you're feeling a bit off.": true
+  },
+  "mechanism": "weaves persona traits and value names into the prompt via _character_clause; instructs a real, consistent character who reacts warmly/curiously/dryly, and forbids coach/therapist/customer-service filler"
+}

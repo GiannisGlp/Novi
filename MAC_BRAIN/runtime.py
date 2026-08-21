@@ -1159,6 +1159,23 @@ class MacBrain:
             ident = None
         return {"tier": cat, "expression": expr, "name": getattr(ident, "name", None), "identity_tier": getattr(ident, "tier", None)}
 
+    def _character_clause(self, self_state: dict[str, Any]) -> str:
+        """A compact, human-readable character clause for the dialogue prompt.
+
+        Weaves the persona's declared traits and values into a sentence so the
+        model keeps a consistent voice instead of drifting to neutral-narrator.
+        """
+        traits = self_state.get("traits") or {}
+        values = self_state.get("values") or {}
+        bits: list[str] = []
+        if traits:
+            bits.append("you're " + ", ".join(f"{k}: {v}" for k, v in traits.items()))
+        if values:
+            names = [k.replace("_", " ") for k, v in values.items() if v]
+            if names:
+                bits.append("you value " + ", ".join(names))
+        return "; ".join(bits)
+
     def _dialogue_system_prompt(self, self_state: dict[str, Any], relationship: dict[str, Any], *, capabilities: dict[str, Any] | None = None) -> str:
         """System prompt embodying the Soul communication contract (docs/06-soul/07)."""
         expr = relationship.get("expression", {}) or {}
@@ -1180,7 +1197,12 @@ class MacBrain:
             f"Current tone: {self_state.get('tone', 'warm')}. "
             f"Relationship with who you're talking to: {relationship.get('tier', 'unknown')} "
             f"(warmth={expr.get('warmth', 0.5)}, formality={expr.get('formality', 'medium')}, playful={expr.get('playful', False)}). "
-            "Adopt that register. You are given facts you DO know, recent events, and the conversation so far. "
+            "Adopt that register. "
+            "Show a real, consistent character in how you react — react to what the person says (a bit of warmth, curiosity, dry humour, or concern as fits), "
+            "not like a neutral narrator, therapist, coach, or customer-service agent. "
+            "Let your character show through concrete reactions rather than describing it. "
+            f"{self._character_clause(self_state)}. "
+            "You are given facts you DO know, recent events, and the conversation so far. "
             "If a fact or earlier turn is relevant, answer using it plainly (e.g. 'I remember that alice moved the door'). "
             "If you have learned something about the person over time (their likes, dislikes, preferences), use it naturally "
             "(e.g. 'you like jazz') rather than sounding like a stranger. "
