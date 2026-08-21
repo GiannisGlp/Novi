@@ -823,6 +823,18 @@ notification, so that's a false promise (like the physical-action overclaim).
 - Tests: +2; fast suites **452 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reminder-honesty.json`.
 
+## Guardrail robustness — no false positives (round 17 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing confirmed the meta-referential and program-speak guardrails reject
+only genuinely meta/program-speak replies, and never legitimate replies that
+reference the conversation or remembering ("I'd love to keep this conversation
+going", "We talked about your garden last week"). Locked in with a regression test
+so the guardrails don't reject natural replies while still catching the original
+"I greeted the system / in our conversation" tell.
+
+- Tests: +1; fast suites **453 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/guardrail-robustness.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -123,6 +123,15 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertTrue(_is_meta_referential("I'm not sure what you mean. That's the main interaction we've had."))
         self.assertFalse(_is_meta_referential("I remember that alice moved the door."))
 
+    def test_guardrails_do_not_reject_legitimate_replies(self):
+        # Replies that legitimately mention conversation/remembering must pass.
+        for s in ["I'd love to keep this conversation going.",
+                  "We talked about your garden last week, how is it now?",
+                  "You mentioned alice earlier — how is she?",
+                  "I remember what we discussed about the lights."]:
+            self.assertFalse(_is_meta_referential(s), s)
+            self.assertFalse(_is_forbidden(s), s)
+
     def test_clarification_detection(self):
         self.assertTrue(_is_clarification("what system?"))
         self.assertTrue(_is_clarification("what do you mean?"))

@@ -1,0 +1,23 @@
+{
+  "slice": "Natural conversation round 17: guardrail robustness (no false positives)",
+  "legitimate_replies_not_rejected": {
+    "I'd love to keep this conversation going.": {
+      "meta": false,
+      "forbidden": false
+    },
+    "We talked about your garden last week, how is it now?": {
+      "meta": false,
+      "forbidden": false
+    },
+    "You mentioned alice earlier \u2014 how is she?": {
+      "meta": false,
+      "forbidden": false
+    },
+    "I remember what we discussed about the lights.": {
+      "meta": false,
+      "forbidden": false
+    }
+  },
+  "truly_meta_still_rejected": true,
+  "mechanism": "verified the meta-referential/program-speak guardrails reject only genuinely meta or program-speak replies, never legitimate references to the conversation or to remembering"
+}

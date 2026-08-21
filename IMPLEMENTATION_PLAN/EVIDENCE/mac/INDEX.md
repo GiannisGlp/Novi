@@ -79,5 +79,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | One question per reply | `20260821T234403Z/one-question-per-reply.json` | prompt steers natural one-thing-at-a-time instead of question lists |
 | More reply-bank variety | `20260821T234819Z/reply-bank-variety.json` | greeting/clarification/thanks/emotional/continuation banks expanded so long chats don't repeat |
 | Honest reminder handling | `20260821T235442Z/reminder-honesty.json` | 'remind me to X' answered honestly (no timed-push promise) and persisted for recall |
+| Guardrail robustness | `20260821T235846Z/guardrail-robustness.json` | meta/program-speak guardrails reject only genuine cases, never legitimate conversation/remembering replies |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
