@@ -759,6 +759,19 @@ processing some interesting data lately").
 - Tests: +2; fast suites **446 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/thanks-and-no-program-speak.json`.
 
+## Time-of-day greetings (round 12 of the naturalness objective) (status: IMPLEMENTED)
+
+Real-LLM testing: "good morning" got the generic "hey — good to see you." while
+"good night" wasn't even recognized as a greeting (inconsistent and not
+time-appropriate).
+
+- `_is_time_greeting` / `time_greeting_reply` handle "good morning/afternoon/
+  evening/night" (and bare "morning!") with a matching, warm reply.
+- Routed before the generic greeting so time-based greetings are acknowledged
+  consistently.
+- Tests: +2; fast suites **448 passing**, web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/time-greetings.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

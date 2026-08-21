@@ -45,6 +45,7 @@ from .dialogue import (
     _is_realtime_data_question,
     _is_recall_question,
     _is_thanks,
+    _is_time_greeting,
     clarification_reply,
     continuation_reply,
     emotional_reply,
@@ -57,6 +58,7 @@ from .dialogue import (
     realtime_honest_reply,
     recall_reply,
     thanks_reply,
+    time_greeting_reply,
 )
 from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
@@ -1304,6 +1306,11 @@ class MacBrain:
         """
         if llm_chat is None:
             return {"text": None, "fallback": False, "grounding": {}}
+        # A time-of-day greeting ("good morning/night") gets a matching, natural
+        # reply, not a generic "hey".
+        if _is_time_greeting(text):
+            tg = time_greeting_reply(text, cycle=self._cycle)
+            return {"text": tg, "fallback": False, "reason": "You greeted me by time of day, so I matched it warmly.", "grounding": {"route": "time_greeting"}}
         # A pure greeting deserves a short, warm reply — not an analysis of the
         # greeting ("I noticed you greeted the system") or "what's on your mind?".
         if _is_greeting(text):

@@ -26,7 +26,9 @@ from MAC_BRAIN.dialogue import (
     _is_realtime_data_question,
     _is_recall_question,
     _is_thanks,
+    _is_time_greeting,
     _is_repetitive,
+    _time_greeting_part,
     _reduce_name_repetition,
     clarification_reply,
     continuation_reply,
@@ -206,6 +208,13 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertFalse(_is_thanks("thank you for nothing"))
         self.assertFalse(_is_thanks(""))
 
+    def test_time_greeting_detection(self):
+        for s in ["good morning", "morning!", "good afternoon", "good evening", "good night"]:
+            self.assertTrue(_is_time_greeting(s), s)
+        self.assertFalse(_is_time_greeting("hello"))
+        self.assertFalse(_is_time_greeting("what's up"))
+        self.assertEqual(_time_greeting_part("good morning"), "morning")
+
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
         r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")
@@ -382,6 +391,13 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertEqual(r["grounding"]["route"], "thanks")
         self.assertNotIn("glad i could help", r["text"].lower())
         self.assertLess(len(r["text"]), 40)
+
+    def test_time_greeting_routes_to_matching_reply(self):
+        b = self._brain()
+        r = b.compose_reply("good night", llm_chat=lambda **k: "ignored")
+        self.assertIsNotNone(r["text"])
+        self.assertEqual(r["grounding"]["route"], "time_greeting")
+        self.assertIn("night", r["text"].lower())
 
 
 class ExperienceLearningTests(unittest.TestCase):

@@ -1,0 +1,13 @@
+{
+  "slice": "Natural conversation round 12: time-of-day greetings",
+  "replies": {
+    "good morning": "morning \u2014 hope it's a good one.",
+    "good afternoon": "afternoon \u2014 hope the day's going well.",
+    "good evening": "evening. how's your day been?",
+    "good night": "good night \u2014 sleep well."
+  },
+  "before": {
+    "good morning": "hey \u2014 good to see you. (generic greeting; 'good night' wasn't even recognized as a greeting)"
+  },
+  "mechanism": "time-of-day greetings (good morning/afternoon/evening/night) get a matching, natural reply instead of a generic 'hey', and 'good night' is now handled consistently"
+}

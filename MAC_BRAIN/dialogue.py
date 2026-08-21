@@ -175,6 +175,31 @@ def greeting_reply(cycle: int = 0) -> str:
     return _GREETING_REPLIES[cycle % len(_GREETING_REPLIES)]
 
 
+_TIME_GREETING = re.compile(r"^\s*(good\s+)?(morning|afternoon|evening|night)\s*[!.?]*$", re.IGNORECASE)
+
+_TIME_GREETING_REPLIES = {
+    "morning": ["morning — hope it's a good one.", "morning! fresh day ahead.", "morning to you too."],
+    "afternoon": ["afternoon — hope the day's going well.", "hey, good afternoon."],
+    "evening": ["evening. how's your day been?", "hey evening to you."],
+    "night": ["good night — sleep well.", "night. rest up.", "good night to you too."],
+}
+
+
+def _time_greeting_part(text: str) -> str:
+    m = _TIME_GREETING.match(text.strip())
+    return m.group(2).lower() if m else ""
+
+
+def _is_time_greeting(text: str) -> bool:
+    return _time_greeting_part(text) != ""
+
+
+def time_greeting_reply(text: str, cycle: int = 0) -> str:
+    part = _time_greeting_part(text)
+    bank = _TIME_GREETING_REPLIES.get(part) or ["hey there."]
+    return bank[cycle % len(bank)]
+
+
 _CLARIFICATION_REPLIES = [
     "Sorry — I think I got a bit ahead of myself. What would you like me to clear up?",
     "Ah, I muddled that. Ask me again and I'll be plainer.",
