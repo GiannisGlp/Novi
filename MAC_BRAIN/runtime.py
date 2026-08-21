@@ -36,11 +36,13 @@ from .dialogue import (
     DialogueEngine,
     _extract_topic,
     _is_clarification,
+    _is_continuation,
     _is_greeting,
     _is_introduction,
     _is_joke_request,
     _is_recall_question,
     clarification_reply,
+    continuation_reply,
     followup_question,
     greeting_reply,
     introduction_reply,
@@ -1364,6 +1366,11 @@ class MacBrain:
             known = [f for f in experience if not f.startswith("I've noticed")]
             reason = "You asked what I remember, so I told you what I actually know (or said honestly I don't know you yet)"
             return {"text": recall_reply(known, person=person or addressee_name), "fallback": True, "reason": reason, "grounding": {"route": "recall", **out}}
+        # Terse continuation prompts ("why?", "go on", "really?") want engagement,
+        # not a flat "i'm here". Re-engage conversationally instead.
+        if _is_continuation(text):
+            reason = "You nudged me to continue, so I engaged conversationally and handed the thread back"
+            return {"text": continuation_reply(cycle=self._cycle), "fallback": True, "reason": reason, "grounding": {"route": "continuation", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

@@ -14,6 +14,7 @@ from MAC_BRAIN.dialogue import (
     DialogueEngine,
     _extract_topic,
     _is_clarification,
+    _is_continuation,
     _is_forbidden,
     _is_greeting,
     _is_introduction,
@@ -24,6 +25,7 @@ from MAC_BRAIN.dialogue import (
     _is_repetitive,
     _reduce_name_repetition,
     clarification_reply,
+    continuation_reply,
     followup_question,
     greeting_reply,
     introduction_reply,
@@ -149,6 +151,20 @@ class DialogueFilterTests(unittest.TestCase):
     def test_recall_reply_with_and_without_known(self):
         self.assertIn("jazz", recall_reply(["I learned you like jazz"], "alice"))
         self.assertIn("don't have much", recall_reply([], "alice"))
+
+    def test_continuation_detection(self):
+        self.assertTrue(_is_continuation("why?"))
+        self.assertTrue(_is_continuation("go on"))
+        self.assertTrue(_is_continuation("tell me more"))
+        self.assertTrue(_is_continuation("and then?"))
+        self.assertFalse(_is_continuation("what time is it"))
+        self.assertFalse(_is_continuation(""))
+
+    def test_continuation_reply_is_engaged(self):
+        for i in range(6):
+            c = continuation_reply(cycle=i)
+            self.assertTrue(c)
+            self.assertFalse(_is_forbidden(c))
 
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
@@ -282,6 +298,14 @@ class ComposeReplyTests(unittest.TestCase):
         r = b.compose_reply("what do you remember about alice?", person="alice", llm_chat=lambda **k: None)
         self.assertIsNotNone(r["text"])
         self.assertIn("jazz", r["text"])
+
+    def test_continuation_in_compose_reply(self):
+        b = self._brain()
+        r = b.compose_reply("go on", llm_chat=lambda **k: None)
+        self.assertIsNotNone(r["text"])
+        self.assertTrue(r["fallback"])
+        self.assertNotEqual(r["text"].lower(), "hey, i'm here.")
+        self.assertIn("continu", r["reason"].lower())
 
 
 class ExperienceLearningTests(unittest.TestCase):

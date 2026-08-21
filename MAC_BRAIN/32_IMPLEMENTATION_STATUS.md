@@ -646,6 +646,20 @@ Three targeted handlers now cover these:
   web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/natural-turn-handlers.json`.
 
+## Engaged continuation for brief prompts (round 5 of the naturalness objective) (status: IMPLEMENTED)
+
+Terse nudge prompts ("why?", "go on", "tell me more", "really?", "and then?")
+previously all fell through to the flat warm ack "hey, i'm here" — a dead end
+that stops the conversation. Now:
+
+- `_is_continuation()` detects these terse continuation/backchannel prompts.
+- `continuation_reply()` answers with an engaged, conversational line that hands
+  the thread back ("I could go on — but I'd rather hear your side first."), varied
+  by cycle.
+- Tests: +4 in `MAC_BRAIN/tests/test_dialogue.py`; fast suites **437 passing**,
+  web **25 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/continuation-natural.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -266,6 +266,35 @@ def recall_reply(known: list[str], person: str = "") -> str:
     return "Honestly, I don't have much on you yet — tell me a bit about yourself and I'll remember it."
 
 
+# Brief prompts that nudge the conversation onward ("why?", "go on", "really?")
+# rather than asking a new topic. A flat "hey, i'm here" is the wrong response —
+# they want engagement and continuation.
+_CONTINUATION_RE = re.compile(
+    r"^(?:why|really|oh|and|and\s+then|so|hmm|go\s+on|tell\s+me\s+more|continue|elaborate|is\s+that\s+(?:so|right)|no\s+way|seriously|ok\.\.\.[.?!]*)$",
+    re.IGNORECASE,
+)
+
+_CONTINUATION_REPLIES = [
+    "I could go on — but I'd rather hear your side first.",
+    "that's where I was headed. what's your read on it?",
+    "I'm listening — go on, what are you getting at?",
+    "honestly, because it felt right. what's your thinking?",
+]
+
+
+def _is_continuation(text: str) -> bool:
+    t = text.strip().lower().rstrip("?!. ")
+    if not t:
+        return False
+    if _CONTINUATION_RE.fullmatch(t):
+        return True
+    return bool(re.match(r"^(tell me more|continue on|go on|elaborate on)", t))
+
+
+def continuation_reply(cycle: int = 0) -> str:
+    return _CONTINUATION_REPLIES[cycle % len(_CONTINUATION_REPLIES)]
+
+
 def _extract_topic(text: str) -> str:
     """Pull the most likely topic noun from a user line (deterministic, no NLP).
 

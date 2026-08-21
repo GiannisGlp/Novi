@@ -1,0 +1,14 @@
+{
+  "slice": "Natural conversation round 5: engaged continuation for brief prompts",
+  "cases": {
+    "why?": "I could go on \u2014 but I'd rather hear your side first.",
+    "go on": "I could go on \u2014 but I'd rather hear your side first.",
+    "tell me more": "I could go on \u2014 but I'd rather hear your side first.",
+    "and then?": "I could go on \u2014 but I'd rather hear your side first.",
+    "really?": "I could go on \u2014 but I'd rather hear your side first."
+  },
+  "before": {
+    "any": "hey, i'm here. (flat warm ack for every continuation prompt)"
+  },
+  "mechanism": "terse continuation prompts (why?, go on, tell me more, really?, and then?) are detected and answered with an engaged, conversational reply that hands the thread back, instead of a flat 'i'm here'"
+}
