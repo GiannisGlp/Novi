@@ -370,6 +370,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - New tests `MAC_BRAIN/tests/test_reasoning2.py` (7); full suite **348 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reasoning2.json`.
 
+## Memory 2.0: importance-weighted retrieval + episodic narrative (status: IMPLEMENTED)
+
+- `_recall_context` now scores recall candidates by **relevance × recency × importance** (`0.5·relevance + 0.3·recency + 0.2·importance`) instead of raw FTS rank, so the most useful memories win the top slots.
+- New `_episodic_narrative()` reconstructs a short narrative from recent episodic memories (utterances/perceptions), surfaced in the reasoning situation.
+- Verified on-device: taught "alice moved the door / alice likes jazz / the door is open" → narrative reconstructed; recall for `alice` returns the relevant utterances.
+- New tests `MAC_BRAIN/tests/test_memory2.py` (4); full suite **352 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/memory2.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

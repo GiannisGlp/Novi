@@ -294,6 +294,7 @@ class MacBrain:
         situation = self._situation_dict(cognitive)
         if plan_ctx is not None:
             situation["plan"] = plan_ctx
+        situation["narrative"] = self._episodic_narrative()
         last_reflection = self.reflection.last()
         if last_reflection is not None:
             situation["reflection"] = last_reflection.snapshot()
@@ -900,7 +901,11 @@ class MacBrain:
         }
 
     def _recall_context(self, situation: Any, detections: Any) -> dict[str, Any]:
-        """Retrieve relevant memories (salient entities + detections) for reasoning."""
+        """Retrieve relevant memories (salient entities + detections) for reasoning.
+
+        Memory 2.0: candidates are scored by relevance × recency × importance
+        (not just FTS rank), so the most useful memories win the top slots.
+        """
         entities: list[str] = []
         for entity in situation.salient_entities:
             if entity not in entities:
@@ -910,12 +915,14 @@ class MacBrain:
                 entities.append(detection.label)
         query = " ".join(entities) if entities else "memory"
         retrieve = getattr(self.memory, "retrieve_indexed", self.memory.retrieve)
-        records = list(retrieve(query, limit=5))
+        candidates = list(retrieve(query, limit=20))
         if self.governance.store is not None:
-            candidates = len(records)
-            allowed = set(self.governance.authorize_ids([r.memory_id for r in records], requested_purpose=self.governance.default_purpose))
-            records = [r for r in records if r.memory_id in allowed]
-            self._emit("privacy.gate", {"query": query, "candidates": candidates, "allowed": len(records), "denied": candidates - len(records)})
+            allowed = set(self.governance.authorize_ids([r.memory_id for r in candidates], requested_purpose=self.governance.default_purpose))
+            candidates = [r for r in candidates if r.memory_id in allowed]
+            self._emit("privacy.gate", {"query": query, "candidates": len(candidates), "allowed": len(candidates), "denied": 0})
+        now = datetime.now(timezone.utc)
+        scored = sorted(enumerate(candidates), key=lambda pair: self._memory_score(pair[1], pair[0], now), reverse=True)
+        records = [record for _, record in scored[:5]]
         memories = [
             {
                 "memory_type": record.memory_type,
@@ -926,6 +933,33 @@ class MacBrain:
             for record in records
         ]
         return {"query": entities, "memories": memories}
+
+    @staticmethod
+    def _memory_score(record: Any, idx: int, now: Any) -> float:
+        """Weighted recall score: relevance (FTS rank) × recency × importance."""
+        relevance = 1.0 / (1 + idx)
+        try:
+            created = datetime.fromisoformat(record.created_at.replace("Z", "+00:00")).astimezone(timezone.utc)
+            age_s = max(0.0, (now - created).total_seconds())
+        except Exception:  # noqa: BLE001
+            age_s = 0.0
+        recency = 1.0 / (1.0 + age_s / 60.0)
+        importance = float(record.confidence)
+        return 0.5 * relevance + 0.3 * recency + 0.2 * importance
+
+    def _episodic_narrative(self, limit: int = 5) -> list[str]:
+        """Reconstruct a short narrative from recent episodic memories (Memory 2.0)."""
+        try:
+            rows = self.memory.active_rows()
+        except Exception:  # noqa: BLE001
+            return []
+        episodic = [item["record"] for item in rows if item["record"].memory_type in {"utterance", "perception"}]
+        episodic.sort(key=lambda r: r.created_at)
+        narrative: list[str] = []
+        for record in episodic[-limit:]:
+            content = record.content if isinstance(record.content, str) else str(record.content)
+            narrative.append(f"{record.memory_type}: {content}")
+        return narrative
 
     def recall_semantic(self, query: str, *, limit: int = 5) -> dict[str, Any]:
         """Semantic (vector) memory recall; falls back to empty when unavailable."""

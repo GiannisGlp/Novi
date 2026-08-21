@@ -1,0 +1,34 @@
+{
+  "slice": "Memory 2.0: importance-weighted retrieval + episodic narrative",
+  "taught": [
+    "alice moved the door",
+    "alice likes jazz",
+    "the door is open"
+  ],
+  "episodic_narrative": [
+    "utterance: alice moved the door",
+    "utterance: alice likes jazz",
+    "utterance: the door is open"
+  ],
+  "weighted_recall_for_alice": [
+    {
+      "memory_type": "utterance",
+      "content": "alice moved the door",
+      "confidence": 0.9,
+      "entity_refs": [
+        "alice",
+        "door"
+      ]
+    },
+    {
+      "memory_type": "utterance",
+      "content": "alice likes jazz",
+      "confidence": 0.9,
+      "entity_refs": [
+        "alice"
+      ]
+    }
+  ],
+  "recall_score": "0.5*relevance + 0.3*recency + 0.2*importance",
+  "mechanism": "_recall_context scores candidates by relevance x recency x importance; _episodic_narrative reconstructs recent episodic memories"
+}
