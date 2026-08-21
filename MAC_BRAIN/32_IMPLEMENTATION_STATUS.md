@@ -499,6 +499,14 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified: served HTML contains the dashboard grid, chat, stats, reasoning, goals+map, memory, actions, and event log; tabs removed; JS validated with `node --check`.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/dashboard-redesign.json`.
 
+## Dashboard layout + flicker fix (status: IMPLEMENTED)
+
+- **Layout:** chat now sits on top, full width, at 50% of the browser height; all widgets are below it in a 3-column grid.
+- **Flicker fix:** added `setHTML()` which only touches the DOM when the content actually changes, so the per-second state refresh no longer rewrites every widget and causes flicker.
+- **Specific heights:** each widget panel has a fixed 250px height with an internally-scrolling body, so info is never hidden.
+- Verified: served HTML contains the chat-top/full-width layout, widgets-below grid, fixed heights, and the flicker guard; server healthy (cycle 251, health PASS).
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/dashboard-layout-fix.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
