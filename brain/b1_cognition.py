@@ -22,6 +22,10 @@ class Situation:
     recent_events: tuple[str, ...]
     uncertainty: tuple[str, ...]
     evidence: tuple[EvidenceRef, ...]
+    # Cognition 2.0: richer context used to ground understanding.
+    relations: tuple[dict[str, Any], ...] = ()          # knowledge-graph triples relevant to salient entities
+    goal: dict[str, Any] | None = None                  # active goal context (kind/target/distance/progress)
+    recalled: tuple[dict[str, Any], ...] = ()           # memories retrieved before reasoning
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,9 @@ class ReasoningResult:
     confidence: float
     basis: tuple[str, ...]
     provenance: tuple[EvidenceRef, ...]
+    # Cognition 2.0: multiple candidate explanations + temporal/causal inferences.
+    hypotheses: tuple[dict[str, Any], ...] = ()
+    inferences: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

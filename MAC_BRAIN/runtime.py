@@ -17,6 +17,7 @@ from brain.runtime import BrainSupervisor, Lifecycle
 from .autonomy import BoundedGoalController, Goal, GoalState, GoalStatus
 from .consolidation import ConsolidationConfig, MemoryConsolidator
 from .cognition import BeliefSystem, ExpectationSystem
+from .cognition2 import MacCognition
 from .fusion import ModalityObservation, MultimodalFusion
 from .identity import PersonIdentity
 from .io import Camera, MacMicrophone, MacSpeaker, VirtualBody
@@ -106,7 +107,7 @@ class MacBrain:
                 self.body.heading_deg = float(pose.get("heading_deg", 0.0))
                 self.body.velocity_mps = float(pose.get("velocity_mps", 0.0))
                 self.body.last_action = str(pose.get("last_action", "idle"))
-        self.cognition = DeterministicCognition()
+        self.cognition = MacCognition()
         self.goals = goals or BoundedGoalController()
         self._seen_entities: set[str] = set()
         self._persisted_terminal: set[str] = set()
@@ -228,8 +229,30 @@ class MacBrain:
         observations = tuple(SensorObservation(cycle=self._cycle, source=f"{self.config.sensor_id}.perception", entity=detection.label, location=None, state="present", confidence=detection.confidence, captured_cycle=self._cycle) for detection in evidence.detections)
         self.world.apply_many(observations)
         self._admit_detections(evidence.detections)
-        cognitive = self.cognition.cycle(self.world.state, observations, cycle=self._cycle)
-        self._emit("cognition.completed", {"cycle": self._cycle, "conclusion": cognitive.reasoning.conclusion, "confidence": cognitive.reasoning.confidence, "uncertainty": list(cognitive.situation.uncertainty)})
+        # Cognition 2.0: two-pass — build a preliminary situation to form the
+        # recall query, then ground the full situation in knowledge + goal + memory.
+        prelim = self.cognition.build_situation(self.world.state, observations, cycle=self._cycle)
+        recall = self._recall_context(prelim, evidence.detections)
+        self._emit("memory.recall", {"cycle": self._cycle, "query": " ".join(recall["query"]), "recalled": len(recall["memories"])})
+        knowledge_ctx = self._knowledge_context_for(prelim.salient_entities)
+        goal_ctx = self._goal_context()
+        cognitive = self.cognition.cycle(
+            self.world.state,
+            observations,
+            cycle=self._cycle,
+            knowledge=knowledge_ctx,
+            goal=goal_ctx,
+            recalled=recall["memories"],
+        )
+        self._emit("cognition.completed", {
+            "cycle": self._cycle,
+            "conclusion": cognitive.reasoning.conclusion,
+            "confidence": cognitive.reasoning.confidence,
+            "uncertainty": list(cognitive.situation.uncertainty),
+            "inferences": list(cognitive.reasoning.inferences),
+            "hypotheses": list(cognitive.reasoning.hypotheses),
+            "relations": list(cognitive.situation.relations),
+        })
 
         # Deepen cognition: update beliefs and learn/check expectations from current detections.
         now = datetime.now(timezone.utc).isoformat()
@@ -261,16 +284,13 @@ class MacBrain:
             self._emit("fusion.completed", {"cycle": self._cycle, **event.snapshot()})
         fused_reported = [event.snapshot() for event in fused_events]
 
-        recall = self._recall_context(cognitive.situation, evidence.detections)
-        self._emit("memory.recall", {"cycle": self._cycle, "query": " ".join(recall["query"]), "recalled": len(recall["memories"])})
-
         route_info: dict[str, Any] = {}
         plan_ctx: dict[str, Any] | None = None
         if self.goals.active is not None and self.goals.active.goal.goal_id in self._plans:
             plan_ctx = self._plans[self.goals.active.goal.goal_id].snapshot()
-        situation = cognitive.situation
-        if plan_ctx is not None and isinstance(situation, dict):
-            situation = {**situation, "plan": plan_ctx}
+        situation = self._situation_dict(cognitive)
+        if plan_ctx is not None:
+            situation["plan"] = plan_ctx
         intent = self.reasoning.decide(
             conclusion=cognitive.reasoning.conclusion,
             confidence=cognitive.reasoning.confidence,
@@ -293,6 +313,8 @@ class MacBrain:
             "recalled": len(recall["memories"]),
             "situation": situation if isinstance(situation, dict) else None,
             "detections": [d.label for d in evidence.detections],
+            "inferences": list(cognitive.reasoning.inferences),
+            "hypotheses": list(cognitive.reasoning.hypotheses),
         }
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)
@@ -790,6 +812,58 @@ class MacBrain:
         if admission.accepted and admission.memory_id:
             self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
         self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "goal_outcome", "accepted": admission.accepted, "goal_id": state.goal.goal_id})
+
+    def _knowledge_context_for(self, salient_entities: tuple[str, ...]) -> list[dict[str, Any]]:
+        """Knowledge-graph triples relevant to the salient entities (Cognition 2.0)."""
+        salient = set(salient_entities)
+        out: list[dict[str, Any]] = []
+        for triple in self.knowledge.triples():
+            if triple.subject in salient or triple.object in salient:
+                out.append(triple.snapshot())
+        return out
+
+    def _goal_context(self) -> dict[str, Any] | None:
+        """Serializable context for the active goal, if any."""
+        active = self.goals.active
+        if active is None or active.status.value != "active":
+            return None
+        goal = active.goal
+        return {
+            "kind": goal.kind,
+            "target": list(goal.target) if isinstance(goal.target, tuple) else goal.target,
+            "priority": goal.priority,
+            "max_steps": goal.max_steps,
+            "steps_taken": active.steps_taken,
+            "distance_to_goal": self._distance_to_goal(goal),
+        }
+
+    def _distance_to_goal(self, goal: Any) -> float | None:
+        try:
+            body = self.body.snapshot()
+            x, y = body.get("x_m", 0.0), body.get("y_m", 0.0)
+            if isinstance(goal.target, tuple):
+                tx, ty = goal.target
+                return round(((x - tx) ** 2 + (y - ty) ** 2) ** 0.5, 3)
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
+    def _situation_dict(self, cognitive: Any) -> dict[str, Any]:
+        """Serialize a CognitiveState's situation for the reasoning providers."""
+        sit = cognitive.situation
+        return {
+            "cycle": sit.cycle,
+            "salient_entities": list(sit.salient_entities),
+            "recent_events": list(sit.recent_events),
+            "uncertainty": list(sit.uncertainty),
+            "relations": list(sit.relations),
+            "goal": sit.goal,
+            "recalled": list(sit.recalled),
+            "entities": [
+                {"entity": e.entity, "state": e.state, "location": e.location, "confidence": e.confidence}
+                for e in sit.entities
+            ],
+        }
 
     def _recall_context(self, situation: Any, detections: Any) -> dict[str, Any]:
         """Retrieve relevant memories (salient entities + detections) for reasoning."""

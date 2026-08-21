@@ -346,6 +346,21 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Live **graphs**: Confidence and Knowledge-growth sparklines on the State page.
 - Model dropdown moved to a tidy header control.
 
+## Cognition 2.0: situation understanding + memory-grounded reasoning (status: IMPLEMENTED)
+
+- New `MacCognition` (`MAC_BRAIN/cognition2.py`) replaces the shallow salience classifier. It grounds reasoning in:
+  - **knowledge-graph relations** relevant to salient entities,
+  - **active-goal context** (kind/target/distance/progress),
+  - **recalled memories** retrieved before reasoning.
+- `Situation`/`ReasoningResult` extended (backward-compatible) with `relations`, `goal`, `recalled`, `hypotheses`, `inferences`.
+- `reason()` now emits **multiple hypotheses** with confidence and **temporal/causal inferences** (e.g. knowledge `alice moved door` + alice salient → *"alice likely moved door"*), and refines the headline conclusion (`causal_change_inferred`, `goal_relevant_change`).
+- Runtime `step()` does a two-pass cognition (preliminary situation → recall → full cognition grounded in knowledge+goal+memory) and passes a serializable situation to the reasoning providers.
+- New conclusions mapped in the deterministic action map (`causal_change_inferred→inspect`, `goal_relevant_change→observe`).
+- Web reasoning trace now shows inferences + hypotheses.
+- Verified on-device: taught "alice moved the door", detected alice → conclusion `causal_change_inferred`, inference "alice likely moved door", hypotheses from knowledge/goal/memory, action `inspect`.
+- New tests `MAC_BRAIN/tests/test_cognition2.py` (5); full suite **341 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/cognition2.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

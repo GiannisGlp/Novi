@@ -1,0 +1,51 @@
+{
+  "slice": "Cognition 2.0: situation understanding + memory-grounded reasoning",
+  "taught": "alice moved the door",
+  "perception": "alice detected",
+  "conclusion": "causal_change_inferred",
+  "confidence": 0.9,
+  "inferences": [
+    "alice likely moved door"
+  ],
+  "hypotheses": [
+    {
+      "hypothesis": "alice moved door",
+      "confidence": 0.9,
+      "source": "knowledge"
+    },
+    {
+      "hypothesis": "goal reach toward [3.0, 0.0] is active",
+      "confidence": 0.9,
+      "source": "goal"
+    },
+    {
+      "hypothesis": "2 relevant memories recalled",
+      "confidence": 0.6,
+      "source": "memory"
+    }
+  ],
+  "relations_in_situation": [
+    {
+      "subject": "alice",
+      "predicate": "moved",
+      "object": "door",
+      "confidence": 0.9,
+      "status": "active"
+    }
+  ],
+  "goal_context": {
+    "kind": "reach",
+    "target": [
+      3.0,
+      0.0
+    ],
+    "priority": 1.0,
+    "max_steps": 60,
+    "steps_taken": 0,
+    "distance_to_goal": 3.0
+  },
+  "recalled": 2,
+  "action": "inspect",
+  "route": "deterministic",
+  "mechanism": "MacCognition.build_situation grounds in knowledge+goal+recall; reason() emits hypotheses + causal inferences"
+}

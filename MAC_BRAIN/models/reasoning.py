@@ -46,6 +46,8 @@ class DeterministicReasoningProvider:
         "environmental_change_is_relevant": "inspect",
         "human_speech_observed": "observe",
         "no_high_salience_change_detected": "wait",
+        "causal_change_inferred": "inspect",
+        "goal_relevant_change": "observe",
     }
     DEFAULT_ACTION = "observe"
 

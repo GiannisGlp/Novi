@@ -268,6 +268,8 @@ function traceHtml(t) {
   s += '<div class="row"><b>rationale:</b> '+esc(t.rationale||'—')+'</div>';
   s += '<div class="row"><b>recalled:</b> '+(t.recalled||0)+' memories &nbsp; <b>cycle:</b> '+t.cycle+'</div>';
   if (t.detections && t.detections.length) s += '<div class="row"><b>seeing:</b> '+esc(t.detections.join(', '))+'</div>';
+  if (t.inferences && t.inferences.length) s += '<div class="row"><b>inferred:</b> '+esc(t.inferences.join(' · '))+'</div>';
+  if (t.hypotheses && t.hypotheses.length) s += '<div class="row"><b>hypotheses:</b> '+esc(t.hypotheses.map(h=>h.hypothesis).join(' · '))+'</div>';
   s += '</div>';
   return s;
 }
