@@ -1034,6 +1034,20 @@ Novi claimed a taste it can't have (no body).
 - Tests: +1; fast suites **467 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/food-drink-preference-honesty.json`.
 
+## Engagement/presence checks + end-to-end verification (round 33 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "are you there? / can you hear me? / do you understand me?" should be
+answered with a warm, consistent presence acknowledgment, not a program-y meta reply.
+
+- `_is_engagement_check` detects "are you there / can you hear me / are you
+  listening / are you still with me / do you understand me", routed to a warm
+  deterministic reply ("I'm right here — I can hear you. What's on your mind?").
+- Verified the **reported example end-to-end through the running web app**:
+  "[heard] Hello." → "hi there — glad you're around."; "what system?" →
+  "I'm not sure what you're referring to — could you clarify…".
+- Tests: +1; fast suites **468 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/engagement-checks-and-endtoend.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

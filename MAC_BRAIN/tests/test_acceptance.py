@@ -85,7 +85,7 @@ class ReasoningAcceptanceTests(unittest.TestCase):
         brain = _brain()
         brain.start()
         try:
-            r = brain.compose_reply("are you there?", addressee_name="Vano", llm_chat=lambda **k: "hi Vano yes Vano ok Vano see you Vano")
+            r = brain.compose_reply("explain how the internet works", addressee_name="Vano", llm_chat=lambda **k: "hi Vano yes Vano ok Vano see you Vano")
             self.assertEqual(r["text"].lower().count("vano"), 1)
         finally:
             brain.stop()

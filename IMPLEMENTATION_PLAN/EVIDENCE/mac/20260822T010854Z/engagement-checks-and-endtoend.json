@@ -1,0 +1,21 @@
+{
+  "slice": "Natural conversation round 33: engagement/presence checks answered warmly; reported example verified end-to-end in the running app",
+  "detected": {
+    "are you there?": true,
+    "can you hear me?": true,
+    "are you listening?": true,
+    "are you still with me?": true,
+    "do you understand me?": true,
+    "what's the time?": false
+  },
+  "reply": "I'm right here \u2014 I can hear you. What's on your mind?",
+  "end_to_end_reported_example": {
+    "turn1": {
+      "[heard] Hello.": "hi there \u2014 glad you're around."
+    },
+    "turn2": {
+      "what system?": "I'm not sure what you're referring to \u2014 could you clarify what you mean by 'system'?"
+    }
+  },
+  "mechanism": "engagement/presence checks (are you there, can you hear me) route to a warm consistent reply instead of a program-y meta answer"
+}

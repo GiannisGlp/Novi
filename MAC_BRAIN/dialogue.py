@@ -600,6 +600,19 @@ def _is_repeat_question(text: str) -> bool:
     return bool(text) and bool(_REPEAT_RE.search(text))
 
 
+# Engagement/presence checks ("are you there?", "can you hear me?", "are you
+# listening?") deserve a warm, present acknowledgment, not a program-y meta reply.
+_ENGAGEMENT_RE = re.compile(
+    r"\b(?:are you there\b|can you hear me\b|are you listening\b|are you still (?:with me|there)\b|"
+    r"are you with me\b|are you awake\b|are you around\b|do you understand me\b)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_engagement_check(text: str) -> bool:
+    return bool(text) and bool(_ENGAGEMENT_RE.search(text))
+
+
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",
 # "set me a reminder"). Novi can remember these conversationally, but it cannot
 # push a timed notification, so it must not over-promise ("I'll remind you at 8am").

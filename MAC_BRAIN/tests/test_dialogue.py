@@ -34,6 +34,7 @@ from MAC_BRAIN.dialogue import (
     _is_embodiment_question,
     _is_assurance_question,
     _is_repeat_question,
+    _is_engagement_check,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -167,6 +168,12 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(_is_future_question(s), s)
         self.assertFalse(_is_future_question("what's the time?"))
         self.assertFalse(_is_future_question("what happened yesterday?"))
+
+    def test_engagement_check_detection(self):
+        # "are you there / can you hear me" deserve a warm presence reply, not a topic.
+        for s in ["are you there?", "can you hear me?", "are you listening?", "are you still with me?", "do you understand me?"]:
+            self.assertTrue(_is_engagement_check(s), s)
+        self.assertFalse(_is_engagement_check("what's the time?"))
 
     def test_bodily_need_question_detection(self):
         # Novi has no body, so eating/sleeping/dreaming questions must be honest.
@@ -517,12 +524,13 @@ class ComposeReplyTests(unittest.TestCase):
 
     def test_perception_question_gets_honest_reply_not_topic_followup(self):
         b = self._brain()
+        # "can you hear me?" is a presence/engagement check — warm and honest.
         r = b.compose_reply("can you hear me?", llm_chat=lambda **k: None)
         self.assertIsNotNone(r["text"])
-        self.assertEqual(r["grounding"]["route"], "perception")
+        self.assertEqual(r["grounding"]["route"], "engagement")
         self.assertIn("hear", r["text"].lower())
         self.assertNotIn("good answer", r["text"].lower())
-        # vision question answered honestly per availability
+        # a vision question answered honestly per availability
         rv = b.compose_reply("did you see that?", llm_chat=lambda **k: None)
         self.assertNotIn("good answer", rv["text"].lower())
 

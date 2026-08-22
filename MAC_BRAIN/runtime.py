@@ -48,6 +48,7 @@ from .dialogue import (
     _is_repeat_question,
     _is_realtime_data_question,
     _is_assurance_question,
+    _is_engagement_check,
     _is_embodiment_question,
     _is_future_question,
     _is_recall_question,
@@ -1285,6 +1286,13 @@ class MacBrain:
         """Whether a camera/vision feed is configured."""
         return getattr(self, "camera", None) is not None
 
+    def _engagement_reply(self) -> str:
+        """Warm, honest reply to an engagement/presence check (are you there?)."""
+        can_hear = self._has_vision() or getattr(self, "audio_enabled", False) or True
+        if can_hear:
+            return "I'm right here — I can hear you. What's on your mind?"
+        return "I'm here. I'm picking up your words even though I can't see you right now."
+
     def _perception_reply(self, text: str) -> str:
         """Honest, natural answer to a perception question ("can you hear/see me?")."""
         t = text.lower()
@@ -1378,6 +1386,9 @@ class MacBrain:
         # "Can you keep a secret?" is a social trust question, not a topic.
         if _is_assurance_question(text):
             return {"text": assurance_reply(cycle=self._cycle), "fallback": False, "reason": "You asked if I can keep a secret / be trusted, so I reassured you warmly.", "grounding": {"route": "assurance"}}
+        # "Are you there? / can you hear me?" — acknowledge present, warm.
+        if _is_engagement_check(text):
+            return {"text": self._engagement_reply(), "fallback": False, "reason": "You checked whether I'm here/listening, so I acknowledged warmly.", "grounding": {"route": "engagement"}}
         self_state = self._chat_self_state()
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)

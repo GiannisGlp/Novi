@@ -95,5 +95,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Identity over-explain (broadened) | `20260822T005417Z/identity-overexplain-broadened.json` | 'transparent, non-deceptive embodied being' caught even with intervening words |
 | Short single-word replies | `20260822T005842Z/short-utterances.json` | 'yes'/'hm'/'no' never become 'no good answer on <word>' |
 | Food/drink preference honesty | `20260822T010327Z/food-drink-preference-honesty.json` | 'do you like coffee?' never claims a taste Novi can't have |
+| Engagement checks + end-to-end | `20260822T010854Z/engagement-checks-and-endtoend.json` | 'are you there?' answered warmly; reported example verified end-to-end in running app |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
