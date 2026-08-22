@@ -509,6 +509,28 @@ def _is_embodiment_question(text: str) -> bool:
     return bool(text) and bool(_EMBODIMENT_RE.search(text))
 
 
+# Future / prediction questions ("what will happen next week?", "what's next?")
+# are conversational speculation, not a topic — they must not fall through to
+# "I don't have a good answer on happen yet".
+_FUTURE_RE = re.compile(
+    r"\b(?:what (?:will|'s (?:going to|gonna)|is going to|would) (?:happen|be|come|change)\b|"
+    r"what(?:'s| is) next\b|what happens (?:next|then|now)\b|"
+    r"(?:will|(?:is|are) (?:going to|gonna)) (?:happen|be like|come next|change)\b|"
+    r"predict\b|in the future\b|what('?s| is) (?:coming|ahead)\b|"
+    r"do you think .{0,15}\b(?:will|(?:is|are) going to)\b)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_future_question(text: str) -> bool:
+    return bool(text) and bool(_FUTURE_RE.search(text))
+
+
+def future_reply() -> str:
+    return ("Hard to say for sure — I can't see the future. But if I had to guess, "
+            "I'd say a lot depends on what you do next. What are you hoping happens?")
+
+
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",
 # "set me a reminder"). Novi can remember these conversationally, but it cannot
 # push a timed notification, so it must not over-promise ("I'll remind you at 8am").

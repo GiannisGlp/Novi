@@ -929,6 +929,19 @@ have (contradicting its honest "I don't have a body" answers).
 - Tests: +1; fast suites **460 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/embodiment-honesty.json`.
 
+## Future/prediction questions answered, not treated as a topic (round 25 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "what do you think will happen next week?" → "I don't have a good
+answer on happen yet." A common future/prediction question was read as a topic.
+
+- `_is_future_question` detects "will happen / what's next / what happens next /
+  predict / going to happen", routed to an honest-uncertainty reply (and a
+  natural fallback) instead of the topic follow-up.
+- Real test: "what do you think will happen next week?" → "Honestly? I can't see
+  the future, so I won't pretend I can…".
+- Tests: +1; fast suites **461 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/future-question-handling.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

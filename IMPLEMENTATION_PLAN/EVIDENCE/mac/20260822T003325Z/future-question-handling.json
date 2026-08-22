@@ -1,0 +1,15 @@
+{
+  "slice": "Natural conversation round 25: future/prediction questions answered, not treated as a topic",
+  "detected": {
+    "what do you think will happen next week?": true,
+    "what's next?": true,
+    "what will happen after that?": true,
+    "what's the time?": false,
+    "what happened yesterday?": false
+  },
+  "fallback_reply": "Hard to say for sure \u2014 I can't see the future. But if I had to guess, I'd say a lot depends on what you do next. What are you hoping happens?",
+  "before": {
+    "what do you think will happen next week?": "I don't have a good answer on happen yet \u2014 what's it like from your side?"
+  },
+  "mechanism": "future/prediction questions ('will happen', 'what's next', 'predict') get an honest-uncertainty reply instead of being read as a topic ('no good answer on happen')"
+}

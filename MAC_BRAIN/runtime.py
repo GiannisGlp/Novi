@@ -46,6 +46,7 @@ from .dialogue import (
     _is_acknowledgment,
     _is_realtime_data_question,
     _is_embodiment_question,
+    _is_future_question,
     _is_recall_question,
     _is_reminder_request,
     _is_thanks,
@@ -55,6 +56,7 @@ from .dialogue import (
     continuation_reply,
     emotional_reply,
     followup_question,
+    future_reply,
     greeting_reply,
     introduction_reply,
     joke_reply,
@@ -1388,7 +1390,13 @@ class MacBrain:
         is_realtime = _is_realtime_data_question(text)
         is_reminder = _is_reminder_request(text)
         is_embodiment = _is_embodiment_question(text)
+        is_future = _is_future_question(text)
         can_physical = self._has_physical_action_capability()
+        if is_future:
+            system += (
+                " The user asked you to predict the future / what will happen. You can't see the future, so give an "
+                "honest, reasoned guess grounded in what you know, and say you can't be sure — don't invent a definitive outcome."
+            )
         if is_embodiment:
             # You sense the space but have no body to physically stand in it.
             system += (
@@ -1491,6 +1499,9 @@ class MacBrain:
         if is_reminder:
             reason = "You asked me to remind you of something, so I said I'd keep it in mind without over-promising a timed alert"
             return {"text": reminder_reply(), "fallback": True, "reason": reason, "grounding": {"route": "reminder_honesty", **out}}
+        if is_future:
+            reason = "You asked me to predict the future, so I answered honestly about uncertainty instead of a dry topic follow-up"
+            return {"text": future_reply(), "fallback": True, "reason": reason, "grounding": {"route": "future", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:
