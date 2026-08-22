@@ -3,9 +3,7 @@ import unittest
 from pathlib import Path
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.observability import (
-    DEBUG,
     FAIL,
     INFO,
     PASS,
@@ -16,7 +14,6 @@ from MAC_BRAIN.observability import (
     HealthMonitor,
     MetricRegistry,
     aggregate_health,
-    default_health_checks,
 )
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera

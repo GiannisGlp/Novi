@@ -8,15 +8,14 @@ Verifies:
   - Individual scenario runners produce correct results.
 """
 
-import unittest
 import subprocess
 import sys
+import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
+from MAC_BRAIN.p0_gate_runner import _SCENARIO_RUNNERS, run_p0_gate
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.soul_acceptance import P0GateResult, ALL_P0_SCENARIOS
-from MAC_BRAIN.p0_gate_runner import run_p0_gate, _SCENARIO_RUNNERS
+from MAC_BRAIN.soul_acceptance import ALL_P0_SCENARIOS, P0GateResult
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 
 

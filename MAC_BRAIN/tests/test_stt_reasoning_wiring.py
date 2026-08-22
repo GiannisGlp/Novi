@@ -1,8 +1,6 @@
 import unittest
-from pathlib import Path
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.models import DeterministicSTTProvider
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig

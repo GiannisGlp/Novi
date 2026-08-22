@@ -10,22 +10,18 @@ Done-bar:
 import unittest
 
 from MAC_BRAIN.closed_loop import (
-    ClosedLoopRuntime,
-    LoopStep,
-    CrossSystemTestResult,
-    run_cross_system_acceptance,
-    run_completion_gate,
-    CompletionGateResult,
-    OBSERVE,
-    PLAN,
     ACT,
-    VERIFY,
-    RECOVER,
     ASK,
-    STOP,
-    OUTCOME_SUCCESS,
+    OBSERVE,
     OUTCOME_FAILURE,
-    OUTCOME_UNKNOWN,
+    OUTCOME_SUCCESS,
+    PLAN,
+    RECOVER,
+    STOP,
+    VERIFY,
+    ClosedLoopRuntime,
+    run_completion_gate,
+    run_cross_system_acceptance,
 )
 
 

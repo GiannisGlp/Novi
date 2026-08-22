@@ -3,11 +3,10 @@ import unittest
 from pathlib import Path
 
 from brain.contracts import utc_now
-
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.storage import DurableMemoryStore
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
-from MAC_BRAIN.vector import EmbeddingIndex, HashingEmbedding, cosine
+from MAC_BRAIN.vector import HashingEmbedding, cosine
 
 
 def admit(store, content, entity_refs=()):

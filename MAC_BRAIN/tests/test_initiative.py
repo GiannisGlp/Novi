@@ -11,10 +11,9 @@ from __future__ import annotations
 import unittest
 
 from brain.b2_perception import Detection, SpecialistPerception
-
-from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.autonomy import Goal
 from MAC_BRAIN.dialogue import _is_forbidden
+from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 
 

@@ -1,6 +1,6 @@
 import unittest
 
-from brain.b2_perception import Detection, SpecialistPerception, DeterministicPerceptionBackend
+from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from MAC_BRAIN.autonomy import BoundedGoalController, Goal, GoalStatus
 from MAC_BRAIN.io import VirtualBody
 from MAC_BRAIN.runtime import MacBrain

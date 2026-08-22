@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from MAC_BRAIN.consolidation import ConsolidationConfig, MemoryConsolidator

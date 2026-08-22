@@ -11,7 +11,6 @@ from .b2_model_runtime import (
     ModelRuntime,
 )
 
-
 NEMOTRON_3_NANO_OMNI_MODEL_ID = "nvidia/nemotron-3-nano-omni-30b-a3b"
 NEMOTRON_3_NANO_OMNI_VERSION = "3.0"
 

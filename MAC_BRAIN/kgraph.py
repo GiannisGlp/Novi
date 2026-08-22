@@ -14,13 +14,13 @@ Boundaries honored (docs/04-memory-and-knowledge/12):
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable
+from typing import Any, Callable
 
 ENTITY_TYPES = {"person", "place", "building", "object", "concept"}
 # Rooms / areas / outdoor zones Novi can recognise as places.
 _PLACE_LABELS = {"door", "room", "kitchen", "window", "table", "hall", "office", "garage", "garden", "living room", "bedroom", "bathroom", "hallway", "yard", "street", "park", "corridor", "lobby"}
 # Buildings / landmarks (docs/03-cognition/02 entity types: Place, Building).
-_BUILDING_LABELS = {"house", "tower", "school", "hospital", "store", "shop", "mall", "bridge", "station", "airport", "library", "museum", "cafe", "restaurant", "bank", "cafe", "factory", "church", "campus", "building"}
+_BUILDING_LABELS = {"house", "tower", "school", "hospital", "store", "shop", "mall", "bridge", "station", "airport", "library", "museum", "cafe", "restaurant", "bank", "factory", "church", "campus", "building"}
 _PERSON_LABELS = {"alice", "bob", "vano", "charlie", "dana", "eve"}
 
 _PREDICATES = {

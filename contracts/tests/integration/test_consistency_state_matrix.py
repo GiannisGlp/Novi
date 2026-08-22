@@ -2,9 +2,8 @@
 """Validate the ARCH-CLOSE-002 state-class matrix as an executable completeness gate."""
 from __future__ import annotations
 
-from pathlib import Path
-import re
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DOC = ROOT.parent / "docs" / "01-system-architecture" / "26_ARCH_CLOSE_002_CONSISTENCY_STATE_CLASS_MATRIX.md"

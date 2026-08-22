@@ -10,15 +10,15 @@ never waits on an LLM.
 import unittest
 
 from MAC_BRAIN.multi_speed_runtime import (
-    MultiSpeedRuntime,
-    AutonomyState,
-    ResourceMode,
-    SystemTask,
+    ALL_SYSTEM_TIERS,
     SYSTEM_0,
     SYSTEM_1,
     SYSTEM_2,
     SYSTEM_3,
-    ALL_SYSTEM_TIERS,
+    AutonomyState,
+    MultiSpeedRuntime,
+    ResourceMode,
+    SystemTask,
 )
 
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Any, Iterable
 
-from .b1_world import SensorObservation, WorldModelState, WorldEntityState
+from .b1_world import SensorObservation, WorldEntityState, WorldModelState
 
 
 @dataclass(frozen=True)

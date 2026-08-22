@@ -10,17 +10,17 @@ that no action executes without a grant.
 import unittest
 
 from MAC_BRAIN.governance_guard import (
-    ActionProposal,
-    GovernanceGuard,
-    GovernanceGrant,
+    ALL_GOVERNANCE_DECISIONS,
     ALLOW,
+    DEGRADED_MODE,
     DENY,
     MODIFY,
-    REQUIRE_CONFIRMATION,
     PAUSE,
+    REQUIRE_CONFIRMATION,
     STOP,
-    DEGRADED_MODE,
-    ALL_GOVERNANCE_DECISIONS,
+    ActionProposal,
+    GovernanceGrant,
+    GovernanceGuard,
 )
 
 

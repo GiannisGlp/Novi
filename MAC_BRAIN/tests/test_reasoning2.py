@@ -8,7 +8,6 @@ self-correction feeding the next decision).
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.models.reasoning import DeliberativeReasoningProvider
 from MAC_BRAIN.reflection import ReflectionEngine
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig

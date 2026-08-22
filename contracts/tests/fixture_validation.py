@@ -8,8 +8,8 @@ prevents hand-written fixtures from silently drifting away from the schemas.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker

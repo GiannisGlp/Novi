@@ -10,7 +10,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from brain.b1_memory import MemoryRecord
-
 from MAC_BRAIN.models.stt import TranscriptionResult
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera

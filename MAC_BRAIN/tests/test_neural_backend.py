@@ -1,7 +1,6 @@
 import unittest
 
 from brain.b2_perception import Detection as BrainDetection
-
 from MAC_BRAIN.models.neural_backend import NeuralPerceptionBackend
 from MAC_BRAIN.models.object_detection import Detection as MacDetection
 

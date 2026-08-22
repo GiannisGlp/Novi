@@ -120,7 +120,7 @@ perception → cognition → attention → situation → reasoning → governanc
 46. **No dedicated test files for `governance_guard.py` or `multi_speed_runtime.py`** (covered only indirectly via `test_skill_governance.py`).
 47. **Web tests slow/flaky** (~70s, sometimes 60s timeout).
 48. **Legacy `brain/` dead code** — `brain/b1_loop.py` and `brain/b1_world.py` TemporalWorldModel marked LEGACY but retained; dual-brain import surface.
-49. **No pre-commit hooks configured.**
+49. **No pre-commit hooks configured.** — **✅ FIXED**: `.pre-commit-config.yaml` added (ruff `--fix` + ruff-format); ran `ruff check --fix` across `MAC_BRAIN/brain/web/contracts/cognition` (296 safe auto-fixes: import sorting I001, trailing newlines W292, duplicate values B033) — full fast suite still green (1165). ~74 legacy non-auto-fixable lint items remain (mostly in LEGACY `brain/` scaffolds + tests) as a tracked backlog; new code is expected to be ruff-clean.
 50. **`VocabularyScopeModel` is a dead duplicate of `Lexicon`** (soul domain). — **✅ FIXED**: removed from `soul_acceptance.py` (scope constants, `VocabularyEntry`, `VocabularyScopeModel`); runtime/chat re-pointed to the canonical `Lexicon`; chat's duplicate `vocab_scope.propose` block removed; dependent tests migrated to Lexicon equivalents (roadmap item 27).
 
 ---

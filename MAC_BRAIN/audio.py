@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Protocol
+from typing import Any
 
 # Extensible acoustic-event taxonomy (non-speech). Maps alias -> canonical class.
 TAXONOMY = (

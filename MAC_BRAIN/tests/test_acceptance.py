@@ -10,10 +10,8 @@ from __future__ import annotations
 import unittest
 
 from brain.b2_perception import Detection, SpecialistPerception
-
-from MAC_BRAIN.io import CameraFrame
-from MAC_BRAIN.autonomy import Goal
 from MAC_BRAIN.dialogue import _is_forbidden, natural_fallback
+from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.models.recognition import DeterministicFaceId, DeterministicSpeakerId
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 
@@ -57,8 +55,8 @@ class ReasoningAcceptanceTests(unittest.TestCase):
             self.assertTrue(hasattr(MacBrain, method), f"{method} must be a brain capability, not a web concern")
 
     def test_dialogue_engine_is_in_mac_brain_not_web(self):
-        from MAC_BRAIN.dialogue import DialogueEngine  # noqa: F401
         import web.server as web  # noqa: F401
+        from MAC_BRAIN.dialogue import DialogueEngine  # noqa: F401
         self.assertFalse(hasattr(web.NoviWebServer, "_generate_reply"), "reply generation must not live in the web server")
 
     """Rule 8 + Rule 10: natural, never an assistant persona."""

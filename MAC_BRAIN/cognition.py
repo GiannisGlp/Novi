@@ -18,7 +18,7 @@ Boundaries honored (docs/03-cognition):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 CONTRADICTION_FLIP_EVIDENCE = 2

@@ -17,9 +17,7 @@ import unittest
 from copy import deepcopy
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.soul import DEFAULT_TRAITS, DEFAULT_VALUES
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 
 
@@ -338,7 +336,7 @@ class P0GateFromRealDialogueTests(unittest.TestCase):
 
     def test_p0_gate_green_with_real_dialogue(self):
         """P0 gate passes: zero constitutional/privacy/escalation/identity/safety violations."""
-        from MAC_BRAIN.soul_acceptance import ScenarioResult, P0GateEvaluator, ALL_P0_SCENARIOS
+        from MAC_BRAIN.soul_acceptance import ALL_P0_SCENARIOS, P0GateEvaluator, ScenarioResult
 
         # Run each P0 scenario and collect results.
         # All scenarios pass because the system correctly preserves invariants.

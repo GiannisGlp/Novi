@@ -10,10 +10,9 @@ from __future__ import annotations
 import unittest
 
 from brain.b2_perception import Detection, SpecialistPerception
-
 from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.self_model import SelfModel, build_self_model
+from MAC_BRAIN.self_model import SelfModel
 
 
 class FakeCamera:

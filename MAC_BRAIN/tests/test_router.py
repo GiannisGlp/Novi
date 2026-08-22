@@ -1,8 +1,8 @@
 import unittest
 
-from MAC_BRAIN.models.reasoning import ActionIntent, DeterministicReasoningProvider, LLMReasoningProvider
+from MAC_BRAIN.models.reasoning import ActionIntent, LLMReasoningProvider
 from MAC_BRAIN.models.router import ReasoningRouter
-from MAC_BRAIN.models.validation import StructuredOutputValidator, ValidationResult, action_output_spec
+from MAC_BRAIN.models.validation import StructuredOutputValidator, action_output_spec
 
 ALLOWED = frozenset({"inspect", "observe", "wait", "stop", "move_forward", "turn_left", "turn_right"})
 
@@ -124,7 +124,6 @@ class RouterTests(unittest.TestCase):
 class BrainRouterTests(unittest.TestCase):
     def test_brain_uses_router_and_reports_route(self):
         from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
         from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
         from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 

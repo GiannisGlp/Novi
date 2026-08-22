@@ -1,7 +1,7 @@
 import unittest
 
 from brain.b2_cosmos_reason import CosmosReason2Adapter, CosmosReasonRequest
-from brain.b2_model_runtime import ModelRuntime, ModelResult
+from brain.b2_model_runtime import ModelResult, ModelRuntime
 
 
 class FakeCosmosBackend:

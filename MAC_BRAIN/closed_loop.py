@@ -16,10 +16,8 @@ Canonical authority:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Sequence
 from uuid import uuid4
-
 
 # ---------------------------------------------------------------------------
 # Closed-loop states
@@ -287,7 +285,7 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
     ))
 
     # Test 2: Cognition -> Memory (observed evidence is stored correctly)
-    from MAC_BRAIN.memory_hardening import HardenedMemoryManager, OBSERVED, DIRECT_SENSOR
+    from MAC_BRAIN.memory_hardening import DIRECT_SENSOR, OBSERVED, HardenedMemoryManager
     mgr = HardenedMemoryManager()
     admit_result = mgr.admit(
         memory_type="perception", content="cup on table", confidence=0.85,
@@ -306,7 +304,7 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
     ))
 
     # Test 3: Memory -> Autonomy (simulated episode cannot become fact in autonomy)
-    from MAC_BRAIN.memory_hardening import SIMULATED, VERIFIED, SIMULATION
+    from MAC_BRAIN.memory_hardening import SIMULATED, SIMULATION, VERIFIED
     sim_admit = mgr.admit(
         memory_type="simulation", content="cup at table", confidence=0.9,
         epistemic_status=SIMULATED, evidence_class=SIMULATED,
@@ -328,7 +326,7 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
     ))
 
     # Test 4: Autonomy -> Safety (governance guard gates action)
-    from MAC_BRAIN.governance_guard import GovernanceGuard, ActionProposal, ALLOW
+    from MAC_BRAIN.governance_guard import ActionProposal, GovernanceGuard
     guard = GovernanceGuard()
     proposal = ActionProposal(proposal_id="p1", action="wait", parameters={}, risk_class="R0")
     grant = guard.evaluate(proposal)
@@ -341,7 +339,7 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
     ))
 
     # Test 5: Safety -> Brain (System-0 safety gate works)
-    from MAC_BRAIN.multi_speed_runtime import MultiSpeedRuntime, SYSTEM_0
+    from MAC_BRAIN.multi_speed_runtime import SYSTEM_0, MultiSpeedRuntime
     rt = MultiSpeedRuntime()
     rt.register(SYSTEM_0, "safety", lambda ctx: {"safe": True})
     rt_results = rt.step()

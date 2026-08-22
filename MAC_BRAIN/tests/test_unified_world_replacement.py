@@ -7,10 +7,9 @@ instead of the legacy TemporalWorldModel.
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.world_model import WorldModel, OBSERVED, PERSON, OBJECT
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
+from MAC_BRAIN.world_model import OBJECT, OBSERVED, PERSON, WorldModel
 
 
 class CupBackend(DeterministicPerceptionBackend):
@@ -45,7 +44,6 @@ class UnifiedWorldModelReplacementTests(unittest.TestCase):
 
     def test_no_references_to_legacy_world_state(self):
         """No references to self.world.state in the runtime (replaced by unified)."""
-        import ast
         with open("MAC_BRAIN/runtime.py") as f:
             content = f.read()
         # self.world.state should not appear (it's been replaced by unified_world.to_world_state())
@@ -53,7 +51,6 @@ class UnifiedWorldModelReplacementTests(unittest.TestCase):
 
     def test_epistemic_status_preserved_in_world_state(self):
         """The unified world model's epistemic status is available through to_world_state()."""
-        from brain.b1_world import WorldModelState
         wm = WorldModel()
         wm.add_entity("alice_001", PERSON, labels=["Alice"], epistemic_status=OBSERVED, confidence=0.9)
         wm.add_entity("unknown_001", OBJECT, labels=["mystery"], epistemic_status="UNKNOWN", confidence=0.1)

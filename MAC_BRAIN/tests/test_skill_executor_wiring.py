@@ -12,10 +12,9 @@ Verifies:
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
-from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.skill_contract import SkillExecutor, SkillInvocation, SUCCESS, FAILURE
 from MAC_BRAIN.autonomy import Goal
+from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
+from MAC_BRAIN.skill_contract import SUCCESS, SkillExecutor
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 
 

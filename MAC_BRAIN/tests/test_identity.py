@@ -3,8 +3,6 @@ import unittest
 from pathlib import Path
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-from brain.contracts import utc_now
-
 from MAC_BRAIN.identity import PersonIdentity
 from MAC_BRAIN.models.stt import TranscriptionResult
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig

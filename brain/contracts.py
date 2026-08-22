@@ -6,12 +6,11 @@ This module intentionally does not redefine contract semantics. The registry and
 versioned JSON Schemas under ``contracts/`` remain the semantic authority.
 """
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-import json
-
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPOSITORY_ROOT / "contracts" / "registry.json"

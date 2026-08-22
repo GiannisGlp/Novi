@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import threading
 import time
@@ -27,7 +26,6 @@ from pathlib import Path
 from typing import Any
 
 from brain.contracts import utc_now
-
 from MAC_BRAIN.audio import AudioFrame
 from MAC_BRAIN.autonomy import Goal
 from MAC_BRAIN.io import CameraFrame

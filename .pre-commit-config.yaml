@@ -1,0 +1,11 @@
+# Pre-commit hooks for the Novi project.
+# Install with: pre-commit install
+# Run on all files with: pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # ruff version, must match the installed ruff (0.16.x)
+    rev: v0.16.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

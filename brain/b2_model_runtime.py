@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Mapping, Protocol
 
-from .contracts import validate_contract, utc_now
+from .contracts import utc_now, validate_contract
 
 
 class ModelRuntimeError(RuntimeError):

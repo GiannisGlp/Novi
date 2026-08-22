@@ -14,16 +14,31 @@ Verifies the improvements made during the review:
 import unittest
 
 from MAC_BRAIN.autonomy_state_machine import (
-    AutonomyStateMachine, AutonomyStateMachineState as ASMState,
+    AWARE,
+    BOOTING,
     CANONICAL_TRANSITIONS,
-    BOOTING, INITIALIZING, OBSERVING, AWARE, INTERACTING, PLANNING,
-    EXECUTING, LEARNING, MAINTENANCE, SAFE_DEGRADED,
-    SHUTTING_DOWN, EMERGENCY_STOP, FAULT_RECOVERY,
+    EMERGENCY_STOP,
+    EXECUTING,
+    FAULT_RECOVERY,
+    INITIALIZING,
+    INTERACTING,
+    LEARNING,
+    MAINTENANCE,
+    OBSERVING,
+    PLANNING,
+    SAFE_DEGRADED,
+    SHUTTING_DOWN,
+    AutonomyStateMachine,
+)
+from MAC_BRAIN.autonomy_state_machine import (
+    AutonomyStateMachineState as ASMState,
 )
 from MAC_BRAIN.failure_modes import (
-    FailureHandler, DegradedMode, FailureRecord,
-    PERCEPTION_UNCERTAINTY, MODEL_UNAVAILABLE, TOOL_FAILURE,
-    IDENTITY_AMBIGUITY, RESOURCE_EXHAUSTION, CORRUPTED_DATA,
+    MODEL_UNAVAILABLE,
+    PERCEPTION_UNCERTAINTY,
+    TOOL_FAILURE,
+    DegradedMode,
+    FailureHandler,
 )
 
 

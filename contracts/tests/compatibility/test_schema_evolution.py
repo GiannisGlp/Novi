@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import copy
 import json
-from pathlib import Path
 import sys
-
-from jsonschema import Draft202012Validator, FormatChecker
+from pathlib import Path
 
 from event_envelope_adapter import upgrade_1_0_to_1_1
+from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_ROOT = ROOT / "contracts" / "system" / "event-envelope"

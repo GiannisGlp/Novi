@@ -2,9 +2,9 @@
 """Deterministic semantic gate for Novi clock/time invariants."""
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from datetime import datetime
-import sys
 
 
 @dataclass(frozen=True)
@@ -64,7 +64,7 @@ def run() -> int:
         failures.append("measurement age semantics failed")
 
     valid_from, valid_until = 50.0, 60.0
-    if not (valid_from <= 55.0 <= valid_until) or 61.0 <= valid_until:
+    if not (valid_from <= 55.0 <= valid_until) or valid_until >= 61.0:
         failures.append("validity window semantics failed")
 
     simulation = TimeSample("SIMULATION", 5.0, "/clock", "SYNCHRONIZED")

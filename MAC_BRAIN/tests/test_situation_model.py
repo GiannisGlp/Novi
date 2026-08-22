@@ -12,12 +12,11 @@ Verifies:
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
-from MAC_BRAIN.world_model import WorldModel, OBSERVED, UNKNOWN, PERSON, OBJECT, ROOM
-from MAC_BRAIN.situation_model import SituationModel, Situation
-from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.autonomy import Goal
+from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
+from MAC_BRAIN.situation_model import SituationModel
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
+from MAC_BRAIN.world_model import OBJECT, OBSERVED, PERSON, UNKNOWN, WorldModel
 
 
 class CupBackend(DeterministicPerceptionBackend):

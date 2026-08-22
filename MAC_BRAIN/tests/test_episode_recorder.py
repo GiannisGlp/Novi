@@ -3,15 +3,13 @@
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.nvidia_experiments import (
-    EpisodeRecorder,
-    NoviEpisode,
-    EpisodeStep,
-    NoviNativeAdapter,
-    LeRobotAdapter,
     OBSERVED,
     SIMULATED,
+    EpisodeRecorder,
+    LeRobotAdapter,
+    NoviEpisode,
+    NoviNativeAdapter,
 )
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera

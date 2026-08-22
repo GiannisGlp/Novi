@@ -5,7 +5,6 @@ from pathlib import Path
 
 from web.server import NoviWebServer
 
-
 # ═══════════════════════════════════════════════════════════════════
 # Shared in-memory server — fast, no durable-store overhead
 # ═══════════════════════════════════════════════════════════════════

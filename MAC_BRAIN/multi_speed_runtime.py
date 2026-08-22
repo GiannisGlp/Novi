@@ -19,11 +19,9 @@ The autonomy state machine: idle/active/degraded with interruption/resume.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
-from uuid import uuid4
-
 
 # ---------------------------------------------------------------------------
 # System tiers

@@ -2,17 +2,24 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brain.b2_perception import Detection, SpecialistPerception, DeterministicPerceptionBackend
-from MAC_BRAIN.io import CameraFrame
+from brain.b2_perception import Detection, DeterministicPerceptionBackend
+from MAC_BRAIN.autonomy import Goal, GoalStatus
+from MAC_BRAIN.memory_hardening import (
+    CONFLICTED,
+    DIRECT_SENSOR,
+    NO_RESULT,
+    OBSERVED,
+    PREDICTED,
+    SIMULATED,
+    STORE_EPISODE,
+    UNVERIFIED,
+    USER_STATEMENT,
+    VERIFIED,
+    WriteGate,
+)
 from MAC_BRAIN.models import DeterministicSTTProvider
 from MAC_BRAIN.runtime import MacBrain
 from MAC_BRAIN.storage import DurableMemoryStore
-from MAC_BRAIN.autonomy import Goal, GoalStatus
-from MAC_BRAIN.memory_hardening import (
-    WriteGate, RetrievalResult, OBSERVED, SIMULATED, VERIFIED, UNVERIFIED, PREDICTED,
-    NO_RESULT, CONFLICTED, STALE, ABSTAIN, STORE_EPISODE, DISCARD,
-    DIRECT_SENSOR, USER_STATEMENT,
-)
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 
 

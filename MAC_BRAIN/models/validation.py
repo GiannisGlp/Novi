@@ -8,7 +8,7 @@ A failing output is rejected with a list of errors rather than silently used.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 

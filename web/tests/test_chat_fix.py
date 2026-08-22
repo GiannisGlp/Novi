@@ -7,9 +7,9 @@ Verifies:
   - The chat-busy flag is cleared even if compose_reply raises.
 """
 
-import unittest
 import time
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import MagicMock, patch
 
 from web.server import NoviWebServer
 

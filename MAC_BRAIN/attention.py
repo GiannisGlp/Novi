@@ -19,17 +19,13 @@ directly command actuators.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable
 
 from .world_model import (
+    INFERRED,
+    UNKNOWN,
     WorldEntity,
     WorldModel,
-    WorldRelation,
-    OBSERVED,
-    INFERRED,
-    PREDICTED,
-    UNKNOWN,
-    VERIFIED,
 )
 
 # ---------------------------------------------------------------------------

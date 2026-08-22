@@ -1,7 +1,6 @@
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.io import MacSpeaker
 from MAC_BRAIN.live import LiveSession
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig

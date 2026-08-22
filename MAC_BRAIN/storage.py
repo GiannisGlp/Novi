@@ -9,30 +9,28 @@ memory semantics, or authorization.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from pathlib import Path
 from typing import Any, Iterable
 
-from brain.b1_memory import MemoryAdmission, MemoryRecord, DeterministicMemoryManager, validate_contract, utc_now
+from brain.b1_memory import DeterministicMemoryManager, MemoryAdmission, MemoryRecord, utc_now, validate_contract
 
 from .memory_hardening import (
-    ADMITTED,
-    OBSERVED,
-    STORE_EPISODE,
-    UNVERIFIED,
-    WriteGate,
-    RetrievalResult,
-    NO_RESULT,
+    ACTIVE as LIFE_ACTIVE,
+)
+from .memory_hardening import (
     AMBIGUOUS,
     CONFLICTED,
-    STALE,
-    ABSTAIN,
     EXPIRED,
-    ACTIVE as LIFE_ACTIVE,
+    NO_RESULT,
+    OBSERVED,
+    STALE,
     IndependenceTracker,
+    RetrievalResult,
+    WriteGate,
 )
-import hashlib
 
 # Retrieval state constants (used locally, not exported from memory_hardening as constants).
 _RESOLVED = "RESOLVED"
@@ -381,9 +379,7 @@ class DurableMemoryStore:
                 }
                 source_class = source_map.get(memory_type, "SYSTEM_STATE")
                 src = str(provenance.get("source", "")).lower()
-                if "camera" in src or "sensor" in src or "vision" in src:
-                    source_class = "DIRECT_SENSOR"
-                elif "audio" in src or "stt" in src or "microphone" in src:
+                if "camera" in src or "sensor" in src or "vision" in src or "audio" in src or "stt" in src or "microphone" in src:
                     source_class = "DIRECT_SENSOR"
                 elif "user" in src or "web" in src:
                     source_class = "USER_STATEMENT"
@@ -968,7 +964,8 @@ class DurableMemoryStore:
           STALE — records found but all are stale.
           ABSTAIN — insufficient evidence for the consequence.
         """
-        from datetime import datetime, timezone as dt_timezone
+        from datetime import datetime
+        from datetime import timezone as dt_timezone
 
         if limit <= 0:
             return RetrievalResult((), NO_RESULT, "limit_is_zero", 0)

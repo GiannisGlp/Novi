@@ -19,7 +19,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
-from .reasoning import ActionIntent, DeterministicReasoningProvider, ReasoningProvider
+from .reasoning import DeterministicReasoningProvider
 
 
 @dataclass

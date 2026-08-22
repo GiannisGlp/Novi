@@ -11,7 +11,6 @@ from __future__ import annotations
 import unittest
 
 from brain.b2_perception import Detection, SpecialistPerception
-
 from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.kgraph import infer_entity_type
 from MAC_BRAIN.models.recognition import DeterministicFaceId, DeterministicSpeakerId

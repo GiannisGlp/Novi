@@ -175,7 +175,7 @@ _STOPWORDS = {
     "anything", "something", "everything", "nothing", "someone", "anyone",
     "somebody", "anybody", "everybody", "nobody", "whoever", "whatever",
     "whenever", "somewhere", "anywhere", "anytime", "still", "also",
-    "always", "never", "often", "sometimes", "really", "actually", "maybe",
+    "always", "never", "often", "sometimes", "actually", "maybe",
 }
 
 
@@ -296,22 +296,18 @@ _STATE_WORDS = {
     "angry", "busy", "stressed", "anxious", "exhausted", "overwhelmed", "lonely",
     "depressed", "down", "nervous", "worried", "sick", "unwell", "frustrated",
     "calm", "confused", "proud", "content", "guilty", "relieved", "hopeful",
-    "sleepy", "awake", "ready", "still", "alone", "tired", "amazed", "awkward",
-    "fine", "okay", "hungry", "in", "up", "off", "around", "here",
-    "leaving", "going", "just", "back", "on", "down", "about", "into", "done",
-    "worried", "excited", "confused", "proud",
-    "starving", "coming", "working", "dying", "trying", "waiting", "running",
+    "sleepy", "awake", "ready", "still", "alone", "amazed", "awkward",
+    "in", "up", "off", "around", "leaving", "on", "about", "into", "starving", "coming", "working", "dying", "waiting", "running",
     "heading", "starting", "thinking", "wondering", "learning", "reading",
     "driving", "walking", "writing", "listening", "watching", "planning",
-    "hoping", "doing", "making", "having", "feeling", "getting", "kidding",
+    "hoping", "doing", "making", "having", "kidding",
     "joking", "seriously", "almost", "totally", "completely",
-    "failing", "losing", "trying", "wondering", "waiting", "struggling",
-    "there", "quitting", "moving", "starting", "ending", "betting", "saying",
-    "asking", "telling", "thinking", "lying", "sitting", "standing",
+    "failing", "losing", "struggling",
+    "there", "quitting", "moving", "ending", "betting", "saying",
+    "asking", "telling", "lying", "sitting", "standing",
     "great", "new", "annoyed", "thrilled", "delighted", "surprised", "shocked",
-    "grateful", "distracted", "exhausted", "free", "mad", "calm", "content",
-    "upset", "busy", "amused", "cheerful", "glad", "pleased", "relaxed",
-    "curious", "certain", "unsure", "uncertain", "lost", "stuck", "all",
+    "grateful", "distracted", "free", "mad", "amused", "cheerful", "glad", "pleased", "relaxed",
+    "certain", "unsure", "uncertain", "lost", "stuck", "all",
 }
 
 

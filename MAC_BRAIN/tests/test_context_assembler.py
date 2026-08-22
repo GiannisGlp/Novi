@@ -10,31 +10,24 @@ Covers the acceptance criteria from docs/03-cognition/09_CONTEXT_ENGINE.md:
 
 import unittest
 
-from MAC_BRAIN.world_model import (
-    WorldModel,
-    Provenance,
-    OBSERVED,
-    INFERRED,
-    PREDICTED,
-    SIMULATED,
-    UNKNOWN,
-    VERIFIED,
-    PERSON,
-    OBJECT,
-    ROOM,
-    BUILDING,
-)
 from MAC_BRAIN.context_assembler import (
-    ContextAssembler,
-    ContextRequest,
-    ContextPackage,
-    ContextItem,
     LAYER_IMMEDIATE,
-    LAYER_SITUATIONAL,
-    LAYER_MEMORY,
     LAYER_KNOWLEDGE,
-    LAYER_RELATIONSHIP,
     LAYER_LONG_HORIZON,
+    LAYER_MEMORY,
+    LAYER_SITUATIONAL,
+    ContextAssembler,
+    ContextPackage,
+    ContextRequest,
+)
+from MAC_BRAIN.world_model import (
+    INFERRED,
+    OBJECT,
+    OBSERVED,
+    PERSON,
+    ROOM,
+    Provenance,
+    WorldModel,
 )
 
 

@@ -23,18 +23,14 @@ The "Bring me that cup" reference-resolution case:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from .world_model import (
-    WorldEntity,
-    WorldModel,
-    WorldRelation,
-    OBSERVED,
     INFERRED,
-    PREDICTED,
-    SIMULATED,
+    OBSERVED,
     UNKNOWN,
     VERIFIED,
+    WorldModel,
 )
 
 # ---------------------------------------------------------------------------

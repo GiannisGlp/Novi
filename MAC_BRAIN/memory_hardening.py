@@ -20,7 +20,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any, Iterable, Sequence
-from uuid import uuid4
 
 # ---------------------------------------------------------------------------
 # Epistemic status (same vocabulary as world_model.py, but standalone for

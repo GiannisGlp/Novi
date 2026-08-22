@@ -1,7 +1,6 @@
 import unittest
 
 from brain.b2_evaluation import EvaluationCase, InferenceEvaluationHarness
-from brain.b2_real_inference import RealModelInvoker
 
 
 class FakeInvoker:

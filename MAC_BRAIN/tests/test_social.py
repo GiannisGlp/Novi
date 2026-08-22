@@ -2,8 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brain.b2_perception import Detection, SpecialistPerception
-
+from brain.b2_perception import SpecialistPerception
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.social import RelationshipCategory, Relationships, SocialIntelligence
 from MAC_BRAIN.storage import DurableMemoryStore

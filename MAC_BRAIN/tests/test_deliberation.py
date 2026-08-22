@@ -10,7 +10,6 @@ import unittest
 from unittest import mock
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.models.deliberation import DeliberativeLLMReasoningProvider, _deliberation_prompt, _extract_json
 from MAC_BRAIN.models.reasoning import ActionIntent
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig

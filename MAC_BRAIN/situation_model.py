@@ -16,13 +16,12 @@ The Situation Model exposes:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Sequence
 from uuid import uuid4
 
-from .world_model import WorldModel, WorldEntity, WorldRelation, OBSERVED, INFERRED, UNKNOWN, PERSON, OBJECT
-
+from .world_model import PERSON, UNKNOWN, WorldModel
 
 # ---------------------------------------------------------------------------
 # Situation — one interpreted current context

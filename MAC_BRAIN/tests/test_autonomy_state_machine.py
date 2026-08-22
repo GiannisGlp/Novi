@@ -11,14 +11,26 @@ Verifies:
 
 import unittest
 
-from MAC_BRAIN.autonomy_state_machine import (
-    AutonomyStateMachine, AutonomyStateMachineState as ASMState,
-    TransitionRecord, Transition, CANONICAL_TRANSITIONS,
-    BOOTING, INITIALIZING, OBSERVING, AWARE, INTERACTING, PLANNING,
-    EXECUTING, LEARNING, MAINTENANCE, SAFE_DEGRADED,
-    SHUTTING_DOWN, EMERGENCY_STOP, FAULT_RECOVERY,
-)
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+from MAC_BRAIN.autonomy_state_machine import (
+    AWARE,
+    BOOTING,
+    EMERGENCY_STOP,
+    EXECUTING,
+    FAULT_RECOVERY,
+    INITIALIZING,
+    INTERACTING,
+    LEARNING,
+    MAINTENANCE,
+    OBSERVING,
+    PLANNING,
+    SAFE_DEGRADED,
+    SHUTTING_DOWN,
+    AutonomyStateMachine,
+)
+from MAC_BRAIN.autonomy_state_machine import (
+    AutonomyStateMachineState as ASMState,
+)
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 

@@ -12,9 +12,8 @@ Verifies:
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
+from MAC_BRAIN.nvidia_experiments import OBSERVED, NoviEpisode
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.nvidia_experiments import EpisodeRecorder, NoviEpisode, NoviNativeAdapter, LeRobotAdapter, OBSERVED
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 
 

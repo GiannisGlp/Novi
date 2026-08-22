@@ -3,7 +3,6 @@ import unittest
 from pathlib import Path
 
 from brain.contracts import utc_now
-
 from MAC_BRAIN.storage import DurableMemoryStore
 
 

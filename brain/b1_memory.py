@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from hashlib import sha256
 import json
+from dataclasses import asdict, dataclass
+from hashlib import sha256
 from typing import Any, Iterable
 
-from .contracts import validate_contract, utc_now
+from .contracts import utc_now, validate_contract
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,6 @@ import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from brain.runtime import Lifecycle
-
 from MAC_BRAIN.io import CameraFrame, VirtualBody
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 

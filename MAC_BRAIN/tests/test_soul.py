@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from MAC_BRAIN.soul import Identity, Personality, Soul
 from MAC_BRAIN.runtime import MacBrain
+from MAC_BRAIN.soul import Soul
 from MAC_BRAIN.storage import DurableMemoryStore
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 

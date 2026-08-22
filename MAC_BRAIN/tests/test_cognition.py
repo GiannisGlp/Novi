@@ -2,8 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brain.b2_perception import Detection, SpecialistPerception
-
+from brain.b2_perception import SpecialistPerception
 from MAC_BRAIN.cognition import BeliefSystem, ExpectationSystem
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.storage import DurableMemoryStore
@@ -97,7 +96,6 @@ class DurableCognitionTests(unittest.TestCase):
 
 class BrainCognitionTests(unittest.TestCase):
     def test_brain_updates_beliefs_and_emits_prediction(self):
-        from MAC_BRAIN.tests.test_mac_brain import FakeCamera
         camera = FakeCamera()
         brain = MacBrain(camera=camera, perception=SpecialistPerception(PersonBackend()), config=MacBrainConfig(curiosity_enabled=False))
         brain.start()

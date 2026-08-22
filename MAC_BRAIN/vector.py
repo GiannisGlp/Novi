@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from typing import Any, Protocol
+from typing import Protocol
 
 DEFAULT_DIM = 256
 _TOKEN_RE = re.compile(r"[a-z0-9]+")

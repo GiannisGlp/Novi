@@ -3,7 +3,6 @@ import unittest
 from pathlib import Path
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.autonomy import Goal
 from MAC_BRAIN.planner import Plan, Planner
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig

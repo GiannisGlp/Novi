@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from brain.b2_perception import DepthEstimate, Detection as BrainDetection, PerceptionBackend, SegmentationResult
+from brain.b2_perception import DepthEstimate, SegmentationResult
+from brain.b2_perception import Detection as BrainDetection
 
 from .object_detection import Detection as MacDetection
 from .torchvision_detector import TorchvisionSSDLiteDetector

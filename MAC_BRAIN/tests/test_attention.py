@@ -9,25 +9,21 @@ Covers:
 
 import unittest
 
-from MAC_BRAIN.world_model import (
-    WorldModel,
-    OBSERVED,
-    INFERRED,
-    PREDICTED,
-    UNKNOWN,
-    PERSON,
-    OBJECT,
-    ROOM,
-)
 from MAC_BRAIN.attention import (
+    NOVELTY,
+    RELEVANCE,
+    SOCIAL,
+    UNCERTAINTY,
+    URGENCY,
     AttentionCandidate,
     AttentionRanker,
-    SALIENCE,
-    NOVELTY,
-    URGENCY,
-    SOCIAL,
-    RELEVANCE,
-    UNCERTAINTY,
+)
+from MAC_BRAIN.world_model import (
+    OBJECT,
+    OBSERVED,
+    PERSON,
+    UNKNOWN,
+    WorldModel,
 )
 
 

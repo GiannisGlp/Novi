@@ -13,11 +13,13 @@ Verifies:
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.failure_modes import (
-    FailureHandler, DegradedMode, FailureRecord,
-    PERCEPTION_UNCERTAINTY, MODEL_UNAVAILABLE, TOOL_FAILURE,
-    IDENTITY_AMBIGUITY, RESOURCE_EXHAUSTION, CORRUPTED_DATA,
+    MODEL_UNAVAILABLE,
+    PERCEPTION_UNCERTAINTY,
+    RESOURCE_EXHAUSTION,
+    TOOL_FAILURE,
+    DegradedMode,
+    FailureHandler,
 )
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera

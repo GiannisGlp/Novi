@@ -10,7 +10,6 @@ import unittest
 from brain.b1_cognition import SensorObservation
 from brain.b1_world import WorldEntityState, WorldModelState
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
 from MAC_BRAIN.autonomy import Goal
 from MAC_BRAIN.cognition2 import MacCognition
 from MAC_BRAIN.models.stt import TranscriptionResult
