@@ -107,6 +107,7 @@ from .attention import AttentionRanker
 from .governance_guard import GovernanceGuard, ActionProposal as GovernanceActionProposal, GovernanceGrant
 from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode, SYSTEM_0, SYSTEM_1, SYSTEM_2, SYSTEM_3
 from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
+from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult
 from .models import (
     DeliberativeReasoningProvider,
     DeterministicReasoningProvider,
@@ -194,7 +195,12 @@ class MacBrain:
         self._last_context_package: dict[str, Any] | None = None
         self._last_governance_grant: dict[str, Any] | None = None
         self._last_loop_snapshot: dict[str, Any] | None = None
-        self.memory = DurableMemoryStore(store_path) if store_path else DeterministicMemoryManager()
+        # Memory: HardenedMemoryManager (in-memory, canonical contract) or
+        # DurableMemoryStore (SQLite, persistent). The hardened manager
+        # enforces the write gate, retrieval failure states, contextual trust,
+        # and independence groups.
+        self.memory = DurableMemoryStore(store_path) if store_path else HardenedMemoryManager()
+        self._using_hardened_memory = isinstance(self.memory, HardenedMemoryManager)
         if body is None and isinstance(self.memory, DurableMemoryStore):
             pose = self.memory.load_body()
             if pose is not None:
@@ -1219,8 +1225,22 @@ class MacBrain:
             if detection.label not in entities:
                 entities.append(detection.label)
         query = " ".join(entities) if entities else "memory"
-        retrieve = getattr(self.memory, "retrieve_indexed", self.memory.retrieve)
-        candidates = list(retrieve(query, limit=20))
+        # Use retrieve_with_states when available (HardenedMemoryManager) to
+        # surface retrieval failure states (NO_RESULT/AMBIGUOUS/CONFLICTED/STALE).
+        retrieve_with_states = getattr(self.memory, "retrieve_with_states", None)
+        if retrieve_with_states is not None:
+            retrieval = retrieve_with_states(query, limit=20)
+            candidates = list(retrieval.records)
+            self._emit("memory.retrieval_state", {
+                "cycle": self._cycle,
+                "state": retrieval.state,
+                "candidates_examined": retrieval.candidates_examined,
+                "conflicts": len(retrieval.conflicts),
+                "reason": retrieval.reason,
+            })
+        else:
+            retrieve = getattr(self.memory, "retrieve_indexed", self.memory.retrieve)
+            candidates = list(retrieve(query, limit=20))
         if self.governance.store is not None:
             allowed = set(self.governance.authorize_ids([r.memory_id for r in candidates], requested_purpose=self.governance.default_purpose))
             candidates = [r for r in candidates if r.memory_id in allowed]

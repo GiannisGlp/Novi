@@ -487,14 +487,44 @@ class HardenedMemoryManager:
         self.stale_threshold = stale_threshold_seconds
         self._governance_decisions: dict[str, GovernanceDecision] = {}
 
+    # ---- source class inference for backward compatibility ----
+
+    _SOURCE_CLASS_MAP: dict[str, str] = {
+        "perception": DIRECT_SENSOR,
+        "observation": DIRECT_SENSOR,
+        "utterance": USER_STATEMENT,
+        "preference": USER_STATEMENT,
+        "simulation": SIMULATION,
+        "prediction": MODEL_INFERENCE,
+        "summary": DERIVED_MEMORY,
+        "narrative": DERIVED_MEMORY,
+    }
+
+    def _infer_source_class(self, memory_type: str, provenance: dict[str, Any]) -> str:
+        """Infer the source class from memory_type and provenance."""
+        # Check provenance source first.
+        source = str(provenance.get("source", "")).lower()
+        if "camera" in source or "sensor" in source or "vision" in source:
+            return DIRECT_SENSOR
+        if "audio" in source or "stt" in source or "microphone" in source:
+            return DIRECT_SENSOR
+        if "user" in source or "web" in source:
+            return USER_STATEMENT
+        if "sim" in source or "isaac" in source:
+            return SIMULATION
+        if "model" in source or "llm" in source or "ollama" in source:
+            return MODEL_INFERENCE
+        # Fall back to memory_type mapping.
+        return self._SOURCE_CLASS_MAP.get(memory_type, SYSTEM_STATE)
+
     def admit(
         self,
         *,
         memory_type: str,
         content: Any,
         confidence: float,
-        epistemic_status: str = UNKNOWN,
-        evidence_class: str = UNKNOWN,
+        epistemic_status: str = OBSERVED,
+        evidence_class: str = OBSERVED,
         verification_status: str = UNVERIFIED,
         source_class: str = "",
         privacy_class: str = "unclassified",
@@ -510,10 +540,19 @@ class HardenedMemoryManager:
         independence_source_id: str = "",
         created_at: str = "",
     ) -> AdmissionResult:
-        """Run the full write-gate admission pipeline."""
+        """Run the full write-gate admission pipeline.
+
+        Backward-compatible with DeterministicMemoryManager.admit(): the new
+        parameters (epistemic_status, evidence_class, source_class) have sensible
+        defaults so existing callers work without changes.
+        """
 
         if provenance is None:
             provenance = {}
+
+        # Infer source_class from provenance/memory_type if not provided.
+        if not source_class:
+            source_class = self._infer_source_class(memory_type, provenance)
         if not created_at:
             from datetime import datetime, timezone
             created_at = datetime.now(timezone.utc).isoformat()
@@ -587,6 +626,45 @@ class HardenedMemoryManager:
                                 self._records[memory_id])
 
     def retrieve(
+        self,
+        query: str,
+        *,
+        entity: str | None = None,
+        memory_type: str | None = None,
+        limit: int = 5,
+        min_confidence: float = 0.0,
+        require_current: bool = False,
+        privacy_scope: str = "default",
+    ) -> tuple[CanonicalMemoryRecord, ...]:
+        """Retrieve memory records (backward-compatible with DeterministicMemoryManager).
+
+        Returns a tuple of records, sorted by relevance. For the full
+        RetrievalResult with failure states, use retrieve_with_states().
+        """
+        result = self.retrieve_with_states(
+            query, entity=entity, memory_type=memory_type,
+            limit=limit, min_confidence=min_confidence,
+            require_current=require_current, privacy_scope=privacy_scope,
+        )
+        return result.records
+
+    def retrieve_indexed(
+        self,
+        query: str,
+        *,
+        entity: str | None = None,
+        memory_type: str | None = None,
+        limit: int = 5,
+        min_confidence: float = 0.0,
+        require_current: bool = False,
+        privacy_scope: str = "default",
+    ) -> tuple[CanonicalMemoryRecord, ...]:
+        """Alias for retrieve() — compatible with DurableMemoryStore.retrieve_indexed."""
+        return self.retrieve(query, entity=entity, memory_type=memory_type,
+                             limit=limit, min_confidence=min_confidence,
+                             require_current=require_current, privacy_scope=privacy_scope)
+
+    def retrieve_with_states(
         self,
         query: str,
         *,

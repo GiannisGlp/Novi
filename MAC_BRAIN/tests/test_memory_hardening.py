@@ -228,7 +228,7 @@ class HardenedMemoryManagerAdmissionTests(unittest.TestCase):
 class RetrievalFailureStateTests(unittest.TestCase):
     def test_no_result(self):
         mgr = HardenedMemoryManager()
-        result = mgr.retrieve("nonexistent query")
+        result = mgr.retrieve_with_states("nonexistent query")
         self.assertEqual(result.state, NO_RESULT)
         self.assertTrue(result.is_failure)
 
@@ -241,7 +241,7 @@ class RetrievalFailureStateTests(unittest.TestCase):
             privacy_class="unclassified", provenance={"source": "cam"},
             entity_refs=("cup",), created_at="2026-01-01T10:00:00Z",
         )
-        result = mgr.retrieve("cup")
+        result = mgr.retrieve_with_states("cup")
         self.assertEqual(result.state, "RESOLVED")
         self.assertEqual(len(result.records), 1)
         self.assertTrue(result.is_resolved)
@@ -264,7 +264,7 @@ class RetrievalFailureStateTests(unittest.TestCase):
             privacy_class="unclassified", provenance={"source": "cam2"},
             entity_refs=("cup_shelf",), created_at="2026-01-01T10:01:00Z",
         )
-        result = mgr.retrieve("cup")
+        result = mgr.retrieve_with_states("cup")
         self.assertEqual(result.state, AMBIGUOUS)
         self.assertGreater(len(result.records), 1)
 
@@ -284,7 +284,7 @@ class RetrievalFailureStateTests(unittest.TestCase):
             privacy_class="unclassified", provenance={"source": "rfid"},
             entity_refs=("alice",), created_at="2026-01-01T10:01:00Z",
         )
-        result = mgr.retrieve("alice")
+        result = mgr.retrieve_with_states("alice")
         self.assertEqual(result.state, CONFLICTED)
         self.assertGreater(len(result.conflicts), 0)
 
@@ -299,7 +299,7 @@ class RetrievalFailureStateTests(unittest.TestCase):
             validity_window={"valid_from": "2025-01-01T10:00:00Z", "valid_until": "2025-01-01T10:05:00Z"},
             created_at="2025-01-01T10:00:00Z",
         )
-        result = mgr.retrieve("door", require_current=True)
+        result = mgr.retrieve_with_states("door", require_current=True)
         self.assertEqual(result.state, STALE)
 
     def test_privacy_filtered_in_retrieval(self):
@@ -311,7 +311,7 @@ class RetrievalFailureStateTests(unittest.TestCase):
             privacy_class="private", provenance={"source": "user"},
             entity_refs=("alice",), created_at="2026-01-01T10:00:00Z",
         )
-        result = mgr.retrieve("alice", privacy_scope="restricted")
+        result = mgr.retrieve_with_states("alice", privacy_scope="restricted")
         self.assertEqual(result.state, NO_RESULT)
 
 

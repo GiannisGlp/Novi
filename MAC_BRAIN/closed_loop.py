@@ -296,7 +296,7 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
         privacy_class="unclassified", provenance={"source": "camera"},
         entity_refs=("cup",),
     )
-    retrieve_result = mgr.retrieve("cup")
+    retrieve_result = mgr.retrieve_with_states("cup")
     results.append(CrossSystemTestResult(
         test_id="cross_2", name="cognition_to_memory",
         systems_tested=("cognition", "memory"),
