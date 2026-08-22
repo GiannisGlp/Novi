@@ -422,8 +422,11 @@ async function refreshChat() {
       for (const it of r.entries) {
         if (it.seq != null && renderedChatSeq.has(it.seq)) continue; // already shown
         if (it.seq != null) renderedChatSeq.add(it.seq);
-        if (it.role === 'user') chat.appendChild(turn('user', esc(it.text)));
-        else chat.appendChild(turn('novi', esc(it.text), traceHtml(it.trace)));
+        // Strip a leading '[heard] ' STT marker so listened and typed messages
+        // display identically (the marker is for the brain, not the reader).
+        const body = it.role === 'user' ? it.text.replace(/^\s*\[heard\]\s*/i, '') : it.text;
+        if (it.role === 'user') chat.appendChild(turn('user', esc(body)));
+        else chat.appendChild(turn('novi', esc(body), traceHtml(it.trace)));
         appended = true;
       }
       if (appended) {
