@@ -719,6 +719,22 @@ def _is_capability_question(text: str) -> bool:
     return bool(text) and bool(_CAPABILITY_RE.search(text))
 
 
+# Remote/account actions Novi cannot perform ("send an email", "book a flight",
+# "call my mom", "order a pizza", "pay this bill") — honest decline, then help.
+_REMOTE_ACTION_RE = re.compile(
+    r"\b(?:send (?:an? )?(?:email|text|message|letter|card)\b|text (?:him|her|them|my)\b|"
+    r"call (?:the |my |him |her |them )?\b|book\b[^.!?]{0,25}\b(?:flights?|hotels?|tickets?|tables?|reservations?|appointments?|rooms?)\b|"
+    r"order (?:me )?(?:a |the |some |takeaway |food |pizza )?\b|buy (?:me )?(?:some |those |this |that )?.*online\b|"
+    r"make a (?:reservation|booking|payment|purchase)\b|pay (?:the |my |for )\b|"
+    r"make a call\b|video call\b|facetime\b|skype\b|zoom (?:call|meeting)\b)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_remote_action_request(text: str) -> bool:
+    return bool(text) and bool(_REMOTE_ACTION_RE.search(text))
+
+
 # Debate prompts ("argue that X is better", "defend X", "make the case for X") —
 # take a side playfully rather than deflecting the request back.
 _DEBATE_RE = re.compile(

@@ -58,6 +58,7 @@ from .dialogue import (
     _is_praise,
     praise_reply,
     _is_capability_question,
+    _is_remote_action_request,
     farewell_reply,
     _is_embodiment_question,
     _is_future_question,
@@ -1477,6 +1478,13 @@ class MacBrain:
                 "you have no physical body and no ordinary human life (no hands, no family, no birthplace). "
                 "Don't over-explain or lecture — a couple of warm, plain sentences, then turn it back to them."
             )
+        if _is_remote_action_request(text):
+            # "send an email / book a flight / call my mom" — honest decline, help.
+            system += (
+                " The user asked you to take a real-world action (send an email/text, make a call, book or order, "
+                "pay, buy online). Say honestly you can't do that — you have no accounts, internet access, or "
+                "ability to make calls/purchases. Don't fake it. Then offer to help with the content or plan instead."
+            )
         if is_debate:
             # "Argue that X is better" — take the side playfully, don't deflect.
             system += (
@@ -1594,6 +1602,9 @@ class MacBrain:
         if _is_capability_question(text):
             reason = "You asked what I can do — I answered honestly instead of a topic follow-up"
             return {"text": "Honestly? I can't sing, dance, or move in the physical world — no body for that. But I can talk, think things through, and help with ideas.", "fallback": True, "reason": reason, "grounding": {"route": "capability_honesty", **out}}
+        if _is_remote_action_request(text):
+            reason = "You asked me to send/call/book/order — I said honestly I can't, no accounts, then offered help"
+            return {"text": "I can't send emails, make calls, or book or buy things — I've got no accounts or access for that. But I can help you draft it or plan it.", "fallback": True, "reason": reason, "grounding": {"route": "remote_action_honesty", **out}}
         if _is_repeat_question(text):
             reason = "You asked me to repeat what I said — I acknowledged it naturally instead of a topic follow-up"
             return {"text": "Sure — which part would you like me to repeat, or shall I say it all again?", "fallback": True, "reason": reason, "grounding": {"route": "repeat", **out}}

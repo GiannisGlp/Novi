@@ -1,0 +1,23 @@
+{
+  "slice": "Natural conversation round 43: remote/account actions ('send an email') answered honestly, never 'no good answer on email'",
+  "detected": {
+    "send an email to my boss": true,
+    "book me a flight": true,
+    "book the tickets": true,
+    "call my mom": true,
+    "order a pizza": true,
+    "send a text message": true,
+    "buy me those shoes online": true,
+    "what's the time?": false
+  },
+  "fallback_replies": {
+    "send an email to my boss": "I can't send emails, make calls, or book or buy things \u2014 I've got no accounts or access for that. But I can help you draft it or plan it.",
+    "book me a flight": "I can't send emails, make calls, or book or buy things \u2014 I've got no accounts or access for that. But I can help you draft it or plan it.",
+    "call my mom": "I can't send emails, make calls, or book or buy things \u2014 I've got no accounts or access for that. But I can help you draft it or plan it.",
+    "order a pizza": "I can't send emails, make calls, or book or buy things \u2014 I've got no accounts or access for that. But I can help you draft it or plan it."
+  },
+  "real_llm_reply": {
+    "send an email to my boss": "I can't send emails or access your accounts, but I'm curious \u2014 what would you like the message to say?"
+  },
+  "mechanism": "remote/account-action detector (send/call/book/order/buy/pay) + honesty steer and fallback; the real LLM already handled these well"
+}

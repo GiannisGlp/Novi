@@ -1178,6 +1178,20 @@ because the physical-action detector only covered object manipulation.
 - Tests: +1; fast suites **480 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/physical-contact-honesty.json`.
 
+## Remote-action honesty (round 43 of the naturalness objective) (status: IMPLEMENTED)
+
+"send an email" reached the catch-all ("I'm still forming my thoughts on email")
+because it was neither a physical-action nor capability request.
+
+- `_is_remote_action_request` catches send email/text, call, book, order, buy
+  online, pay, video-call → honest "I can't send emails, make calls, or book or
+  buy things — no accounts or access", then offers to draft/plan.
+- Real LLM already handled these well ("I can't send emails or access your
+  accounts, but I'm curious — what would you like the message to say?");
+  the detector makes the fallback consistent.
+- Tests: +1; fast suites **481 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/remote-action-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

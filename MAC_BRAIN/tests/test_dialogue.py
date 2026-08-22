@@ -43,6 +43,7 @@ from MAC_BRAIN.dialogue import (
     _is_identity_question,
     _is_praise,
     _is_capability_question,
+    _is_remote_action_request,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -441,6 +442,15 @@ class ComposeReplyTests(unittest.TestCase):
         clause = b._character_clause({"traits": {"curious": 0.8, "warm": 0.7}, "values": {"kindness": "kindness", "honesty": "honesty"}})
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
+
+    def test_remote_action_request_detection(self):
+        # "send an email / book a flight / call my mom / order a pizza" are
+        # actions Novi can't do — answer honestly, never "no good answer".
+        for s in ["send an email to my boss", "book me a flight", "book the tickets",
+                  "call my mom", "order a pizza", "send a text message",
+                  "buy me those shoes online"]:
+            self.assertTrue(_is_remote_action_request(s), s)
+        self.assertFalse(_is_remote_action_request("what's the time?"))
 
     def test_physical_contact_request_detection(self):
         # "give me a hug / hand me the book / carry me" are physical requests
