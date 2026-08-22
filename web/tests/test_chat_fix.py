@@ -125,5 +125,52 @@ class ChatSendAppendTests(unittest.TestCase):
         self.assertEqual(chat_after_dup, chat_after_first)
 
 
+class ChatPollIdempotencyTests(unittest.TestCase):
+    """The /api/chat?after=N endpoint must never re-send already-delivered
+    entries. The frontend depends on this contract: two overlapping polls reading
+    the same `after` must return the same entries, and the client dedups by seq so
+    a re-append can never create a duplicate message."""
+
+    def setUp(self):
+        self.server = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+        self.server.start()
+
+    def tearDown(self):
+        self.server.stop()
+
+    def test_poll_after_returns_all_and_next_is_empty(self):
+        self.server.clear_chat()
+        self.server.chat_send("hello", confidence=0.9)
+        first = self.server.chat(0)
+        self.assertEqual(len(first["entries"]), 2)  # user + novi
+        after = first["after"]
+        # The next poll with the returned `after` must be empty (no re-send).
+        second = self.server.chat(after)
+        self.assertEqual(second["entries"], [])
+        self.assertEqual(second["after"], after)
+
+    def test_poll_after_is_idempotent(self):
+        """Polling twice with the same `after` returns the same entries and does
+        not mutate server state, so the client dedup set is what prevents a
+        duplicate DOM append when two polls overlap."""
+        self.server.clear_chat()
+        self.server.chat_send("how are you?", confidence=0.9)
+        a = self.server.chat(0)
+        b = self.server.chat(0)
+        self.assertEqual(a["entries"], b["entries"])
+        self.assertEqual(a["after"], b["after"])
+        self.assertEqual(len(a["entries"]), 2)
+
+    def test_poll_entries_have_monotonic_seqs(self):
+        """Every entry carries a unique, increasing seq so the client can dedup."""
+        self.server.clear_chat()
+        self.server.chat_send("first", confidence=0.9)
+        self.server.chat_send("second", confidence=0.9)
+        entries = self.server.chat(0)["entries"]
+        seqs = [e["seq"] for e in entries]
+        self.assertEqual(seqs, sorted(seqs))
+        self.assertEqual(len(seqs), len(set(seqs)))
+
+
 if __name__ == "__main__":
     unittest.main()

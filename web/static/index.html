@@ -298,6 +298,12 @@ const $ = id => document.getElementById(id);
 let after = 0, chatAfter = 0;
 const confHist = [], memHist = [], evHist = [];
 let connOk = true, lastUpdate = 0;
+// Re-entrancy guards: the 1.2s poll and the post-send refresh() can overlap when
+// the server holds its lock through a slow LLM compose. Two concurrent polls read
+// the same `after` and both append the same entries -> duplicate messages. The
+// guard makes polls non-overlapping; the seq sets deduplicate as a safety net.
+let chatRefreshing = false, eventRefreshing = false;
+const renderedChatSeq = new Set(), renderedEventSeq = new Set();
 
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
@@ -404,21 +410,30 @@ function scrollChat(force){
 }
 
 async function refreshChat() {
+  if (chatRefreshing) return;         // skip if a previous poll is still in flight
+  chatRefreshing = true;
   try {
     const r = await (await fetch('/api/chat?after='+chatAfter)).json();
     chatAfter = r.after; markConn(true);
     if (r.entries && r.entries.length) {
       const chat = $('chat');
       const hadEmpty = chat.firstChild && chat.firstChild.classList && chat.firstChild.classList.contains('empty');
+      let appended = false;
       for (const it of r.entries) {
+        if (it.seq != null && renderedChatSeq.has(it.seq)) continue; // already shown
+        if (it.seq != null) renderedChatSeq.add(it.seq);
         if (it.role === 'user') chat.appendChild(turn('user', esc(it.text)));
         else chat.appendChild(turn('novi', esc(it.text), traceHtml(it.trace)));
+        appended = true;
       }
-      if (hadEmpty) { const e = chat.querySelector('.empty'); if (e) e.remove(); }
-      while (chat.children.length > 90) chat.removeChild(chat.firstChild);
-      scrollChat(false);
+      if (appended) {
+        if (hadEmpty) { const e = chat.querySelector('.empty'); if (e) e.remove(); }
+        while (chat.children.length > 90) chat.removeChild(chat.firstChild);
+        scrollChat(false);
+      }
     }
   } catch(e){ markConn(false); }
+  finally { chatRefreshing = false; }
 }
 
 // ---- sparklines ----
@@ -574,27 +589,36 @@ async function refreshState() {
 }
 
 async function refreshEvents() {
+  if (eventRefreshing) return;        // skip if a previous poll is still in flight
+  eventRefreshing = true;
   try {
     const r = await (await fetch('/api/events?after='+after)).json();
     after = r.after; markConn(true);
     if (r.events && r.events.length) {
       const log = $('log');
       if (log.firstChild && log.firstChild.textContent && log.firstChild.textContent.includes('waiting')) log.innerHTML = '';
+      let appended = false;
       for (const it of r.events) {
+        if (it.seq != null && renderedEventSeq.has(it.seq)) continue;
+        if (it.seq != null) renderedEventSeq.add(it.seq);
         const ev = it.event;
         const line = document.createElement('div'); line.className='ev';
         line.innerHTML = '<span class="t">'+esc(fmtTime(it.ts))+'</span>'
                        + '<span class="e"><span class="ec">'+(ev.cycle!=null?('c'+ev.cycle):'')+'</span> '+esc(ev.event_type||'event')+' '+esc(JSON.stringify(stripJson(ev)).slice(0,180))+'</span>';
         log.appendChild(line);
+        appended = true;
       }
-      while (log.children.length > 500) log.removeChild(log.firstChild);
-      log.scrollTop = log.scrollHeight;
+      if (appended) {
+        while (log.children.length > 500) log.removeChild(log.firstChild);
+        log.scrollTop = log.scrollHeight;
+      }
       evHist.push(r.events.length); if (evHist.length>60) evHist.shift();
       drawSparks();
     } else {
       evHist.push(0); if (evHist.length>60) evHist.shift();
     }
   } catch(e){ markConn(false); }
+  finally { eventRefreshing = false; }
 }
 function stripJson(o){ const c={...o}; delete c.event_type; delete c.cycle; delete c.cycle_id; return c; }
 
@@ -648,7 +672,7 @@ $('listenBtn').onclick = async () => {
 $('stepBtn').onclick = async () => { await post('/api/step'); refreshState(); refreshChat(); };
 $('clearBtn').onclick = async () => {
   try { await post('/api/chat/clear', {}); markConn(true); } catch(e){ markConn(false); }
-  $('chat').innerHTML = ''; chatAfter = 0; putLoading();
+  $('chat').innerHTML = ''; chatAfter = 0; renderedChatSeq.clear(); putLoading();
 };
 $('healthBtn').onclick = async () => { await post('/api/health'); refreshState(); };
 $('collapseChat').onclick = () => {
