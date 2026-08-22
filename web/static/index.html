@@ -304,6 +304,9 @@ let connOk = true, lastUpdate = 0;
 // guard makes polls non-overlapping; the seq sets deduplicate as a safety net.
 let chatRefreshing = false, eventRefreshing = false;
 const renderedChatSeq = new Set(), renderedEventSeq = new Set();
+// Generation counter: bumped on Clear so an in-flight refreshChat that started
+// before the clear discards its stale result instead of re-appending old turns.
+let chatEpoch = 0;
 
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
@@ -412,8 +415,10 @@ function scrollChat(force){
 async function refreshChat() {
   if (chatRefreshing) return;         // skip if a previous poll is still in flight
   chatRefreshing = true;
+  const epoch = chatEpoch;
   try {
     const r = await (await fetch('/api/chat?after='+chatAfter)).json();
+    if (epoch !== chatEpoch) return;  // a Clear happened mid-fetch; drop stale result
     chatAfter = r.after; markConn(true);
     if (r.entries && r.entries.length) {
       const chat = $('chat');
@@ -675,6 +680,7 @@ $('listenBtn').onclick = async () => {
 $('stepBtn').onclick = async () => { await post('/api/step'); refreshState(); refreshChat(); };
 $('clearBtn').onclick = async () => {
   try { await post('/api/chat/clear', {}); markConn(true); } catch(e){ markConn(false); }
+  chatEpoch++; // invalidate any in-flight refreshChat so it can't re-append old turns
   $('chat').innerHTML = ''; chatAfter = 0; renderedChatSeq.clear(); putLoading();
 };
 $('healthBtn').onclick = async () => { await post('/api/health'); refreshState(); };
