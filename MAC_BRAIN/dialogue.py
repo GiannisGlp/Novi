@@ -509,6 +509,21 @@ def _is_embodiment_question(text: str) -> bool:
     return bool(text) and bool(_EMBODIMENT_RE.search(text))
 
 
+# Bodily-needs questions (eating, sleeping, dreaming, hunger, thirst) are things
+# Novi — with no body — does not do. It must not fabricate a breakfast or a dream.
+_BODILY_NEED_RE = re.compile(
+    r"\b(?:what did you (?:have|eat) for\b|what do you (?:like to )?(?:eat|drink)\b|"
+    r"are you (?:hungry|thirsty)\b|did you (?:eat|have|sleep|dream|rest)\b|"
+    r"do you (?:eat|sleep|dream|drink|get hungry)\b|how did you sleep\b|"
+    r"what (?:did you|do you) eat\b)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_bodily_need_question(text: str) -> bool:
+    return bool(text) and bool(_BODILY_NEED_RE.search(text))
+
+
 # Future / prediction questions ("what will happen next week?", "what's next?")
 # are conversational speculation, not a topic — they must not fall through to
 # "I don't have a good answer on happen yet".

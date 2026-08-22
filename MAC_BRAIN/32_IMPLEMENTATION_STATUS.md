@@ -942,6 +942,20 @@ answer on happen yet." A common future/prediction question was read as a topic.
 - Tests: +1; fast suites **461 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/future-question-handling.json`.
 
+## No fabricated eating/sleeping/dreaming (round 26 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "what did you have for breakfast?" → "I had oatmeal with banana and a
+splash of almond milk…" — Novi fabricated a meal it never ate (it has no body).
+
+- `_is_bodily_need_question` detects eating/drinking/sleeping/dreaming/hunger
+  questions ("what did you have for breakfast", "are you hungry", "did you sleep",
+  "do you dream").
+- An honesty steer + fallback answer that Novi has no body and doesn't eat/sleep/
+  dream, and invites the person to share theirs — never fabricating a meal or dream.
+- Real test: "what did you have for breakfast?" → "I don't eat — no body to feed."
+- Tests: +1; fast suites **462 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/bodily-need-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

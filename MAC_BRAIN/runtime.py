@@ -44,6 +44,7 @@ from .dialogue import (
     _is_perception_question,
     _is_physical_action_request,
     _is_acknowledgment,
+    _is_bodily_need_question,
     _is_realtime_data_question,
     _is_embodiment_question,
     _is_future_question,
@@ -1391,6 +1392,7 @@ class MacBrain:
         is_reminder = _is_reminder_request(text)
         is_embodiment = _is_embodiment_question(text)
         is_future = _is_future_question(text)
+        is_bodily_need = _is_bodily_need_question(text)
         can_physical = self._has_physical_action_capability()
         if is_future:
             system += (
@@ -1403,6 +1405,13 @@ class MacBrain:
                 " The user asked about your physical presence/body. Be honest: you sense and are present in "
                 "this space through your senses, but you have no physical body — no hands, no feet, you can't "
                 "physically stand beside them. Say so plainly and warmly; don't claim to be 'standing in the room'."
+            )
+        if is_bodily_need:
+            # You don't eat, sleep, or dream — don't fabricate a breakfast.
+            system += (
+                " The user asked about eating/sleeping/dreaming. You have no body, so you don't eat, drink, sleep, "
+                "or dream. Answer honestly and briefly (e.g. 'I don't eat — no body to feed') and don't invent a meal, "
+                "a dream, or a night's sleep. You can ask about theirs instead."
             )
         if is_reminder:
             # Don't promise a timed push notification Novi can't deliver.
@@ -1502,6 +1511,9 @@ class MacBrain:
         if is_future:
             reason = "You asked me to predict the future, so I answered honestly about uncertainty instead of a dry topic follow-up"
             return {"text": future_reply(), "fallback": True, "reason": reason, "grounding": {"route": "future", **out}}
+        if is_bodily_need:
+            reason = "You asked what I ate/slept/dreamed — I have no body, so I said so instead of fabricating a meal or dream"
+            return {"text": "I don't have a body, so I don't eat, sleep, or dream. But tell me about yours — did you get a good night's rest?", "fallback": True, "reason": reason, "grounding": {"route": "bodily_honesty", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

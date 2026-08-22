@@ -88,5 +88,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Casual slang acknowledgments | `20260822T002511Z/slang-acknowledgments.json` | 'bet/facts/word/no cap/fr/preach' get a brief natural reply, not read literally or as a topic |
 | Embodiment/presence honesty | `20260822T002917Z/embodiment-honesty.json` | 'are you in the room / do you have a body' answered honestly — senses the space, has no body |
 | Future/prediction questions | `20260822T003325Z/future-question-handling.json` | 'what will happen / what's next' answered honestly, not read as a topic ('no good answer on happen') |
+| No fabricated eating/sleeping/dreaming | `20260822T003742Z/bodily-need-honesty.json` | 'what did you have for breakfast?' never fabricates a meal/dream — Novi has no body |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

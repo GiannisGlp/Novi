@@ -30,6 +30,7 @@ from MAC_BRAIN.dialogue import (
     _is_thanks,
     _is_time_greeting,
     _is_acknowledgment,
+    _is_bodily_need_question,
     _is_embodiment_question,
     _is_future_question,
     _is_repetitive,
@@ -156,6 +157,13 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(_is_future_question(s), s)
         self.assertFalse(_is_future_question("what's the time?"))
         self.assertFalse(_is_future_question("what happened yesterday?"))
+
+    def test_bodily_need_question_detection(self):
+        # Novi has no body, so eating/sleeping/dreaming questions must be honest.
+        for s in ["what did you have for breakfast?", "did you sleep well last night?",
+                  "are you hungry?", "do you dream?"]:
+            self.assertTrue(_is_bodily_need_question(s), s)
+        self.assertFalse(_is_bodily_need_question("what's your favorite movie?"))
 
     def test_guardrails_do_not_reject_legitimate_replies(self):
         # Replies that legitimately mention conversation/remembering must pass.
