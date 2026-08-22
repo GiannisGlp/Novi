@@ -119,63 +119,191 @@ class Transition:
 # The canonical transitions. Emergency transitions have high priority and
 # can interrupt any state.
 CANONICAL_TRANSITIONS: tuple[Transition, ...] = (
-    # Boot sequence.
-    Transition(BOOTING, "boot_complete", INITIALIZING, guard="runtime_loaded"),
-    Transition(INITIALIZING, "init_complete", OBSERVING, guard="sensors_verified"),
-    Transition(INITIALIZING, "init_failed", FAULT_RECOVERY, guard="dependency_failure"),
+    # ---- Boot sequence ----
+    Transition(BOOTING, "boot_complete", INITIALIZING,
+               guard="runtime_loaded",
+               side_effects=("load_configuration",)),
+    Transition(BOOTING, "boot_failed", FAULT_RECOVERY,
+               guard="hardware_or_runtime_failure",
+               side_effects=("log_failure", "alert_operator")),
+    Transition(INITIALIZING, "init_complete", OBSERVING,
+               guard="sensors_verified",
+               side_effects=("activate_sensors", "load_world_state")),
+    Transition(INITIALIZING, "init_failed", FAULT_RECOVERY,
+               guard="dependency_failure",
+               side_effects=("log_failure", "isolate_failed_dependency")),
 
-    # Observing → AWARE (something happened).
-    Transition(OBSERVING, "significant_event", AWARE, guard="event_is_significant"),
-    Transition(OBSERVING, "person_detected", AWARE, guard="person_present"),
-    Transition(OBSERVING, "goal_set", PLANNING, guard="goal_is_valid"),
+    # ---- Observing → active states ----
+    Transition(OBSERVING, "significant_event", AWARE,
+               guard="event_is_significant",
+               side_effects=("escalate_attention",)),
+    Transition(OBSERVING, "person_detected", AWARE,
+               guard="person_present",
+               side_effects=("note_person_presence",)),
+    Transition(OBSERVING, "goal_set", PLANNING,
+               guard="goal_is_valid",
+               side_effects=("activate_goal",)),
+    Transition(OBSERVING, "learning_opportunity", LEARNING,
+               guard="evidence_available",
+               side_effects=("start_consolidation",)),
+    Transition(OBSERVING, "maintenance_needed", MAINTENANCE,
+               guard="diagnostics_required",
+               side_effects=("run_diagnostics",)),
 
-    # AWARE → sub-states.
-    Transition(AWARE, "interaction_started", INTERACTING, guard="person_engaged"),
-    Transition(AWARE, "planning_needed", PLANNING, guard="goal_requires_planning"),
-    Transition(AWARE, "execution_ready", EXECUTING, guard="action_authorized"),
-    Transition(AWARE, "learning_opportunity", LEARNING, guard="evidence_available"),
-    Transition(AWARE, "maintenance_needed", MAINTENANCE, guard="diagnostics_required"),
-    Transition(AWARE, "degradation_detected", SAFE_DEGRADED, guard="component_unavailable"),
+    # ---- AWARE → sub-states ----
+    Transition(AWARE, "interaction_started", INTERACTING,
+               guard="person_engaged",
+               side_effects=("engage_social",)),
+    Transition(AWARE, "planning_needed", PLANNING,
+               guard="goal_requires_planning",
+               side_effects=("start_planner",)),
+    Transition(AWARE, "execution_ready", EXECUTING,
+               guard="action_authorized",
+               side_effects=("dispatch_action",)),
+    Transition(AWARE, "learning_opportunity", LEARNING,
+               guard="evidence_available",
+               side_effects=("start_consolidation",)),
+    Transition(AWARE, "maintenance_needed", MAINTENANCE,
+               guard="diagnostics_required",
+               side_effects=("run_diagnostics",)),
+    Transition(AWARE, "degradation_detected", SAFE_DEGRADED,
+               guard="component_unavailable",
+               side_effects=("activate_degraded_fallback",)),
+    Transition(AWARE, "no_longer_significant", OBSERVING,
+               guard="event_resolved",
+               side_effects=("de_escalate_attention",)),
 
-    # Sub-states → OBSERVING (return to passive).
-    Transition(INTERACTING, "interaction_ended", OBSERVING, guard="person_disengaged"),
-    Transition(PLANNING, "plan_ready", EXECUTING, guard="plan_is_valid"),
-    Transition(PLANNING, "planning_aborted", OBSERVING, guard="goal_cancelled"),
-    Transition(EXECUTING, "action_completed", OBSERVING, guard="outcome_verified"),
-    Transition(EXECUTING, "action_failed", PLANNING, guard="recovery_needed"),
-    Transition(LEARNING, "learning_complete", OBSERVING, guard="consolidation_done"),
-    Transition(MAINTENANCE, "maintenance_complete", OBSERVING, guard="diagnostics_passed"),
+    # ---- Sub-state cross-transitions ----
+    Transition(INTERACTING, "planning_needed", PLANNING,
+               guard="goal_requires_planning",
+               side_effects=("pause_interaction", "start_planner")),
+    Transition(INTERACTING, "execution_ready", EXECUTING,
+               guard="action_authorized",
+               side_effects=("pause_interaction", "dispatch_action")),
+    Transition(EXECUTING, "interaction_started", INTERACTING,
+               guard="person_engaged",
+               side_effects=("pause_execution", "engage_social")),
+    Transition(EXECUTING, "learning_opportunity", LEARNING,
+               guard="evidence_available",
+               side_effects=("record_outcome", "start_consolidation")),
+    Transition(PLANNING, "degradation_detected", SAFE_DEGRADED,
+               guard="component_unavailable",
+               side_effects=("abort_planning", "activate_degraded_fallback")),
+    Transition(EXECUTING, "degradation_detected", SAFE_DEGRADED,
+               guard="component_unavailable",
+               side_effects=("stop_execution", "activate_degraded_fallback")),
+    Transition(LEARNING, "significant_event", AWARE,
+               guard="event_is_significant",
+               side_effects=("pause_consolidation", "escalate_attention")),
+    Transition(MAINTENANCE, "degradation_detected", SAFE_DEGRADED,
+               guard="component_unavailable",
+               side_effects=("log_degradation", "activate_degraded_fallback")),
 
-    # Safe degraded → recovery.
-    Transition(SAFE_DEGRADED, "component_recovered", OBSERVING, guard="component_available"),
-    Transition(SAFE_DEGRADED, "component_still_degraded", SAFE_DEGRADED, guard="still_unavailable"),
+    # ---- Sub-states → OBSERVING (return to passive) ----
+    Transition(INTERACTING, "interaction_ended", OBSERVING,
+               guard="person_disengaged",
+               side_effects=("record_interaction",)),
+    Transition(PLANNING, "plan_ready", EXECUTING,
+               guard="plan_is_valid",
+               side_effects=("dispatch_action",)),
+    Transition(PLANNING, "planning_aborted", OBSERVING,
+               guard="goal_cancelled",
+               side_effects=("discard_plan",)),
+    Transition(EXECUTING, "action_completed", OBSERVING,
+               guard="outcome_verified",
+               side_effects=("record_outcome", "update_world_state")),
+    Transition(EXECUTING, "action_failed", PLANNING,
+               guard="recovery_needed",
+               side_effects=("record_failure", "trigger_replanning")),
+    Transition(LEARNING, "learning_complete", OBSERVING,
+               guard="consolidation_done",
+               side_effects=("persist_learning",)),
+    Transition(MAINTENANCE, "maintenance_complete", OBSERVING,
+               guard="diagnostics_passed",
+               side_effects=("log_maintenance",)),
 
-    # Fault recovery.
-    Transition(FAULT_RECOVERY, "recovery_complete", INITIALIZING, guard="system_repaired"),
-    Transition(FAULT_RECOVERY, "recovery_failed", EMERGENCY_STOP, guard="unrecoverable"),
+    # ---- Safe degraded → recovery ----
+    Transition(SAFE_DEGRADED, "component_recovered", OBSERVING,
+               guard="component_available_and_world_revalidated",
+               side_effects=("restore_full_capability", "revalidate_world_state")),
+    Transition(SAFE_DEGRADED, "component_still_degraded", SAFE_DEGRADED,
+               guard="still_unavailable",
+               side_effects=()),
+    Transition(SAFE_DEGRADED, "maintenance_needed", MAINTENANCE,
+               guard="diagnostics_required",
+               side_effects=("run_diagnostics",)),
+    Transition(SAFE_DEGRADED, "learning_opportunity", LEARNING,
+               guard="evidence_available",
+               side_effects=("start_limited_consolidation",)),
 
-    # Emergency (can interrupt ANY state — priority 100).
-    Transition(AWARE, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
-    Transition(INTERACTING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
-    Transition(PLANNING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
-    Transition(EXECUTING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
-    Transition(LEARNING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
-    Transition(MAINTENANCE, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
-    Transition(OBSERVING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
-    Transition(SAFE_DEGRADED, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100),
+    # ---- Fault recovery ----
+    Transition(FAULT_RECOVERY, "recovery_complete", INITIALIZING,
+               guard="system_repaired",
+               side_effects=("reload_configuration", "reverify_dependencies")),
+    Transition(FAULT_RECOVERY, "recovery_failed", EMERGENCY_STOP,
+               guard="unrecoverable",
+               side_effects=("alert_operator", "lock_down")),
+    Transition(FAULT_RECOVERY, "full_restart", BOOTING,
+               guard="restart_authorized",
+               side_effects=("clear_state", "cold_boot")),
 
-    # Shutdown (can interrupt any non-emergency state — priority 90).
-    Transition(OBSERVING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
-    Transition(AWARE, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
-    Transition(INTERACTING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
-    Transition(PLANNING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
-    Transition(EXECUTING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
-    Transition(LEARNING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
-    Transition(MAINTENANCE, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
-    Transition(SAFE_DEGRADED, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90),
+    # ---- Shutdown / restart ----
+    Transition(SHUTTING_DOWN, "restart_requested", BOOTING,
+               guard="restart_authorized",
+               side_effects=("persist_state", "cold_boot")),
 
-    # Emergency stop → fault recovery.
-    Transition(EMERGENCY_STOP, "recovery_initiated", FAULT_RECOVERY, guard="recovery_authorized"),
+    # ---- Emergency (can interrupt ANY operational state — priority 100) ----
+    Transition(OBSERVING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(AWARE, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(INTERACTING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(PLANNING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(EXECUTING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(LEARNING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(MAINTENANCE, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(SAFE_DEGRADED, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(FAULT_RECOVERY, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(BOOTING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+    Transition(INITIALIZING, "emergency", EMERGENCY_STOP, guard="safety_critical", priority=100,
+               side_effects=("stop_all_actions", "preserve_state", "audit")),
+
+    # ---- Shutdown (can interrupt any non-emergency state — priority 90) ----
+    Transition(BOOTING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(OBSERVING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(AWARE, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(INTERACTING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(PLANNING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(EXECUTING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(LEARNING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(MAINTENANCE, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(SAFE_DEGRADED, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(FAULT_RECOVERY, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+    Transition(INITIALIZING, "shutdown_requested", SHUTTING_DOWN, guard="shutdown_authorized", priority=90,
+               side_effects=("cleanup", "persist_state", "audit")),
+
+    # ---- Emergency stop → fault recovery ----
+    Transition(EMERGENCY_STOP, "recovery_initiated", FAULT_RECOVERY,
+               guard="recovery_authorized",
+               side_effects=("begin_recovery", "alert_operator")),
 )
 
 
@@ -355,6 +483,59 @@ class AutonomyStateMachine:
             event for (source, event) in self._transition_table
             if source == self._state
         )
+
+    def transitions_from(self, state: AutonomyStateMachineState) -> tuple[Transition, ...]:
+        """All defined transitions from a given state."""
+        return tuple(t for t in CANONICAL_TRANSITIONS if t.source == state)
+
+    def validate_table(self) -> dict[str, Any]:
+        """Validate the transition table for completeness.
+
+        Checks:
+          - Every state has at least one outgoing transition.
+          - EMERGENCY_STOP is reachable from every operational state.
+          - SHUTTING_DOWN is reachable from every non-terminal state.
+          - OBSERVING is reachable from every sub-state (return to passive).
+        """
+        all_states = set(AutonomyStateMachineState)
+        states_with_outgoing = {t.source for t in CANONICAL_TRANSITIONS}
+        states_without_outgoing = all_states - states_with_outgoing
+
+        # Check emergency reachability from operational states.
+        operational_states = {OBSERVING, AWARE, INTERACTING, PLANNING, EXECUTING,
+                              LEARNING, MAINTENANCE, SAFE_DEGRADED}
+        emergency_reachable = {
+            t.source for t in CANONICAL_TRANSITIONS
+            if t.destination == EMERGENCY_STOP and t.source in operational_states
+        }
+        missing_emergency = operational_states - emergency_reachable
+
+        # Check shutdown reachability.
+        non_terminal = all_states - {EMERGENCY_STOP, SHUTTING_DOWN}
+        shutdown_reachable = {
+            t.source for t in CANONICAL_TRANSITIONS
+            if t.destination == SHUTTING_DOWN and t.source in non_terminal
+        }
+        missing_shutdown = non_terminal - shutdown_reachable
+
+        # Check return-to-observing from sub-states.
+        sub_states = {INTERACTING, PLANNING, EXECUTING, LEARNING, MAINTENANCE}
+        observing_reachable = {
+            t.source for t in CANONICAL_TRANSITIONS
+            if t.destination == OBSERVING and t.source in sub_states
+        }
+        missing_observing = sub_states - observing_reachable
+
+        return {
+            "valid": (not states_without_outgoing and not missing_emergency
+                      and not missing_shutdown and not missing_observing),
+            "states_without_outgoing": [s.value for s in states_without_outgoing],
+            "missing_emergency_from": [s.value for s in missing_emergency],
+            "missing_shutdown_from": [s.value for s in missing_shutdown],
+            "missing_observing_return_from": [s.value for s in missing_observing],
+            "total_transitions": len(CANONICAL_TRANSITIONS),
+            "total_states": len(all_states),
+        }
 
     def snapshot(self) -> dict[str, Any]:
         return {

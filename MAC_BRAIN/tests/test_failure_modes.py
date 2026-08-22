@@ -167,7 +167,7 @@ class FailureHandlerRuntimeIntegrationTests(unittest.TestCase):
         self.assertTrue(brain.failure_handler.is_degraded)
         # Now switch to normal detections and step enough times to recover.
         brain.perception = SpecialistPerception(CupBackend())
-        for _ in range(4):
+        for _ in range(6):
             brain.step()
         brain.stop()
         recovery_events = [e for e in brain.events if e["event_type"] == "failure.recovered"]

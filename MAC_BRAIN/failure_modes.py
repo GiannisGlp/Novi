@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 from uuid import uuid4
 
 
@@ -105,6 +105,15 @@ class FailureHandler:
 
     The handler maintains the current degraded mode and can detect when
     conditions improve to return to normal operation.
+
+    Improvements over the initial implementation:
+      - Configurable recovery thresholds per severity (not a single count).
+      - Recovery can be gated by a condition_check callable to verify the
+        failure condition is actually resolved, not just count attempts.
+      - Per-category recovery tracking: recovering from perception_uncertainty
+        doesn't reset the count for a model_unavailable failure.
+      - Component-level degradation tracking: multiple components can be
+        degraded simultaneously.
     """
 
     # Map failure categories to degraded modes.
@@ -135,11 +144,28 @@ class FailureHandler:
         CORRUPTED_DATA: "isolate_affected_records",
     }
 
-    def __init__(self) -> None:
+    # Recovery thresholds per severity level.
+    _RECOVERY_THRESHOLDS: dict[str, int] = {
+        "info": 1,       # info-level failures recover quickly
+        "warning": 3,    # warning: 3 cycles of clear perception
+        "error": 5,      # error: 5 cycles before attempting recovery
+        "critical": 10,  # critical: requires sustained normal operation
+    }
+
+    def __init__(
+        self,
+        *,
+        recovery_thresholds: dict[str, int] | None = None,
+    ) -> None:
         self._failures: list[FailureRecord] = []
         self._degraded_mode: DegradedMode = DegradedMode.NORMAL
         self._degraded_since: str = ""
         self._recovery_attempts: int = 0
+        self._recovery_thresholds = recovery_thresholds or dict(self._RECOVERY_THRESHOLDS)
+        # Per-category recovery tracking.
+        self._category_recovery: dict[str, dict[str, Any]] = {}
+        # Track which components are degraded.
+        self._degraded_components: set[str] = set()
 
     @property
     def degraded_mode(self) -> DegradedMode:
@@ -152,6 +178,11 @@ class FailureHandler:
     @property
     def is_safety_only(self) -> bool:
         return self._degraded_mode == DegradedMode.SAFETY_ONLY
+
+    @property
+    def degraded_components(self) -> frozenset[str]:
+        """Components that are currently degraded."""
+        return frozenset(self._degraded_components)
 
     def report_failure(
         self,
@@ -183,6 +214,14 @@ class FailureHandler:
                 if not self._degraded_since:
                     self._degraded_since = timestamp
 
+        # Track the degraded component.
+        self._degraded_components.add(component)
+
+        # Reset per-category recovery for this category (new failure).
+        self._category_recovery[category] = {"attempts": 0, "last_failure_timestamp": timestamp}
+        # Reset global recovery counter (new failure occurred).
+        self._recovery_attempts = 0
+
         record = FailureRecord(
             failure_id=str(uuid4()),
             category=category,
@@ -210,23 +249,54 @@ class FailureHandler:
         }
         return mode_order.get(new_mode, 4) >= mode_order.get(self._degraded_mode, 0)
 
-    def attempt_recovery(self) -> bool:
+    def attempt_recovery(
+        self,
+        *,
+        condition_check: Callable[[], bool] | None = None,
+    ) -> bool:
         """Attempt to recover from degraded mode.
+
+        Args:
+            condition_check: Optional callable that returns True if the failure
+                             condition is actually resolved. If provided and
+                             returns False, recovery is not attempted even if
+                             the threshold is met.
 
         Returns True if recovery was successful (back to NORMAL).
         """
         if self._degraded_mode == DegradedMode.NORMAL:
             return True
+
         self._recovery_attempts += 1
-        # Simple recovery: after 3 attempts, return to normal.
-        # In a real system, this would check whether the failure condition
-        # has been resolved (e.g. model is available again, memory is restored).
-        if self._recovery_attempts >= 3:
+
+        # Determine the threshold based on the most recent failure's severity.
+        recent = self._failures[-1] if self._failures else None
+        severity = recent.severity if recent else "warning"
+        threshold = self._recovery_thresholds.get(severity, 3)
+
+        if self._recovery_attempts < threshold:
+            return False
+
+        # If a condition check is provided, verify the failure is actually resolved.
+        if condition_check is not None and not condition_check():
+            return False
+
+        # Recovery successful.
+        self._degraded_mode = DegradedMode.NORMAL
+        self._degraded_since = ""
+        self._recovery_attempts = 0
+        self._degraded_components.clear()
+        self._category_recovery.clear()
+        return True
+
+    def clear_component(self, component: str) -> None:
+        """Mark a component as recovered (no longer degraded)."""
+        self._degraded_components.discard(component)
+        # If no components are degraded, return to normal.
+        if not self._degraded_components:
             self._degraded_mode = DegradedMode.NORMAL
             self._degraded_since = ""
             self._recovery_attempts = 0
-            return True
-        return False
 
     def reset_recovery(self) -> None:
         """Reset recovery attempts (e.g. when a new failure occurs)."""
@@ -244,13 +314,20 @@ class FailureHandler:
     def failures_by_category(self, category: str) -> tuple[FailureRecord, ...]:
         return tuple(f for f in self._failures if f.category == category)
 
+    def failures_by_component(self, component: str) -> tuple[FailureRecord, ...]:
+        return tuple(f for f in self._failures if f.component == component)
+
     def snapshot(self) -> dict[str, Any]:
         return {
             "degraded_mode": self._degraded_mode.value,
             "is_degraded": self.is_degraded,
             "is_safety_only": self.is_safety_only,
             "degraded_since": self._degraded_since,
+            "degraded_components": list(self._degraded_components),
             "failure_count": self.failure_count,
             "recovery_attempts": self._recovery_attempts,
+            "recovery_threshold": self._recovery_thresholds.get(
+                (self._failures[-1].severity if self._failures else "warning"), 3
+            ),
             "recent_failures": [f.snapshot() for f in self.recent_failures],
         }
