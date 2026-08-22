@@ -21,12 +21,12 @@ The `MAC_BRAIN/runtime.py` orchestrator (~1460 lines) genuinely wires ~30 subsys
 perception → cognition → attention → situation → reasoning → governance → skill → closed-loop VERIFY → reflection → soul → social.
 
 **Measured test baseline (this analysis):**
-- MAC_BRAIN: **961** passing (written in this session: +8 governance/runtime/durable-independence tests, +5 confirmation-flow tests, +17 event-bus contract tests, +11 goal-lifecycle/conflict tests, +13 audit-trail tests, +27 scenario/adversarial/endurance tests, +11 affect→communication mapping tests, +15 P1–P3 acceptance catalog/gate/runner tests)
+- MAC_BRAIN: **1013** passing (in this working session: prior rounds wrote +8 governance/runtime/durable-independence tests, +5 confirmation-flow, +17 event-bus contract, +11 goal-lifecycle/conflict, +13 audit-trail, +27 scenario/adversarial/endurance, +11 affect→communication mapping, +15 P1–P3 acceptance catalog/gate/runner, +14 spatial model, +9 typed cognition emission, +17 learning pipeline, +10 memory-class decision + schema-evolution hooks)
 - brain: **105** passing
 - web: **41** passing (slow, ~70s)
 - contracts suite: **13** passing (executable validators via pytest shim)
 - cognition typed contracts: **34** passing
-- **Total: 1154** (fast suites = 1113 + web 41)
+- **Total: 1206** (fast suites = 1165 + web 41)
 
 **Key implemented capabilities (all wired into `runtime.py`):**
 - **Unified WorldModel** — typed entities/relations with epistemic status (OBSERVED/INFERRED/PREDICTED/SIMULATED/VERIFIED/UNKNOWN), contradictions preserved, snapshots, provenance.
@@ -51,8 +51,8 @@ perception → cognition → attention → situation → reasoning → governanc
 
 ### P0 — Documentation / governance integrity (cheapest, highest leverage)
 
-1. **`MAC_BRAIN/32_IMPLEMENTATION_STATUS.md` is STALE.** It ends at natural-conversation round 49 and never documents the PERFECTING_PLAN wave (WorldModel, SkillExecutor, GovernanceGuard, MultiSpeedRuntime, ClosedLoopRuntime, EpisodeRecorder, P0GateEvaluator, VocabularyScopeModel, AutonomyStateMachine, FailureHandler, HardenedMemoryManager). Test counts wrong (claims 858/753+105/web 26; actual 950/804+105/41). The "known limitation" about goal-resume (lines 1290–1293) is outdated — goal-resume is implemented. "Next implementation slice" sections are stale. — **✅ FIXED**: PERFECTING_PLAN wave documented, counts reconciled to 961 MAC_BRAIN + 105 brain + 41 web + 13 contracts + 34 cognition = 1154, stale limitation and "Next implementation slice" removed.
-2. **`13_CONSOLIDATED_IMPROVEMENT_PLAN.md` and `32_IMPLEMENTATION_STATUS.md` disagree on test counts** (858 vs 848 vs actual 950) — **✅ FIXED**: both reconciled to 1154.
+1. **`MAC_BRAIN/32_IMPLEMENTATION_STATUS.md` is STALE.** It ends at natural-conversation round 49 and never documents the PERFECTING_PLAN wave (WorldModel, SkillExecutor, GovernanceGuard, MultiSpeedRuntime, ClosedLoopRuntime, EpisodeRecorder, P0GateEvaluator, VocabularyScopeModel, AutonomyStateMachine, FailureHandler, HardenedMemoryManager). Test counts wrong (claims 858/753+105/web 26; actual 950/804+105/41). The "known limitation" about goal-resume (lines 1290–1293) is outdated — goal-resume is implemented. "Next implementation slice" sections are stale. — **✅ FIXED**: PERFECTING_PLAN wave documented, counts reconciled (then 961; now 1013 MAC_BRAIN + 105 brain + 41 web + 13 contracts + 34 cognition = 1206), stale limitation and "Next implementation slice" removed, roadmap items 11/12/13/16/29/30 documented.
+2. **`13_CONSOLIDATED_IMPROVEMENT_PLAN.md` and `32_IMPLEMENTATION_STATUS.md` disagree on test counts** (858 vs 848 vs actual 950) — **✅ FIXED**: both reconciled (1154 → now 1206).
 3. **Contracts test suite not runnable:** `contracts/tests` require `jsonschema`, which is not installed and **not declared in `pyproject.toml`**. 0 tests run. `13_CONSOLIDATED` P3 misattributes this to "pytest required." — **✅ FIXED**: `jsonschema>=4.23,<5` declared in dev deps; pytest shim runs the executable validators (13 passing); CI gate added.
 4. **Governance contradiction:** the Global Completion Gate says CLOSED / "no new implementation phase until every domain COMPLETE," yet the program is deep in Brain implementation. Needs explicit reconciliation (the gate's intent is that *new phases* wait; the current phase is the Brain phase — but the doc should say so). — **✅ FIXED**: §5.1 reconciliation added to `NOVI_GLOBAL_COMPLETION_GATE.md`.
 5. **System Architecture marked COMPLETE** in the tracker, but ARCH-CLOSE evidence docs say PARTIALLY EVIDENCED. Duplicate numbering (16/17/19/20/21/22) and duplicate time-sync authority (17 vs 19) noted. — **✅ FIXED**: tracker reconciliation ("COMPLETE vs PARTIALLY EVIDENCED") + time-sync authority consolidated (17 SUPERSEDED by 19) + ARCH-CLOSE-010 addendum.
@@ -65,7 +65,7 @@ perception → cognition → attention → situation → reasoning → governanc
 9. **Canonical cognitive objects missing from `contracts/registry.json`:** SituationState, PersonContext, AttentionCandidate, IntentHypothesis, Prediction, CognitiveDecisionRecord, CognitiveEvent are not registered contracts. — **✅ FIXED**: 7 cognition contracts registered (registry 18 → 25), each with generated `schema.json` (`$id` = `<contract_id>/1.0.0`).
 10. **No replay fixtures or replay harness** (the 12 listed scenarios in the scenario catalog are not present as a replay runner). — **✅ FIXED**: `cognition/replay/` runs all 12 canonical scenarios (`replay_all`, `summarize`).
 11. **No separate structural/semantic/provenance/cross-contract validators** — only `StructuredOutputValidator` and the lightweight `brain/contracts.py`. — **✅ FIXED**: `cognition/validation/structural.py`, `semantic.py`, `provenance.py`, `cross_contract.py`.
-12. **Prediction, IntentHypothesis, CognitiveDecisionRecord, CognitiveEvent, PersonContext not typed objects** — cognition emits dicts/strings, not the canonical objects with correlation/causation IDs. — Typed models now exist and are validated; emitting them from the live cognition pipeline is the remaining Step 1 item (roadmap item 12).
+12. **Prediction, IntentHypothesis, CognitiveDecisionRecord, CognitiveEvent, PersonContext not typed objects** — cognition emits dicts/strings, not the canonical objects with correlation/causation IDs. — Typed models exist and are validated; the live pipeline now emits them (`MAC_BRAIN/cognition_typed.py` + `MacCognition.cycle_typed` + `MacBrain.cognition_typed`) — roadmap item 12 done.
 
 ### P2 — Memory contract completion
 
@@ -137,8 +137,8 @@ perception → cognition → attention → situation → reasoning → governanc
 ## 5. Prioritized Next Steps (roadmap)
 
 ### Step 0 — Freeze scope & fix documentation (do first; cheap, unblocks everything)
-- [x] 1. Update `MAC_BRAIN/32_IMPLEMENTATION_STATUS.md`: correct test counts (now **961** MAC_BRAIN + 105 brain + 41 web + 13 contracts + 34 cognition = **1154**), document the PERFECTING_PLAN wave, remove the stale goal-resume limitation and stale "Next implementation slice" sections.
-- [x] 2. Reconcile `13_CONSOLIDATED_IMPROVEMENT_PLAN.md` test counts (858 vs 848 → 1154 with cognition).
+- [x] 1. Update `MAC_BRAIN/32_IMPLEMENTATION_STATUS.md`: correct test counts (now **1013** MAC_BRAIN + 105 brain + 41 web + 13 contracts + 34 cognition = **1206**), document the PERFECTING_PLAN wave, remove the stale goal-resume limitation and the stale "Next implementation slice" sections.
+- [x] 2. Reconcile `13_CONSOLIDATED_IMPROVEMENT_PLAN.md` test counts (858 vs 848 → 1154, now 1206 with cognition + Step 1/2/3 wave).
 - [x] 3. Fix the contracts test suite: add `jsonschema` to `pyproject.toml` dev deps, install, run `contracts/tests`, add to CI.
 - [x] 4. Reconcile the Global Completion Gate "CLOSED" wording with the active Brain phase; fix System Architecture COMPLETE-vs-PARTIALLY-EVIDENCED; resolve duplicate numbering and duplicate time-sync authority.
 - [x] 5. Deprecate one of the two autonomy boundary audits (`12_AUTONOMY_BOUNDARY_AND_OWNERSHIP_AUDIT.md` vs `16_AUTONOMY_ARCHITECTURE_BOUNDARY_AUDIT.md`); fix the file-numbering collision; remove the stale "Wheely" claim in `16_AUTONOMY_ARCHITECTURE_BOUNDARY_AUDIT.md`.
@@ -149,14 +149,14 @@ perception → cognition → attention → situation → reasoning → governanc
 - [x] 8. Register the canonical cognitive objects in `contracts/registry.json`.
 - [x] 9. Add structural/semantic/provenance/cross-contract validators enforcing ownership boundaries (Cognition cannot grant authorization/command hardware).
 - [x] 10. Build the replay fixtures + replay harness (12 scenarios).
-- [ ] 11. Implement the spatial model (SpatialReference, coordinate frames, occupancy, metric-vs-semantic link) — base `SpatialReference`/`Entity` spatial fields exist in the typed models; full frame/occupancy model deferred to P3.
-- [ ] 12. Emit typed Prediction/IntentHypothesis/CognitiveDecisionRecord/CognitiveEvent/PersonContext from cognition.
-- [ ] 13. Implement knowledge-promotion pipeline + user-correction-with-provenance; routine detection; counterfactual engine.
+- [x] 11. Implement the spatial model (SpatialReference, coordinate frames, occupancy, metric-vs-semantic link) — `MAC_BRAIN/spatial_map.py` (SpatialMap: frames/regions/doors/occupancy, metric↔semantic placement, visibility_between, reachable_regions via doors + containment, `to_spatial_state()` feeding WorldState.spatial_state; `default_home_map()` kitchen/living_room/table_zone). Wired into `MacBrain(spatial_map=...)` + `brain.spatial`; 14 tests.
+- [x] 12. Emit typed Prediction/IntentHypothesis/CognitiveDecisionRecord/CognitiveEvent/PersonContext from cognition — `MAC_BRAIN/cognition_typed.py` (`emit_cognitive_typed` → TypedCognitionOutput) + `MacCognition.cycle_typed` + `MacBrain.cognition_typed` (publishes `cognition.typed` on the event bus, stores `_last_typed_cognition`). All emitted objects pass `cognition.validation.validate_structurally` against canonical schemas; decision records are interpretation-only (never authorization); 9 tests.
+- [x] 13. Implement knowledge-promotion pipeline + user-correction-with-provenance; routine detection; counterfactual engine — `MAC_BRAIN/learning_pipeline.py` (KnowledgePromotionPipeline with evidence/confidence thresholds — SIMULATED/PREDICTED never promote; UserCorrectionLog supersedes prior claims at authoritative confidence with provenance, history preserved as contradicted; RoutineDetector emits INFERRED hypotheses only; CounterfactualEngine returns SIMULATED hypothetical slices never merged into facts) + runtime wiring `observe_knowledge`/`correct_knowledge`/`observe_routine`/`counterfactual` with learning.* events; 17 tests.
 
 ### Step 2 — Memory hardening
 - [x] 14. Wire `IndependenceTracker` into the durable store path (group assigned + persisted on admit, rebuilt on reopen; `independence_group_of` / `independence_corroboration_count` accessors).
 - [x] 15. Add the simulated-episode-cannot-be-recalled-as-fact test (admission rejection + recall-path status preservation).
-- [ ] 16. Decide which memory classes (procedural/prospective/metamemory/autobiographical) to implement now vs defer. (L0–L6 schema-evolution hooks also remain.)
+- [x] 16. Decide which memory classes (procedural/prospective/metamemory/autobiographical) to implement now vs defer. (L0–L6 schema-evolution hooks also remain.) — `MAC_BRAIN/memory_classes.py` records the decision: SEMANTIC/EPISODIC/SPATIAL/TEMPORAL/PREFERENCE/ROUTINE_CANDIDATE/PROCEDURAL_CANDIDATE implemented now; PROCEDURAL_COMPETENCE/PROSPECTIVE/METAMEMORY/AUTOBIOGRAPHICAL deferred to the body phase with rationale. L0–L6 `SchemaEvolutionGate`: L0–L3 autonomous, L4 proposal-gated, L5/L6 never autonomous. Wired as `brain.memory_classes` + `brain.schema_evolution`; 10 tests.
 
 ### Step 3 — Autonomy + skill contract + safety
 - [x] 17. Implement the autonomy event-bus contract: `MAC_BRAIN/event_bus.py` implements the canonical doc-10 envelope (event_id/type/version/occurred_at/published_at/source/correlation_id/causation_id/priority/privacy_class/payload) with replay, dedup, bounded-queue backpressure, health metrics, and access control. `MacBrain._emit` now publishes through the bus; each cycle is one correlation domain with causal chaining. 17 new tests.
@@ -174,11 +174,11 @@ perception → cognition → attention → situation → reasoning → governanc
 - [x] 27. Remove the dead `VocabularyScopeModel` duplicate of `Lexicon`: all scope constants/`VocabularyEntry`/`VocabularyScopeModel` removed from `soul_acceptance.py`; runtime/chat re-pointed to the canonical `Lexicon` (`MAC_BRAIN/lexicon.py`); chat's duplicate `vocab_scope.propose` block removed (canonical `self.lexicon.observe` remains); dependent tests migrated to Lexicon equivalents (7 old tests → 7 new Lexicon tests, net-zero count change).
 
 ### Step 5 — NVIDIA no-hardware experiments (record evidence)
-28. Run Exp 1 (reference resolution — implemented), Exp 2 (skill contract — implemented), Exp 3 (NoviEpisode demo dataset — schema+adapters implemented); produce evidence files with evidence-class labels (E0–E5).
+- [x] 28. Run Exp 1 (reference resolution — implemented), Exp 2 (skill contract — implemented), Exp 3 (NoviEpisode demo dataset — schema+adapters implemented); produce evidence files with evidence-class labels (E0–E5). `MAC_BRAIN/nvidia_experiments.py` now labels each `ExperimentResult` with a validation evidence class (E2 reproducible for Exp 1/2, E3 integration for Exp 3, per docs/01-system-architecture/10_ARCHITECTURE_VALIDATION_AND_TRACEABILITY.md) alongside the OBSERVED/SIMULATED epistemic status; `scripts/mac/nvidia_evidence.py` runs all three experiments on the Mac (no hardware) and writes timestamped, E-class-labelled evidence records + manifest + `commit_sha.txt`/`collection_time.txt` into `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/` with INDEX.md rows (new: `validation_class` field, 2 tests; all 3 experiments PASS).
 
 ### Step 6 — Closed-loop validation + acceptance gate
-29. Execute cross-system acceptance tests (Soul→Cognition→Memory→Autonomy→Safety→Brain) + completion-gate review + full-suite green.
-30. Resolve the `brain/` vs `MAC_BRAIN/` dual-brain cleanup (deprecate dead types, clean re-exports, add `MAC_BRAIN/ARCHITECTURE.md`).
+- [x] 29. Execute cross-system acceptance tests (Soul→Cognition→Memory→Autonomy→Safety→Brain) + completion-gate review + full-suite green — `scripts/mac/cross_system_acceptance.py` runs every priority gate (P0–P3) against a **fresh brain per gate** (gates mutate fatigue/cooldown/affect, so a shared instance made later gates order-dependent — now each gate is a clean-boot acceptance run), plus end-to-end pipeline checks (spatial model, typed cognition, learning pipeline, memory-class decision, event-bus observability) and the full fast suite + architecture-integrity checker. Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/20260822T225017Z/` — **PASS**: P0 13/13 complete, P1 33 (14 runners pending, zero violations), P2/P3 pending-only, 1165 fast-suite passed, integrity PASS.
+- [x] 30. Resolve the `brain/` vs `MAC_BRAIN/` dual-brain cleanup (deprecate dead types, clean re-exports, add `MAC_BRAIN/ARCHITECTURE.md`) — dependency scan confirms strict one-way `MAC_BRAIN → brain` (0 reverse imports); Stage-0 scaffolds `brain/b1_loop.py`, `b1_autonomy.py`, `b1_execution.py`, `b1_outcomes.py` marked LEGACY (retained only for `brain/tests`); `MAC_BRAIN/ARCHITECTURE.md` refreshed (1013 MAC_BRAIN + 105 brain + 13 contracts + 34 cognition = 1165 fast, +41 web; new modules: spatial_map, cognition_typed, learning_pipeline, memory_classes, event_bus, audit_trail, soul_acceptance, p0_gate_runner).
 
 ### Deferred (body/hardware phase — do NOT start in brain phase)
 31. Real neural TTS, Nemotron/Cosmos real inference, specialist perception models, model lifecycle registry, streaming/cancellation/batching, drift/shadow/canary/rollback.

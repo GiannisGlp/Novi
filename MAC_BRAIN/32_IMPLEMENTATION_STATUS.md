@@ -253,6 +253,25 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified on-device: speech → learned triple (alice→moved→door); `alice located_near kitchen` then `...garden` → conflict flagged, `kitchen` stays active, `garden` contradicted; extraction and typing correct; graph survived restart.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/kgraph.json`.
 
+## Spatial model (roadmap item 11) (status: IMPLEMENTED)
+
+- `MAC_BRAIN/spatial_map.py` — `SpatialMap`: coordinate **frames**, **regions** (bounds in a frame), **doors** (room adjacency), **occupancy**, metric↔semantic **placement** (pose must be in a registered frame), `visible_entities`, `reachable_regions` (BFS via doors + containment), `visibility_between`, `snapshot()`, and `to_spatial_state()` feeding `WorldState.spatial_state`. `default_home_map()` builds kitchen / living_room / table_zone with a kitchen↔living_room door.
+- `MacBrain(spatial_map=...)` (backward-compatible kwarg); `brain.spatial` exposes the model; 14 tests (`MAC_BRAIN/tests/test_spatial_map.py`).
+
+## Typed cognition emission (roadmap item 12) (status: IMPLEMENTED)
+
+- `MAC_BRAIN/cognition_typed.py` — `emit_cognitive_typed(situation, reasoning, ...)` → `TypedCognitionOutput` with canonical **SituationState**, **PersonContext**(s), **IntentHypothesis**(s), **Prediction**(s), **CognitiveDecisionRecord** (interpretation-only, never authorization), and **CognitiveEvent**(s), all carrying correlation/causation ids and provenance.
+- `MacCognition.cycle_typed(...)` and `MacBrain.cognition_typed()` (publishes `cognition.typed` on the event bus, stores `_last_typed_cognition`). Every emitted object passes `cognition.validation.validate_structurally` against the canonical JSON Schemas; 9 tests (`MAC_BRAIN/tests/test_cognition_typed.py`).
+
+## Learning pipeline (roadmap item 13) (status: IMPLEMENTED)
+
+- `MAC_BRAIN/learning_pipeline.py` — `KnowledgePromotionPipeline` (evidence + confidence thresholds; **SIMULATED/PREDICTED never promote**), `UserCorrectionLog` (explicit corrections supersede prior claims at authoritative confidence, history preserved as contradicted, full provenance), `RoutineDetector` (repeated co-occurrence patterns as INFERRED hypotheses only), `CounterfactualEngine` (SIMULATED hypothetical slices, never merged into facts — Imagination Boundary).
+- Runtime wiring: `observe_knowledge` / `correct_knowledge` / `observe_routine` / `counterfactual` with `learning.*` events; 17 tests (`MAC_BRAIN/tests/test_learning_pipeline.py`).
+
+## Memory-class decision + schema-evolution hooks (roadmap item 16) (status: DECIDED)
+
+- `MAC_BRAIN/memory_classes.py` — `MemoryClassDecisionRegistry` records implemented-now (semantic/episodic/spatial/temporal/preference/routine-candidate/procedural-candidate) vs deferred-to-body (procedural-competence/prospective/metamemory/autobiographical) with rationale; `SchemaEvolutionGate` classifies changes by the **L0–L6 ladder** (L0–L3 autonomous, L4 proposal-gated, L5/L6 never autonomous). Wired as `brain.memory_classes` + `brain.schema_evolution`; 10 tests (`MAC_BRAIN/tests/test_memory_classes.py`).
+
 ## Multi-step planning context (status: IMPLEMENTED)
 
 - `MAC_BRAIN/planner.py` — `Planner`, `Plan`, `PlanStep`: decomposes a goal into an ordered, **typed** step plan (determine → execute → verify) with per-step expected outcomes, tracks each step's status (pending/active/completed/failed/cancelled), and supports **replanning/cancellation** when observations invalidate assumptions (docs/02-autonomy/01).
@@ -1292,12 +1311,12 @@ The `MAC_BRAIN/PERFECTING_PLAN/` roadmap (13 files) is implemented and wired int
 
 ### Regression status (this analysis)
 
-- MAC_BRAIN: **961 passing** (804 + 50 new dedicated governance-guard / multi-speed-runtime tests + 107 Step 2/3/4 tests: durable independence wiring, simulated-episode recall, skill timeout enforcement, resource-aware adaptation, runtime confirmation flow, event-bus contract, goal lifecycle + conflict resolution, audit trail, scenario/adversarial/endurance, affect→communication mapping, P1–P3 acceptance catalog + gates + runners)
+- MAC_BRAIN: **1013 passing** (804 + 50 new dedicated governance-guard / multi-speed-runtime tests + 159 Step 2/3/4 tests: durable independence wiring, simulated-episode recall, skill timeout enforcement, resource-aware adaptation, runtime confirmation flow, event-bus contract, goal lifecycle + conflict resolution, audit trail, scenario/adversarial/endurance, affect→communication mapping, P1–P3 acceptance catalog + gates + runners, spatial model 14, typed cognition emission 9, learning pipeline 17, memory-class decision + schema-evolution hooks 10)
 - brain: **105 passing**
 - web: **41 passing** (slow, ~70s)
 - contracts: **13 passing** (executable suite via pytest shim, requires `jsonschema` — now declared in `pyproject.toml` dev deps)
 - cognition typed contracts: **34 passing** (`cognition/tests/test_contracts.py`, Pydantic v2 models + validators + replay harness)
-- **Total: 1154** (fast suites = 961 MAC_BRAIN + 105 brain + 13 contracts + 34 cognition = 1113, + web 41)
+- **Total: 1206** (fast suites = 1013 MAC_BRAIN + 105 brain + 13 contracts + 34 cognition = 1165, + web 41)
 
 ### Known limitations (noted, not blocking)
 

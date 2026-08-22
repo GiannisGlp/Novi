@@ -1,0 +1,327 @@
+{
+  "run_id": "20260822T222719Z-nvidia_exp_3",
+  "experiment_id": "nvidia_exp_3",
+  "name": "demonstration_dataset_novi_episode",
+  "status": "PASS",
+  "evidence_class": "E3",
+  "epistemic_class": "OBSERVED",
+  "input_config": {
+    "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+    "platform": "darwin",
+    "nvidia_hardware": false,
+    "backend": "deterministic-mock",
+    "note": "No-hardware Mac experiment; validates architecture seams only (PERFECTING_PLAN/09_GAP_ANALYSIS_NVIDIA_INTEGRATION.md)."
+  },
+  "start_time": "20260822T222719Z",
+  "metrics": {},
+  "failures": [],
+  "conclusion": "4 adapters tested, roundtrips OK",
+  "evidence": {
+    "episodes": [
+      {
+        "episode_id": "episode-301ee794d8fd",
+        "task_name": "navigate_to_kitchen",
+        "description": "Navigate from start position to the kitchen.",
+        "step_count": 3,
+        "steps": [
+          {
+            "step_id": "bfbdccb9-22d2-40fa-ba1e-fd16605708e6",
+            "step_index": 0,
+            "timestamp": "2026-01-01T10:00:00Z",
+            "observation": {
+              "robot_position": [
+                0.0,
+                0.0
+              ],
+              "target": "kitchen",
+              "heading": 0.0
+            },
+            "action": {
+              "skill": "navigate",
+              "parameters": {
+                "target_location": "kitchen"
+              },
+              "risk_class": "R3"
+            },
+            "outcome": {
+              "status": "running",
+              "distance_traveled": 0.0
+            },
+            "evidence_class": "OBSERVED",
+            "provenance": {
+              "source": "mac_brain",
+              "capability": "navigate_skill"
+            }
+          },
+          {
+            "step_id": "4592b5a9-76af-4ae7-a108-41c219f9ae0b",
+            "step_index": 1,
+            "timestamp": "2026-01-01T10:00:05Z",
+            "observation": {
+              "robot_position": [
+                1.0,
+                0.0
+              ],
+              "target": "kitchen",
+              "heading": 0.0
+            },
+            "action": {
+              "skill": "navigate",
+              "parameters": {
+                "target_location": "kitchen"
+              },
+              "risk_class": "R3"
+            },
+            "outcome": {
+              "status": "running",
+              "distance_traveled": 1.0
+            },
+            "evidence_class": "OBSERVED",
+            "provenance": {
+              "source": "mac_brain",
+              "capability": "navigate_skill"
+            }
+          },
+          {
+            "step_id": "3df49acd-9ba7-4e77-bc27-a0f7c8bb2c26",
+            "step_index": 2,
+            "timestamp": "2026-01-01T10:00:10Z",
+            "observation": {
+              "robot_position": [
+                2.5,
+                0.0
+              ],
+              "target": "kitchen",
+              "heading": 0.0
+            },
+            "action": {
+              "skill": "navigate",
+              "parameters": {
+                "target_location": "kitchen"
+              },
+              "risk_class": "R3"
+            },
+            "outcome": {
+              "status": "SUCCESS",
+              "destination": "kitchen",
+              "distance_traveled": 2.5
+            },
+            "evidence_class": "OBSERVED",
+            "provenance": {
+              "source": "mac_brain",
+              "capability": "navigate_skill"
+            }
+          }
+        ],
+        "evidence_class": "OBSERVED",
+        "provenance": {
+          "source": "mac_brain",
+          "experiment": "nvidia_exp_2_skill_contract"
+        },
+        "platform": {
+          "runtime": "mac_brain",
+          "simulated": "False"
+        },
+        "metadata": {
+          "task_type": "navigation",
+          "skill": "navigate"
+        }
+      },
+      {
+        "episode_id": "episode-8f6ca270dae9",
+        "task_name": "pick_cup",
+        "description": "Find and pick up the cup from the table (Bring me that cup).",
+        "step_count": 2,
+        "steps": [
+          {
+            "step_id": "e12c79d3-a9e3-4860-95c1-28377ba17b16",
+            "step_index": 0,
+            "timestamp": "2026-01-01T10:00:00Z",
+            "observation": {
+              "cup_location": "table",
+              "robot_position": [
+                2.5,
+                0.0
+              ]
+            },
+            "action": {
+              "skill": "find_object",
+              "parameters": {
+                "object_description": "cup"
+              },
+              "risk_class": "R1"
+            },
+            "outcome": {
+              "status": "SUCCESS",
+              "object": "cup",
+              "location": "table"
+            },
+            "evidence_class": "OBSERVED",
+            "provenance": {
+              "source": "mac_brain"
+            }
+          },
+          {
+            "step_id": "6f637da9-d872-41f2-9a4d-04e449e2417c",
+            "step_index": 1,
+            "timestamp": "2026-01-01T10:00:03Z",
+            "observation": {
+              "cup_location": "table",
+              "robot_position": [
+                2.5,
+                0.0
+              ],
+              "cup_visible": true
+            },
+            "action": {
+              "skill": "pick",
+              "parameters": {
+                "object_id": "cup_001"
+              },
+              "risk_class": "R3"
+            },
+            "outcome": {
+              "status": "SUCCESS",
+              "object_grasped": true
+            },
+            "evidence_class": "OBSERVED",
+            "provenance": {
+              "source": "mac_brain"
+            }
+          }
+        ],
+        "evidence_class": "OBSERVED",
+        "provenance": {
+          "source": "mac_brain",
+          "experiment": "nvidia_exp_1_reference_resolution"
+        },
+        "platform": {
+          "runtime": "mac_brain",
+          "simulated": "False"
+        },
+        "metadata": {
+          "task_type": "manipulation",
+          "skill": "pick",
+          "referent": "cup"
+        }
+      }
+    ],
+    "simulated_episode": {
+      "episode_id": "episode-7e4280606c05",
+      "task_name": "navigate_to_kitchen",
+      "description": "Navigate from start position to the kitchen.",
+      "step_count": 3,
+      "steps": [
+        {
+          "step_id": "b0464c46-6539-459e-99d8-d10ae4b49ca4",
+          "step_index": 0,
+          "timestamp": "2026-01-01T10:00:00Z",
+          "observation": {
+            "robot_position": [
+              0.0,
+              0.0
+            ],
+            "target": "kitchen",
+            "heading": 0.0
+          },
+          "action": {
+            "skill": "navigate",
+            "parameters": {
+              "target_location": "kitchen"
+            },
+            "risk_class": "R3"
+          },
+          "outcome": {
+            "status": "running",
+            "distance_traveled": 0.0
+          },
+          "evidence_class": "SIMULATED",
+          "provenance": {
+            "source": "isaac_sim",
+            "capability": "navigate_skill"
+          }
+        },
+        {
+          "step_id": "c4931342-9386-4037-a962-1307d6210f02",
+          "step_index": 1,
+          "timestamp": "2026-01-01T10:00:05Z",
+          "observation": {
+            "robot_position": [
+              1.0,
+              0.0
+            ],
+            "target": "kitchen",
+            "heading": 0.0
+          },
+          "action": {
+            "skill": "navigate",
+            "parameters": {
+              "target_location": "kitchen"
+            },
+            "risk_class": "R3"
+          },
+          "outcome": {
+            "status": "running",
+            "distance_traveled": 1.0
+          },
+          "evidence_class": "SIMULATED",
+          "provenance": {
+            "source": "isaac_sim",
+            "capability": "navigate_skill"
+          }
+        },
+        {
+          "step_id": "4153033e-124d-4aa0-84a9-8d18278ac53a",
+          "step_index": 2,
+          "timestamp": "2026-01-01T10:00:10Z",
+          "observation": {
+            "robot_position": [
+              2.5,
+              0.0
+            ],
+            "target": "kitchen",
+            "heading": 0.0
+          },
+          "action": {
+            "skill": "navigate",
+            "parameters": {
+              "target_location": "kitchen"
+            },
+            "risk_class": "R3"
+          },
+          "outcome": {
+            "status": "SUCCESS",
+            "destination": "kitchen",
+            "distance_traveled": 2.5
+          },
+          "evidence_class": "SIMULATED",
+          "provenance": {
+            "source": "isaac_sim",
+            "capability": "navigate_skill"
+          }
+        }
+      ],
+      "evidence_class": "SIMULATED",
+      "provenance": {
+        "source": "isaac_sim",
+        "experiment": "nvidia_exp_2_skill_contract"
+      },
+      "platform": {
+        "runtime": "mac_brain",
+        "simulated": "True"
+      },
+      "metadata": {
+        "task_type": "navigation",
+        "skill": "navigate"
+      }
+    },
+    "adapters_tested": [
+      "novi_native",
+      "lerobot",
+      "isaac_lab",
+      "rosbag"
+    ],
+    "all_roundtrips_ok": true,
+    "sim_evidence_preserved": true
+  }
+}

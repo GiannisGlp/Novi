@@ -14,13 +14,13 @@ episode so simulations never silently become facts.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 from uuid import uuid4
 
 # Reuse evidence classes from memory_hardening for consistency.
 from .memory_hardening import (
-    OBSERVED, INFERRED, PREDICTED, SIMULATED,
-    ALL_EPISTEMIC_STATUSES,
+    OBSERVED,
+    SIMULATED,
 )
 
 # ---------------------------------------------------------------------------
@@ -391,6 +391,7 @@ class ExperimentResult:
     evidence_class: str
     evidence_file: dict[str, Any]
     reason: str = ""
+    validation_class: str = ""
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -398,9 +399,24 @@ class ExperimentResult:
             "name": self.name,
             "passed": self.passed,
             "evidence_class": self.evidence_class,
+            "validation_class": self.validation_class,
             "evidence_file": self.evidence_file,
             "reason": self.reason,
         }
+
+
+# Validation evidence classes (E0-E5) per
+# docs/01-system-architecture/10_ARCHITECTURE_VALIDATION_AND_TRACEABILITY.md:
+#   E0 design intent · E1 authoritative vendor/standards docs · E2 reproducible
+#   benchmark · E3 integration validation · E4 physical · E5 long-duration.
+# All no-hardware Mac experiments are deterministic cross-component tests, so
+# E2 (reproducible Novi-controlled test) applies; Exp 3 additionally exercises
+# cross-component integration (schema -> 4 adapters), hence E3.
+VALIDATION_CLASS_BY_EXPERIMENT: dict[str, str] = {
+    "nvidia_exp_1": "E2",  # reproducible reference-resolution benchmark
+    "nvidia_exp_2": "E2",  # reproducible skill-contract invocation test
+    "nvidia_exp_3": "E3",  # cross-component integration: schema + adapters round-trip
+}
 
 
 def run_nvidia_experiments() -> tuple[ExperimentResult, ...]:
@@ -411,8 +427,8 @@ def run_nvidia_experiments() -> tuple[ExperimentResult, ...]:
     Exp 3: demonstration dataset in NoviEpisode schema with adapters.
     """
     from .context_assembler import ContextAssembler, ContextRequest
-    from .world_model import WorldModel, OBSERVED, PERSON, OBJECT, ROOM
-    from .skill_contract import SkillExecutor, SUCCESS
+    from .skill_contract import SUCCESS, SkillExecutor
+    from .world_model import OBJECT, OBSERVED, PERSON, WorldModel
 
     results: list[ExperimentResult] = []
 
@@ -430,7 +446,7 @@ def run_nvidia_experiments() -> tuple[ExperimentResult, ...]:
     exp1_passed = ref_result["status"] == "RESOLVED" and ref_result["label"] == "cup"
     results.append(ExperimentResult(
         experiment_id="nvidia_exp_1", name="context_aware_reference_resolution",
-        passed=exp1_passed, evidence_class=OBSERVED,
+        passed=exp1_passed, evidence_class=OBSERVED, validation_class=VALIDATION_CLASS_BY_EXPERIMENT["nvidia_exp_1"],
         evidence_file=ref_result,
         reason=f"reference resolved to {ref_result.get('label')} with status {ref_result['status']}",
     ))
@@ -442,7 +458,7 @@ def run_nvidia_experiments() -> tuple[ExperimentResult, ...]:
     exp2_passed = nav_result.status == SUCCESS
     results.append(ExperimentResult(
         experiment_id="nvidia_exp_2", name="skill_contract_invocation",
-        passed=exp2_passed, evidence_class=OBSERVED,
+        passed=exp2_passed, evidence_class=OBSERVED, validation_class=VALIDATION_CLASS_BY_EXPERIMENT["nvidia_exp_2"],
         evidence_file=nav_result.snapshot(),
         reason=f"skill navigate invoked with status {nav_result.status}",
     ))
@@ -468,7 +484,7 @@ def run_nvidia_experiments() -> tuple[ExperimentResult, ...]:
     exp3_passed = all_roundtrips_ok and sim_evidence_preserved
     results.append(ExperimentResult(
         experiment_id="nvidia_exp_3", name="demonstration_dataset_novi_episode",
-        passed=exp3_passed, evidence_class=OBSERVED,
+        passed=exp3_passed, evidence_class=OBSERVED, validation_class=VALIDATION_CLASS_BY_EXPERIMENT["nvidia_exp_3"],
         evidence_file={
             "episodes": [nav_episode.snapshot(), pick_episode.snapshot()],
             "simulated_episode": sim_episode.snapshot(),

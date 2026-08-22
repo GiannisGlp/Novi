@@ -8,19 +8,16 @@ Exp 3: demonstration dataset in NoviEpisode schema with adapters.
 import unittest
 
 from MAC_BRAIN.nvidia_experiments import (
-    NoviEpisode,
-    EpisodeStep,
-    EpisodeAdapter,
-    NoviNativeAdapter,
-    LeRobotAdapter,
-    IsaacLabAdapter,
-    ROSBagAdapter,
     ALL_ADAPTERS,
+    OBSERVED,
+    SIMULATED,
+    IsaacLabAdapter,
+    LeRobotAdapter,
+    NoviNativeAdapter,
+    ROSBagAdapter,
     build_navigate_episode,
     build_pick_cup_episode,
     run_nvidia_experiments,
-    OBSERVED,
-    SIMULATED,
 )
 
 
@@ -143,6 +140,21 @@ class ExperimentRunnerTests(unittest.TestCase):
         results = run_nvidia_experiments()
         exp3 = next(r for r in results if r.experiment_id == "nvidia_exp_3")
         self.assertTrue(exp3.passed)
+
+    def test_experiments_carry_validation_evidence_class(self):
+        """Each experiment is labelled E0-E5 (docs/01-system-architecture/10)."""
+        results = run_nvidia_experiments()
+        self.assertEqual(len(results), 3)
+        for r in results:
+            self.assertIn(r.validation_class, {"E0", "E1", "E2", "E3", "E4", "E5"})
+            self.assertIn("validation_class", r.snapshot())
+
+    def test_expected_validation_classes(self):
+        results = {r.experiment_id: r for r in run_nvidia_experiments()}
+        # Reproducible deterministic tests -> E2; adapter round-trip -> E3.
+        self.assertEqual(results["nvidia_exp_1"].validation_class, "E2")
+        self.assertEqual(results["nvidia_exp_2"].validation_class, "E2")
+        self.assertEqual(results["nvidia_exp_3"].validation_class, "E3")
 
     def test_all_experiments_pass(self):
         """Done-bar: all NVIDIA experiments produce evidence files with evidence-class labels."""

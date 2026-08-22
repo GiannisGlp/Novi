@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,72 +7,83 @@ from typing import Any
 from uuid import uuid4
 
 from brain.b1_cognition import DeterministicCognition
-from brain.b1_memory import DeterministicMemoryManager
 from brain.b1_world import SensorObservation
 from brain.b2_perception import SpecialistPerception
 from brain.runtime import ActionProposal as RuntimeActionProposal
 from brain.runtime import BrainSupervisor, Lifecycle
 
+from .attention import AttentionRanker
+from .audio import AudioFrame, Hearing
 from .autonomy import BoundedGoalController, Goal, GoalState, GoalStatus
-from .consolidation import ConsolidationConfig, MemoryConsolidator, SummaryConsolidator
+from .autonomy_state_machine import AutonomyStateMachine
+from .autonomy_state_machine import AutonomyStateMachineState as ASMState
+from .chat import ChatMixin
+from .closed_loop import OUTCOME_FAILURE as LOOP_FAILURE
+from .closed_loop import OUTCOME_SUCCESS as LOOP_SUCCESS
+from .closed_loop import ClosedLoopRuntime
 from .cognition import BeliefSystem, ExpectationSystem
 from .cognition2 import MacCognition
+from .consolidation import ConsolidationConfig, MemoryConsolidator, SummaryConsolidator
+from .context_assembler import ContextAssembler
+from .dialogue import DialogueEngine
+from .event_bus import EventBus
+from .failure_modes import PERCEPTION_UNCERTAINTY, TOOL_FAILURE, DegradedMode, FailureHandler
 from .fusion import ModalityObservation, MultimodalFusion
+from .governance_guard import (
+    REQUIRE_CONFIRMATION,
+    GovernanceGuard,
+)
+from .governance_guard import (
+    ActionProposal as GovernanceActionProposal,
+)
 from .identity import PersonIdentity
 from .io import Camera, MacMicrophone, MacSpeaker, VirtualBody
 from .kgraph import EntityKnowledgeGraph
-from .planner import Plan, Planner
-from .privacy import PrivacyGovernance
-from .reflection import ReflectionEngine
-from .audio import AudioEvent, AudioFrame, Hearing
-from .observability import Diagnostics, HealthMonitor, MetricRegistry, default_health_checks
 from .lexicon import LearnedPreferences, Lexicon
-from .social import Relationships, SocialIntelligence, TIER_EXPRESSION, SocialInitiative, InitiativeConfig
-from .soul import Soul
-from .storage import DurableMemoryStore
-from .dialogue import DialogueEngine
-from .self_model import SelfModel, build_self_model
-from .chat import ChatMixin
-from .temporal import TemporalModel
-from .world_model import WorldModel as UnifiedWorldModel
-from .world_model import (
-    PERSON as WM_PERSON,
-    OBJECT as WM_OBJECT,
-    ROOM as WM_ROOM,
-    BUILDING as WM_BUILDING,
-    PLACE as WM_PLACE,
-    DEVICE as WM_DEVICE,
-    OBSERVED as WM_OBSERVED,
-    INFERRED as WM_INFERRED,
-    UNKNOWN as WM_UNKNOWN,
-)
-from .context_assembler import ContextAssembler, ContextRequest
-from .attention import AttentionRanker
-from .governance_guard import (
-    GovernanceGuard,
-    ActionProposal as GovernanceActionProposal,
-    GovernanceGrant,
-    REQUIRE_CONFIRMATION,
-)
-from .event_bus import EventBus
-from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode, SYSTEM_0, SYSTEM_1, SYSTEM_2, SYSTEM_3
-from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
-from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult, WriteGate
-from .soul_acceptance import CommunicationDecision
-from .p0_gate_runner import run_p0_gate
-from .nvidia_experiments import EpisodeRecorder, NoviEpisode, ALL_ADAPTERS, OBSERVED as EP_OBSERVED
-from .skill_contract import SkillExecutor, SkillInvocation, SUCCESS as SKILL_SUCCESS, FAILURE as SKILL_FAILURE
-from .situation_model import SituationModel
-from .failure_modes import FailureHandler, DegradedMode, PERCEPTION_UNCERTAINTY, MODEL_UNAVAILABLE, TOOL_FAILURE
-from .autonomy_state_machine import AutonomyStateMachine, AutonomyStateMachineState as ASMState
+from .memory_hardening import HardenedMemoryManager, WriteGate
 from .models import (
     DeliberativeReasoningProvider,
-    DeterministicReasoningProvider,
     DeterministicSTTProvider,
     ReasoningProvider,
     SpeechToTextProvider,
     TranscriptionResult,
 )
+from .multi_speed_runtime import SYSTEM_0, AutonomyState, MultiSpeedRuntime, ResourceMode
+from .nvidia_experiments import ALL_ADAPTERS, EpisodeRecorder, NoviEpisode
+from .nvidia_experiments import OBSERVED as EP_OBSERVED
+from .observability import Diagnostics, HealthMonitor, MetricRegistry, default_health_checks
+from .p0_gate_runner import run_p0_gate
+from .planner import Plan, Planner
+from .privacy import PrivacyGovernance
+from .reflection import ReflectionEngine
+from .self_model import build_self_model
+from .situation_model import SituationModel
+from .skill_contract import SUCCESS as SKILL_SUCCESS
+from .skill_contract import SkillExecutor, SkillInvocation
+from .social import InitiativeConfig, Relationships, SocialInitiative, SocialIntelligence
+from .soul import Soul
+from .soul_acceptance import CommunicationDecision
+from .storage import DurableMemoryStore
+from .temporal import TemporalModel
+from .world_model import (
+    BUILDING as WM_BUILDING,
+)
+from .world_model import (
+    OBJECT as WM_OBJECT,
+)
+from .world_model import (
+    OBSERVED as WM_OBSERVED,
+)
+from .world_model import (
+    PERSON as WM_PERSON,
+)
+from .world_model import (
+    PLACE as WM_PLACE,
+)
+from .world_model import (
+    UNKNOWN as WM_UNKNOWN,
+)
+from .world_model import WorldModel as UnifiedWorldModel
 
 
 @dataclass(frozen=True)
@@ -132,6 +141,7 @@ class MacBrain(ChatMixin):
         face_id: Any | None = None,
         governance_guard: GovernanceGuard | None = None,
         config: MacBrainConfig | None = None,
+        spatial_map: Any | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -145,6 +155,11 @@ class MacBrain(ChatMixin):
         self.reflection = ReflectionEngine()
         self.stt = stt or DeterministicSTTProvider()
         self.unified_world = UnifiedWorldModel()
+        from .spatial_map import default_home_map
+        # Spatial model (roadmap item 11): runtime holder for frames, regions,
+        # occupancy, and the metric<->semantic link. A default home map is
+        # established so reachability/visibility queries are available.
+        self.spatial = spatial_map if spatial_map is not None else default_home_map()
         self.context_assembler = ContextAssembler()
         self.attention_ranker = AttentionRanker()
         self.governance_guard = governance_guard or GovernanceGuard()
@@ -162,6 +177,7 @@ class MacBrain(ChatMixin):
         self._last_skill_invocation: dict[str, Any] | None = None
         self.situation_model = SituationModel()
         self._last_situations: list[dict[str, Any]] = []
+        self._last_typed_cognition: dict[str, Any] | None = None
         self.failure_handler = FailureHandler()
         self.autonomy_sm = AutonomyStateMachine()
         self.episode_recorder: EpisodeRecorder | None = None
@@ -282,6 +298,23 @@ class MacBrain(ChatMixin):
             # (WAL-backed), so nothing is lost on a crash or hard kill.
             self.knowledge.set_on_change(self._persist_knowledge)
             self._persist_knowledge()
+        # Learning pipeline (roadmap item 13): evidence-backed promotion into
+        # knowledge, explicit user corrections with provenance, routine
+        # detection (hypotheses only), and counterfactual evaluation.
+        from .learning_pipeline import (
+            CounterfactualEngine,
+            KnowledgePromotionPipeline,
+            RoutineDetector,
+            UserCorrectionLog,
+        )
+        self.learning = KnowledgePromotionPipeline()
+        self.corrections = UserCorrectionLog()
+        self.routines = RoutineDetector()
+        self.counterfactuals = CounterfactualEngine()
+        # Memory-class decision (roadmap item 16) + L0–L6 schema-evolution hooks.
+        from .memory_classes import MemoryClassDecisionRegistry, SchemaEvolutionGate
+        self.memory_classes = MemoryClassDecisionRegistry()
+        self.schema_evolution = SchemaEvolutionGate()
         self.governance = governance or PrivacyGovernance(self.memory if isinstance(self.memory, DurableMemoryStore) else None)
         self.hearing = hearing or Hearing()
         self._pending_audio: list[ModalityObservation] = []
@@ -1395,6 +1428,41 @@ class MacBrain(ChatMixin):
         self._emit("p0.gate", {"cycle": self._cycle, **snap})
         return snap
 
+    # ---- Typed cognition emission (roadmap item 12) ----
+
+    def cognition_typed(self, observations: list[Any] | None = None) -> dict[str, Any]:
+        """Run a cognition cycle and emit the canonical typed contracts.
+
+        Wraps `MacCognition.cycle_typed` against the current unified world state,
+        publishes the resulting contracts on the event bus (cognition.typed) and
+        returns the snapshot. Nothing emitted is an authorization or command.
+        """
+        observations = observations if observations is not None else ()
+        state = self.unified_world.to_world_state()
+        out = self.cognition.cycle_typed(
+            state, observations, cycle=self._cycle,
+            world_revision=self.unified_world.world_version,
+            correlation_id=self._cycle_correlation_id,
+        )
+        snap = out.snapshot()
+        self._emit("cognition.typed", {
+            "cycle": self._cycle,
+            "correlation_id": out.correlation_id,
+            "situation": snap["situation"]["id"] if snap.get("situation") else None,
+            "person_contexts": [p["id"] for p in snap["person_contexts"]],
+            "predictions": [p["id"] for p in snap["predictions"]],
+            "intent_hypotheses": [h["id"] for h in snap["intent_hypotheses"]],
+            "decision": snap["decision"]["id"] if snap.get("decision") else None,
+            "counts": {
+                "person_contexts": len(snap["person_contexts"]),
+                "predictions": len(snap["predictions"]),
+                "intent_hypotheses": len(snap["intent_hypotheses"]),
+                "events": len(out.events),
+            },
+        })
+        self._last_typed_cognition = snap
+        return snap
+
     # ---- Episode recording ----
 
     def start_recording(self, task_name: str = "runtime_observation", *, description: str = "") -> None:
@@ -1615,6 +1683,71 @@ class MacBrain(ChatMixin):
     def learn_preference(self, person: str, kind: str, value, *, explicit: bool = False, now: str = "") -> None:
         pref = self.preferences.learn(person, kind, value, explicit=explicit, now=now)
         self._emit("preference.learned", {"person": person, "kind": kind, "value": value, "confidence": pref.confidence, "explicit": explicit})
+
+    # ---- Learning pipeline (roadmap item 13) ----
+
+    def observe_knowledge(self, subject: str, predicate: str, object: str, *, confidence: float,
+                          source: str = "", epistemic: str = "OBSERVED") -> bool:
+        """Feed an observation into the promotion pipeline; promote when ready.
+
+        Returns True if the candidate crossed the promotion thresholds and was
+        added to the knowledge graph (never for SIMULATED/PREDICTED input).
+        """
+        from .learning_pipeline import OBSERVED, VERIFIED
+        promotable = epistemic in (OBSERVED, VERIFIED, "INFERRED")
+        cand = self.learning.observe(subject, predicate, object,
+                                     confidence=confidence, source=source,
+                                     cycle=self._cycle, epistemic=epistemic)
+        if not promotable:
+            self._emit("learning.candidate", {"subject": subject, "predicate": predicate,
+                                               "object": object, "epistemic": epistemic,
+                                               "status": "hypothetical"})
+            return False
+        promoted = self.learning.promote(cand, self.knowledge, cycle=self._cycle)
+        self._emit("learning.candidate", {"subject": subject, "predicate": predicate,
+                                           "object": object, "epistemic": epistemic,
+                                           "status": "promoted" if promoted else "accumulating",
+                                           "evidence_count": cand.evidence_count})
+        return promoted
+
+    def correct_knowledge(self, subject: str, predicate: str, new_object: str, *,
+                          person: str = "", source: str = "user_correction") -> bool:
+        """Apply an explicit user correction with provenance; supersedes prior claim.
+
+        Returns True when a prior claim was actually corrected.
+        """
+        from .learning_pipeline import CorrectionRecord
+        prior = self.knowledge.leading(subject, predicate)
+        old_object = prior.object if prior is not None else None
+        record = CorrectionRecord(subject=subject, predicate=predicate, old_object=old_object,
+                                  new_object=new_object, person=person, source=source,
+                                  cycle=self._cycle)
+        changed = self.corrections.apply(record, self.knowledge)
+        self._emit("learning.corrected", {
+            "subject": subject, "predicate": predicate,
+            "old_object": old_object, "new_object": new_object,
+            "corrected_by": person, "source": source, "changed": changed,
+        })
+        return changed
+
+    def observe_routine(self, events: set[str]) -> None:
+        """Feed a cycle's event set to the routine detector."""
+        self.routines.observe(self._cycle, events)
+        routines = self.routines.routines(min_occurrences=self.routines.min_occurrences)
+        if routines and routines[0].occurrences >= self.routines.min_occurrences:
+            self._emit("learning.routine", {"cycle": self._cycle,
+                                             "pattern": list(routines[0].pattern),
+                                             "occurrences": routines[0].occurrences})
+
+    def counterfactual(self, *, premise: str, if_evidence: dict[str, Any],
+                       then_prediction: str, confidence: float = 0.4) -> dict[str, Any]:
+        """Evaluate a what-if question; result is SIMULATED, never merged into facts."""
+        result = self.counterfactuals.evaluate(
+            premise=premise, if_evidence=if_evidence,
+            then_prediction=then_prediction, confidence=confidence,
+        )
+        self._emit("learning.counterfactual", {"cycle": self._cycle, **result})
+        return result
 
     def record_correction(self, person: str, kind: str, value, *, now: str = "") -> None:
         pref = self.preferences.record_correction(person, kind, value, now=now)

@@ -1,9 +1,13 @@
+"""Stage-0 simulation scaffold — LEGACY (not imported by MAC_BRAIN; retained only for the brain/tests suite).
+
+Do not extend these types for the brain phase — new work targets MAC_BRAIN/.
+"""
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+import json
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
-import json
 from typing import Any
 
 from .b1_cognition import CognitiveState
@@ -11,6 +15,7 @@ from .contracts import validate_contract
 
 
 @dataclass(frozen=True)
+
 class ActionProposal:
     proposal_id: str
     capability: str

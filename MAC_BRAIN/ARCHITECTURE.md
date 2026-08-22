@@ -6,16 +6,20 @@
 
 ```
 ┌──────────────────────────────────────────────┐
-│  MAC_BRAIN/   (canonical brain — 743 tests)  │
+│  MAC_BRAIN/   (canonical brain — 1013 tests) │
 │  ├── runtime.py       MacBrain orchestrator  │
 │  ├── cognition.py     BeliefSystem, etc.     │
 │  ├── cognition2.py    MacCognition           │
+│  ├── cognition_typed.py  typed contracts     │
 │  ├── soul.py          Soul, Identity, Affect │
 │  ├── social.py        Relationships          │
 │  ├── dialogue.py      Natural conversation   │
 │  ├── storage.py       DurableMemoryStore     │
 │  ├── world_model.py   UnifiedWorldModel      │
-│  ├── ...              (50+ modules)          │
+│  ├── spatial_map.py   SpatialModel           │
+│  ├── learning_pipeline.py  promotion/correction/routines/counterfactuals │
+│  ├── memory_classes.py   memory-class decision + schema-evolution hooks │
+│  ├── ...              (60+ modules)          │
 │  │                                           │
 │  │  imports from:                            │
 │  ▼                                           │
@@ -82,6 +86,14 @@
 | `context_assembler.py` | Context assembly for reasoning |
 | `memory_hardening.py` | Hardened memory manager |
 | `nvidia_experiments.py` | NVIDIA experiment harness |
+| `event_bus.py` | Canonical doc-10 event envelope, replay, dedup, backpressure |
+| `audit_trail.py` | Append-only decision trace with retention |
+| `soul_acceptance.py` | P0–P3 acceptance catalog + gate evaluator |
+| `p0_gate_runner.py` | Acceptance-gate runners (all priorities) |
+| `spatial_map.py` | Spatial frames/regions/doors/occupancy model |
+| `cognition_typed.py` | Typed cognitive emission (SituationState, IntentHypothesis, Prediction, CognitiveDecisionRecord, CognitiveEvent, PersonContext) |
+| `learning_pipeline.py` | Knowledge promotion, user corrections, routine detection, counterfactual engine |
+| `memory_classes.py` | Memory-class decision (now vs defer) + L0–L6 schema-evolution gate |
 | `models/` | Neural model providers (STT, reasoning, detection, etc.) |
 
 ## What brain/ owns (imported by MAC_BRAIN)
@@ -111,10 +123,12 @@ the brain phase.
 
 | Suite | Count | Owner | Status |
 |-------|-------|-------|--------|
-| `MAC_BRAIN/tests/` | 743 | MAC_BRAIN canonical | ✅ All green |
+| `MAC_BRAIN/tests/` | 1013 | MAC_BRAIN canonical | ✅ All green |
 | `brain/tests/` | 105 | brain portable library | ✅ All green |
-| `web/tests/` | 26 | Web server integration | ⚠️ Needs running server |
-| `contracts/tests/` | ~20 | Contract validation | Not executed this run |
+| `web/tests/` | 41 | Web server integration | ⚠️ Slow (~70s), not in fast suite |
+| `contracts/tests/` | 13 | Contract validation (via pytest shim) | ✅ All green |
+| `cognition/tests/` | 34 | Typed cognition contracts + replay | ✅ All green |
+| **Fast suite total** | **1165** | MAC_BRAIN + brain + contracts + cognition | ✅ All green |
 
 ## Key architecture rules
 

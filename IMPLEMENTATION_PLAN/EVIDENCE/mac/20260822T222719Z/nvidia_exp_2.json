@@ -1,0 +1,37 @@
+{
+  "run_id": "20260822T222719Z-nvidia_exp_2",
+  "experiment_id": "nvidia_exp_2",
+  "name": "skill_contract_invocation",
+  "status": "PASS",
+  "evidence_class": "E2",
+  "epistemic_class": "OBSERVED",
+  "input_config": {
+    "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+    "platform": "darwin",
+    "nvidia_hardware": false,
+    "backend": "deterministic-mock",
+    "note": "No-hardware Mac experiment; validates architecture seams only (PERFECTING_PLAN/09_GAP_ANALYSIS_NVIDIA_INTEGRATION.md)."
+  },
+  "start_time": "20260822T222719Z",
+  "metrics": {},
+  "failures": [],
+  "conclusion": "skill navigate invoked with status SUCCESS",
+  "evidence": {
+    "invocation_id": "a7eea3bc-1695-44d1-9875-b477dfdca756",
+    "skill_id": "navigate",
+    "parameters": {
+      "target_location": "kitchen",
+      "speed": 0.3
+    },
+    "status": "SUCCESS",
+    "result": {
+      "destination": "kitchen",
+      "distance_traveled": 2.5
+    },
+    "started_at": "2026-08-22T22:27:19.573474+00:00",
+    "completed_at": "2026-08-22T22:27:19.573482+00:00",
+    "error": "",
+    "timeout_seconds": 60.0,
+    "deadline_monotonic": 536903.178651208
+  }
+}

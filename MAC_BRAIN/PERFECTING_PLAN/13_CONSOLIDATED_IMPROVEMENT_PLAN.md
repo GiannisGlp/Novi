@@ -1,7 +1,7 @@
 # 13 — Consolidated Improvement Plan
 
 **Generated:** 2026-08-22
-**Source:** Full-repository analysis (848 tests at generation time; reconciled baseline now **1154** — see Test Baseline), ~60 Python modules, ~200 docs, contracts, web server
+**Source:** Full-repository analysis (848 tests at generation time; reconciled baseline now **1206** — see Test Baseline), ~60 Python modules, ~200 docs, contracts, web server
 **Purpose:** Actionable improvement plan derived from comprehensive gap, bug, and quality analysis of the entire Novi project at the current Mac Brain phase.
 
 ---
@@ -24,12 +24,12 @@
 
 | Suite | Count | Status |
 |-------|-------|--------|
-| MAC_BRAIN/tests | 961 | ✅ All passing (was 743 at generation; +50 dedicated governance-guard / multi-speed-runtime tests; +107 Step 2/3/4 tests in this wave) |
+| MAC_BRAIN/tests | 1013 | ✅ All passing (was 743 at generation; +50 governance-guard / multi-speed-runtime; +159 Step 2/3/4 + spatial 14 + typed cognition 9 + learning pipeline 17 + memory-class decision 10) |
 | brain/tests | 105 | ✅ All passing |
 | web/tests | 41 | ✅ All passing (slow, ~70s; was 26 — web timeout fixed) |
 | contracts/tests | 13 | ✅ All passing via pytest shim (jsonschema now in `pyproject.toml` dev deps) |
 | cognition/tests | 34 | ✅ All passing (new typed-cognition package: Pydantic v2 models, validators, replay harness) |
-| **Total** | **1154** | |
+| **Total** | **1206** | |
 
 ---
 
@@ -82,7 +82,7 @@
 ## Priority 3: Fix Stale Documentation and Test Discrepancy
 
 ### Problem
-- `32_IMPLEMENTATION_STATUS.md` had stale test counts ("201 passed"/"858 passed") — **✅ Fixed** in the gap-analysis wave: counts now reported as 961 MAC_BRAIN + 105 brain + 41 web + 13 contracts + 34 cognition = 1154
+- `32_IMPLEMENTATION_STATUS.md` had stale test counts ("201 passed"/"858 passed") — **✅ Fixed** in the gap-analysis wave: counts now reported as 1013 MAC_BRAIN + 105 brain + 41 web + 13 contracts + 34 cognition = 1206
 - The implementation status doc's stale "Next implementation slice" section — **✅ Fixed** (replaced with PERFECTING_PLAN wave documentation)
 - `mac_brain_evidence.json` at root is noted as "first-slice artifact left in place" — should it be archived?
 
@@ -130,9 +130,9 @@ The `brain/b1_memory.py` `MemoryRecord` dataclass has the fields but lacks:
 - `MAC_BRAIN/tests/test_storage.py`: 10 new `HardenedDurableStoreTests` (write gate admit, simulated-as-fact rejection, poisoning rejection, missing provenance, retrieval states, conflict detection, field persistence, backward compatibility)
 
 ### Remaining
-- Independence groups for contextual trust (IndependenceTracker exists but not wired into durable path)
-- Schema evolution hooks (L0-L6 migration framework)
-- Procedural/prospective/metamemory memory classes (deferred to body phase)
+- Independence groups for contextual trust (IndependenceTracker exists but not wired into durable path) — ✅ DONE: wired + persisted (roadmap item 14)
+- Schema evolution hooks (L0-L6 migration framework) — ✅ hooks in place (`MAC_BRAIN/memory_classes.py` SchemaEvolutionGate; full migration engine deferred)
+- Procedural/prospective/metamemory memory classes — ✅ DECIDED deferred to body phase with rationale (`MAC_BRAIN/memory_classes.py`, roadmap item 16)
 
 ---
 
@@ -251,7 +251,7 @@ Each priority has a clear done-bar (testable, verifiable). Infrastructure first 
 
 ## Evidence of Analysis Completeness
 
-- All **1154** tests run (MAC_BRAIN: 961 ✅, brain: 105 ✅, web: 41 ✅, contracts: 13 ✅, cognition: 34 ✅) — reconciled during the gap-analysis wave and updated with typed-cognition + Step 2/3/4 tests
+- All **1206** tests run (MAC_BRAIN: 1013 ✅, brain: 105 ✅, web: 41 ✅, contracts: 13 ✅, cognition: 34 ✅) — reconciled during the gap-analysis wave and updated with typed-cognition + Step 2/3/4 tests
 - All ~60 Python source files inspected
 - All 12 PERFECTING_PLAN documents read
 - All 8 doc domains and their READMEs reviewed

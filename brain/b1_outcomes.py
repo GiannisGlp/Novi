@@ -1,3 +1,7 @@
+"""Stage-0 simulation scaffold — LEGACY (not imported by MAC_BRAIN; retained only for the brain/tests suite).
+
+Do not extend these types for the brain phase — new work targets MAC_BRAIN/.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,6 +11,7 @@ from .b1_autonomy import ActionProposal
 
 
 @dataclass(frozen=True)
+
 class ActionOutcome:
     proposal_id: str
     status: str

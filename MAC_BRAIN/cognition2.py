@@ -162,3 +162,31 @@ class MacCognition(DeterministicCognition):
     ) -> CognitiveState:
         situation = self.build_situation(state, observations, cycle=cycle, knowledge=knowledge, goal=goal, recalled=recalled)
         return CognitiveState(situation=situation, reasoning=self.reason(situation))
+
+    def cycle_typed(
+        self,
+        state: WorldModelState,
+        observations: Iterable[SensorObservation],
+        *,
+        cycle: int,
+        world_revision: int = 0,
+        knowledge: Any = (),
+        goal: dict[str, Any] | None = None,
+        recalled: Any = (),
+        correlation_id: str | None = None,
+        causation_id: str | None = None,
+    ) -> Any:
+        """Run a cognition cycle and emit the canonical typed contracts (roadmap item 12).
+
+        Returns a TypedCognitionOutput with SituationState, PersonContext(s),
+        IntentHypotheses, Predictions, a CognitiveDecisionRecord (interpretation-only),
+        and CognitiveEvent(s) — all ownership-boundary safe (nothing here is an
+        authorization grant or physical command).
+        """
+        situation = self.build_situation(state, observations, cycle=cycle, knowledge=knowledge, goal=goal, recalled=recalled)
+        reasoning = self.reason(situation)
+        from .cognition_typed import emit_cognitive_typed
+        return emit_cognitive_typed(
+            situation, reasoning, cycle=cycle, world_revision=world_revision,
+            correlation_id=correlation_id, causation_id=causation_id,
+        )

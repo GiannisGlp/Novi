@@ -114,3 +114,13 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Check-in honesty | `20260822T025202Z/check-in-honesty.json` | 'how are you?' never says 'the system's running smoothly'/'processing' |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
+
+
+
+## Step 5 — NVIDIA no-hardware experiments (roadmap item 28)
+| NVIDIA no-hardware nvidia_exp_1 | `20260822T222719Z/nvidia_exp_1.json` | context_aware_reference_resolution — [E-class E2] PASS: reference resolved to cup with status RESOLVED |
+| NVIDIA no-hardware nvidia_exp_2 | `20260822T222719Z/nvidia_exp_2.json` | skill_contract_invocation — [E-class E2] PASS: skill navigate invoked with status SUCCESS |
+| NVIDIA no-hardware nvidia_exp_3 | `20260822T222719Z/nvidia_exp_3.json` | demonstration_dataset_novi_episode — [E-class E3] PASS: 4 adapters tested, roundtrips OK |
+
+## Step 10 — Cross-system acceptance (roadmap item 29)
+| Cross-system acceptance (Soul→Cognition→Memory→Autonomy→Safety→Runtime) | `20260822T225017Z/cross_system_acceptance.json` | E3 integration — PASS (gates: 4, pipeline checks: 5, fast suite: 1165, integrity: True) |
