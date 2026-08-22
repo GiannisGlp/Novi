@@ -174,5 +174,47 @@ class FailureHandlerRuntimeIntegrationTests(unittest.TestCase):
         self.assertGreater(len(recovery_events), 0)
 
 
+class ResourceAdaptationTests(unittest.TestCase):
+    """Gap-analysis Step 3, item 19: resource-aware behavioral adaptation.
+
+    The runtime's multi-speed resource mode must track the failure-handler
+    degraded state instead of always assuming FULL resources.
+    """
+
+    def _brain(self, backend):
+        return MacBrain(camera=FakeCamera(), perception=SpecialistPerception(backend),
+                        config=MacBrainConfig(curiosity_enabled=False))
+
+    def test_normal_cycle_uses_full_resources(self):
+        brain = self._brain(CupBackend())
+        brain.start()
+        brain.step()
+        self.assertEqual(brain.multi_speed.resource_mode.value, "full")
+        brain.stop()
+
+    def test_perception_degraded_uses_reactive_only(self):
+        from MAC_BRAIN.multi_speed_runtime import ResourceMode
+        brain = self._brain(EmptyBackend())
+        brain.start()
+        brain.step()  # no detections → PERCEPTION_UNCERTAINTY → degraded
+        self.assertTrue(brain.failure_handler.is_degraded)
+        self.assertEqual(brain.failure_handler.degraded_mode.value, "perception_degraded")
+        self.assertEqual(brain.multi_speed.resource_mode, ResourceMode.REACTIVE_ONLY)
+        brain.stop()
+
+    def test_recovery_restores_full_resources(self):
+        from MAC_BRAIN.multi_speed_runtime import ResourceMode
+        brain = self._brain(EmptyBackend())
+        brain.start()
+        brain.step()
+        self.assertEqual(brain.multi_speed.resource_mode, ResourceMode.REACTIVE_ONLY)
+        brain.perception = SpecialistPerception(CupBackend())
+        for _ in range(8):
+            brain.step()
+        self.assertFalse(brain.failure_handler.is_degraded)
+        self.assertEqual(brain.multi_speed.resource_mode, ResourceMode.FULL)
+        brain.stop()
+
+
 if __name__ == "__main__":
     unittest.main()

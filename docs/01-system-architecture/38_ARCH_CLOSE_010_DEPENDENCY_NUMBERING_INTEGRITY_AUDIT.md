@@ -113,6 +113,10 @@ Confirmed examples include:
 
 These are governed organizational collisions, not competing semantic authorities.
 
+### Addendum (2026-08-22, gap-analysis Step 0)
+
+One collision was upgraded from *organizational* to *semantic*: `17_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md` and `19_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md` both claimed time authority. Consolidated per the gap analysis: `19_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md` is the canonical time authority, and `17_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md` is now marked **SUPERSEDED** for historical traceability. Cross-references were updated to the canonical path.
+
 ## 7. Historical lineage
 
 Historical identifiers such as `06_107`, `07_108`, `08_110` and `09_111` remain in filenames because they preserve architecture lineage. They are not current sequential identifiers and must not be referenced by numeric prefix alone.

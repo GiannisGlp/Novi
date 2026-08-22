@@ -88,6 +88,20 @@ Current domains requiring completion work remain:
 
 Soul is the first domain currently treated as complete, subject only to normal consuming-domain cross-reference maintenance.
 
+### 5.1 Reconciliation with the active Brain implementation phase (2026-08-22)
+
+The gate rule is: **no *new* implementation phase begins** until every program-status
+domain is complete (§1). The Mac Brain phase is the current, authorized phase under the
+program tracker (`docs/00-strategy/NOVI_DOCUMENTATION_AND_IMPLEMENTATION_COMPLETION_TRACKER.md`)
+and the `MAC_BRAIN/PERFECTING_PLAN/` roadmap — it is not a *new* phase. The gate therefore
+does not forbid the ongoing Brain-phase work; it continues to forbid opening *additional*
+phases (e.g. a hardware-implementation phase) while design/definition gaps in the incomplete
+domains remain.
+
+This does not relax the completion requirement: the Brain domain itself remains
+IN PROGRESS (see gap analysis `docs/00-strategy/NOVI_BRAIN_GAP_ANALYSIS_AND_NEXT_STEPS.md`),
+and every §10 readiness box must still be checked before the gate opens.
+
 ## 6. Completion campaign
 
 We now work through the program status itself. We do **not** start another implementation workstream simply because one domain has reached a sufficient level for implementation.

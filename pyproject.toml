@@ -55,11 +55,17 @@ dev = [
     "pytest>=8",
     "pytest-cov",
     "ruff>=0.6",
+    "jsonschema>=4.23,<5",
+]
+
+# Typed cognition contract layer (docs/03-cognition/22, 25, 26 + gap-analysis Step 1)
+typed = [
+    "pydantic>=2.7",
 ]
 
 # Everything for a full Mac Brain setup
 mac = [
-    "novi[neural,audio,vision,llm,dev]",
+    "novi[neural,audio,vision,llm,typed,dev]",
 ]
 
 [project.scripts]
@@ -67,7 +73,7 @@ novi-brain = "MAC_BRAIN.cli:main"
 novi-web = "web.server:main"
 
 [tool.setuptools.packages.find]
-include = ["brain*", "MAC_BRAIN*", "web*", "contracts*"]
+include = ["brain*", "MAC_BRAIN*", "web*", "contracts*", "cognition*"]
 exclude = ["tests*", "docs*", "scripts*"]
 
 [tool.ruff]

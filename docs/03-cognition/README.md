@@ -152,8 +152,21 @@ Reference ecosystems include NVIDIA, PyTorch, TensorFlow, OpenCV, ONNX Runtime, 
 
 ## Final Status
 
-**DESIGN COMPLETE — V1**
+**DESIGN COMPLETE — V1** (design/architecture level)
 
 The final architecture audit is recorded in `24_COGNITION_ARCHITECTURE_AUDIT.md`. Future changes should normally be additive or captured as decision records unless new evidence demonstrates that an architectural boundary is wrong.
+
+### Design-complete vs implementation-in-progress (reconciled 2026-08-22, gap-analysis Step 0)
+
+"DESIGN COMPLETE — V1" is a **design/architecture** status. It does not mean the
+Cognition **implementation** phase is complete. Implementation-phase documents
+remain **IN PROGRESS** per the §35 completion gate of
+`21_COGNITION_IMPLEMENTATION_SPECIFICATION.md` — most importantly, the canonical
+typed cognitive contract layer (`22_COGNITIVE_DATA_CONTRACTS_AND_SCHEMAS.md`,
+`26_COGNITIVE_TYPED_MODEL_IMPLEMENTATION_BASELINE.md`) is not yet implemented
+(no Pydantic typed models; cognition emits dicts). Cognition may move to
+`VALIDATED`/`COMPLETE` for the Mac phase only after that work lands with
+validation evidence — see `docs/00-strategy/NOVI_BRAIN_GAP_ANALYSIS_AND_NEXT_STEPS.md`
+Step 1 for the priority-ordered plan.
 
 The next major domain is `04-memory-and-knowledge`.

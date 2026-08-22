@@ -1,7 +1,8 @@
-"""Tests for VocabularyScopeModel wiring into the dialogue/lexicon path.
+"""Tests for scoped-vocabulary wiring into the dialogue/lexicon path.
 
 Verifies:
-  - VocabularyScopeModel is initialized in the runtime.
+  - The canonical Lexicon is initialized in the runtime (single source of truth;
+    the legacy duplicate VocabularyScopeModel was removed, roadmap item 27).
   - _learn_from_chat observes expressions as relationship-scoped.
   - Exposure alone does not cause adoption (A06: lexicon poisoning).
   - Relationship-scoped expressions from other people are surfaced in vocabulary_scope.
@@ -12,10 +13,9 @@ Verifies:
 import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-
+from MAC_BRAIN.lexicon import Lexicon, LexiconStatus
+from MAC_BRAIN.lexicon import Scope as LexScope
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.soul_acceptance import VocabularyScopeModel, RELATIONSHIP_SCOPE
-from MAC_BRAIN.lexicon import Lexicon, Scope as LexScope, LexiconStatus
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 
 
@@ -39,10 +39,13 @@ class VocabularyScopeWiringTests(unittest.TestCase):
         brain.step()
         return brain
 
-    def test_vocab_scope_model_initialized(self):
+    def test_canonical_lexicon_initialized(self):
+        """The runtime owns one canonical Lexicon; no legacy duplicate remains."""
         brain = self._brain()
         try:
-            self.assertIsInstance(brain.vocab_scope, VocabularyScopeModel)
+            self.assertIsInstance(brain.lexicon, Lexicon)
+            self.assertFalse(hasattr(brain, "vocab_scope"),
+                             "legacy VocabularyScopeModel duplicate removed")
         finally:
             brain.stop()
 
@@ -139,18 +142,17 @@ class VocabularyScopeWiringTests(unittest.TestCase):
         finally:
             brain.stop()
 
-    def test_vocab_scope_model_proposed_from_chat(self):
-        """The VocabularyScopeModel is updated when _learn_from_chat is called."""
+    def test_learn_from_chat_updates_canonical_lexicon(self):
+        """_learn_from_chat updates the canonical Lexicon (single scoped source)."""
         brain = self._brain()
         try:
             brain._learn_from_chat("hey there friend", person="Alice")
-            entries = brain.vocab_scope.all_entries()
-            # Should have at least one entry (the expression from Alice).
+            entries = [e for e in brain.lexicon.snapshot()
+                       if e["expression"] == "hey there friend" and e["person"] == "Alice"]
+            # Should have at least one entry (the expression from Alice), scoped.
             self.assertGreater(len(entries), 0)
-            # Find the entry for this expression.
-            alice_entries = [e for e in entries if e.scope_target == "Alice"]
-            self.assertGreater(len(alice_entries), 0)
-            self.assertEqual(alice_entries[0].scope, RELATIONSHIP_SCOPE)
+            self.assertEqual(entries[0]["scope"], LexScope.RELATIONSHIP.value)
+            self.assertEqual(entries[0]["person"], "Alice")
         finally:
             brain.stop()
 
@@ -159,18 +161,8 @@ class VocabularyScopeWiringTests(unittest.TestCase):
         brain = self._brain()
         try:
             brain._learn_from_chat("buddy", person="Alice")
-            # Check the VocabularyScopeModel.
-            appropriate_for_alice = brain.vocab_scope.is_appropriate("buddy", person="Alice")
-            appropriate_for_bob = brain.vocab_scope.is_appropriate("buddy", person="Bob")
-            # For Alice: the expression was proposed for her, so it's in her scope.
-            # For Bob: it was scoped to Alice, so it's NOT appropriate for Bob.
-            # (The VocabularyScopeModel returns True for unknown expressions by default,
-            # but the lexicon's is_usable() is the authoritative check.)
-            # Let's check the lexicon instead.
-            usable_for_alice = brain.lexicon.is_usable("buddy", person="Alice")
-            usable_for_bob = brain.lexicon.is_usable("buddy", person="Bob")
-            # After a single observation, the expression is OBSERVED (not yet usable).
-            # But after repeated exposure, it should be usable for Alice but not Bob.
+            # After a single observation, the expression is OBSERVED (not yet usable) —
+            # the canonical Lexicon's is_usable() is the authoritative check.
             for _ in range(3):
                 brain._learn_from_chat("buddy", person="Alice")
             usable_for_alice_after = brain.lexicon.is_usable("buddy", person="Alice")

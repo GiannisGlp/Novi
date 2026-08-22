@@ -255,7 +255,7 @@ The audio contract must support both short frames and longer retained segments.
 
 # 7. Time synchronization
 
-Audio timestamps must use the same system time model defined by `17_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md`.
+Audio timestamps must use the same system time model defined by `19_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md` (canonical authority; supersedes `17_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md`).
 
 Every audio segment must be attributable to:
 

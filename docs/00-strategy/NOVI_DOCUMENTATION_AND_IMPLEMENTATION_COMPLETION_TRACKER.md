@@ -160,6 +160,19 @@ ARCH-CLOSE-010  CLOSED
              SYSTEM ARCHITECTURE COMPLETE
 ```
 
+### Reconciliation: COMPLETE vs PARTIALLY EVIDENCED (2026-08-22, gap-analysis Step 0)
+
+Two closure-evidence documents (`43_ARCH_CLOSE_005_SAFETY_INTEGRATION_EVIDENCE.md`,
+`44_ARCH_CLOSE_006_TIME_VALIDATION_EVIDENCE.md`) carry **Status: PARTIALLY EVIDENCED**.
+This is not a contradiction with the domain status above: COMPLETE means the
+architecture and its executable closure evidence are sufficient for the current
+**software/no-hardware** stage. The PARTIALLY EVIDENCED designation on those two
+files refers to *physical-world* validation (hardware safety integration,
+physical sensor-clock synchronization and long-duration drift budgets) that is
+deferred until hardware-in-loop exists. Those items must **re-open** the
+corresponding ARCH-CLOSE items when hardware arrives; they do not block the
+current Brain phase.
+
 ### Completion gate
 
 - no unresolved P0 architecture contradiction identified in the closure campaign;

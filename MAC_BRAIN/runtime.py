@@ -50,11 +50,17 @@ from .world_model import (
 )
 from .context_assembler import ContextAssembler, ContextRequest
 from .attention import AttentionRanker
-from .governance_guard import GovernanceGuard, ActionProposal as GovernanceActionProposal, GovernanceGrant
+from .governance_guard import (
+    GovernanceGuard,
+    ActionProposal as GovernanceActionProposal,
+    GovernanceGrant,
+    REQUIRE_CONFIRMATION,
+)
+from .event_bus import EventBus
 from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode, SYSTEM_0, SYSTEM_1, SYSTEM_2, SYSTEM_3
 from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
 from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult, WriteGate
-from .soul_acceptance import CommunicationDecision, VocabularyScopeModel, GLOBAL_SCOPE, RELATIONSHIP_SCOPE
+from .soul_acceptance import CommunicationDecision
 from .p0_gate_runner import run_p0_gate
 from .nvidia_experiments import EpisodeRecorder, NoviEpisode, ALL_ADAPTERS, OBSERVED as EP_OBSERVED
 from .skill_contract import SkillExecutor, SkillInvocation, SUCCESS as SKILL_SUCCESS, FAILURE as SKILL_FAILURE
@@ -124,6 +130,7 @@ class MacBrain(ChatMixin):
         dialogue: Any | None = None,
         speaker_id: Any | None = None,
         face_id: Any | None = None,
+        governance_guard: GovernanceGuard | None = None,
         config: MacBrainConfig | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
@@ -140,15 +147,17 @@ class MacBrain(ChatMixin):
         self.unified_world = UnifiedWorldModel()
         self.context_assembler = ContextAssembler()
         self.attention_ranker = AttentionRanker()
-        self.governance_guard = GovernanceGuard()
+        self.governance_guard = governance_guard or GovernanceGuard()
         self.multi_speed = MultiSpeedRuntime()
         self.closed_loop = ClosedLoopRuntime()
         self._last_attention_candidates: list[dict[str, Any]] = []
         self._last_context_package: dict[str, Any] | None = None
         self._last_governance_grant: dict[str, Any] | None = None
+        # Confirmation flow (gap-analysis Step 3, item 18): REQUIRE_CONFIRMATION
+        # grants are surfaced as requests and held here until confirm_action().
+        self._pending_confirmations: dict[str, dict[str, Any]] = {}
         self._last_loop_snapshot: dict[str, Any] | None = None
         self.communication_decision = CommunicationDecision()
-        self.vocab_scope = VocabularyScopeModel()
         self.skill_executor = SkillExecutor()
         self._last_skill_invocation: dict[str, Any] | None = None
         self.situation_model = SituationModel()
@@ -285,6 +294,17 @@ class MacBrain(ChatMixin):
         self._last_health: dict[str, Any] | None = None
         self._cycle = 0
         self.events: list[dict[str, Any]] = []
+        # Autonomy event bus (gap-analysis Step 3, item 17): canonical
+        # envelope with correlation/causation IDs, priority, privacy class,
+        # replay, dedup, backpressure, and access control. `self.events` is
+        # kept as the flattened compatibility view (all legacy consumers read
+        # it); the bus is the authoritative store.
+        self.event_bus = EventBus()
+        self._cycle_correlation_id = str(uuid4())
+        # Persistent decision audit trail (gap-analysis Step 3, item 23):
+        # structured records of consequential decisions/actions with retention.
+        from .audit_trail import AuditTrail
+        self.audit_trail = AuditTrail()
 
     def start(self) -> None:
         self.brain.start()
@@ -299,18 +319,26 @@ class MacBrain(ChatMixin):
         self._emit("autonomy.transition", {"cycle": 0, **t2.snapshot()})
         self._emit("MAC_BRAIN.started", {"run_id": self.run_id})
 
-    def step(self) -> dict[str, Any]:
+    def step(self, *, resource_constrained: bool = False) -> dict[str, Any]:
         if self.brain.lifecycle is not Lifecycle.ACTIVE:
             raise RuntimeError(f"Mac Brain must be ACTIVE, got {self.brain.lifecycle.value}")
         if self.camera is None:
             raise RuntimeError("camera provider is not configured")
         self._cycle += 1
+        # Resource-constrained cycles pause lower-priority goals (doc 00 §Resources).
+        self._resource_constrained = bool(resource_constrained) or self.failure_handler.is_degraded
+        # Each cycle is one correlation domain on the event bus: all events
+        # emitted during this step share the correlation id, and each event
+        # causally references the event before it (doc 10 ordering).
+        self._cycle_correlation_id = str(uuid4())
         # Failure handler: attempt recovery from degraded mode at the start of each cycle.
         if self.failure_handler.is_degraded:
             recovered = self.failure_handler.attempt_recovery()
             if recovered:
                 self._emit("failure.recovered", {"cycle": self._cycle, "mode": "normal"})
-                self.multi_speed.set_state(AutonomyState.ACTIVE)
+        # Resource-aware adaptation: keep the multi-speed runtime's resource
+        # mode aligned with the current failure/degraded state (Step 3 item 19).
+        self._apply_resource_adaptation()
         # Multi-speed runtime: System-0 safety check runs first (never waits on LLM).
         msr_results = self.multi_speed.step({"cycle": self._cycle})
         if not self.multi_speed.system0_safety_clear:
@@ -340,6 +368,7 @@ class MacBrain(ChatMixin):
                 timestamp=datetime.now(timezone.utc).isoformat(),
             )
             self._emit("failure.detected", {"cycle": self._cycle, **failure.snapshot()})
+            self._apply_resource_adaptation()
         # Autonomy state machine: OBSERVING → AWARE when significant events detected.
         now_sm = datetime.now(timezone.utc).isoformat()
         if self.autonomy_sm.state == ASMState.OBSERVING and evidence.detections:
@@ -496,7 +525,7 @@ class MacBrain(ChatMixin):
                 t = self.autonomy_sm.transition("interaction_started", timestamp=now_sm2)
                 self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         if goal_was_active:
-            step_command = self.goals.step(self.body, cycle=self._cycle)
+            step_command = self.goals.step(self.body, cycle=self._cycle, resource_constrained=self._resource_constrained)
             action = step_command.action
             parameters = step_command.parameters
             reason = "goal_pursuit"
@@ -556,12 +585,44 @@ class MacBrain(ChatMixin):
             "reason": gov_grant.reason,
         })
 
+        # Confirmation flow (gap-analysis Step 3, item 18): a
+        # REQUIRE_CONFIRMATION grant is surfaced as a pending request and the
+        # action is held until confirm_action() grants it — it is not silently
+        # treated as a denial.
+        awaiting_confirmation = False
+        if gov_grant.decision == REQUIRE_CONFIRMATION:
+            awaiting_confirmation = True
+            governance_allowed = False
+            self._pending_confirmations[gov_grant.grant_id] = {
+                "grant_id": gov_grant.grant_id,
+                "proposal_id": proposal.correlation_id,
+                "action": action,
+                "parameters": dict(parameters),
+                "risk_class": risk_class,
+                "reason": reason,
+                "cycle": self._cycle,
+                "proposal": proposal,
+                "decision": decision,
+            }
+            self._emit("governance.confirmation_required", {
+                "cycle": self._cycle,
+                "grant_id": gov_grant.grant_id,
+                "proposal_id": proposal.correlation_id,
+                "action": action,
+                "parameters": dict(parameters),
+                "risk_class": risk_class,
+                "reason": gov_grant.reason,
+            })
+
         # Action executes only if BOTH the brain authorizes AND the governance guard allows.
         authorized = decision.authorized and governance_allowed
 
         # Skill contract: invoke the formal skill contract for this action.
         # If the skill's preconditions aren't met, the action is skipped.
-        skill_invocation = self._invoke_skill_for_action(action, parameters, goal_was_active)
+        # Actions held for confirmation are not invoked yet.
+        skill_invocation = None
+        if not awaiting_confirmation:
+            skill_invocation = self._invoke_skill_for_action(action, parameters, goal_was_active)
         skill_passed = True
         if skill_invocation is not None:
             skill_passed = skill_invocation.status == SKILL_SUCCESS
@@ -582,6 +643,7 @@ class MacBrain(ChatMixin):
                     timestamp=datetime.now(timezone.utc).isoformat(),
                 )
                 self._emit("failure.detected", {"cycle": self._cycle, **failure.snapshot()})
+                self._apply_resource_adaptation()
 
         if authorized:
             outcome = self.brain.execute(proposal, decision)
@@ -600,11 +662,29 @@ class MacBrain(ChatMixin):
             "brain_authorized": decision.authorized,
             "governance_allowed": governance_allowed,
             "governance_decision": gov_grant.decision,
+            "awaiting_confirmation": awaiting_confirmation,
             "skill_passed": skill_passed,
             "skill_invoked": skill_invocation is not None,
-            "outcome": outcome.detail if outcome else (decision.reason if not decision.authorized else gov_grant.reason),
+            "outcome": (outcome.detail if outcome else
+                        ("awaiting_confirmation" if awaiting_confirmation else
+                         (decision.reason if not decision.authorized else gov_grant.reason))),
             "virtual_body": virtual_state,
         })
+        # Persistent decision audit trace (doc 13): record the consequential
+        # action with policy/safety results and outcome, in the cycle's
+        # correlation domain, with goal/plan/action ids when available.
+        self.audit_trail.record(
+            correlation_id=self._cycle_correlation_id,
+            action=action,
+            decision_reason=reason,
+            policy_result=gov_grant.decision if not gov_grant.is_allowed else f"ALLOW:{risk_class}",
+            safety_result="executed" if authorized else ("held" if awaiting_confirmation else "blocked"),
+            outcome=outcome.detail if outcome else ("held" if awaiting_confirmation else "not_executed"),
+            goal_id=self.goals.active.goal.goal_id if self.goals.has_active else "",
+            action_id=proposal.correlation_id,
+            actor="runtime",
+            version="mac-brain",
+        )
         # Reflection / self-correction: judge whether the action had its intended effect.
         body_after = self.body.snapshot()
         effective = self._action_effective(action, body_before, body_after, authorized, cognitive.situation.salient_entities, cognitive.reasoning.inferences)
@@ -730,6 +810,13 @@ class MacBrain(ChatMixin):
         plan = self.planner.plan(goal, cycle=cycle)
         self.planner.start(plan)
         self._plans[goal.goal_id] = plan
+        # Plan validation (doc 05 §Plan Validation): a valid plan is not
+        # automatically authorized; validation verdict is emitted for audit.
+        validation = self.planner.validate(plan, available_actions=getattr(self.body, "ALLOWED_ACTIONS", None))
+        self._emit("plan.validated", {
+            "goal_id": goal.goal_id, "plan_id": plan.plan_id,
+            "valid": validation.valid, "issues": list(validation.issues),
+        })
         self._emit("plan.created", {"goal_id": goal.goal_id, "goal_kind": goal.kind, "plan_id": plan.plan_id, "steps": len(plan.steps)})
         self._emit("goal.adopted", {"goal_id": goal.goal_id, "kind": goal.kind, "target": str(goal.target), "max_steps": goal.max_steps})
         self._persist_goal(state)
@@ -951,6 +1038,29 @@ class MacBrain(ChatMixin):
         self._last_audio_events = [e.snapshot() for e in events]
         return {"events": [e.snapshot() for e in events], "quality": quality.snapshot(), "admitted": admitted}
 
+    def _apply_resource_adaptation(self) -> None:
+        """Map the failure-handler degraded mode to the MultiSpeedRuntime resource mode.
+
+        Gap-analysis Step 3, item 19 (resource-aware behavioral adaptation):
+        when a subsystem is degraded the runtime must run in a matching resource
+        mode instead of always assuming FULL resources.
+        """
+        mode = self.failure_handler.degraded_mode
+        if mode == DegradedMode.NORMAL:
+            self.multi_speed.set_resource_mode(ResourceMode.FULL)
+            if self.multi_speed.state not in (AutonomyState.INTERRUPTED,):
+                self.multi_speed.set_state(AutonomyState.ACTIVE)
+        elif mode in (DegradedMode.PERCEPTION_DEGRADED, DegradedMode.IDENTITY_DEGRADED):
+            # Perception is unreliable: react deterministically, skip deliberation.
+            self.multi_speed.set_resource_mode(ResourceMode.REACTIVE_ONLY)
+            self.multi_speed.set_state(AutonomyState.DEGRADED)
+        elif mode == DegradedMode.SAFETY_ONLY:
+            self.multi_speed.set_resource_mode(ResourceMode.SAFE_MINIMUM)
+            self.multi_speed.set_state(AutonomyState.SAFE_MINIMUM)
+        else:  # reasoning/memory degraded
+            self.multi_speed.set_resource_mode(ResourceMode.DEGRADED)
+            self.multi_speed.set_state(AutonomyState.DEGRADED)
+
     def _admit_detections(self, detections: Any) -> None:
         for detection in detections:
             classification = self.governance.classify(memory_type="perception", content={"label": detection.label, "confidence": detection.confidence}, entity_refs=(detection.label,), modality="vision")
@@ -1159,6 +1269,87 @@ class MacBrain(ChatMixin):
         out = [t.snapshot() for t in triples]
         self._emit("knowledge.recalled", {"entity": entity, "recalled": len(out)})
         return {"entity": entity, "triples": out}
+
+    # ---- audit trail API (gap-analysis Step 3, item 23) ----
+
+    def audit_entries(self, *, limit: int | None = None) -> tuple[dict[str, Any], ...]:
+        """Full structured decision-trace snapshots (doc 13 §Decision Trace)."""
+        return self.audit_trail.snapshots(limit=limit)
+
+    def audit_user_view(self, *, limit: int | None = None) -> tuple[dict[str, Any], ...]:
+        """Privacy-safe user audit view (doc 13 §User Audit)."""
+        return self.audit_trail.user_audit_view(limit=limit)
+
+    def audit_trace_for(self, correlation_id: str) -> tuple[dict[str, Any], ...]:
+        return tuple(e.snapshot() for e in self.audit_trail.by_correlation(correlation_id))
+
+    def audit_stats(self) -> dict[str, Any]:
+        return self.audit_trail.stats()
+
+    # ---- confirmation flow API (gap-analysis Step 3, item 18) ----
+
+    def pending_confirmations(self) -> tuple[dict[str, Any], ...]:
+        """Snapshots of actions currently awaiting user/operator confirmation."""
+        out: list[dict[str, Any]] = []
+        for v in self._pending_confirmations.values():
+            out.append({
+                "grant_id": v["grant_id"],
+                "proposal_id": v["proposal_id"],
+                "action": v["action"],
+                "parameters": dict(v["parameters"]),
+                "risk_class": v["risk_class"],
+                "reason": v["reason"],
+                "cycle": v["cycle"],
+            })
+        return tuple(out)
+
+    def confirm_action(self, grant_id: str) -> bool:
+        """Confirm a pending REQUIRE_CONFIRMATION grant and execute the action.
+
+        This is the wired confirmation flow: REQUIRE_CONFIRMATION → surface
+        request → confirm() → execute. Returns True when the action was
+        confirmed and executed (or already executed); False when the grant is
+        not pending or was denied.
+        """
+        confirmed = self.governance_guard.confirm(grant_id)
+        if confirmed is None or not confirmed.is_allowed:
+            return False
+        pending = self._pending_confirmations.pop(grant_id, None)
+        if pending is None:
+            return False
+        self._last_governance_grant = confirmed.snapshot()
+        self._emit("governance.confirmed", {
+            "grant_id": grant_id,
+            "action": pending["action"],
+            "reason": "confirmed_by_user_or_operator",
+        })
+        # Execute the confirmed action through the same brain + body path.
+        outcome = self.brain.execute(pending["proposal"], pending["decision"])
+        virtual_state = self.body.execute(pending["action"], **pending["parameters"])
+        self._emit("action.completed", {
+            "action": pending["action"],
+            "authorized": True,
+            "brain_authorized": True,
+            "governance_allowed": True,
+            "governance_decision": "ALLOW",
+            "awaiting_confirmation": False,
+            "skill_passed": True,
+            "skill_invoked": False,
+            "outcome": outcome.detail,
+            "virtual_body": virtual_state,
+        })
+        return True
+
+    def reject_confirmation(self, grant_id: str) -> bool:
+        """Withdraw a pending confirmation request without executing the action."""
+        pending = self._pending_confirmations.pop(grant_id, None)
+        if pending is None:
+            return False
+        self._emit("governance.confirmation_rejected", {
+            "grant_id": grant_id,
+            "action": pending["action"],
+        })
+        return True
 
     # ---- privacy / memory governance API ----
     def forget_memory(self, memory_id: str, *, reason: str = "user_request") -> dict[str, Any]:
@@ -1457,5 +1648,43 @@ class MacBrain(ChatMixin):
         self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         self._emit("MAC_BRAIN.stopped", {"run_id": self.run_id, "cycles": self._cycle})
 
-    def _emit(self, event_type: str, payload: dict[str, Any]) -> None:
-        self.events.append({"event_type": event_type, "run_id": self.run_id, "cycle": self._cycle, "payload": payload})
+    def _emit(
+        self,
+        event_type: str,
+        payload: dict[str, Any],
+        *,
+        source: str = "runtime",
+        correlation_id: str | None = None,
+        causation_id: str | None = None,
+        priority: str = "normal",
+        privacy_class: str = "unclassified",
+    ) -> str:
+        """Publish an event through the autonomy event bus (doc 10 contract).
+
+        Returns the event_id. Events are threaded into the current cycle's
+        correlation domain and causally chained to the previous event when no
+        explicit ids are given. ``self.events`` remains the flattened
+        compatibility view for legacy consumers.
+        """
+        envelope = self.event_bus.publish(
+            event_type,
+            payload,
+            source=source,
+            correlation_id=correlation_id or self._cycle_correlation_id,
+            causation_id=causation_id,
+            priority=priority,
+            privacy_class=privacy_class,
+        )
+        self.events.append({
+            "event_type": event_type,
+            "run_id": self.run_id,
+            "cycle": self._cycle,
+            "payload": payload,
+            "event_id": envelope.event_id,
+            "correlation_id": envelope.correlation_id,
+            "causation_id": envelope.causation_id,
+            "priority": envelope.priority,
+            "privacy_class": envelope.privacy_class,
+            "sequence": envelope.sequence,
+        })
+        return envelope.event_id

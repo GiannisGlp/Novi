@@ -1,7 +1,13 @@
 # 12 — Autonomy Boundary & Ownership Audit
 
-**Status:** CRITICAL — CANONICAL BOUNDARY AUDIT  
+**Status:** SUPERSEDED — see `16_AUTONOMY_ARCHITECTURE_BOUNDARY_AUDIT.md` (canonical boundary audit)  
+**Superseded:** 2026-08-22 (gap-analysis Step 0)  
 **Scope:** `02-autonomy`, `02-novi-brain`, `03-cognition`, `04-memory-and-knowledge`, `01-system-architecture`
+
+**Reason:** duplicate autonomy boundary audit; the autonomy README designates
+`16_AUTONOMY_ARCHITECTURE_BOUNDARY_AUDIT.md` as the canonical ownership/separation
+audit. This file is retained for historical traceability only; its decisions
+remain effective only insofar as they are restated in doc 16.
 
 ## 1. Decision
 

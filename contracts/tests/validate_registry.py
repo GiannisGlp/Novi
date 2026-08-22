@@ -26,8 +26,10 @@ def main() -> int:
     contracts = registry.get("contracts", [])
     failures: list[str] = []
 
-    if len(contracts) != 18:
-        failures.append(f"registry contains {len(contracts)} contracts; expected 18")
+    # 18 system/memory/autonomy/safety/execution/brain/hardware/deployment
+    # + 7 cognition contracts (gap-analysis Step 1) = 25.
+    if len(contracts) != 25:
+        failures.append(f"registry contains {len(contracts)} contracts; expected 25")
 
     seen_ids: set[str] = set()
     seen_names: set[str] = set()

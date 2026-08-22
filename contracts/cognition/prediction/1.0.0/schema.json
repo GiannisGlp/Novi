@@ -1,0 +1,328 @@
+{
+  "$defs": {
+    "PrivacyClassificationModel": {
+      "additionalProperties": false,
+      "description": "Privacy classification for a contract/field (canonical registry semantics).",
+      "properties": {
+        "classification": {
+          "default": "inherited",
+          "enum": [
+            "none",
+            "inherited",
+            "field-classified",
+            "required",
+            "sensitive-biometric"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "sensitive_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sensitive Fields",
+          "type": "array"
+        },
+        "retention": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retention"
+        }
+      },
+      "title": "PrivacyClassificationModel",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Provenance chain for a derived object (doc 26 \u00a718).\n\nEvery derived object must be traceable: source \u2192 observation \u2192 evidence \u2192\nderived object. For model-derived results, model ID/version/runtime must be\nrecorded.",
+      "properties": {
+        "source": {
+          "default": "system",
+          "title": "Source",
+          "type": "string"
+        },
+        "source_observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Observation Ids",
+          "type": "array"
+        },
+        "source_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Evidence Ids",
+          "type": "array"
+        },
+        "source_object_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Object Ids",
+          "type": "array"
+        },
+        "model_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Ref"
+        },
+        "model_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Version"
+        },
+        "model_runtime": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Runtime"
+        },
+        "transformation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transformation"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        }
+      },
+      "title": "Provenance",
+      "type": "object"
+    },
+    "SchemaVersion": {
+      "additionalProperties": false,
+      "description": "SemVer version of a contract schema (doc 26 \u00a722).",
+      "properties": {
+        "major": {
+          "minimum": 0,
+          "title": "Major",
+          "type": "integer"
+        },
+        "minor": {
+          "minimum": 0,
+          "title": "Minor",
+          "type": "integer"
+        },
+        "patch": {
+          "minimum": 0,
+          "title": "Patch",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "major",
+        "minor",
+        "patch"
+      ],
+      "title": "SchemaVersion",
+      "type": "object"
+    },
+    "Uncertainty": {
+      "additionalProperties": false,
+      "description": "Explicit uncertainty (doc 26 \u00a717 Uncertainty).\n\nConfidence and probability are separate fields; a confidence value must not\nbe presented as a calibrated probability unless calibration status says so.",
+      "properties": {
+        "confidence": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "probability": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Probability"
+        },
+        "calibrated": {
+          "default": false,
+          "title": "Calibrated",
+          "type": "boolean"
+        },
+        "source": {
+          "default": "model",
+          "title": "Source",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "title": "Uncertainty",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A future-state hypothesis from Cognition (doc 26 \u00a714).",
+  "properties": {
+    "schema_version": {
+      "$ref": "#/$defs/SchemaVersion"
+    },
+    "contract_type": {
+      "default": "Prediction",
+      "title": "Contract Type",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "predicts_at": {
+      "format": "date-time",
+      "title": "Predicts At",
+      "type": "string"
+    },
+    "subject_ref": {
+      "title": "Subject Ref",
+      "type": "string"
+    },
+    "predicted_attribute": {
+      "title": "Predicted Attribute",
+      "type": "string"
+    },
+    "predicted_value": {
+      "default": null,
+      "title": "Predicted Value"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "uncertainty": {
+      "$ref": "#/$defs/Uncertainty"
+    },
+    "basis": {
+      "title": "Basis",
+      "type": "string"
+    },
+    "supporting_evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Supporting Evidence Ids",
+      "type": "array"
+    },
+    "counterfactual": {
+      "default": false,
+      "title": "Counterfactual",
+      "type": "boolean"
+    },
+    "source": {
+      "default": "cognition",
+      "title": "Source",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "privacy": {
+      "$ref": "#/$defs/PrivacyClassificationModel"
+    },
+    "correlation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlation Id"
+    },
+    "causation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causation Id"
+    }
+  },
+  "required": [
+    "id",
+    "created_at",
+    "predicts_at",
+    "subject_ref",
+    "predicted_attribute",
+    "confidence",
+    "basis"
+  ],
+  "title": "Prediction",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novi.prediction/1.0.0"
+}

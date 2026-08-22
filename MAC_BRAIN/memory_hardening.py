@@ -406,6 +406,26 @@ class IndependenceTracker:
     def group_of(self, memory_id: str) -> str | None:
         return self._record_groups.get(memory_id)
 
+    def restore(self, memory_id: str, group_id: str, *, source_id: str | None = None) -> None:
+        """Restore a persisted (memory_id → group_id) mapping after a restart.
+
+        This is the durable-store bridge: stores persist the independence_group
+        column, and DurableMemoryStore.__init__ calls this for every row so
+        corroboration counting survives restarts (gap-analysis Step 2).
+        """
+        if not group_id:
+            return
+        self._groups.setdefault(group_id, set())
+        if source_id:
+            self._groups[group_id].add(source_id)
+        self._record_groups[memory_id] = group_id
+
+    def tracked_record_ids(self) -> tuple[str, ...]:
+        return tuple(self._record_groups)
+
+    def tracked_group_count(self) -> int:
+        return len(self._groups)
+
     def are_independent(self, memory_id_a: str, memory_id_b: str) -> bool:
         """True if two records are from independent evidence lineages."""
         ga = self._record_groups.get(memory_id_a)

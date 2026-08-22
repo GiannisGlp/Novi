@@ -31,6 +31,25 @@ fixtures/
 
 The suite must eventually be executed in CI and its evidence recorded in the architecture closure register.
 
-## Current limitation
+## Execution
 
-Fixtures are being introduced incrementally. Until all 18 contracts have positive and negative coverage and the validator has executed successfully, ARCH-CLOSE-001 remains open.
+The suite is a set of standalone executable validators plus a pytest shim:
+
+```text
+python -m pytest contracts/tests -q          # CI-runnable entry point
+python contracts/tests/generate_fixtures.py  # regenerate fixtures (run before validation)
+```
+
+`test_executable_suite.py` runs the fixture generator and then executes every
+validator as a subprocess, failing the pytest run on any non-zero exit. All 25
+registry contracts validated (schemas, fixtures, compatibility policy,
+integration, persistence, semantic) — 18 original domains + 7 cognition
+contracts (SituationState, PersonContext, AttentionCandidate, IntentHypothesis,
+Prediction, CognitiveDecisionRecord, CognitiveEvent).
+
+## Current status
+
+Fixtures are generated deterministically from the registry schemas
+(`generate_fixtures.py`), then validated by `fixture_validation.py`
+(18/18 positive, 36 negative cases) and `validate_registry.py`. Requires
+`jsonschema` (declared in the `dev` extra of `pyproject.toml`).

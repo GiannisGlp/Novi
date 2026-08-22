@@ -84,8 +84,6 @@ Speech transcripts and neural detections now flow into cognition **and** memory.
 - Verified on-device: reach `(8,0)` moved forward and completed within the 0.5 m threshold; reach `(0,10)` turned to heading 90° then moved forward and completed.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/GOAL-reach.json`, `GOAL-turn.json`.
 
-## Next implementation slice
-
 ## Memory recall into the autonomous loop (status: IMPLEMENTED)
 
 - `MacBrain._recall_context(...)` retrieves relevant memories (queried from salient entities + detections) via the memory manager, then passes them as `recall` context into `reasoning.decide(...)`.
@@ -1272,26 +1270,39 @@ are you doing today?" fell to a catch-all.
 - Tests: +1; fast suites **487 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/check-in-honesty.json`.
 
-## Next implementation slice
+## PERFECTING_PLAN implementation wave (Steps 1–6) (status: IMPLEMENTED)
 
-- **Regression:** full suite `python -m unittest discover -s MAC_BRAIN/tests -s brain/tests` → **858 passed** (MAC_BRAIN: 753, brain: 105). Web suite: 26 tests (requires running server/Ollama for full pass).
-- **End-to-end durable run** (`EVIDENCE/mac/<stamp>/integration.json`): a scripted perception sequence drove the whole pipeline (perception → memory admit/recall/consolidation → cognition → reasoning → goals → action → soul → social → lexicon/preferences/beliefs), then a **restart** re-opened the same store and every subsystem reported persisted state:
-  - `memory_active_after_restart=6`, `soul_identity=Novi`, `alice_relationship=friend`,
-    `lexicon_buddy_status=scoped`, `pref_response_length=detailed` (correction superseded),
-    `belief_lamp={value:true, contradictions:1}`, `expectation_violations_fired=2`,
-    tone `warm`, and the full emitted event stream.
-- **Durability surface audit:** the store now persists **10 domain tables** (`memory_records`,
-  `goals`, `soul`, `relationships`, `lexicon`, `preferences`, `beliefs`, `expectations`,
-  `memory_fts`, plus the consolidated state tables) — all constructed on init, loaded on
-  restart, and saved on `stop()`.
-- **Cleanup:** removed stray `$DEST/` scratch dirs, a `_cap.py` leftover, empty evidence
-  directories from failed captures, and consolidated a single clean evidence index
-  (`IMPLEMENTATION_PLAN/EVIDENCE/mac/INDEX.md`).
-- **Known limitation (noted, not blocking):** goal *history* is persisted to the `goals`
-  table but is not rebuilt into the in-memory `BoundedGoalController` on restart — so a
-  restart does not resume an interrupted goal. Bounded goals are short-lived by design, so
-  this is acceptable for the current stage; resuming goals across restart is a future item.
-- `mac_brain_evidence.json` (tracked, first-slice artifact) left in place.
+The `MAC_BRAIN/PERFECTING_PLAN/` roadmap (13 files) is implemented and wired into the runtime. This wave added the subsystems documented below, all exercised by dedicated test files.
+
+- **Unified WorldModel** (`MAC_BRAIN/world_model.py`) — typed entities/relations with epistemic status (OBSERVED/INFERRED/PREDICTED/SIMULATED/VERIFIED/UNKNOWN), contradictions preserved, snapshots, provenance. Replaced the legacy `TemporalWorldModel` (`brain/b1_world.py` retained as LEGACY). Tests: `test_world_model.py`, `test_unified_world_replacement.py`, `test_world_integration.py`.
+- **SituationModel + ContextAssembler** (`situation_model.py`, `context_assembler.py`) — bounded, provenance-filtered context; `resolve_reference()` implements the "Bring me that cup" reference-resolution scenario; fed into the assembler. Tests: `test_situation_model.py`, `test_context_assembler.py`.
+- **AttentionRanker** (`attention.py`) — ranked attention candidates. Test: `test_attention.py`.
+- **HardenedMemoryManager** (`memory_hardening.py`) — `WriteGate` (7-stage), `retrieve_with_states` (NO_RESULT/AMBIGUOUS/CONFLICTED/STALE/ABSTAIN), `IndependenceTracker`, `ContextualTrust`, wired into the runtime. Tests: `test_memory_hardening.py`, `test_hardened_memory_wiring.py`.
+- **MultiSpeedRuntime** (`multi_speed_runtime.py`) — deterministic System-0 safety tier that never waits on an LLM, registered at `runtime.py` (System-0 safety). Tests: `test_multi_speed_runtime.py` (dedicated), `test_skill_governance.py`.
+- **SkillExecutor + SkillContract** (`skill_contract.py`) — navigate/inspect/find_object/pick/speak with preconditions/success/failure/timeout/recovery/safety; wired into the runtime. Tests: `test_skill_executor_wiring.py`, `test_skill_governance.py`.
+- **GovernanceGuard** (`governance_guard.py`) — "no action executes without grant"; degraded-mode blocks physical actions; confirmation grants. Tests: `test_governance_guard.py` (dedicated), `test_skill_governance.py`.
+- **AutonomyStateMachine** (`autonomy_state_machine.py`) — 13 states, validated transition table, interruption/resume. Test: `test_autonomy_state_machine.py`.
+- **FailureHandler** (`failure_modes.py`) — degraded modes, escalation, recovery. Test: `test_failure_modes.py`, `test_enhanced_sm_and_fh.py`.
+- **ClosedLoopRuntime** (`closed_loop.py`) — observe/plan/act/verify/recover/ask/stop + cross-system acceptance + completion gate. Test: `test_closed_loop.py`.
+- **EpisodeRecorder + NoviEpisode schema** (`nvidia_experiments.py`) — LeRobot/IsaacLab/ROSBag/NoviNative adapters, wired for automatic episode recording. Tests: `test_episode_recorder.py`, `test_episode_recorder_wiring.py`.
+- **Soul acceptance harness** (`soul_acceptance.py`, `p0_gate_runner.py`) — P0GateEvaluator, VocabularyScopeModel, CommunicationDecision (fatigue/cooldown/silence), P0GateRunner wired as release gate. Tests: `test_soul_acceptance.py`, `test_p0_gate_wiring.py`, `test_p0_real_dialogue.py`, `test_vocab_scope_wiring.py`, `test_communication_wiring.py`.
+- **Real neural capability** — SSDLite320 object detection (`models/torchvision_detector.py`, torchvision/MPS), faster-whisper STT (`models/stt.py`). TTS uses native macOS `say`. Tests: `test_torchvision_detector.py`, `test_neural_backend.py`, `test_stt_reasoning_wiring.py`.
+- **Durable SQLite store** (`storage.py`) — 10 domain tables, FTS5 (`memory_fts` virtual table), vector memory (`vector.py`), privacy/erasure (`privacy.py`), consolidation/decay/archival (`consolidation.py`). Tests: `test_storage.py`, `test_storage_index.py`, `test_vector.py`, `test_privacy.py`, `test_consolidation.py`.
+- **Web dashboard** (`web/`) — chat, reasoning trace, state, event log, goals+map, real sensing, model switcher (qwen3.8 ⇄ nemotron-3.5-lightning).
+
+### Regression status (this analysis)
+
+- MAC_BRAIN: **961 passing** (804 + 50 new dedicated governance-guard / multi-speed-runtime tests + 107 Step 2/3/4 tests: durable independence wiring, simulated-episode recall, skill timeout enforcement, resource-aware adaptation, runtime confirmation flow, event-bus contract, goal lifecycle + conflict resolution, audit trail, scenario/adversarial/endurance, affect→communication mapping, P1–P3 acceptance catalog + gates + runners)
+- brain: **105 passing**
+- web: **41 passing** (slow, ~70s)
+- contracts: **13 passing** (executable suite via pytest shim, requires `jsonschema` — now declared in `pyproject.toml` dev deps)
+- cognition typed contracts: **34 passing** (`cognition/tests/test_contracts.py`, Pydantic v2 models + validators + replay harness)
+- **Total: 1154** (fast suites = 961 MAC_BRAIN + 105 brain + 13 contracts + 34 cognition = 1113, + web 41)
+
+### Known limitations (noted, not blocking)
+
+- Goal *history* is persisted to the `goals` table and **rebuilt into the in-memory `BoundedGoalController` on restart** — goal-resume across restart is implemented (`runtime.py` goal-restore path, `test_resume_goals.py`); mid-pursuit step-budget preservation is covered under "Goal-resume across restart: mid-pursuit step-budget preservation" above.
+- Remaining gaps are prioritized in `docs/00-strategy/NOVI_BRAIN_GAP_ANALYSIS_AND_NEXT_STEPS.md` (typed cognition contracts P1, memory contract completion P2, real neural models P3, spatial/multi-person P4, autonomy/safety/runtime P5).
 
 ## Evidence rule
 

@@ -14,30 +14,66 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
-from .dialogue import (
-    _extract_topic, _is_clarification, _is_continuation, _is_emotional_statement,
-    _is_greeting, _is_introduction, _is_joke_request, _is_perception_question,
-    _is_physical_action_request, _is_acknowledgment, _is_bodily_need_question,
-    _is_repeat_question, _is_realtime_data_question, _is_assurance_question,
-    _is_engagement_check, _is_memory_question, _is_talk_request,
-    _is_debate_request, _is_farewell, _is_world_question, _is_identity_question,
-    _is_praise, praise_reply, _is_reassurance_question, reassurance_reply,
-    _is_check_in, check_in_reply, _is_capability_question,
-    _is_remote_action_request, farewell_reply, _is_embodiment_question,
-    _is_future_question, _is_recall_question, _is_reminder_request,
-    _is_thanks, _is_time_greeting, acknowledgment_reply, assurance_reply,
-    clarification_reply, continuation_reply, emotional_reply, followup_question,
-    future_reply, greeting_reply, introduction_reply, joke_reply,
-    natural_fallback, physical_action_honest_reply, realtime_honest_reply,
-    recall_reply, reminder_reply, thanks_reply, time_greeting_reply,
-)
-from .soul_acceptance import RELATIONSHIP_SCOPE
-from .social import TIER_EXPRESSION
 from .context_assembler import ContextRequest
+from .dialogue import (
+    _extract_topic,
+    _is_acknowledgment,
+    _is_assurance_question,
+    _is_bodily_need_question,
+    _is_capability_question,
+    _is_check_in,
+    _is_clarification,
+    _is_continuation,
+    _is_debate_request,
+    _is_embodiment_question,
+    _is_emotional_statement,
+    _is_engagement_check,
+    _is_farewell,
+    _is_future_question,
+    _is_greeting,
+    _is_identity_question,
+    _is_introduction,
+    _is_joke_request,
+    _is_memory_question,
+    _is_perception_question,
+    _is_physical_action_request,
+    _is_praise,
+    _is_realtime_data_question,
+    _is_reassurance_question,
+    _is_recall_question,
+    _is_reminder_request,
+    _is_remote_action_request,
+    _is_repeat_question,
+    _is_talk_request,
+    _is_thanks,
+    _is_time_greeting,
+    _is_world_question,
+    acknowledgment_reply,
+    assurance_reply,
+    check_in_reply,
+    clarification_reply,
+    continuation_reply,
+    emotional_reply,
+    farewell_reply,
+    followup_question,
+    future_reply,
+    greeting_reply,
+    introduction_reply,
+    joke_reply,
+    natural_fallback,
+    physical_action_honest_reply,
+    praise_reply,
+    realtime_honest_reply,
+    reassurance_reply,
+    recall_reply,
+    reminder_reply,
+    thanks_reply,
+    time_greeting_reply,
+)
+from .social import TIER_EXPRESSION
+from .soul_acceptance import affect_expression
 
 
 class ChatMixin:
@@ -333,13 +369,6 @@ class ChatMixin:
                 scope=LexScope.RELATIONSHIP,
                 now=now,
             )
-            # Also propose to the VocabularyScopeModel (soul acceptance module).
-            self.vocab_scope.propose(
-                text.strip()[:80],
-                RELATIONSHIP_SCOPE,
-                scope_target=person,
-                confidence=0.2,  # low initial confidence — needs repeated evidence
-            )
             self._emit("lexicon.observed_from_chat", {
                 "cycle": self._cycle, "person": person,
                 "expression": text.strip()[:80],
@@ -387,6 +416,15 @@ class ChatMixin:
             "traits": dict(self.soul.personality.traits),
             "values": dict(self.soul.personality.values),
         }
+
+    @staticmethod
+    def _affect_serious_context(text: str) -> bool:
+        """Detect a serious human situation warranting calmer expression (S30)."""
+        lowered = (text or "").lower()
+        return any(tok in lowered for tok in (
+            "upset", "sorry", "worried", "scared", "afraid", "hurt", "sad",
+            "crying", "lost someone", "died", "emergency", "help me", "fear",
+        ))
 
     def _chat_surroundings(self) -> dict[str, Any]:
         """Current surroundings for dialogue (docs/06-soul/01 WHERE I AM + world)."""
@@ -504,7 +542,11 @@ class ChatMixin:
 
         Wraps _compose_reply_impl with CommunicationDecision: records each
         successful interaction and respects prefer-silence / social-fatigue.
+        Attaches the affect→expression directive (docs/06-soul/05 §12/§14)
+        to the reply for observability (roadmap item 26).
         """
+        affect = dict(self.soul.affect.dimensions)
+        directive = affect_expression(affect, serious=self._affect_serious_context(text))
         result = self._compose_reply_impl(
             text, person=person, history=history, llm_chat=llm_chat,
             last_novi_text=last_novi_text, addressee_name=addressee_name,
@@ -518,6 +560,9 @@ class ChatMixin:
                 "fatigue_level": self.communication_decision.fatigue_level,
                 "interaction_count": self.communication_decision.interaction_count,
             })
+        result["expression"] = directive
+        if isinstance(result.get("grounding"), dict):
+            result["grounding"]["affect_expression"] = directive
         return result
 
     def _compose_reply_impl(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
@@ -540,11 +585,14 @@ class ChatMixin:
             return {"text": None, "fallback": False, "grounding": {}}
         # CommunicationDecision: decide whether, when, and how to communicate.
         # "Prefer silence" when there's no useful communicative reason; respect
-        # social-fatigue budget and turn-taking (docs/06-soul/08 §S60, §S61).
+        # social-fatigue budget, turn-taking, and affect-driven social overload
+        # (docs/06-soul/08 §S60, §S61; docs/06-soul/05 §14; roadmap item 26).
         addressee = person or addressee_name
+        affect = dict(self.soul.affect.dimensions)
         should, silence_reason = self.communication_decision.should_speak(
             has_communicative_reason=True,  # a user message is a communicative reason
             addressee=addressee,
+            affect=affect,
         )
         if not should:
             self._emit("communication.silent", {
@@ -865,6 +913,14 @@ class ChatMixin:
         action — it only proposes a communicative act.
         """
         if not self.config.initiative_enabled:
+            return None
+        # Social overload reduces proactive behavior (docs/06-soul/05 §14):
+        # when social-comfort and engagement are both low, don't initiate.
+        affect = self.soul.affect.dimensions
+        if affect.get("social_comfort", 0.5) < 0.35 and affect.get("engagement", 0.5) < 0.5:
+            self._emit("speech.initiative_suppressed", {
+                "cycle": self._cycle, "reason": "social_overload_reduction",
+            })
             return None
         proposal = self.social_initiative.propose(
             cycle=self._cycle,

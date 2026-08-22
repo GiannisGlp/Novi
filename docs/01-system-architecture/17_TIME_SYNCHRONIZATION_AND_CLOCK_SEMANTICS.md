@@ -1,7 +1,9 @@
 # 17 — Time Synchronization & Clock Semantics
 
-**Status:** P0 normative architecture foundation  
+**Status:** SUPERSEDED — see `19_TIME_SYNCHRONIZATION_AND_CLOCK_SEMANTICS.md` (canonical authority)  
+**Date:** 2026-08-18 (superseded 2026-08-22)  
 **Purpose:** Define time semantics across sensors, ROS 2, cognition, simulation, logging, memory, hardware and future distributed execution.
+**Reason for supersession:** duplicate time-sync authority consolidated (gap-analysis Step 0). Exact-path references to this file must be updated to the canonical document; this file is retained for historical traceability only.
 
 ## 1. Why time is architectural
 

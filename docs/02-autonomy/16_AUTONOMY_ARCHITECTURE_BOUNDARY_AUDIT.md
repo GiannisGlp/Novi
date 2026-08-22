@@ -650,15 +650,15 @@ No Autonomy file needs deletion at this stage. The problem is boundary language 
 
 ---
 
-## 20. Critical stale references found
+## 20. Stale reference check (corrected 2026-08-22)
 
-The Autonomy documentation contains references to **Wheely** even though this repository is Novi.
-
-Examples include the physical release wording in `00_HIGH_LEVEL_AUTONOMY.md` and `15_AUTONOMY_IMPLEMENTATION_ROADMAP.md`.
-
-These must be corrected to Novi before the autonomy documentation is considered canonical.
-
-This is a documentation-integrity issue, not merely a naming preference.
+Earlier versions of this audit claimed the Autonomy documentation contains stale
+**Wheely** references (e.g. in `00_HIGH_LEVEL_AUTONOMY.md` and
+`15_AUTONOMY_IMPLEMENTATION_ROADMAP.md`). That claim is itself stale: a
+repository-wide grep on 2026-08-22 finds "Wheely" **only inside this document**
+nowhere else in `docs/02-autonomy/`. No Wheely references remain to correct in
+the Autonomy corpus; this section is retained to record the disposition of the
+earlier finding.
 
 ---
 
@@ -667,7 +667,8 @@ This is a documentation-integrity issue, not merely a naming preference.
 Perform the following in order:
 
 1. Keep this audit as the Autonomy boundary authority.
-2. Correct stale `Wheely` references to `Novi`.
+2. ~~Correct stale `Wheely` references to `Novi`.~~ — **DONE:** 2026-08-22 grep found
+   no Wheely references outside this document; no correction needed.
 3. Add explicit cross-domain boundary sections to the Autonomy README.
 4. Reframe `01` as the autonomous behavioral loop.
 5. Reconcile `05` with Cognition's reasoning/planning responsibilities.
@@ -698,7 +699,7 @@ The Autonomy boundary passes when:
 - event transport is not duplicated;
 - safety is not duplicated;
 - model routing is not duplicated;
-- stale Wheely references are removed;
+- ~~stale Wheely references are removed~~ — satisfied (no stale references found);
 - cross-links identify canonical owners;
 - no new overlapping semantic document is created.
 

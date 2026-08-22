@@ -6,46 +6,40 @@ Done-bars:
   - System-0 safety gating proven.
 """
 
+import dataclasses
 import unittest
 
+from MAC_BRAIN.governance_guard import (
+    ALLOW,
+    DEGRADED_MODE,
+    DENY,
+    REQUIRE_CONFIRMATION,
+    ActionProposal,
+    GovernanceGuard,
+)
+from MAC_BRAIN.multi_speed_runtime import (
+    SYSTEM_0,
+    SYSTEM_1,
+    SYSTEM_2,
+    AutonomyState,
+    MultiSpeedRuntime,
+    ResourceMode,
+)
 from MAC_BRAIN.skill_contract import (
-    SkillContract,
-    SkillInvocation,
-    SkillExecutor,
-    NAVIGATE_SKILL,
-    INSPECT_SKILL,
-    FIND_OBJECT_SKILL,
-    PICK_SKILL,
-    SPEAK_SKILL,
     ALL_SKILLS,
-    SUCCESS,
     FAILURE,
-    PENDING,
-    RUNNING,
+    INSPECT_SKILL,
+    NAVIGATE_SKILL,
+    PICK_SKILL,
     R0,
     R1,
     R3,
     R5,
+    SPEAK_SKILL,
+    SUCCESS,
+    TIMEOUT,
+    SkillExecutor,
 )
-from MAC_BRAIN.governance_guard import (
-    ActionProposal,
-    GovernanceGuard,
-    GovernanceGrant,
-    ALLOW,
-    DENY,
-    REQUIRE_CONFIRMATION,
-    DEGRADED_MODE,
-)
-from MAC_BRAIN.multi_speed_runtime import (
-    MultiSpeedRuntime,
-    AutonomyState,
-    ResourceMode,
-    SYSTEM_0,
-    SYSTEM_1,
-    SYSTEM_2,
-    SYSTEM_3,
-)
-
 
 # ---------------------------------------------------------------------------
 # Skill contract tests
@@ -152,6 +146,53 @@ class SkillExecutorTests(unittest.TestCase):
         retrieved = executor.get_invocation(result.invocation_id)
         self.assertIsNotNone(retrieved)
         self.assertEqual(retrieved.status, SUCCESS)
+
+    def test_invoke_enforces_contract_timeout(self):
+        """Gap-analysis Step 3, item 20: SkillContract.timeout_seconds enforced.
+
+        A handler that exceeds the contract deadline is reported as TIMEOUT
+        rather than SUCCESS/FAILURE.
+        """
+        import time as _time
+
+        executor = SkillExecutor()
+
+        def slow_handler(invocation, contract, context):
+            # Simulate a backend that overruns the deadline.
+            _time.sleep(max(contract.timeout_seconds + 0.05, 0.05))
+            invocation.status = SUCCESS
+            invocation.result = {"slow": True}
+
+        executor.register_handler("navigate", slow_handler)
+        # Override the contract deadline to a tiny value so the test is fast.
+        fast_contract = dataclasses.replace(NAVIGATE_SKILL, timeout_seconds=0.02)
+        executor._handlers["navigate"] = slow_handler
+        original = executor.get_contract
+
+        def get_contract_with_timeout(skill_id):
+            if skill_id == "navigate":
+                return fast_contract
+            return original(skill_id)
+
+        executor.get_contract = get_contract_with_timeout  # type: ignore[method-assign]
+        result = executor.invoke("navigate", {"target_location": "kitchen", "speed": 0.3},
+                                  context={"robot_localized": True, "target_location_known": True, "path_clear": True})
+        self.assertEqual(result.status, TIMEOUT)
+        self.assertIn("timeout_exceeded", result.error)
+        self.assertGreater(result.deadline_monotonic, 0.0)
+
+    def test_invoke_fast_handler_not_timed_out(self):
+        """A handler completing within the deadline is not reported as TIMEOUT."""
+        executor = SkillExecutor()
+
+        def fast_handler(invocation, contract, context):
+            invocation.status = SUCCESS
+            invocation.result = {"fast": True}
+
+        executor.register_handler("navigate", fast_handler)
+        result = executor.invoke("navigate", {"target_location": "kitchen", "speed": 0.3},
+                                  context={"robot_localized": True, "target_location_known": True, "path_clear": True})
+        self.assertEqual(result.status, SUCCESS)
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +307,7 @@ class MultiSpeedRuntimeTests(unittest.TestCase):
         # When safety gate fails, higher tiers are interrupted.
         sys1_results = results.get("system_1", {})
         if isinstance(sys1_results, dict):
-            self.assertTrue(sys1_results.get("interrupted") or 
+            self.assertTrue(sys1_results.get("interrupted") or
                            any(v.get("interrupted") for v in sys1_results.values() if isinstance(v, dict)))
         self.assertEqual(rt.state, AutonomyState.INTERRUPTED)
 

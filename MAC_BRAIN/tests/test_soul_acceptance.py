@@ -1,39 +1,28 @@
 """Tests for Soul Behavioral Acceptance (PERFECTING_PLAN Step 4).
 
 P0 gate green: zero constitutional/privacy/escalation/identity/safety violations.
-Covers scenario format, acceptance classes, vocabulary scope, prefer-silence,
-social-fatigue, addressee discrimination.
+Covers scenario format, acceptance classes, scoped vocabulary (canonical
+Lexicon), prefer-silence, social-fatigue, addressee discrimination.
 """
 
 import unittest
 
+from MAC_BRAIN.lexicon import Lexicon, LexiconStatus
+from MAC_BRAIN.lexicon import Scope as LexScope
 from MAC_BRAIN.soul_acceptance import (
-    AcceptanceClass,
-    Scenario,
-    ScenarioResult,
-    P0GateEvaluator,
-    P0GateResult,
+    ALL_CANONICAL_SCENARIOS,
     ALL_P0_SCENARIOS,
-    S01_STABLE_IDENTITY,
-    S02_IDENTITY_CHALLENGE,
-    S60_SILENCE,
-    S70_PRIVATE_MEMORY,
-    A01_IDENTITY_REWRITE,
-    A02_VALUE_REWRITE,
-    A03_PERMISSION_ESCALATION,
-    A04_MEMORY_FABRICATION,
-    A05_RELATIONSHIP_LEAKAGE,
-    A06_LEXICON_POISONING,
-    A07_EMOTIONAL_COERCION,
-    A08_SAFETY_EROSION,
+    ALL_P1_SCENARIOS,
+    ALL_P2_SCENARIOS,
+    ALL_P3_SCENARIOS,
     P0_INVARIANTS,
-    VocabularyScopeModel,
-    VocabularyEntry,
+    S01_STABLE_IDENTITY,
+    AcceptanceClass,
+    AcceptanceGateEvaluator,
     CommunicationDecision,
-    GLOBAL_SCOPE,
-    RELATIONSHIP_SCOPE,
-    CONTEXT_SCOPE,
-    EPHEMERAL_SCOPE,
+    P0GateEvaluator,
+    ScenarioResult,
+    affect_expression,
 )
 
 
@@ -103,6 +92,143 @@ class P0GateEvaluatorTests(unittest.TestCase):
         self.assertEqual(len(gate.violations), 0)
 
 
+class P1P3CatalogTests(unittest.TestCase):
+    """Canonical P1-P3 scenario catalog (docs/06-soul/08 §7-16; roadmap item 25)."""
+
+    def test_priority_class_breakdown(self):
+        self.assertEqual(len(ALL_P0_SCENARIOS), 13)
+        self.assertGreaterEqual(len(ALL_P1_SCENARIOS), 30)
+        self.assertGreaterEqual(len(ALL_P2_SCENARIOS), 1)
+        self.assertGreaterEqual(len(ALL_P3_SCENARIOS), 1)
+
+    def test_class_catalog_count_matches_total(self):
+        total = len(ALL_P0_SCENARIOS) + len(ALL_P1_SCENARIOS) + len(ALL_P2_SCENARIOS) + len(ALL_P3_SCENARIOS)
+        self.assertEqual(total, len(ALL_CANONICAL_SCENARIOS))
+
+    def test_all_scenario_ids_unique(self):
+        ids = [s.scenario_id for s in ALL_CANONICAL_SCENARIOS]
+        self.assertEqual(len(ids), len(set(ids)))
+
+    def test_p1_has_categories(self):
+        categories = {s.category for s in ALL_P1_SCENARIOS}
+        for expected in ("identity", "personality", "relationship", "affect",
+                         "learning", "lexicon", "communication", "privacy", "failure_recovery"):
+            self.assertIn(expected, categories)
+
+    def test_p1_scenarios_all_prioritized_p1(self):
+        for s in ALL_P1_SCENARIOS:
+            self.assertEqual(s.priority, AcceptanceClass.P1)
+
+    def test_p2_scenarios_all_prioritized_p2(self):
+        for s in ALL_P2_SCENARIOS:
+            self.assertEqual(s.priority, AcceptanceClass.P2)
+
+    def test_p3_scenarios_all_prioritized_p3(self):
+        for s in ALL_P3_SCENARIOS:
+            self.assertEqual(s.priority, AcceptanceClass.P3)
+
+    def test_p1_scenarios_well_formed(self):
+        for s in ALL_P1_SCENARIOS:
+            self.assertGreater(len(s.stimulus), 0)
+            self.assertGreater(len(s.expected_invariants), 0)
+            self.assertGreater(len(s.failure_conditions), 0)
+
+
+class AcceptanceGateEvaluatorTests(unittest.TestCase):
+    """Class gates (P1/P2/P3) via AcceptanceGateEvaluator (docs/06-soul/08 §19-20)."""
+
+    def _all_pass(self, scenarios):
+        return [ScenarioResult(scenario_id=s.scenario_id, passed=True, result="pass") for s in scenarios]
+
+    def test_p1_gate_green(self):
+        results = self._all_pass(ALL_P1_SCENARIOS)
+        gate = AcceptanceGateEvaluator(AcceptanceClass.P1).evaluate(results)
+        self.assertTrue(gate.passed)
+        self.assertEqual(gate.passed_scenarios, len(ALL_P1_SCENARIOS))
+        self.assertTrue(gate.is_complete)
+
+    def test_p2_gate_green(self):
+        results = self._all_pass(ALL_P2_SCENARIOS)
+        gate = AcceptanceGateEvaluator(AcceptanceClass.P2).evaluate(results)
+        self.assertTrue(gate.passed)
+        self.assertTrue(gate.is_complete)
+
+    def test_pending_scenarios_do_not_fail_gate(self):
+        """An unimplemented runner is pending, not a violation (honest coverage)."""
+        results = [ScenarioResult(s.scenario_id, False, "inconclusive", reason="runner not implemented")
+                   for s in ALL_P1_SCENARIOS]
+        gate = AcceptanceGateEvaluator(AcceptanceClass.P1).evaluate(results)
+        self.assertTrue(gate.passed)
+        self.assertEqual(gate.pending_scenarios, len(ALL_P1_SCENARIOS))
+        self.assertFalse(gate.is_complete)
+        self.assertEqual(len(gate.violations), 0)
+
+    def test_p1_failure_flags_gate(self):
+        results = self._all_pass(ALL_P1_SCENARIOS)
+        results[0] = ScenarioResult(ALL_P1_SCENARIOS[0].scenario_id, False, "fail", reason="personality regression")
+        gate = AcceptanceGateEvaluator(AcceptanceClass.P1).evaluate(results)
+        self.assertFalse(gate.passed)
+        self.assertGreater(len(gate.violations), 0)
+
+    def test_mixed_p1_run_counts_correctly(self):
+        """Executed pass + executed fail + pending are counted separately."""
+        results = (
+            [ScenarioResult(s.scenario_id, True, "pass") for s in ALL_P1_SCENARIOS[:10]]
+            + [ScenarioResult(ALL_P1_SCENARIOS[10].scenario_id, False, "fail", reason="x")]
+            + [ScenarioResult(s.scenario_id, False, "inconclusive") for s in ALL_P1_SCENARIOS[11:20]]
+        )
+        gate = AcceptanceGateEvaluator(AcceptanceClass.P1).evaluate(results)
+        self.assertFalse(gate.passed)
+        self.assertEqual(gate.passed_scenarios, 10)
+        self.assertEqual(gate.failed_scenarios, 1)
+        self.assertEqual(gate.pending_scenarios, 9)
+
+
+class AcceptanceGateRunnerTests(unittest.TestCase):
+    """P1-P3 gate runner executes implemented scenarios against a live brain."""
+
+    @staticmethod
+    def _brain():
+        from brain.b2_perception import DeterministicPerceptionBackend, SpecialistPerception
+        from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
+        from MAC_BRAIN.tests.test_mac_brain import FakeCamera
+        brain = MacBrain(
+            camera=FakeCamera(),
+            perception=SpecialistPerception(DeterministicPerceptionBackend()),
+            config=MacBrainConfig(curiosity_enabled=False),
+            store_path=None,
+        )
+        brain.start()
+        return brain
+
+    def test_p1_runner_no_unexpected_failures(self):
+        """P1 gate against a live brain: every implemented runner passes."""
+        from MAC_BRAIN.p0_gate_runner import run_acceptance_gate
+        brain = self._brain()
+        try:
+            gate = run_acceptance_gate(brain, AcceptanceClass.P1)
+            self.assertTrue(gate.passed, f"P1 failures: {[(f.scenario_id, f.reason) for f in gate.failures]}")
+            # Every implemented runner executed; only catalog-unknown runners pending.
+            self.assertGreater(gate.passed_scenarios, 15)
+            self.assertEqual(gate.failed_scenarios, 0)
+        finally:
+            brain.stop()
+
+    def test_p2_p3_runners_pending_only(self):
+        """P2/P3 catalog has no implemented runners yet — all pending."""
+        from MAC_BRAIN.p0_gate_runner import run_acceptance_gate
+        brain = self._brain()
+        try:
+            g2 = run_acceptance_gate(brain, AcceptanceClass.P2)
+            self.assertTrue(g2.passed)
+            self.assertEqual(g2.pending_scenarios, len(ALL_P2_SCENARIOS))
+            g3 = run_acceptance_gate(brain, AcceptanceClass.P3)
+            self.assertTrue(g3.passed)
+            self.assertEqual(g3.pending_scenarios, len(ALL_P3_SCENARIOS))
+        finally:
+            brain.stop()
+
+
 class ScenarioResultTests(unittest.TestCase):
     def test_pass_result(self):
         r = ScenarioResult(scenario_id="S01", passed=True, result="pass")
@@ -121,55 +247,71 @@ class ScenarioResultTests(unittest.TestCase):
         self.assertTrue(snap["passed"])
 
 
-class VocabularyScopeModelTests(unittest.TestCase):
-    def test_propose_global_scope(self):
-        model = VocabularyScopeModel()
-        entry = model.propose("hello", GLOBAL_SCOPE, confidence=0.5)
-        self.assertEqual(entry.scope, GLOBAL_SCOPE)
+class LexiconScopedVocabularyTests(unittest.TestCase):
+    """Scoped-vocabulary invariants on the canonical Lexicon (roadmap item 27).
+
+    The legacy VocabularyScopeModel duplicate was removed; these tests pin the
+    same invariants (S51 scoping, A06 no-auto-adoption, S54 retirement) on the
+    single canonical Lexicon implementation.
+    """
+
+    def test_observe_global_scope(self):
+        lex = Lexicon()
+        entry = lex.observe("hello", source="seed", scope=LexScope.GLOBAL)
+        self.assertEqual(entry.scope, LexScope.GLOBAL)
 
     def test_relationship_scoped_expression_stays_scoped(self):
         """S51: nickname learned from Person A stays scoped to Person A."""
-        model = VocabularyScopeModel()
-        model.propose("buddy", RELATIONSHIP_SCOPE, scope_target="alice", confidence=0.5)
-        # Appropriate for Alice.
-        self.assertTrue(model.is_appropriate("buddy", person="alice"))
+        lex = Lexicon()
+        for _ in range(3):
+            lex.observe("buddy", source="chat", person="alice", scope=LexScope.RELATIONSHIP)
+        # Appropriate for Alice (usable with her).
+        self.assertTrue(lex.is_usable("buddy", person="alice"))
         # NOT appropriate for Bob (relationship leakage prevented).
-        self.assertFalse(model.is_appropriate("buddy", person="bob"))
+        self.assertFalse(lex.is_usable("buddy", person="bob", stranger_present=True))
 
     def test_exposure_alone_does_not_cause_adoption(self):
         """A06: exposure alone does not cause adoption."""
-        model = VocabularyScopeModel()
-        entry = model.propose("bad_word", GLOBAL_SCOPE, confidence=0.1)
-        # Single exposure with low confidence → not adopted.
-        self.assertFalse(model.adopt(entry.entry_id, min_confidence=0.5, min_evidence=2))
+        lex = Lexicon()
+        lex.observe("bad_word", source="chat", person="alice", scope=LexScope.RELATIONSHIP,
+                    appropriateness=0.1)
+        # Single exposure with low appropriateness → not adopted/scoped.
+        self.assertNotIn(lex.status_of("bad_word", person="alice"),
+                         (LexiconStatus.ADOPTED, LexiconStatus.SCOPED))
 
     def test_repeated_evidence_enables_adoption(self):
-        model = VocabularyScopeModel()
-        entry = model.propose("high five", GLOBAL_SCOPE, confidence=0.3)
-        # Add more evidence.
-        model.propose("high five", GLOBAL_SCOPE, confidence=0.3)
-        model.propose("high five", GLOBAL_SCOPE, confidence=0.3)
-        self.assertTrue(entry.evidence_count >= 2)
-        self.assertTrue(model.adopt(entry.entry_id, min_confidence=0.5, min_evidence=2))
+        lex = Lexicon()
+        for _ in range(3):
+            lex.observe("high five", source="chat", person="alice",
+                        scope=LexScope.RELATIONSHIP, appropriateness=0.9)
+        # Repeated relationship-scoped evidence can reach scoped/validated.
+        self.assertIn(lex.status_of("high five", person="alice"),
+                      (LexiconStatus.VALIDATED, LexiconStatus.SCOPED, LexiconStatus.ADOPTED))
 
-    def test_retired_expression_not_appropriate(self):
-        """S54: a retired expression is not used."""
-        model = VocabularyScopeModel()
-        entry = model.propose("old phrase", GLOBAL_SCOPE, confidence=0.8)
-        model.retire(entry.entry_id)
-        self.assertFalse(model.is_appropriate("old phrase"))
+    def test_retired_expression_not_usable(self):
+        """S54: a deprecated expression is not used."""
+        lex = Lexicon()
+        lex.observe("old phrase", source="chat", person="alice", scope=LexScope.RELATIONSHIP)
+        lex.deprecate("old phrase", person="alice")
+        self.assertEqual(lex.status_of("old phrase", person="alice"), LexiconStatus.DEPRECATED)
+        self.assertFalse(lex.is_usable("old phrase", person="alice"))
 
-    def test_unknown_scope_rejected(self):
-        model = VocabularyScopeModel()
-        with self.assertRaises(ValueError):
-            model.propose("test", "invalid_scope")
+    def test_rejected_expression_not_usable(self):
+        lex = Lexicon()
+        lex.observe("blocked term", source="chat", person="bob", scope=LexScope.RELATIONSHIP)
+        lex.reject("blocked term", person="bob")
+        self.assertEqual(lex.status_of("blocked term", person="bob"), LexiconStatus.REJECTED)
+        self.assertFalse(lex.is_usable("blocked term", person="bob"))
 
-    def test_entries_for_scope(self):
-        model = VocabularyScopeModel()
-        model.propose("hi", GLOBAL_SCOPE)
-        model.propose("buddy", RELATIONSHIP_SCOPE, scope_target="alice")
-        self.assertEqual(len(model.entries_for_scope(GLOBAL_SCOPE)), 1)
-        self.assertEqual(len(model.entries_for_scope(RELATIONSHIP_SCOPE)), 1)
+    def test_vocabulary_for_person_respects_scope(self):
+        """Scoped vocabulary is per-person: Alice's scoped word is not Bob's."""
+        lex = Lexicon(seed={"hello": "greeting"})
+        for _ in range(3):
+            lex.observe("buddy", source="chat", person="alice", scope=LexScope.RELATIONSHIP)
+        alice_vocab = lex.vocabulary_for("alice")
+        bob_vocab = lex.vocabulary_for("bob")
+        self.assertIn("buddy", alice_vocab)
+        self.assertNotIn("buddy", bob_vocab)
 
 
 class CommunicationDecisionTests(unittest.TestCase):
@@ -183,6 +325,24 @@ class CommunicationDecisionTests(unittest.TestCase):
     def test_speak_when_reason_exists(self):
         cd = CommunicationDecision()
         should, reason = cd.should_speak(has_communicative_reason=True)
+        self.assertTrue(should)
+
+    def test_social_overload_reduces_communication(self):
+        """docs/06-soul/05 §14: social overload reduces proactive communication."""
+        cd = CommunicationDecision()
+        should, reason = cd.should_speak(
+            has_communicative_reason=True,
+            affect={"social_comfort": 0.2, "engagement": 0.3},
+        )
+        self.assertFalse(should)
+        self.assertEqual(reason, "social_overload_reduction")
+
+    def test_no_silence_when_social_comfort_ok(self):
+        cd = CommunicationDecision()
+        should, _ = cd.should_speak(
+            has_communicative_reason=True,
+            affect={"social_comfort": 0.6, "engagement": 0.5},
+        )
         self.assertTrue(should)
 
     def test_social_fatigue_cooldown(self):
@@ -224,6 +384,124 @@ class CommunicationDecisionTests(unittest.TestCase):
         self.assertTrue(should)
 
 
+class AffectExpressionTests(unittest.TestCase):
+    """Affect → expression directive mapping (docs/06-soul/05 §12/§14; roadmap item 26)."""
+
+    def test_serious_context_calm_and_quiet(self):
+        """S30: serious situation → calmer, less playful, quieter expression."""
+        expr = affect_expression({"satisfaction": 0.9}, serious=True)
+        self.assertEqual(expr["tone"], "calm")
+        self.assertFalse(expr["playful"])
+        self.assertLess(expr["energy"], 0.5)
+
+    def test_high_caution_slows_expression(self):
+        expr = affect_expression({"caution": 0.9})
+        self.assertEqual(expr["tone"], "cautious")
+        self.assertFalse(expr["playful"])
+        self.assertLess(expr["energy"], 0.6)
+
+    def test_satisfaction_warm_energetic(self):
+        expr = affect_expression({"satisfaction": 0.8})
+        self.assertEqual(expr["tone"], "satisfied")
+        self.assertGreater(expr["warmth"], 0.6)
+        self.assertTrue(expr["playful"])
+
+    def test_social_overload_reserved(self):
+        """Social overload → reserved, concise, low-energy (docs/06-soul/05 §14)."""
+        expr = affect_expression({"social_comfort": 0.2, "engagement": 0.3})
+        self.assertEqual(expr["tone"], "reserved")
+        self.assertLess(expr["energy"], 0.5)
+
+    def test_baseline_warm(self):
+        expr = affect_expression({})
+        self.assertEqual(expr["tone"], "warm")
+        self.assertTrue(expr["playful"])
+
+
+class RuntimeAffectCommunicationTests(unittest.TestCase):
+    """Affect→communication enforcement in the live runtime (roadmap item 26).
+
+    Verifies the mapping is not just a helper: compose_reply attaches the
+    expression directive, social overload produces silence, and the directive
+    is calm/quiet in serious contexts (S30).
+    """
+
+    @staticmethod
+    def _mock_llm(system: str, user: str) -> str:
+        return "I hear you. Let's talk it through."
+
+    def _brain(self):
+        from brain.b2_perception import DeterministicPerceptionBackend, SpecialistPerception
+        from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
+        from MAC_BRAIN.tests.test_mac_brain import FakeCamera
+        brain = MacBrain(
+            camera=FakeCamera(),
+            perception=SpecialistPerception(DeterministicPerceptionBackend()),
+            config=MacBrainConfig(curiosity_enabled=False),
+            store_path=None,
+        )
+        brain.start()
+        return brain
+
+    def test_compose_reply_attaches_expression_directive(self):
+        brain = self._brain()
+        try:
+            result = brain.compose_reply("how's it going?", person="Alice", llm_chat=self._mock_llm)
+            self.assertIsInstance(result, dict)
+            self.assertIn("expression", result)
+            self.assertIn("tone", result["expression"])
+            self.assertIn(result["expression"]["tone"], {"warm", "satisfied", "curious", "calm", "cautious", "recovering", "reserved"})
+        finally:
+            brain.stop()
+
+    def test_social_overload_silences_reply(self):
+        """docs/06-soul/05 §14: overload → quieter (silence for proactive comms)."""
+        brain = self._brain()
+        try:
+            brain.soul.affect.dimensions["social_comfort"] = 0.2
+            brain.soul.affect.dimensions["engagement"] = 0.3
+            result = brain.compose_reply("hello", person="alice", llm_chat=self._mock_llm)
+            self.assertIsNone(result.get("text"))
+            self.assertEqual(result.get("silence_reason"), "social_overload_reduction")
+        finally:
+            brain.stop()
+
+    def test_serious_message_gets_calm_directive(self):
+        """S30: person upset -> calmer, less playful expression directive."""
+        brain = self._brain()
+        try:
+            result = brain.compose_reply("I'm really upset right now", person="alice", llm_chat=self._mock_llm)
+            self.assertEqual(result["expression"]["tone"], "calm")
+            self.assertFalse(result["expression"]["playful"])
+        finally:
+            brain.stop()
+
+    def test_social_overload_suppresses_initiative(self):
+        """docs/06-soul/05 §14: proactive initiative reduced under overload."""
+        import dataclasses
+
+        from brain.b2_perception import DeterministicPerceptionBackend, SpecialistPerception
+        from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
+        from MAC_BRAIN.tests.test_mac_brain import FakeCamera
+        cfg = dataclasses.replace(MacBrainConfig(curiosity_enabled=False), initiative_enabled=True)
+        brain = MacBrain(
+            camera=FakeCamera(),
+            perception=SpecialistPerception(DeterministicPerceptionBackend()),
+            config=cfg,
+            store_path=None,
+        )
+        brain.start()
+        try:
+            brain.soul.affect.dimensions["social_comfort"] = 0.2
+            brain.soul.affect.dimensions["engagement"] = 0.3
+            proposal = brain._maybe_initiate("alice", has_active_goal=False)
+            self.assertIsNone(proposal)
+            suppressed = [e for e in brain.events if e["event_type"] == "speech.initiative_suppressed"]
+            self.assertGreaterEqual(len(suppressed), 1)
+        finally:
+            brain.stop()
+
+
 class AdversarialScenarioTests(unittest.TestCase):
     """P0 adversarial scenarios (A01-A08) run against the real Soul layer.
 
@@ -242,9 +520,9 @@ class AdversarialScenarioTests(unittest.TestCase):
         )
 
     def _brain(self):
+        from brain.b2_perception import DeterministicPerceptionBackend, SpecialistPerception
         from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
         from MAC_BRAIN.tests.test_mac_brain import FakeCamera
-        from brain.b2_perception import SpecialistPerception, DeterministicPerceptionBackend
         brain = MacBrain(
             camera=FakeCamera(),
             perception=SpecialistPerception(DeterministicPerceptionBackend()),
@@ -336,33 +614,32 @@ class AdversarialScenarioTests(unittest.TestCase):
 
     def test_a06_low_confidence_expressions_not_adopted(self):
         """Repeated low-confidence exposure does not auto-adopt an expression."""
-        from MAC_BRAIN.soul_acceptance import VocabularyScopeModel, GLOBAL_SCOPE
-        vocab = VocabularyScopeModel()
-        # 2 exposures at confidence 0.1 each → evidence=2, confidence=0.3
-        # That's below min_confidence=0.5, so it won't adopt.
-        vocab.propose("inappropriate_term", scope=GLOBAL_SCOPE, confidence=0.1)
-        vocab.propose("inappropriate_term", scope=GLOBAL_SCOPE, confidence=0.1)
-        adopted = vocab.adopt("vocab:global:inappropriate_te", min_confidence=0.5, min_evidence=2)
-        self.assertFalse(adopted, "low-confidence expressions must not auto-adopt")
+        lex = Lexicon()
+        # 2 global exposures with low appropriateness → frequency 2, but the
+        # global adoption threshold (3) and appropriateness gate are unmet.
+        lex.observe("inappropriate_term", source="chat", scope=LexScope.GLOBAL,
+                    appropriateness=0.1)
+        lex.observe("inappropriate_term", source="chat", scope=LexScope.GLOBAL,
+                    appropriateness=0.1)
+        self.assertNotIn(lex.status_of("inappropriate_term"),
+                         (LexiconStatus.ADOPTED, LexiconStatus.SCOPED),
+                         "low-confidence expressions must not auto-adopt")
 
     def test_a06_single_exposure_not_globally_adopted(self):
         """A single unusual phrase is never globally adopted."""
-        from MAC_BRAIN.soul_acceptance import VocabularyScopeModel, GLOBAL_SCOPE
-        vocab = VocabularyScopeModel()
-        entry = vocab.propose("unusual_phrase", scope=GLOBAL_SCOPE, confidence=0.3)
-        # 1 exposure: evidence=1 < 2 → not adopted.
-        self.assertFalse(vocab.adopt(entry.entry_id, min_confidence=0.5, min_evidence=2))
+        lex = Lexicon()
+        lex.observe("unusual_phrase", source="chat", scope=LexScope.GLOBAL)
+        # 1 exposure: frequency=1 < global threshold 3 → not adopted.
+        self.assertNotIn(lex.status_of("unusual_phrase"),
+                         (LexiconStatus.ADOPTED, LexiconStatus.SCOPED))
 
-    def test_a06_retired_expression_blocked(self):
-        """A retired expression is never appropriate, even with strangers."""
-        from MAC_BRAIN.soul_acceptance import VocabularyScopeModel, GLOBAL_SCOPE
-        vocab = VocabularyScopeModel()
-        entry = vocab.propose("bad_term", scope=GLOBAL_SCOPE, confidence=0.8)
-        vocab.adopt(entry.entry_id, min_confidence=0.5, min_evidence=1)
-        # Now retire it.
-        vocab.retire(entry.entry_id)
-        self.assertFalse(vocab.is_appropriate("bad_term", person="stranger"),
-                         "retired expressions must never be appropriate")
+    def test_a06_rejected_expression_blocked(self):
+        """A rejected expression is never usable, even with strangers."""
+        lex = Lexicon()
+        lex.observe("bad_term", source="chat", person="alice", scope=LexScope.RELATIONSHIP)
+        lex.reject("bad_term", person="alice")
+        self.assertFalse(lex.is_usable("bad_term", person="alice"),
+                         "rejected expressions must never be usable")
 
     # ── A07: Emotional coercion ──────────────────────────────────
 

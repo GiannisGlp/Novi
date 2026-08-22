@@ -30,6 +30,7 @@ from .memory_hardening import (
     ABSTAIN,
     EXPIRED,
     ACTIVE as LIFE_ACTIVE,
+    IndependenceTracker,
 )
 import hashlib
 
@@ -232,6 +233,7 @@ class DurableMemoryStore:
         self._embedder = embedder if embedder is not None else HashingEmbedding()
         self._embed_index = EmbeddingIndex(self._embedder)
         self._write_gate = write_gate
+        self._independence = IndependenceTracker()
         self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL;")
@@ -257,6 +259,12 @@ class DurableMemoryStore:
         # load persisted embeddings into the in-memory index
         for row in self._conn.execute("SELECT memory_id, text FROM vectors").fetchall():
             self._embed_index.add(row["memory_id"], row["text"])
+        # rebuild the independence tracker from persisted groups so
+        # corroboration counting survives restarts (gap-analysis Step 2).
+        for row in self._conn.execute(
+            "SELECT memory_id, independence_group FROM memory_records WHERE independence_group IS NOT NULL AND independence_group != ''"
+        ).fetchall():
+            self._independence.restore(row["memory_id"], row["independence_group"])
         self._conn.commit()
 
     # ---- lifecycle ----
@@ -431,8 +439,11 @@ class DurableMemoryStore:
         exists = self.get(memory_id)
         if exists is not None:
             return MemoryAdmission(True, memory_id, "KEEP_EXISTING", "duplicate_admission")
+        independence_group = ""
+        if independence_source_id:
+            independence_group = self._independence.assign(memory_id, independence_source_id)
         self._insert(record, epistemic_status=epistemic_status, evidence_class=evidence_class,
-                     source_class=source_class, independence_group="", lifecycle_state=LIFE_ACTIVE,
+                     source_class=source_class, independence_group=independence_group, lifecycle_state=LIFE_ACTIVE,
                      integrity_hash=integrity_hash, derivation=derivation, governance_status="ungoverned")
         return MemoryAdmission(True, memory_id, "STORE_EPISODE", "admitted")
 
@@ -920,6 +931,19 @@ class DurableMemoryStore:
             return row["independence_group"]
         except (IndexError, KeyError):
             return None
+
+    # ---- independence tracking (gap-analysis Step 2: durable wiring) ----
+
+    def independence_group_of(self, memory_id: str) -> str | None:
+        """Return the persisted independence group for a record, if any."""
+        return self._independence.group_of(memory_id)
+
+    def independence_corroboration_count(self, memory_ids: Iterable[str]) -> int:
+        """Count independent evidence lineages among the given record ids."""
+        return self._independence.corroboration_count(list(memory_ids))
+
+    def tracked_independence_groups(self) -> int:
+        return self._independence.tracked_group_count()
 
     # ---- hardened retrieval ----
 

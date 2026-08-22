@@ -110,6 +110,9 @@ class SkillInvocation:
     started_at: str = ""
     completed_at: str = ""
     error: str = ""
+    timeout_seconds: float = 0.0
+    started_monotonic: float = 0.0  # time.monotonic() at start, for deadline checks
+    deadline_monotonic: float = 0.0  # time.monotonic() deadline, or 0.0 when none
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -121,7 +124,15 @@ class SkillInvocation:
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "error": self.error,
+            "timeout_seconds": self.timeout_seconds,
+            "deadline_monotonic": self.deadline_monotonic,
         }
+
+    @property
+    def timed_out(self) -> bool:
+        """True when the deadline has been reached/exceeded (timeout enforced)."""
+        from time import monotonic
+        return self.deadline_monotonic > 0.0 and monotonic() >= self.deadline_monotonic
 
 
 # ---------------------------------------------------------------------------
@@ -215,12 +226,21 @@ class SkillExecutor:
     """Executes skill contracts with deterministic/mock implementations.
 
     The executor validates preconditions, runs the skill, checks success/failure
-    criteria, and handles timeouts. The same contract runs with a mock or a
-    real backend behind an adapter.
+    criteria, and enforces the contract timeout deadline. The same contract runs
+    with a mock or a real backend behind an adapter.
+
+    Custom handlers can be registered per skill (e.g. slow/simulated backends)
+    for testing deadline enforcement; when none is registered the deterministic
+    mock is used.
     """
 
     def __init__(self) -> None:
         self._invocations: dict[str, SkillInvocation] = {}
+        self._handlers: dict[str, Any] = {}  # skill_id -> handler(invocation, contract, context)
+
+    def register_handler(self, skill_id: str, handler: Any) -> None:
+        """Register a custom execution handler for a skill (test/backend seam)."""
+        self._handlers[skill_id] = handler
 
     def get_contract(self, skill_id: str) -> SkillContract | None:
         return ALL_SKILLS.get(skill_id)
@@ -277,15 +297,37 @@ class SkillExecutor:
             self._invocations[invocation.invocation_id] = invocation
             return invocation
 
-        # Execute the deterministic/mock implementation.
+        # Execute the deterministic/mock implementation with a deadline.
+        from datetime import datetime, timezone
+        from time import monotonic
+
         invocation.status = RUNNING
+        invocation.started_at = datetime.now(timezone.utc).isoformat()
+        invocation.timeout_seconds = contract.timeout_seconds
+        invocation.started_monotonic = monotonic()
+        invocation.deadline_monotonic = (
+            invocation.started_monotonic + contract.timeout_seconds
+            if contract.timeout_seconds > 0 else 0.0
+        )
         self._invocations[invocation.invocation_id] = invocation
         self._execute_mock(invocation, contract, context)
+
+        # Enforce the timeout: a skill that overruns its contract deadline is
+        # reported as TIMEOUT instead of SUCCESS/FAILURE (gap-analysis Step 3,
+        # item 20: SkillContract.timeout_seconds must be enforced).
+        if contract.timeout_seconds > 0 and invocation.timed_out and invocation.status != TIMEOUT:
+            invocation.status = TIMEOUT
+            invocation.error = f"timeout_exceeded:{contract.timeout_seconds:.1f}s"
+        invocation.completed_at = datetime.now(timezone.utc).isoformat()
 
         return invocation
 
     def _execute_mock(self, invocation: SkillInvocation, contract: SkillContract, context: dict[str, Any]) -> None:
-        """Deterministic mock execution for each skill."""
+        """Deterministic mock execution for each skill (or a registered handler)."""
+        handler = self._handlers.get(invocation.skill_id)
+        if handler is not None:
+            handler(invocation, contract, context)
+            return
         if invocation.skill_id == "navigate":
             target = invocation.parameters.get("target_location", "")
             if target and context.get("robot_localized"):

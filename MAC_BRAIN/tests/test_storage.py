@@ -9,7 +9,7 @@ from MAC_BRAIN.runtime import MacBrain
 from MAC_BRAIN.storage import DurableMemoryStore
 from MAC_BRAIN.autonomy import Goal, GoalStatus
 from MAC_BRAIN.memory_hardening import (
-    WriteGate, RetrievalResult, OBSERVED, SIMULATED, VERIFIED, UNVERIFIED,
+    WriteGate, RetrievalResult, OBSERVED, SIMULATED, VERIFIED, UNVERIFIED, PREDICTED,
     NO_RESULT, CONFLICTED, STALE, ABSTAIN, STORE_EPISODE, DISCARD,
     DIRECT_SENSOR, USER_STATEMENT,
 )
@@ -273,6 +273,105 @@ class HardenedDurableStoreTests(unittest.TestCase):
                 source_class=USER_STATEMENT,
             )
             self.assertFalse(r.accepted)
+            store.close()
+
+    def test_independence_group_persists_across_restart(self):
+        """Gap-analysis Step 2: IndependenceTracker is wired into the durable store path.
+
+        Records admitted with an independence_source_id must persist their group
+        and the tracker must be rebuilt from the DB on reopen, so corroboration
+        counting survives restarts.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            store = self._store(td)
+            a = store.admit(
+                memory_type="perception", content="alice near door", confidence=0.9,
+                verification_status=UNVERIFIED, privacy_class="unclassified",
+                provenance={"source": "camera_0"}, entity_refs=("alice",),
+                epistemic_status=OBSERVED, evidence_class=OBSERVED,
+                source_class=DIRECT_SENSOR, independence_source_id="cam_frame_42",
+            )
+            b = store.admit(
+                memory_type="perception", content="alice near door", confidence=0.7,
+                verification_status=UNVERIFIED, privacy_class="unclassified",
+                provenance={"source": "camera_1"}, entity_refs=("alice",),
+                epistemic_status=OBSERVED, evidence_class=OBSERVED,
+                source_class=DIRECT_SENSOR, independence_source_id="cam_frame_42",
+            )
+            self.assertTrue(a.accepted)
+            self.assertTrue(b.accepted)
+            ga = store.independence_group_of(a.memory_id)
+            gb = store.independence_group_of(b.memory_id)
+            self.assertIsNotNone(ga)
+            self.assertEqual(ga, gb)  # same source lineage → same group
+            self.assertEqual(store.independence_corroboration_count([a.memory_id, b.memory_id]), 1)
+            store.close()
+
+            reopened = DurableMemoryStore(Path(td) / "state.db")
+            # Tracker rebuilt from persisted rows — same group survives reopen.
+            self.assertEqual(reopened.independence_group_of(a.memory_id), ga)
+            self.assertEqual(reopened.independence_group_of(b.memory_id), gb)
+            self.assertEqual(reopened.independence_corroboration_count([a.memory_id, b.memory_id]), 1)
+            reopened.close()
+
+    def test_independent_sources_count_as_corroboration(self):
+        with tempfile.TemporaryDirectory() as td:
+            store = self._store(td)
+            ids = []
+            for src in ("cam_a", "mic_b"):
+                r = store.admit(
+                    memory_type="perception", content="alice speaking", confidence=0.85,
+                    verification_status=UNVERIFIED, privacy_class="unclassified",
+                    provenance={"source": src}, entity_refs=("alice",),
+                    epistemic_status=OBSERVED, evidence_class=OBSERVED,
+                    source_class=DIRECT_SENSOR, independence_source_id=src,
+                )
+                ids.append(r.memory_id)
+            # Two distinct evidence lineages → 2 corroborating groups.
+            self.assertEqual(store.independence_corroboration_count(ids), 2)
+            self.assertNotEqual(
+                store.independence_group_of(ids[0]), store.independence_group_of(ids[1])
+            )
+            store.close()
+
+    def test_simulated_episode_cannot_be_recalled_as_fact(self):
+        """Gap-analysis Step 2 done-bar: simulated episodes are not recalled as fact.
+
+        A simulation-sourced record is either rejected by the write gate when
+        presented as verified fact, or — when legitimately stored as a
+        prediction — is never upgraded to a verified/factual status on recall.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            store = self._store(td)
+            # 1) A simulated episode presented as a verified fact is rejected.
+            rejected = store.admit(
+                memory_type="episode", content="robot grasped cup in sim", confidence=0.99,
+                verification_status=UNVERIFIED, privacy_class="unclassified",
+                provenance={"source": "isaac_sim_ep_7"}, entity_refs=("cup",),
+                epistemic_status=VERIFIED, evidence_class=SIMULATED,
+                source_class="SIMULATION",
+            )
+            self.assertFalse(rejected.accepted)
+
+            # 2) A simulated record admitted as a prediction keeps that status
+            #    on recall — it is never surfaced as OBSERVED/VERIFIED fact.
+            admitted = store.admit(
+                memory_type="episode", content="robot grasped cup in sim", confidence=0.6,
+                verification_status=UNVERIFIED, privacy_class="unclassified",
+                provenance={"source": "isaac_sim_ep_7"}, entity_refs=("cup",),
+                epistemic_status=PREDICTED, evidence_class=SIMULATED,
+                source_class="SIMULATION",
+            )
+            self.assertTrue(admitted.accepted)
+            result = store.retrieve_with_states("grasped cup")
+            self.assertEqual(result.state, "RESOLVED")
+            row = store._conn.execute(
+                "SELECT epistemic_status, evidence_class, source_class FROM memory_records WHERE memory_id=?",
+                (admitted.memory_id,),
+            ).fetchone()
+            self.assertEqual(row["epistemic_status"], PREDICTED)
+            self.assertEqual(row["evidence_class"], SIMULATED)
+            self.assertEqual(row["source_class"], "SIMULATION")
             store.close()
 
 
