@@ -1,0 +1,21 @@
+{
+  "slice": "Natural conversation round 42: physical-contact requests ('give me a hug') answered honestly, never 'no good answer on give'",
+  "detected": {
+    "give me a hug": true,
+    "hug me": true,
+    "hold my hand": true,
+    "hand me the book": true,
+    "carry me": true,
+    "high five": true,
+    "what's the time?": false
+  },
+  "replies": {
+    "give me a hug": "I can't physically do that \u2014 I've got no hands or body for it. But I can keep track of it or talk it through with you. What's the situation?",
+    "hug me": "I can't physically do that \u2014 I've got no hands or body for it. But I can keep track of it or talk it through with you. What's the situation?",
+    "hand me the book": "I can't physically do that \u2014 I've got no hands or body for it. But I can keep track of it or talk it through with you. What's the situation?",
+    "carry me": "I can't physically do that \u2014 I've got no hands or body for it. But I can keep track of it or talk it through with you. What's the situation?"
+  },
+  "before_phrasing": "I can't physically do that in this build \u2014 I've got no hands or actuators for that.",
+  "after_phrasing": "I can't physically do that \u2014 I've got no hands or body for it.",
+  "mechanism": "extended physical-action detector to cover contact requests (hug/hand me/carry) and softened the honest reply (no 'in this build'/'actuators')"
+}

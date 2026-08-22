@@ -442,6 +442,14 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
 
+    def test_physical_contact_request_detection(self):
+        # "give me a hug / hand me the book / carry me" are physical requests
+        # that must answer honestly, not "no good answer on give".
+        for s in ["give me a hug", "hug me", "hold my hand", "hand me the book",
+                  "carry me", "high five"]:
+            self.assertTrue(_is_physical_action_request(s), s)
+        self.assertFalse(_is_physical_action_request("what's the time?"))
+
     def test_praise_and_capability_detection(self):
         # "you're amazing / i love you" get a warm reply, not "no good answer".
         for s in ["you're amazing", "i love you", "you're my favorite", "you're the best"]:

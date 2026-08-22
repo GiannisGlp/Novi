@@ -394,7 +394,9 @@ def continuation_reply(cycle: int = 0) -> str:
 # door, move/pick up an object). Novi usually has no actuators for these, so it
 # must be honest rather than pretend.
 _PHYSICAL_ACTION_RE = re.compile(
-    r"\b(turn (?:on|off|up|down)|open|close|unlock|lock|move|pick up|grab|push|pull|press|flip|start|stop|switch (?:on|off)|raise|lower)\b",
+    r"\b(turn (?:on|off|up|down)|open|close|unlock|lock|move|pick up|grab|push|pull|press|flip|start|stop|switch (?:on|off)|raise|lower|"
+    r"hug me|give me a hug|high ?five|hold (?:my|your) hand|hold hands|carry me|pick me up|"
+    r"hand me|pass me|give me a (?:hand|thumbs up)|shake my hand|hug each other)\b",
     re.IGNORECASE,
 )
 
@@ -405,8 +407,8 @@ def _is_physical_action_request(text: str) -> bool:
 
 
 def physical_action_honest_reply() -> str:
-    return ("I can't physically do that in this build — I've got no hands or actuators "
-            "for that. But I can keep track of it or talk it through. What's the situation?")
+    return ("I can't physically do that — I've got no hands or body for it. "
+            "But I can keep track of it or talk it through with you. What's the situation?")
 
 
 # Real-time data Novi cannot verify offline (live prices, weather, news, scores).

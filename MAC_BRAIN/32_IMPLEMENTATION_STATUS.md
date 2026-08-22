@@ -1165,6 +1165,19 @@ answer on love/help/broken yet…" for any input without a dedicated handler.
 - Tests: +1; fast suites **479 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/natural-catchall-fallback.json`.
 
+## Physical-contact honesty (round 42 of the naturalness objective) (status: IMPLEMENTED)
+
+"give me a hug" reached the catch-all ("I'm still forming my thoughts on give")
+because the physical-action detector only covered object manipulation.
+
+- Extended `_PHYSICAL_ACTION_RE` to contact requests: hug / high five / hold my
+  hand / hand me / pass me / carry me / pick me up / give me a thumbs up.
+- Softened the honest reply (dropped "in this build" / "actuators").
+- Real LLM still gives the warmest reply ("I can't physically hug back, but I'm
+  sending you warmth").
+- Tests: +1; fast suites **480 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/physical-contact-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -104,5 +104,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Identity questions | `20260822T015647Z/identity-questions.json` | 'are you a robot?/do you have hands?' answered honestly, never 'no good answer on X' |
 | Praise + capability | `20260822T020144Z/praise-and-capability.json` | 'you're amazing'/'can you sing?' answered naturally, never 'no good answer on X' |
 | Natural catch-all fallback | `20260822T020717Z/natural-catchall-fallback.json` | fallback says "I'm still forming my thoughts on X" not "no good answer on X" |
+| Physical-contact honesty | `20260822T021228Z/physical-contact-honesty.json` | 'give me a hug'/'hand me the book' answered honestly, never 'no good answer on give' |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
