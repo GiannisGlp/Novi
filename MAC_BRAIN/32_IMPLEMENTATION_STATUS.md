@@ -835,6 +835,21 @@ so the guardrails don't reject natural replies while still catching the original
 - Tests: +1; fast suites **453 passing**, web **25 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/guardrail-robustness.json`.
 
+## Root-cause fix for the reported `[heard] Hello.` bug (round 18 of the naturalness objective) (status: IMPLEMENTED)
+
+The user's reported interaction literally begins with `[heard] Hello.`. Testing the
+real HTTP flow exposed the root cause: `_clean_chat_text` stripped the `[heard] `
+STT display marker only when building LLM **history**, not from the **incoming**
+chat text. So `[heard] Hello.` reached `compose_reply` with the marker, the
+greeting detector missed it (`_is_greeting("[heard] Hello.") == False`), and the
+LLM produced the awkward "I noticed you greeted the system" reply.
+
+- `chat_send`/`hear` now strip the `[heard] ` marker off the incoming text before
+  detection/compose_reply.
+- Real HTTP test: `[heard] Hello.` → "hey, nice to hear from you."
+- Tests: +1 web; fast suites **453 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/heard-greeting-root-cause.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

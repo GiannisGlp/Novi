@@ -1,0 +1,11 @@
+{
+  "slice": "Natural conversation round 18: root-cause fix for the reported [heard] Hello bug",
+  "root_cause": "the '[heard] ' STT display marker was stripped only when building LLM history, not from the incoming chat text, so '[heard] Hello.' reached compose_reply and the greeting detector missed it",
+  "demonstration": {
+    "raw": "[heard] Hello.",
+    "greeting_detected_on_raw": false,
+    "cleaned": "Hello.",
+    "greeting_detected_after_clean": true
+  },
+  "fix": "chat_send/hear now strip the '[heard] ' marker off the incoming text before detection/compose_reply"
+}

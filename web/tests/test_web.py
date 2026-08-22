@@ -103,6 +103,19 @@ class NoviWebServerTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_chat_send_strips_heard_marker_before_store(self):
+        # The '[heard] ' STT marker must not reach the brain/detectors, or a
+        # greeting like '[heard] Hello.' won't be recognised as a greeting.
+        s = self._server(auto_step=False)
+        s.start()
+        try:
+            s.chat_send("[heard] Hello.")
+            user_texts = [e["text"] for e in s.chat(0)["entries"] if e["role"] == "user"]
+            self.assertTrue(any(t == "Hello." for t in user_texts), user_texts)
+            self.assertTrue(all("[heard]" not in t for t in user_texts), user_texts)
+        finally:
+            s.stop()
+
     def test_state_includes_reasoning_trace(self):
         s = self._server(auto_step=False)
         s.start()

@@ -241,7 +241,7 @@ class NoviWebServer:
 
     def hear(self, text: str, confidence: float = 0.9) -> dict[str, Any]:
         with self._lock:
-            r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
+            r = self.brain.ingest_transcript(TranscriptionResult(text=self._clean_chat_text(text), language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
         adm = r["admission"]
         return {"accepted": adm.accepted, "memory_id": adm.memory_id, "reasoning": r["reasoning"], "confidence": r["confidence"]}
 
@@ -258,6 +258,11 @@ class NoviWebServer:
 
     def chat_send(self, text: str, confidence: float = 0.9) -> dict[str, Any]:
         """Hear the user message, let the brain decide, and append a chat turn."""
+        # Strip the '[heard] ' STT display marker off the incoming message before
+        # detection/compose_reply, so a greeting like '[heard] Hello.' is recognised
+        # as a greeting (the raw prefix would defeat the greeting/clarification
+        # detectors and let the LLM mis-handle it).
+        text = self._clean_chat_text(text)
         with self._lock:
             r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
             adm = r["admission"]
