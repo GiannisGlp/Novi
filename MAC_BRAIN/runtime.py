@@ -46,6 +46,7 @@ from .dialogue import (
     _is_acknowledgment,
     _is_bodily_need_question,
     _is_realtime_data_question,
+    _is_assurance_question,
     _is_embodiment_question,
     _is_future_question,
     _is_recall_question,
@@ -53,6 +54,7 @@ from .dialogue import (
     _is_thanks,
     _is_time_greeting,
     acknowledgment_reply,
+    assurance_reply,
     clarification_reply,
     continuation_reply,
     emotional_reply,
@@ -1372,6 +1374,9 @@ class MacBrain:
         # "I don't have a good answer on got yet" or a forced introduction.
         if _is_acknowledgment(text):
             return {"text": acknowledgment_reply(cycle=self._cycle), "fallback": False, "reason": "You acknowledged something, so I replied briefly and naturally.", "grounding": {"route": "acknowledgment"}}
+        # "Can you keep a secret?" is a social trust question, not a topic.
+        if _is_assurance_question(text):
+            return {"text": assurance_reply(cycle=self._cycle), "fallback": False, "reason": "You asked if I can keep a secret / be trusted, so I reassured you warmly.", "grounding": {"route": "assurance"}}
         self_state = self._chat_self_state()
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)

@@ -1,0 +1,14 @@
+{
+  "slice": "Natural conversation round 27: 'can you keep a secret?' answered socially, not as a topic",
+  "detected": {
+    "can you keep a secret?": true,
+    "promise you won't tell?": true,
+    "can i trust you?": true,
+    "what's the time?": false
+  },
+  "reply": "Of course \u2014 what's on your chest? I've got you.",
+  "before": {
+    "can you keep a secret?": "I don't have a good answer on secret yet \u2014 what's it like from your side?"
+  },
+  "mechanism": "assurance/trust questions (keep a secret, promise not to tell, can I trust you) get a warm reassuring reply instead of a dry topic follow-up ('no good answer on secret')"
+}

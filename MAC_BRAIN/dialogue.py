@@ -546,6 +546,31 @@ def future_reply() -> str:
             "I'd say a lot depends on what you do next. What are you hoping happens?")
 
 
+# Assurance/trust questions ("can you keep a secret?", "promise you won't tell?")
+# are social, not a topic — they must not fall through to "no good answer on secret".
+_ASSURANCE_RE = re.compile(
+    r"\b(?:can you keep a secret|will you keep (?:this|it) (?:a )?secret|"
+    r"keep (?:this|it) (?:just )?between us|are you discreet|promise (?:me )?you won'?t (?:tell|share)|"
+    r"can i trust you|are you trustworthy|don'?t tell anyone)\b",
+    re.IGNORECASE,
+)
+
+_ASSURANCE_REPLIES = [
+    "Of course — what's on your chest? I've got you.",
+    "Sure thing. Whatever it is, I won't pass it along.",
+    "You can trust me. Lay it on me.",
+    "Absolutely. My lips are sealed — what's up?",
+]
+
+
+def _is_assurance_question(text: str) -> bool:
+    return bool(text) and bool(_ASSURANCE_RE.search(text))
+
+
+def assurance_reply(cycle: int = 0) -> str:
+    return _ASSURANCE_REPLIES[cycle % len(_ASSURANCE_REPLIES)]
+
+
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",
 # "set me a reminder"). Novi can remember these conversationally, but it cannot
 # push a timed notification, so it must not over-promise ("I'll remind you at 8am").

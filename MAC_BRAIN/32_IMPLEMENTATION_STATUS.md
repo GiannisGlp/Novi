@@ -956,6 +956,17 @@ splash of almond milk…" — Novi fabricated a meal it never ate (it has no bod
 - Tests: +1; fast suites **462 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/bodily-need-honesty.json`.
 
+## Assurance/trust questions (round 27 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "can you keep a secret?" → "I don't have a good answer on secret
+yet…" — a social trust question read as a topic.
+
+- `_is_assurance_question` detects "can you keep a secret / promise you won't tell /
+  can I trust you / are you discreet", routed to a warm reassuring reply.
+- Real test: "can you keep a secret?" → "Of course — what's on your chest? I've got you."
+- Tests: +1; fast suites **463 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/assurance-questions.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

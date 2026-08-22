@@ -32,6 +32,7 @@ from MAC_BRAIN.dialogue import (
     _is_acknowledgment,
     _is_bodily_need_question,
     _is_embodiment_question,
+    _is_assurance_question,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -164,6 +165,12 @@ class DialogueFilterTests(unittest.TestCase):
                   "are you hungry?", "do you dream?"]:
             self.assertTrue(_is_bodily_need_question(s), s)
         self.assertFalse(_is_bodily_need_question("what's your favorite movie?"))
+
+    def test_assurance_question_not_topic(self):
+        # "Can you keep a secret?" is social, not a topic to answer dryly.
+        for s in ["can you keep a secret?", "promise you won't tell?", "can i trust you?"]:
+            self.assertTrue(_is_assurance_question(s), s)
+        self.assertFalse(_is_assurance_question("what's the time?"))
 
     def test_guardrails_do_not_reject_legitimate_replies(self):
         # Replies that legitimately mention conversation/remembering must pass.
