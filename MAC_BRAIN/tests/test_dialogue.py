@@ -398,6 +398,15 @@ class DialogueFilterTests(unittest.TestCase):
         q = followup_question("hmm")
         self.assertTrue(q)
         self.assertFalse(_is_forbidden(q))
+        self.assertNotIn("good answer on", q.lower())
+
+    def test_followup_question_no_awkward_topic_phrasing(self):
+        # The catch-all must not say "I don't have a good answer on <word>".
+        for s in ["what is love?", "i need advice", "help me", "are you happy?"]:
+            q = followup_question(s)
+            self.assertNotIn("good answer on", q.lower(), s)
+            self.assertNotIn("no good answer", q.lower(), s)
+            self.assertFalse(_is_forbidden(q), s)
 
     def test_extract_topic_picks_substantive_word(self):
         self.assertEqual(_extract_topic("tell me about the solar panels"), "panels")

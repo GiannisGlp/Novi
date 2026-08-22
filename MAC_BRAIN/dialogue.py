@@ -828,12 +828,13 @@ def followup_question(text: str) -> str:
 
     Requirement: 'when it does not have a good answer must come up with a good
     logical and in context question'. Deterministic and testable; never names the
-    user and never sounds like an assistant.
+    user and never sounds like an assistant. Kept natural — no "I don't have a
+    good answer on <word>" phrasing.
     """
     topic = _extract_topic(text)
     if topic:
-        return f"I don't have a good answer on {topic} yet — what's it like from your side?"
-    return "I don't have a good answer to that yet — what made you bring it up?"
+        return f"I'm still forming my thoughts on {topic} — what's your take?"
+    return "I'm still forming my thoughts there — what's behind the question?"
 
 
 def _is_near_repetitive(text: str, recent_novi: list[str] | None) -> bool:

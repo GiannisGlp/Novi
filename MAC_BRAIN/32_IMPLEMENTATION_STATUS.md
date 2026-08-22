@@ -1152,6 +1152,19 @@ A fallback sweep found "you're amazing" → "no good answer on amazing" and
 - Tests: +1; fast suites **478 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/praise-and-capability.json`.
 
+## Natural catch-all fallback (round 41 of the naturalness objective) (status: IMPLEMENTED)
+
+A fallback sweep showed the last-resort catch-all still said "I don't have a good
+answer on love/help/broken yet…" for any input without a dedicated handler.
+
+- Replaced the catch-all `followup_question` phrasing with a natural
+  "I'm still forming my thoughts on {topic} — what's your take?" (no more
+  "no good answer on <word>").
+- This fixes the whole remaining class in one change; the real LLM still gives
+  richer answers, and the fallback is now natural too.
+- Tests: +1; fast suites **479 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/natural-catchall-fallback.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

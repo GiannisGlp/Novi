@@ -1,0 +1,19 @@
+{
+  "slice": "Natural conversation round 41: the fallback catch-all no longer says 'I don't have a good answer on <word>'",
+  "before": {
+    "what is love?": "I don't have a good answer on love yet \u2014 what's it like from your side?"
+  },
+  "after_followup": {
+    "what is love?": "I'm still forming my thoughts on love \u2014 what's your take?",
+    "i need advice": "I'm still forming my thoughts on advice \u2014 what's your take?",
+    "help me": "I'm still forming my thoughts on help \u2014 what's your take?",
+    "are you happy?": "I'm still forming my thoughts on happy \u2014 what's your take?",
+    "what's your dream?": "I'm still forming my thoughts on dream \u2014 what's your take?"
+  },
+  "after_replies": {
+    "what is love?": "I'm still forming my thoughts on love \u2014 what's your take?",
+    "what's your secret?": "I'm still forming my thoughts on secret \u2014 what's your take?",
+    "help me": "I'm still forming my thoughts on help \u2014 what's your take?"
+  },
+  "mechanism": "replaced the awkward catch-all phrasing 'I don't have a good answer on X yet' with a natural 'I'm still forming my thoughts on X \u2014 what's your take?'"
+}
