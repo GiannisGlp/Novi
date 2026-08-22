@@ -16,8 +16,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
-ENTITY_TYPES = {"person", "place", "object", "concept"}
-_PLACE_LABELS = {"door", "room", "kitchen", "window", "table", "hall", "office", "garage", "garden"}
+ENTITY_TYPES = {"person", "place", "building", "object", "concept"}
+# Rooms / areas / outdoor zones Novi can recognise as places.
+_PLACE_LABELS = {"door", "room", "kitchen", "window", "table", "hall", "office", "garage", "garden", "living room", "bedroom", "bathroom", "hallway", "yard", "street", "park", "corridor", "lobby"}
+# Buildings / landmarks (docs/03-cognition/02 entity types: Place, Building).
+_BUILDING_LABELS = {"house", "tower", "school", "hospital", "store", "shop", "mall", "bridge", "station", "airport", "library", "museum", "cafe", "restaurant", "bank", "cafe", "factory", "church", "campus", "building"}
 _PERSON_LABELS = {"alice", "bob", "vano", "charlie", "dana", "eve"}
 
 _PREDICATES = {
@@ -66,9 +69,11 @@ class KnowledgeTriple:
 
 
 def infer_entity_type(entity: str) -> str:
-    e = entity.lower()
+    e = entity.lower().strip()
     if e in _PERSON_LABELS:
         return "person"
+    if e in _BUILDING_LABELS:
+        return "building"
     if e in _PLACE_LABELS:
         return "place"
     return "object"

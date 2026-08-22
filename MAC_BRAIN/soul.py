@@ -109,6 +109,7 @@ _AFFECT_DELTAS: dict[str, dict[str, float]] = {
     "task_success": {"satisfaction": 0.2, "engagement": 0.1, "frustration": -0.1},
     "task_failure": {"frustration": 0.2, "caution": 0.1, "energy": -0.1},
     "social_overload": {"social_comfort": -0.2, "engagement": -0.1},
+    "neglected": {"social_comfort": -0.1, "engagement": -0.05, "frustration": 0.05},
 }
 
 

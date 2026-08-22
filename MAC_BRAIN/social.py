@@ -224,3 +224,56 @@ class SocialIntelligence:
 
     def can_speak(self, person: str, relationships: Relationships, cycle: int, *, direct_confidence: float) -> bool:
         return self.participation_decision(person, relationships, direct_confidence=direct_confidence, cycle=cycle)["action"] == "participate"
+
+
+@dataclass
+class InitiativeConfig:
+    """Budget for spontaneous social initiative (docs/06-soul/00 §11/§21, docs/02-autonomy/03).
+
+    Novi may initiate a low-cost interaction when socially appropriate, but is
+    bounded: a neglect threshold before it is eligible, a cooldown between
+    initiatives, and a per-session cap. Silence remains the default.
+    """
+    neglect_threshold: int = 30   # cycles unaddressed before eligible
+    cooldown: int = 60            # minimum cycles between two initiatives
+    max_per_session: int = 200
+
+
+class SocialInitiative:
+    """Decides whether Novi should spontaneously initiate when neglected.
+
+    This is the autonomy-facing 'should I speak now' gate for *unprompted*
+    communication (docs/02-autonomy/01: the loop runs continuously and may decide
+    to SIGNAL). It never authorizes an action; it only proposes a communicative
+    act that the brain renders.
+    """
+
+    def __init__(self, config: InitiativeConfig | None = None) -> None:
+        self.config = config or InitiativeConfig()
+        self.last_addressed_cycle: int = 0
+        self.last_initiative_cycle: int = -10 ** 9
+        self.count: int = 0
+
+    def note_addressed(self, cycle: int) -> None:
+        """Record that someone addressed Novi at this cycle."""
+        self.last_addressed_cycle = max(self.last_addressed_cycle, cycle)
+
+    def propose(self, *, cycle: int, person_present: bool, person: str, has_active_goal: bool) -> dict[str, Any] | None:
+        """Return an initiative proposal, or None to stay silent.
+
+        Returns {"kind": "neglected_remark"|"idle_remark", "person": str,
+        "reason": str} when Novi should initiate; None when it should not.
+        """
+        if self.count >= self.config.max_per_session:
+            return None
+        if has_active_goal:
+            return None  # do not interrupt goal pursuit
+        idle = cycle - self.last_addressed_cycle
+        if idle < self.config.neglect_threshold:
+            return None
+        if cycle - self.last_initiative_cycle < self.config.cooldown:
+            return None
+        kind = "neglected_remark" if person_present else "idle_remark"
+        self.last_initiative_cycle = cycle
+        self.count += 1
+        return {"kind": kind, "person": person, "reason": f"neglected_for_{idle}_cycles"}
