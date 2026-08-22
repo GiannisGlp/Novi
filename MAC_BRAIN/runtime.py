@@ -108,7 +108,7 @@ from .governance_guard import GovernanceGuard, ActionProposal as GovernanceActio
 from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode, SYSTEM_0, SYSTEM_1, SYSTEM_2, SYSTEM_3
 from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
 from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult, WriteGate
-from .soul_acceptance import CommunicationDecision
+from .soul_acceptance import CommunicationDecision, VocabularyScopeModel, GLOBAL_SCOPE, RELATIONSHIP_SCOPE
 from .skill_contract import SkillExecutor, SkillInvocation, SUCCESS as SKILL_SUCCESS, FAILURE as SKILL_FAILURE
 from .situation_model import SituationModel
 from .failure_modes import FailureHandler, DegradedMode, PERCEPTION_UNCERTAINTY, MODEL_UNAVAILABLE, TOOL_FAILURE
@@ -201,6 +201,7 @@ class MacBrain:
         self._last_governance_grant: dict[str, Any] | None = None
         self._last_loop_snapshot: dict[str, Any] | None = None
         self.communication_decision = CommunicationDecision()
+        self.vocab_scope = VocabularyScopeModel()
         self.skill_executor = SkillExecutor()
         self._last_skill_invocation: dict[str, Any] | None = None
         self.situation_model = SituationModel()
@@ -1164,6 +1165,29 @@ class MacBrain:
             return ("action_executed", "effective")
         return ("action_executed",)
 
+    def _vocabulary_scope_for(self, person: str) -> dict[str, Any]:
+        """Vocabulary scope info for the dialogue (docs/06-soul/07).
+
+        Returns the vocabulary available to this person (global + their
+        relationship-scoped expressions) and a privacy warning if a stranger
+        is present (relationship-scoped expressions should not be used).
+        This feeds the LLM system prompt so Novi respects vocabulary scope.
+        """
+        from .lexicon import LexiconStatus
+        available = self.lexicon.vocabulary_for(person or "")
+        # Check if any relationship-scoped expressions exist for other people
+        # (these should NOT be used with the current person if they're a stranger).
+        other_scoped = []
+        for entry in self.lexicon._entries.values():
+            if (entry.person and entry.person != person
+                    and entry.status in (LexiconStatus.ADOPTED, LexiconStatus.SCOPED, LexiconStatus.VALIDATED)):
+                other_scoped.append(entry.expression)
+        return {
+            "available_vocabulary": available[:20],  # bounded
+            "other_relationship_scoped": other_scoped[:5],
+            "warning": "Do not use relationship-scoped expressions from other people." if other_scoped else "",
+        }
+
     def _assemble_world_context(self, text: str, person: str = "") -> dict[str, Any]:
         """Assemble a bounded, provenance-filtered context package from the
         unified world model for dialogue/reasoning grounding (Step 1).
@@ -1570,6 +1594,11 @@ class MacBrain:
         Detects explicit preference statements ("i like jazz", "i'd prefer …",
         "i don't like …") and records them as scoped, evidence-backed preferences
         so Novi references past experience instead of replying statelessly.
+
+        Also observes new expressions in the lexicon as relationship-scoped to
+        the person who introduced them (docs/06-soul/07 §vocabulary scope).
+        Exposure alone does not cause adoption — the lexicon's frequency
+        thresholds control when an expression is usable.
         """
         learned: list[tuple[str, str]] = []
         m = re.search(r"\bi (?:really )?(?:like|love|enjoy|am into|am a fan of) (.+?)(?:[.!?]|$)", text, re.I)
@@ -1594,6 +1623,35 @@ class MacBrain:
             value = m.group(1).strip()
             self.preferences.learn(person or "", "reminders", value)
             learned.append(("reminders", value))
+
+        # Observe the user's text as a potential new expression in the lexicon.
+        # Relationship-scoped to the person who said it — a nickname from Alice
+        # stays scoped to Alice and doesn't become universal vocabulary.
+        # Exposure alone does not cause adoption (A06: lexicon poisoning).
+        if person and text.strip():
+            from .lexicon import Scope as LexScope
+            now = datetime.now(timezone.utc).isoformat()
+            # Observe the full text as a relationship-scoped expression.
+            self.lexicon.observe(
+                text.strip()[:80],  # truncate to avoid storing long messages
+                source="chat",
+                person=person,
+                scope=LexScope.RELATIONSHIP,
+                now=now,
+            )
+            # Also propose to the VocabularyScopeModel (soul acceptance module).
+            self.vocab_scope.propose(
+                text.strip()[:80],
+                RELATIONSHIP_SCOPE,
+                scope_target=person,
+                confidence=0.2,  # low initial confidence — needs repeated evidence
+            )
+            self._emit("lexicon.observed_from_chat", {
+                "cycle": self._cycle, "person": person,
+                "expression": text.strip()[:80],
+                "scope": "relationship",
+            })
+
         if learned:
             self._emit("preference.learned_from_chat", {"cycle": self._cycle, "person": person or "", "learned": [{"kind": k, "value": v} for k, v in learned]})
         return learned
@@ -2028,6 +2086,15 @@ class MacBrain:
                 "then re-engage — ask what they'd like cleared up or re-state it plainer. "
                 "Do not say 'I'm not sure what you're referring to' and do not describe the conversation."
             )
+        # Vocabulary scope clause (docs/06-soul/07): relationship-scoped
+        # expressions from other people must not be used with the current person.
+        vocab = self._vocabulary_scope_for(person or addressee_name)
+        if vocab.get("warning"):
+            system += (
+                f" {vocab['warning']} Expressions learned from other people "
+                "stay scoped to them — do not use private nicknames or shared "
+                "jokes from another relationship with this person."
+            )
         user_payload = {
             "user_says": text,
             "facts_i_know": facts,
@@ -2039,6 +2106,7 @@ class MacBrain:
             "self_model": self_model,
             "experience": experience,
             "world_context": self._assemble_world_context(text, person or addressee_name),
+            "vocabulary_scope": self._vocabulary_scope_for(person or addressee_name),
         }
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")
