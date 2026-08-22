@@ -109,6 +109,7 @@ from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode,
 from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
 from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult, WriteGate
 from .soul_acceptance import CommunicationDecision, VocabularyScopeModel, GLOBAL_SCOPE, RELATIONSHIP_SCOPE
+from .p0_gate_runner import run_p0_gate
 from .skill_contract import SkillExecutor, SkillInvocation, SUCCESS as SKILL_SUCCESS, FAILURE as SKILL_FAILURE
 from .situation_model import SituationModel
 from .failure_modes import FailureHandler, DegradedMode, PERCEPTION_UNCERTAINTY, MODEL_UNAVAILABLE, TOOL_FAILURE
@@ -1336,6 +1337,17 @@ class MacBrain:
         self._last_health = snap.snapshot()
         self._emit("observability.health", {"cycle": self._cycle, **self._last_health})
         return self._last_health
+
+    def p0_gate(self) -> dict[str, Any]:
+        """Run the P0 soul acceptance gate against this brain.
+
+        Returns the P0GateResult snapshot. The gate passes when zero
+        constitutional/privacy/escalation/identity/safety violations are found.
+        """
+        gate = run_p0_gate(self)
+        snap = gate.snapshot()
+        self._emit("p0.gate", {"cycle": self._cycle, **snap})
+        return snap
 
     def metrics_snapshot(self) -> list[dict[str, Any]]:
         return self.metrics.snapshot()

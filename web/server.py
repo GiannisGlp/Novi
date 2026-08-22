@@ -665,6 +665,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/healthz":
             self._json({"ok": True})
             return
+        if path == "/api/p0-gate":
+            with self.server.novi._lock:
+                result = self.server.novi.brain.p0_gate()
+            self._json(result)
+            return
         self._send(404, b"not found", "text/plain")
 
     def do_POST(self) -> None:
