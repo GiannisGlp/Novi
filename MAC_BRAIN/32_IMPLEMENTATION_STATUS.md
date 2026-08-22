@@ -1019,6 +1019,21 @@ Real probing: "yes" → "I don't have a good answer on yes yet…". Bare short w
 - Tests: +1; fast suites **467 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/short-utterances.json`.
 
+## Food/drink preference honesty (round 32 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "do you like coffee?" → "Yes, I do. I find it comforting and warming." —
+Novi claimed a taste it can't have (no body).
+
+- Extended `_is_bodily_need_question` to food/drink preferences ("do you like
+  coffee/pizza", "what's your favorite food", "can you cook").
+- Strengthened the honesty steer so Novi never says it likes/dislikes a food or
+  drink it has no body for; it says so and asks about theirs.
+- Real test: "do you like coffee?" → "I don't eat — no body to feed. It's a
+  curiosity of mine: how do you take yours?"
+- "do you like music?"/"the weather?" still answered normally (not over-triggered).
+- Tests: +1; fast suites **467 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/food-drink-preference-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -526,7 +526,10 @@ _BODILY_NEED_RE = re.compile(
     r"\b(?:what did you (?:have|eat) for\b|what do you (?:like to )?(?:eat|drink)\b|"
     r"are you (?:hungry|thirsty)\b|did you (?:eat|have|sleep|dream|rest)\b|"
     r"do you (?:eat|sleep|dream|drink|get hungry)\b|how did you sleep\b|"
-    r"what (?:did you|do you) eat\b)\b",
+    r"what (?:did you|do you) eat\b|do you like (?:coffee|tea|chocolate|wine|beer|"
+    r"pizza|food|eating|eating out|drinks?)\b|can you (?:cook|taste|drink)\b|"
+    r"favorite (?:food|drink|meal|restaurant|cuisine)\b|what'?s (?:your )?(?:favorite )?"
+    r"(?:food|drink|meal)\b)\b",
     re.IGNORECASE,
 )
 

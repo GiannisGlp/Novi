@@ -1,0 +1,19 @@
+{
+  "slice": "Natural conversation round 32: 'do you like coffee?' never claims a taste Novi can't have",
+  "detected": {
+    "do you like coffee?": true,
+    "what's your favorite food?": true,
+    "do you like pizza?": true,
+    "can you cook?": true,
+    "do you like music?": false,
+    "what do you think of the weather?": false
+  },
+  "before": {
+    "do you like coffee?": "Yes, I do. I find it comforting and warming."
+  },
+  "after": {
+    "do you like coffee?": "I don't have a body, so I don't eat, sleep, or dream. But tell me about yours \u2014 did you get a good night's rest?",
+    "do you like pizza?": "I don't have a body, so I don't eat, sleep, or dream. But tell me about yours \u2014 did you get a good night's rest?"
+  },
+  "mechanism": "extended bodily-need detector to food/drink preferences and strengthened the honesty steer so Novi never claims to like/taste a food or drink it has no body for"
+}

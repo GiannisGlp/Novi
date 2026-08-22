@@ -171,9 +171,12 @@ class DialogueFilterTests(unittest.TestCase):
     def test_bodily_need_question_detection(self):
         # Novi has no body, so eating/sleeping/dreaming questions must be honest.
         for s in ["what did you have for breakfast?", "did you sleep well last night?",
-                  "are you hungry?", "do you dream?"]:
+                  "are you hungry?", "do you dream?", "do you like coffee?",
+                  "what's your favorite food?", "can you cook?"]:
             self.assertTrue(_is_bodily_need_question(s), s)
         self.assertFalse(_is_bodily_need_question("what's your favorite movie?"))
+        self.assertFalse(_is_bodily_need_question("do you like music?"))
+        self.assertFalse(_is_bodily_need_question("what do you think of the weather?"))
 
     def test_assurance_question_not_topic(self):
         # "Can you keep a secret?" is social, not a topic to answer dryly.

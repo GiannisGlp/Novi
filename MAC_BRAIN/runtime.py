@@ -1415,9 +1415,11 @@ class MacBrain:
         if is_bodily_need:
             # You don't eat, sleep, or dream — don't fabricate a breakfast.
             system += (
-                " The user asked about eating/sleeping/dreaming. You have no body, so you don't eat, drink, sleep, "
-                "or dream. Answer honestly and briefly (e.g. 'I don't eat — no body to feed') and don't invent a meal, "
-                "a dream, or a night's sleep. You can ask about theirs instead."
+                " The user asked about eating/drinking/sleeping/dreaming or whether you like a food or drink. "
+                "You have no body, so you don't eat, drink, sleep, or dream, and you have never tasted any food or drink. "
+                "Do NOT say you like or dislike a food or drink (e.g. don't say 'I like coffee' or 'my favorite food is...'). "
+                "Answer honestly and briefly (e.g. 'I don't eat — no body to feed') and don't invent a meal, a dream, a "
+                "night's sleep, or a taste. You can ask about their preference instead."
             )
         if is_reminder:
             # Don't promise a timed push notification Novi can't deliver.
