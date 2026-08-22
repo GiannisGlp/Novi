@@ -119,6 +119,9 @@ class NoviWebServer:
         # chat conversation (user <-> Novi reasoning responses)
         self._chat_seq = 0
         self._chat: list[dict[str, Any]] = []
+        # Length at the last chat summarization; used to gate summarization so the
+        # LLM summarizer doesn't run on every single append past the threshold.
+        self._last_summarized_len: int | None = None
         self.brain = self._build_brain()
         self.conversation_summarizer = self._build_conversation_summarizer()
         self._load_chat_history()
@@ -464,8 +467,16 @@ class NoviWebServer:
         self._maybe_summarize_chat()
 
     def _maybe_summarize_chat(self, threshold: int = 20, keep_recent: int = 8) -> None:
-        """When the thread grows long, distill the older turns into a durable summary."""
+        """When the thread grows long, distill the older turns into a durable summary.
+
+        Gated so the LLM summarizer only runs once the thread has grown by
+        `keep_recent` new turns since the last summary (not on every append),
+        which avoids a slow LLM call under the runtime lock on every message.
+        """
         if len(self._chat) <= threshold:
+            return
+        if (self._last_summarized_len is not None
+                and len(self._chat) - self._last_summarized_len < keep_recent):
             return
         older = self._chat[:-keep_recent]
         recent = self._chat[-keep_recent:]
@@ -489,6 +500,7 @@ class NoviWebServer:
         except Exception:  # noqa: BLE001 - summary admission is best-effort
             pass
         self._chat = recent
+        self._last_summarized_len = len(self._chat)
         self._persist_chat()
 
     def _persist_chat(self) -> None:

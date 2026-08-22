@@ -172,5 +172,50 @@ class ChatPollIdempotencyTests(unittest.TestCase):
         self.assertEqual(len(seqs), len(set(seqs)))
 
 
+class ChatSummarizerGateTests(unittest.TestCase):
+    """The chat summarizer must not run an LLM call on every single append past
+    the threshold — it is gated to run only when the thread has grown enough."""
+
+    def setUp(self):
+        self.server = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+        self.server.start()
+
+    def tearDown(self):
+        self.server.stop()
+
+    def _seed_chat(self, n: int) -> None:
+        self.server._chat = [
+            {"seq": i + 1, "role": "user" if i % 2 == 0 else "novi", "text": f"msg {i + 1}"}
+            for i in range(n)
+        ]
+        self.server._chat_seq = n
+
+    def test_no_summary_when_below_threshold(self):
+        self._seed_chat(10)
+        with patch.object(self.server, "conversation_summarizer", MagicMock()) as sm:
+            self.server._maybe_summarize_chat()
+        sm.assert_not_called()
+        self.assertEqual(len(self.server._chat), 10)
+
+    def test_gate_skips_when_not_enough_new_turns(self):
+        # 22 turns but last summarized at 22 -> no new growth -> gated (no call).
+        self._seed_chat(22)
+        self.server._last_summarized_len = 22
+        with patch.object(self.server, "conversation_summarizer", MagicMock()) as sm:
+            self.server._maybe_summarize_chat()
+        sm.assert_not_called()
+        # Thread untouched because the gate skipped.
+        self.assertEqual(len(self.server._chat), 22)
+
+    def test_summarizes_when_grown_past_gate(self):
+        self._seed_chat(30)  # grew well past the gate since last summary
+        self.server._last_summarized_len = 8
+        with patch.object(self.server, "conversation_summarizer", return_value="summary") as sm:
+            self.server._maybe_summarize_chat(threshold=20, keep_recent=8)
+        sm.assert_called_once()
+        # Trimmed to the last 8 recent turns.
+        self.assertEqual(len(self.server._chat), 8)
+
+
 if __name__ == "__main__":
     unittest.main()
