@@ -1107,6 +1107,23 @@ a side.
 - Tests: +1; fast suites **473 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/debate-requests.json`.
 
+## Farewells, world-news honesty, smoke hardening (round 38 of the naturalness objective) (status: IMPLEMENTED)
+
+Probing surfaced: "i'm leaving now" fell to "no good answer on leaving"; "what's
+going on in the world?" → "no good answer on world"; and my engagement reply
+contained the forbidden "what's on your mind?".
+
+- `_is_farewell` catches "bye / i'm leaving (now) / see you later / going home" →
+  a warm farewell (no intro/topic).
+- `_is_world_question` catches "what's going on in the world / the news" → honest
+  "I don't have live news from outside this space".
+- Fixed the engagement reply (no "what's on your mind?").
+- Relaxed the overreaching forbidden pattern `I'm here for/if you` → only `I'm here
+  for you`, so the warm "I'm here if you want to talk it out" is allowed.
+- Added a broad naturalness smoke test covering 16 representative inputs.
+- Tests: +2; fast suites **476 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/farewells-and-smoke-hardening.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -38,6 +38,8 @@ from MAC_BRAIN.dialogue import (
     _is_memory_question,
     _is_talk_request,
     _is_debate_request,
+    _is_farewell,
+    _is_world_question,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -427,6 +429,40 @@ class ComposeReplyTests(unittest.TestCase):
         clause = b._character_clause({"traits": {"curious": 0.8, "warm": 0.7}, "values": {"kindness": "kindness", "honesty": "honesty"}})
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
+
+    def test_farewell_detection(self):
+        # "bye / i'm leaving now / see you later" are farewells, not intros/topics.
+        for s in ["goodbye", "bye", "i'm leaving now", "i'm going home", "see you later"]:
+            self.assertTrue(_is_farewell(s), s)
+        self.assertFalse(_is_farewell("hello"))
+        self.assertFalse(_is_farewell("what's the time?"))
+
+    def test_world_question_detection(self):
+        # "what's going on in the world?" is a news question, not a topic.
+        for s in ["what's going on in the world?", "what's the news today?"]:
+            self.assertTrue(_is_world_question(s), s)
+        self.assertFalse(_is_world_question("what's the time?"))
+
+    def test_broad_naturalness_smoke_no_awkward_fallbacks(self):
+        # Representative inputs across 37 rounds must never produce a "no good
+        # answer on <word>" fallback or a forbidden program-speak phrase.
+        b = self._brain()
+        cases = [
+            "hello", "what system?", "i'm nervous", "can you hear me?",
+            "remind me to water the plants", "what will happen next week?",
+            "can you keep a secret?", "i'm leaving now", "what did you just say?",
+            "are you going to forget me?", "what's going on in the world?",
+            "just talk to me about anything", "argue that cats are better than dogs",
+            "what did you have for breakfast?", "yes", "do you like coffee?",
+        ]
+        for u in cases:
+            r = b.compose_reply(u, llm_chat=lambda **k: None)
+            t = (r.get("text") or "").lower()
+            self.assertNotIn("no good answer", t, u)
+            self.assertNotIn("good answer on", t, u)
+            self.assertFalse(_is_forbidden(t), u)
+
+
 
     def test_system_prompt_includes_character_and_reactions(self):
         b = self._brain()

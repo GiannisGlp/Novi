@@ -1,0 +1,22 @@
+{
+  "slice": "Natural conversation round 38: farewells handled naturally; broad naturalness smoke test added; engagement reply cleaned of 'what's on your mind'",
+  "farewells": {
+    "goodbye": true,
+    "bye": true,
+    "i'm leaving now": true,
+    "i'm going home": true,
+    "see you later": true,
+    "hello": false
+  },
+  "world": {
+    "what's going on in the world?": true,
+    "what's the news today?": true
+  },
+  "replies": {
+    "i'm leaving now": "Bye \u2014 take care of yourself.",
+    "goodbye": "Bye \u2014 take care of yourself.",
+    "what's going on in the world?": "I don't have live news from outside this space \u2014 I can't see what's happening in the wider world. But tell me what's going on for you."
+  },
+  "engagement_fixed": "engagement reply no longer contains the forbidden 'what's on your mind'",
+  "mechanism": "farewell + world-news detectors answer naturally (no 'no good answer on leaving/world'); relaxed overreaching 'I'm here if' forbidden pattern; added a broad naturalness smoke test covering 16 representative inputs"
+}

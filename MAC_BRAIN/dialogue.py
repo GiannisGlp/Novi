@@ -53,7 +53,7 @@ _FORBIDDEN = [
         r"\bgreat question\b",
         r"\bthat('?s| is) a great question\b",
         r"\bi appreciate you (sharing|asking|telling|reaching)\b",
-        r"\bi('?m| am) here (?:for|if) (you|anyone)\b",
+        r"\bi('?m| am) here for you\b",
         r"\bsounds like you('?re| are) feeling\b",
         r"\bthank you for (?:sharing|asking)\b",
         r"\b(?:as an? )?ai (?:model|assistant|language model)\b",
@@ -647,6 +647,20 @@ def _is_talk_request(text: str) -> bool:
     return bool(text) and bool(_TALK_REQUEST_RE.search(text))
 
 
+# World/news questions ("what's going on in the world?", "any news?") — Novi has
+# no live world access, so answer honestly (and don't fabricate local errands).
+_WORLD_RE = re.compile(
+    r"\b(?:what'?s (?:going on|happening|new) in the world|any news\b|what'?s the news\b|"
+    r"what'?s (?:new|happening) (?:today|around here)\b|what'?s going on out there\b|"
+    r"what'?s happening (?:in the world|around here)\b)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_world_question(text: str) -> bool:
+    return bool(text) and bool(_WORLD_RE.search(text))
+
+
 # Debate prompts ("argue that X is better", "defend X", "make the case for X") —
 # take a side playfully rather than deflecting the request back.
 _DEBATE_RE = re.compile(
@@ -658,6 +672,31 @@ _DEBATE_RE = re.compile(
 
 def _is_debate_request(text: str) -> bool:
     return bool(text) and bool(_DEBATE_RE.search(text))
+
+
+# Farewells ("bye", "goodbye", "i'm leaving", "see you later") deserve a warm
+# goodbye, not an intro or a topic follow-up.
+_FAREWELL_RE = re.compile(
+    r"^\s*(?:bye|goodbye|good ?bye|bye-bye|so long|farewell|see you(?: later| soon| around)?|"
+    r"later|peace out|ttyl|gotta go|i'?m (?:leaving(?: now)?|heading out|going(?: now| home)?)|"
+    r"i'?m out|take care)\b[.!?]*\s*$",
+    re.IGNORECASE,
+)
+
+_FAREWELL_REPLIES = [
+    "Bye — take care of yourself.",
+    "See you later. I'll be here.",
+    "Alright, go on. Talk soon.",
+    "Goodbye — come back and tell me how it goes.",
+]
+
+
+def _is_farewell(text: str) -> bool:
+    return bool(text) and bool(_FAREWELL_RE.match(text.strip()))
+
+
+def farewell_reply(cycle: int = 0) -> str:
+    return _FAREWELL_REPLIES[cycle % len(_FAREWELL_REPLIES)]
 
 
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",

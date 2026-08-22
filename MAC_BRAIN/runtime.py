@@ -52,6 +52,9 @@ from .dialogue import (
     _is_memory_question,
     _is_talk_request,
     _is_debate_request,
+    _is_farewell,
+    _is_world_question,
+    farewell_reply,
     _is_embodiment_question,
     _is_future_question,
     _is_recall_question,
@@ -1296,7 +1299,7 @@ class MacBrain:
         """Warm, honest reply to an engagement/presence check (are you there?)."""
         can_hear = self._has_vision() or getattr(self, "audio_enabled", False) or True
         if can_hear:
-            return "I'm right here — I can hear you. What's on your mind?"
+            return "I'm right here — I can hear you. What would you like to say?"
         return "I'm here. I'm picking up your words even though I can't see you right now."
 
     def _perception_reply(self, text: str) -> str:
@@ -1372,6 +1375,9 @@ class MacBrain:
         if _is_greeting(text):
             g = greeting_reply(cycle=self._cycle)
             return {"text": g, "fallback": False, "reason": "You just greeted me, so I replied warmly and briefly — no need to over-explain.", "grounding": {"route": "greeting"}}
+        # A farewell ("bye", "i'm leaving", "see you later") — wish them well.
+        if _is_farewell(text):
+            return {"text": farewell_reply(cycle=self._cycle), "fallback": False, "reason": "You're leaving or said goodbye, so I wished you well.", "grounding": {"route": "farewell"}}
         # The user introduces themselves by name — acknowledge it warmly instead
         # of saying "I don't have a good answer on <name> yet".
         if _is_introduction(text):
@@ -1563,6 +1569,9 @@ class MacBrain:
         if is_bodily_need:
             reason = "You asked what I ate/slept/dreamed — I have no body, so I said so instead of fabricating a meal or dream"
             return {"text": "I don't have a body, so I don't eat, sleep, or dream. But tell me about yours — did you get a good night's rest?", "fallback": True, "reason": reason, "grounding": {"route": "bodily_honesty", **out}}
+        if _is_world_question(text):
+            reason = "You asked what's happening in the world — I said honestly I don't have live news, no fabricated errands"
+            return {"text": "I don't have live news from outside this space — I can't see what's happening in the wider world. But tell me what's going on for you.", "fallback": True, "reason": reason, "grounding": {"route": "world_honesty", **out}}
         if _is_repeat_question(text):
             reason = "You asked me to repeat what I said — I acknowledged it naturally instead of a topic follow-up"
             return {"text": "Sure — which part would you like me to repeat, or shall I say it all again?", "fallback": True, "reason": reason, "grounding": {"route": "repeat", **out}}
