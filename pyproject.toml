@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "novi"
+version = "0.1.0"
+description = "Novi — persistent autonomous embodied AI system"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Novi Project"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+# Core (always required — stdlib only, no installs needed)
+# Listed here for documentation purposes
+core = []
+
+# Real neural perception (Torchvision SSDLite on MPS, Whisper STT)
+neural = [
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "faster-whisper>=1.0",
+]
+
+# Mac audio I/O
+audio = [
+    "sounddevice>=0.4",
+]
+
+# Mac camera (optional — deterministic fallback works without it)
+vision = [
+    "opencv-python>=4.8",
+]
+
+# Local LLM via Ollama (qwen, nemotron)
+llm = [
+    # Ollama runs as a separate service; the Python side uses urllib (stdlib)
+    # Listed here for documentation purposes
+]
+
+# Development and testing
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "ruff>=0.6",
+]
+
+# Everything for a full Mac Brain setup
+mac = [
+    "novi[neural,audio,vision,llm,dev]",
+]
+
+[project.scripts]
+novi-brain = "MAC_BRAIN.cli:main"
+novi-web = "web.server:main"
+
+[tool.setuptools.packages.find]
+include = ["brain*", "MAC_BRAIN*", "web*", "contracts*"]
+exclude = ["tests*", "docs*", "scripts*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501", # line too long — handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["MAC_BRAIN/tests", "brain/tests", "web/tests", "contracts/tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short"

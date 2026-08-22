@@ -619,15 +619,16 @@ $('sendBtn').onclick = async () => {
   const text = $('say').value.trim();
   if (!text) return;
   $('say').value=''; autoGrow($('say'));
-  $('sendBtn').disabled = true; $('sendBtn').innerHTML = '<span class="spinner"></span> sending';
+  $('sendBtn').disabled = true; $('say').disabled = true; $('sendBtn').innerHTML = '<span class="spinner"></span> sending';
   typing(true);
   try { await post('/api/chat', {text, confidence: parseFloat($('conf').value)}); markConn(true); }
   catch(e) { $('chat').appendChild(turn('novi', '(reply failed &mdash; is the model reachable?)')); markConn(false); }
   typing(false);
-  $('sendBtn').disabled = false; $('sendBtn').textContent = 'Send';
+  $('sendBtn').disabled = false; $('say').disabled = false; $('sendBtn').textContent = 'Send';
+  $('say').focus();
   refreshState(); refreshChat();
 };
-$('say').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sendBtn').click(); } });
+$('say').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!$('sendBtn').disabled) $('sendBtn').click(); } });
 function autoGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,140)+'px'; }
 $('say').addEventListener('input', e => autoGrow(e.target));
 

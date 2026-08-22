@@ -107,7 +107,7 @@ from .attention import AttentionRanker
 from .governance_guard import GovernanceGuard, ActionProposal as GovernanceActionProposal, GovernanceGrant
 from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode, SYSTEM_0, SYSTEM_1, SYSTEM_2, SYSTEM_3
 from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
-from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult
+from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult, WriteGate
 from .soul_acceptance import CommunicationDecision
 from .skill_contract import SkillExecutor, SkillInvocation, SUCCESS as SKILL_SUCCESS, FAILURE as SKILL_FAILURE
 from .situation_model import SituationModel
@@ -208,10 +208,12 @@ class MacBrain:
         self.failure_handler = FailureHandler()
         self.autonomy_sm = AutonomyStateMachine()
         # Memory: HardenedMemoryManager (in-memory, canonical contract) or
-        # DurableMemoryStore (SQLite, persistent). The hardened manager
-        # enforces the write gate, retrieval failure states, contextual trust,
-        # and independence groups.
-        self.memory = DurableMemoryStore(store_path) if store_path else HardenedMemoryManager()
+        # DurableMemoryStore (SQLite, persistent). Both paths now use the
+        # same WriteGate so the durable path has the same hardening
+        # (epistemic status, evidence class, source class, independence groups,
+        # retrieval failure states) as the in-memory path.
+        write_gate = WriteGate()
+        self.memory = DurableMemoryStore(store_path, write_gate=write_gate) if store_path else HardenedMemoryManager(write_gate=write_gate)
         self._using_hardened_memory = isinstance(self.memory, HardenedMemoryManager)
         if body is None and isinstance(self.memory, DurableMemoryStore):
             pose = self.memory.load_body()

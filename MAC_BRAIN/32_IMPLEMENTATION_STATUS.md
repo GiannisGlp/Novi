@@ -1274,7 +1274,7 @@ are you doing today?" fell to a catch-all.
 
 ## Next implementation slice
 
-- **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
+- **Regression:** full suite `python -m unittest discover -s MAC_BRAIN/tests -s brain/tests` → **858 passed** (MAC_BRAIN: 753, brain: 105). Web suite: 26 tests (requires running server/Ollama for full pass).
 - **End-to-end durable run** (`EVIDENCE/mac/<stamp>/integration.json`): a scripted perception sequence drove the whole pipeline (perception → memory admit/recall/consolidation → cognition → reasoning → goals → action → soul → social → lexicon/preferences/beliefs), then a **restart** re-opened the same store and every subsystem reported persisted state:
   - `memory_active_after_restart=6`, `soul_identity=Novi`, `alice_relationship=friend`,
     `lexicon_buddy_status=scoped`, `pref_response_length=detailed` (correction superseded),

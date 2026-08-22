@@ -1,4 +1,6 @@
 # 18 — World Model
+> **⚠️ SUPERSEDED** — Canonical implementations now live in `MAC_BRAIN/` (see `MAC_BRAIN/PERFECTING_PLAN/`). This document is retained for historical reference only.
+
 
 **Status:** SUPERSEDED — legacy Brain source document  
 **Canonical owner:** `03-cognition/02_WORLD_MODEL.md`

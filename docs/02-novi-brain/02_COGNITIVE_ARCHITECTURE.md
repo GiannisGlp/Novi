@@ -1,4 +1,6 @@
 # 02 — Novi Brain Cognitive Runtime Boundary
+> **⚠️ SUPERSEDED** — Canonical implementations now live in `MAC_BRAIN/` (see `MAC_BRAIN/PERFECTING_PLAN/`). This document is retained for historical reference only.
+
 
 **Status:** BOUNDARY REFERENCE — NOT CANONICAL COGNITIVE ARCHITECTURE
 **Canonical cognitive architecture:** `docs/03-cognition/01_COGNITIVE_ARCHITECTURE.md`

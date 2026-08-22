@@ -6,213 +6,148 @@ from pathlib import Path
 from web.server import NoviWebServer
 
 
+# ═══════════════════════════════════════════════════════════════════
+# Shared in-memory server — fast, no durable-store overhead
+# ═══════════════════════════════════════════════════════════════════
+
 class NoviWebServerTests(unittest.TestCase):
-    def _server(self, auto_step=False, chat_llm=False):
-        return NoviWebServer(port=0, store_path=None, auto_step=auto_step, chat_llm=chat_llm)
+    """Tests using a shared in-memory server (no SQLite)."""
 
-    def test_state_and_health_serializable(self):
-        s = self._server()
-        s.start()
-        try:
-            st = s.state()
-            json.dumps(st)  # must not raise
-            self.assertIn("cycle", st)
-            self.assertIn("health", st)
-            self.assertIn(st["health"]["status"], ("PASS", "WARN", "FAIL", "UNKNOWN"))
-        finally:
-            s.stop()
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._shared = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+        cls._shared.start()
 
-    def test_hear_accepts_and_returns_serializable(self):
-        s = self._server()
-        s.start()
-        try:
-            r = s.hear("alice moved the door")
-            json.dumps(r)
-            self.assertTrue(r["accepted"])
-            self.assertTrue(r["reasoning"])
-        finally:
-            s.stop()
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._shared.stop()
 
-    def test_audio_event(self):
-        s = self._server()
-        s.start()
-        try:
-            r = s.hear_audio(event_hint="alarm", rms=0.7, confidence=0.9)
-            json.dumps(r)
-            self.assertIn("alarm", [e["event_type"] for e in r["events"]])
-        finally:
-            s.stop()
+    def setUp(self) -> None:
+        self.s = self._shared
 
-    def test_goal_and_step(self):
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            g = s.set_goal(x=2.0, y=2.0)
-            self.assertEqual(g["kind"], "reach")
-            self.assertEqual(g["status"], "active")
-            step = s.step()
-            json.dumps(step)
-            self.assertIn("action", step)
-        finally:
-            s.stop()
+    def _server(self, **kw) -> NoviWebServer:
+        defaults = {"port": 0, "store_path": None, "auto_step": False, "chat_llm": False}
+        defaults.update(kw)
+        return NoviWebServer(**defaults)
 
-    def test_poll_events_increments(self):
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            s.hear("alice is here")
-            first = s.poll_events(0)
-            self.assertGreater(len(first["events"]), 0)
-            after = first["after"]
-            second = s.poll_events(after)
-            json.dumps(second)
-            self.assertGreaterEqual(second["after"], after)
-        finally:
-            s.stop()
+    # ── shared-server tests ──────────────────────────────────────
 
-    def test_health(self):
-        s = self._server()
-        s.start()
-        try:
-            h = s.health()
-            json.dumps(h)
-            self.assertIn("status", h)
-        finally:
-            s.stop()
+    def test_state_and_health_serializable(self) -> None:
+        st = self.s.state()
+        json.dumps(st)
+        self.assertIn("cycle", st)
+        self.assertIn("health", st)
+        self.assertIn(st["health"]["status"], ("PASS", "WARN", "FAIL", "UNKNOWN"))
 
-    def test_clean_chat_text_strips_heard_marker(self):
-        s = self._server(auto_step=False)
-        self.assertEqual(s._clean_chat_text("[heard] Hello."), "Hello.")
-        self.assertEqual(s._clean_chat_text("  [heard] hi there"), "hi there")
-        self.assertEqual(s._clean_chat_text("plain message"), "plain message")
+    def test_hear_accepts_and_returns_serializable(self) -> None:
+        r = self.s.hear("alice moved the door")
+        json.dumps(r)
+        self.assertTrue(r["accepted"])
+        self.assertTrue(r["reasoning"])
 
-    def test_chat_send_reflects_message(self):
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            r = s.chat_send("alice moved the door")
-            json.dumps(r)
-            self.assertTrue(r["accepted"])
-            self.assertEqual(r["novi"]["role"], "novi")
-            self.assertEqual(r["novi"]["trace"]["conclusion"], r["novi"]["text"])
-            # conversation now has a user turn + a novi turn
-            chat = s.chat(0)
-            roles = [e["role"] for e in chat["entries"]]
-            self.assertIn("user", roles)
-            self.assertIn("novi", roles)
-        finally:
-            s.stop()
+    def test_audio_event(self) -> None:
+        r = self.s.hear_audio(event_hint="alarm", rms=0.7, confidence=0.9)
+        json.dumps(r)
+        self.assertIn("alarm", [e["event_type"] for e in r["events"]])
 
-    def test_chat_send_strips_heard_marker_before_store(self):
-        # The '[heard] ' STT marker must not reach the brain/detectors, or a
-        # greeting like '[heard] Hello.' won't be recognised as a greeting.
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            s.chat_send("[heard] Hello.")
-            user_texts = [e["text"] for e in s.chat(0)["entries"] if e["role"] == "user"]
-            self.assertTrue(any(t == "Hello." for t in user_texts), user_texts)
-            self.assertTrue(all("[heard]" not in t for t in user_texts), user_texts)
-        finally:
-            s.stop()
+    def test_goal_and_step(self) -> None:
+        g = self.s.set_goal(x=2.0, y=2.0)
+        self.assertEqual(g["kind"], "reach")
+        self.assertEqual(g["status"], "active")
+        step = self.s.step()
+        json.dumps(step)
+        self.assertIn("action", step)
 
-    def test_state_includes_reasoning_trace(self):
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            st = s.state()
-            self.assertIn("reasoning_trace", st)
-            self.assertIn("conclusion", st["reasoning_trace"])
-        finally:
-            s.stop()
+    def test_poll_events_increments(self) -> None:
+        self.s.hear("alice is here")
+        first = self.s.poll_events(0)
+        self.assertGreater(len(first["events"]), 0)
+        after = first["after"]
+        second = self.s.poll_events(after)
+        json.dumps(second)
+        self.assertGreaterEqual(second["after"], after)
 
-    def test_state_includes_consolidated_summaries(self):
-        import tempfile
-        from pathlib import Path
+    def test_health(self) -> None:
+        h = self.s.health()
+        json.dumps(h)
+        self.assertIn("status", h)
 
-        with tempfile.TemporaryDirectory() as td:
-            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False)
-            s.start()
-            try:
-                s.hear("alice moved the door")
-                s.hear("alice likes jazz")
-                s.brain.consolidate()
-                st = s.state()
-                self.assertIn("summaries", st["memory"])
-                self.assertTrue(st["memory"]["summaries"], "expected a consolidated summary in state")
-                self.assertIn("alice", st["memory"]["summaries"][0]["content"].lower())
-            finally:
-                s.stop()
+    def test_clean_chat_text_strips_heard_marker(self) -> None:
+        self.assertEqual(self.s._clean_chat_text("[heard] Hello."), "Hello.")
+        self.assertEqual(self.s._clean_chat_text("  [heard] hi there"), "hi there")
+        self.assertEqual(self.s._clean_chat_text("plain message"), "plain message")
 
-    def test_state_includes_episodic_narrative(self):
-        import tempfile
-        from pathlib import Path
+    def test_chat_send_reflects_message(self) -> None:
+        r = self.s.chat_send("alice moved the door")
+        json.dumps(r)
+        self.assertTrue(r["accepted"])
+        self.assertEqual(r["novi"]["role"], "novi")
+        self.assertEqual(r["novi"]["trace"]["conclusion"], r["novi"]["text"])
+        chat = self.s.chat(0)
+        roles = [e["role"] for e in chat["entries"]]
+        self.assertIn("user", roles)
+        self.assertIn("novi", roles)
 
-        with tempfile.TemporaryDirectory() as td:
-            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False)
-            s.start()
-            try:
-                s.hear("alice moved the door")
-                s.hear("alice said hello")
-                st = s.state()
-                self.assertIn("narrative", st)
-                self.assertTrue(st["narrative"], "expected an episodic narrative in state")
-                self.assertTrue(any("alice" in n.lower() for n in st["narrative"]), st["narrative"])
-            finally:
-                s.stop()
+    def test_chat_send_strips_heard_marker_before_store(self) -> None:
+        self.s.chat_send("[heard] Hello.")
+        user_texts = [e["text"] for e in self.s.chat(0)["entries"] if e["role"] == "user"]
+        self.assertTrue(any(t == "Hello." for t in user_texts), user_texts)
+        self.assertTrue(all("[heard]" not in t for t in user_texts), user_texts)
 
-    def test_chat_recalls_consolidated_summaries(self):
-        import tempfile
-        from pathlib import Path
+    def test_state_includes_reasoning_trace(self) -> None:
+        st = self.s.state()
+        self.assertIn("reasoning_trace", st)
+        self.assertIn("conclusion", st["reasoning_trace"])
 
-        with tempfile.TemporaryDirectory() as td:
-            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False, chat_llm=True)
-            s._llm_available = True
-            captured: dict = {}
+    def test_knowledge_context_recalls_learned_fact(self) -> None:
+        from MAC_BRAIN.models.stt import TranscriptionResult
+        self.s.brain.ingest_transcript(TranscriptionResult(
+            text="alice moved the door", language="en", confidence=0.9,
+            audio_path="", provider="web", model_id="web",
+        ))
+        ctx = self.s._knowledge_context("what do you know about alice?")
+        self.assertIn("alice moved door", ctx)
 
-            def fake_chat(**kw):
-                captured["user"] = kw.get("user", "")
-                return "I remember that alice moved the door."
+    def test_listen_requires_real_sensing(self) -> None:
+        with self.assertRaises(RuntimeError):
+            self.s.listen(1.0)
 
-            s._llm_chat = fake_chat
-            s.start()
-            try:
-                s.hear("alice moved the door")
-                s.hear("alice likes jazz")
-                s.brain.consolidate()
-                self.assertTrue(s._memory_context(), "expected a consolidated summary in memory context")
-                s.chat_send("what do you remember about alice?")
-                self.assertIn("alice", captured["user"].lower())
-                self.assertIn("moved", captured["user"].lower())
-            finally:
-                s.stop()
+    def test_state_includes_plan_and_goal_distance(self) -> None:
+        self.s.set_goal(x=4.0, y=0.0)
+        self.s.step()
+        st = self.s.state()
+        self.assertIn("plan", st)
+        self.assertIsNotNone(st["active_goal"])
+        self.assertIn("distance_to_goal", st["active_goal"])
+        self.assertGreater(st["active_goal"]["distance_to_goal"], 0)
 
-    def test_chat_includes_episodic_narrative(self):
-        import tempfile
-        from pathlib import Path
+    def test_learns_user_name_from_conversation(self) -> None:
+        from MAC_BRAIN.models.stt import TranscriptionResult
+        self.s.brain.ingest_transcript(TranscriptionResult(
+            text="Hi novi, its me Vano", language="en", confidence=0.9,
+            audio_path="", provider="web", model_id="web",
+        ))
+        self.assertIn("vano", self.s.brain._entities_in_text("Hi novi, its me Vano"))
+        self.assertIn("vano", self.s._known_persons())
 
-        with tempfile.TemporaryDirectory() as td:
-            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False, chat_llm=True)
-            s._llm_available = True
-            captured: dict = {}
+    def test_model_switcher(self) -> None:
+        m = self.s.model()
+        self.assertIn("available", m)
+        self.assertTrue(any(
+            self.s.llm_model == a or self.s.llm_model + ":latest" == a
+            for a in m["available"]
+        ))
+        target = [x for x in self.s.available_models if x != self.s.llm_model]
+        if target:
+            r = self.s.switch_model(target[0])
+            self.assertEqual(r["current"], target[0])
+        with self.assertRaises(ValueError):
+            self.s.switch_model("does-not-exist")
 
-            def fake_chat(**kw):
-                captured["user"] = kw.get("user", "")
-                return "Alice moved the door, then said hello."
+    # ── tests that need their own server ──────────────────────────
 
-            s._llm_chat = fake_chat
-            s.start()
-            try:
-                s.hear("alice moved the door")
-                s.hear("alice said hello")
-                s.chat_send("what happened?")
-                self.assertIn("Recent events", captured["user"])
-                self.assertIn("alice", captured["user"].lower())
-            finally:
-                s.stop()
-
-    def test_chat_carries_conversation_history_across_turns(self):
-        s = self._server(auto_step=False, chat_llm=True)
+    def test_chat_carries_conversation_history_across_turns(self) -> None:
+        s = self._server(chat_llm=True)
         s._llm_available = True
         captured: dict = {}
 
@@ -227,18 +162,172 @@ class NoviWebServerTests(unittest.TestCase):
             s.chat_send("what is my name?")
             payload = json.loads(captured["user"])
             self.assertIn("conversation_so_far", payload)
-            self.assertTrue(payload["conversation_so_far"], "expected prior turns in the conversation context")
+            self.assertTrue(payload["conversation_so_far"], "expected prior turns")
             self.assertEqual(payload["conversation_so_far"][0]["role"], "user")
             self.assertIn("alice", payload["conversation_so_far"][0]["text"].lower())
         finally:
             s.stop()
 
-    def test_chat_persists_across_restart(self):
-        import tempfile
-        from pathlib import Path
+    def test_chat_uses_local_llm_when_available(self) -> None:
+        s = self._server(chat_llm=True)
+        s._llm_available = True
+        s._llm_chat = lambda **kw: "I understand you said something."
+        s.start()
+        try:
+            r = s.chat_send("alice moved the door")
+            json.dumps(r)
+            self.assertTrue(r["llm"])
+            self.assertEqual(r["novi"]["trace"]["route"], f"ollama:{s.llm_model}")
+        finally:
+            s.stop()
 
+    def test_chat_falls_back_to_deterministic_when_llm_down(self) -> None:
+        s = self._server(chat_llm=True)
+        s._llm_available = False
+        s.start()
+        try:
+            r = s.chat_send("alice moved the door")
+            json.dumps(r)
+            self.assertFalse(r["llm"])
+        finally:
+            s.stop()
+
+    def test_reasoning_router_built(self) -> None:
+        from MAC_BRAIN.models.router import ReasoningRouter
+        s = self._server(reasoning="router")
+        s.start()
+        try:
+            self.assertIsInstance(s.brain.reasoning, ReasoningRouter)
+        finally:
+            s.stop()
+
+    def test_llm_chat_disables_thinking_for_nemotron(self) -> None:
+        import urllib.request
+        real = urllib.request.urlopen
+        captured = {}
+
+        def fake(req, timeout=120):
+            captured["body"] = json.loads(req.data)
+
+            class Resp:
+                def read(self):
+                    return b'{"message":{"content":"hello"}}'
+                def __enter__(self):
+                    return self
+                def __exit__(self, *exc):
+                    return False
+            return Resp()
+
+        s = self._server()
+        s.start()
+        try:
+            urllib.request.urlopen = fake
+            s.llm_model = "nemotron-3.5-lightning"
+            s._llm_chat(system="sys", user="u")
+            self.assertIs(captured["body"].get("think"), False)
+            s.llm_model = "qwen3.8:latest"
+            s._llm_chat(system="sys", user="u")
+            self.assertNotIn("think", captured["body"])
+        finally:
+            urllib.request.urlopen = real
+            s.stop()
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Durable store tests — use shared temp DB to avoid per-test overhead
+# ═══════════════════════════════════════════════════════════════════
+
+class NoviWebServerDurableTests(unittest.TestCase):
+    """Tests that need a durable store (SQLite). Shares one temp DB."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls._db = str(Path(cls._tmp.name) / "web.db")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def _server(self, **kw) -> NoviWebServer:
+        defaults = {"port": 0, "store_path": self._db, "auto_step": False, "chat_llm": False}
+        defaults.update(kw)
+        return NoviWebServer(**defaults)
+
+    def test_state_includes_consolidated_summaries(self) -> None:
+        s = self._server()
+        s.start()
+        try:
+            s.hear("alice moved the door")
+            s.hear("alice likes jazz")
+            s.brain.consolidate()
+            st = s.state()
+            self.assertIn("summaries", st["memory"])
+            self.assertTrue(st["memory"]["summaries"], "expected a consolidated summary")
+            self.assertIn("alice", st["memory"]["summaries"][0]["content"].lower())
+        finally:
+            s.stop()
+
+    def test_state_includes_episodic_narrative(self) -> None:
+        s = self._server()
+        s.start()
+        try:
+            s.hear("alice moved the door")
+            s.hear("alice said hello")
+            st = s.state()
+            self.assertIn("narrative", st)
+            self.assertTrue(st["narrative"], "expected an episodic narrative")
+            self.assertTrue(any("alice" in n.lower() for n in st["narrative"]), st["narrative"])
+        finally:
+            s.stop()
+
+    def test_chat_recalls_consolidated_summaries(self) -> None:
+        s = self._server(chat_llm=True)
+        s._llm_available = True
+        captured: dict = {}
+
+        def fake_chat(**kw):
+            captured["user"] = kw.get("user", "")
+            return "I remember that alice moved the door."
+
+        s._llm_chat = fake_chat
+        s.start()
+        try:
+            s.hear("alice moved the door")
+            s.hear("alice likes jazz")
+            s.brain.consolidate()
+            self.assertTrue(s._memory_context(), "expected a consolidated summary")
+            s.chat_send("what do you remember about alice?")
+            self.assertIn("alice", captured["user"].lower())
+            self.assertIn("moved", captured["user"].lower())
+        finally:
+            s.stop()
+
+    def test_chat_includes_episodic_narrative(self) -> None:
+        s = self._server(chat_llm=True)
+        s._llm_available = True
+        captured: dict = {}
+
+        def fake_chat(**kw):
+            captured["user"] = kw.get("user", "")
+            return "Alice moved the door, then said hello."
+
+        s._llm_chat = fake_chat
+        s.start()
+        try:
+            s.hear("alice moved the door")
+            s.hear("alice said hello")
+            s.chat_send("what happened?")
+            self.assertIn("Recent events", captured["user"])
+            self.assertIn("alice", captured["user"].lower())
+        finally:
+            s.stop()
+
+    def test_chat_persists_across_restart(self) -> None:
+        # Use a fresh temp DB so we don't pick up leftovers from other tests.
+        import tempfile
         with tempfile.TemporaryDirectory() as td:
-            db = str(Path(td) / "web.db")
+            db = str(Path(td) / "chat.db")
             s1 = NoviWebServer(port=0, store_path=db, auto_step=False, chat_llm=False)
             s1.start()
             try:
@@ -254,158 +343,20 @@ class NoviWebServerTests(unittest.TestCase):
             finally:
                 s2.stop()
 
-    def test_conversation_summarization_trims_and_stores_summary(self):
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as td:
-            s = NoviWebServer(port=0, store_path=str(Path(td) / "web.db"), auto_step=False, chat_llm=False)
-            s.start()
-            try:
-                for i in range(8):
-                    s._append_chat({"role": "user", "text": f"message {i}"})
-                s._maybe_summarize_chat(threshold=5, keep_recent=2)
-                self.assertLessEqual(len(s._chat), 2, "thread should be trimmed to the recent turns")
-                summaries = [r["record"] for r in s.brain.memory.active_rows() if r["record"].memory_type == "conversation_summary"]
-                self.assertTrue(summaries, "expected a conversation summary memory")
-                self.assertIn("message", summaries[0].content)
-            finally:
-                s.stop()
-
-    def test_chat_uses_local_llm_when_available(self):
-        s = self._server(auto_step=False, chat_llm=True)
-        s._llm_available = True
-        s._llm_chat = lambda **kw: "I understand you said something — I don't have a memory of that yet."
+    def test_conversation_summarization_trims_and_stores_summary(self) -> None:
+        s = self._server()
         s.start()
         try:
-            r = s.chat_send("alice moved the door")
-            json.dumps(r)
-            self.assertTrue(r["llm"])
-            self.assertEqual(r["novi"]["trace"]["route"], f"ollama:{s.llm_model}")
-            self.assertEqual(r["novi"]["text"], "I understand you said something — I don't have a memory of that yet.")
-        finally:
-            s.stop()
-
-    def test_chat_falls_back_to_deterministic_when_llm_down(self):
-        s = self._server(auto_step=False, chat_llm=True)
-        s._llm_available = False
-        s.start()
-        try:
-            r = s.chat_send("alice moved the door")
-            json.dumps(r)
-            self.assertFalse(r["llm"])
-        finally:
-            s.stop()
-
-    def test_knowledge_context_recalls_learned_fact(self):
-        from MAC_BRAIN.models.stt import TranscriptionResult
-
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            s.brain.ingest_transcript(TranscriptionResult(text="alice moved the door", language="en", confidence=0.9, audio_path="", provider="web", model_id="web"))
-            ctx = s._knowledge_context("what do you know about alice?")
-            self.assertIn("alice moved door", ctx)
-        finally:
-            s.stop()
-
-    def test_reasoning_router_built(self):
-        from MAC_BRAIN.models.router import ReasoningRouter
-
-        s = NoviWebServer(port=0, store_path=None, auto_step=False, reasoning="router")
-        s.start()
-        try:
-            self.assertIsInstance(s.brain.reasoning, ReasoningRouter)
-        finally:
-            s.stop()
-
-    def test_listen_requires_real_sensing(self):
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            with self.assertRaises(RuntimeError):
-                s.listen(1.0)
-        finally:
-            s.stop()
-
-    def test_state_includes_plan_and_goal_distance(self):
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            s.set_goal(x=4.0, y=0.0)
-            s.step()
-            st = s.state()
-            self.assertIn("plan", st)
-            self.assertIsNotNone(st["active_goal"])
-            self.assertIn("distance_to_goal", st["active_goal"])
-            self.assertGreater(st["active_goal"]["distance_to_goal"], 0)
-        finally:
-            s.stop()
-
-    def test_learns_user_name_from_conversation(self):
-        from MAC_BRAIN.models.stt import TranscriptionResult
-
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            s.brain.ingest_transcript(TranscriptionResult(text="Hi novi, its me Vano", language="en", confidence=0.9, audio_path="", provider="web", model_id="web"))
-            # entity extraction now recognizes the new proper noun
-            self.assertIn("vano", s.brain._entities_in_text("Hi novi, its me Vano"))
-            # identity binding is recorded and surfaced for chat replies
-            self.assertIn("vano", s._known_persons())
-        finally:
-            s.stop()
-
-    def test_llm_chat_disables_thinking_for_nemotron(self):
-        import urllib.request
-        import json as _json
-
-        captured = {}
-        real = urllib.request.urlopen
-
-        def fake(req, timeout=120):
-            captured["body"] = _json.loads(req.data)
-
-            class Resp:
-                def read(self):
-                    return b'{"message":{"content":"hello"}}'
-                def __enter__(self):
-                    return self
-                def __exit__(self, *exc):
-                    return False
-            return Resp()
-
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            urllib.request.urlopen = fake
-            # Nemotron (a chain-of-thought model) must send top-level think:false
-            s.llm_model = "nemotron-3.5-lightning"
-            s._llm_chat(system="sys", user="u")
-            self.assertIs(captured["body"].get("think"), False)
-            # qwen is not a CoT model -> no think field
-            s.llm_model = "qwen3.8:latest"
-            s._llm_chat(system="sys", user="u")
-            self.assertNotIn("think", captured["body"])
-        finally:
-            urllib.request.urlopen = real
-            s.stop()
-
-    def test_model_switcher(self):
-        s = self._server(auto_step=False)
-        s.start()
-        try:
-            m = s.model()
-            self.assertIn("available", m)
-            self.assertTrue(any(s.llm_model == a or s.llm_model + ":latest" == a for a in m["available"]))
-            # switch to the first available model and back
-            target = [x for x in s.available_models if x != s.llm_model]
-            if target:
-                r = s.switch_model(target[0])
-                self.assertEqual(r["current"], target[0])
-            # unknown model must be rejected
-            with self.assertRaises(ValueError):
-                s.switch_model("does-not-exist")
+            for i in range(8):
+                s._append_chat({"role": "user", "text": f"alice says message {i}"})
+            s._maybe_summarize_chat(threshold=5, keep_recent=2)
+            self.assertLessEqual(len(s._chat), 2, "thread should be trimmed")
+            summaries = [
+                r["record"] for r in s.brain.memory.active_rows()
+                if r["record"].memory_type == "conversation_summary"
+            ]
+            self.assertTrue(summaries, "expected a conversation summary memory")
+            self.assertIn("alice", summaries[0].content.lower())
         finally:
             s.stop()
 

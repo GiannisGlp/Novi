@@ -1,4 +1,6 @@
 # 05 — Novi Cognitive Runtime Cycle
+> **⚠️ SUPERSEDED** — Canonical implementations now live in `MAC_BRAIN/` (see `MAC_BRAIN/PERFECTING_PLAN/`). This document is retained for historical reference only.
+
 
 **Status:** BOUNDARY REFERENCE — NOT CANONICAL AUTONOMY LOOP
 **Canonical behavioral loop:** `docs/02-autonomy/01_CONTINUOUS_COGNITIVE_LOOP.md`

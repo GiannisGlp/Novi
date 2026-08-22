@@ -102,6 +102,16 @@ class NoviWebServer:
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        # chat-busy flag: prevents the background auto-step loop from running
+        # brain.step() while a chat reply is being composed (the LLM call can
+        # take 10+ seconds, and a concurrent step can trigger initiative
+        # messages that appear as duplicate Novi responses in the chat).
+        self._chat_busy = False
+        # deduplication: track the last sent text + timestamp to reject
+        # duplicate sends (double-click, Enter key race) within a short window.
+        self._last_sent_text: str = ""
+        self._last_sent_time: float = 0.0
+        self._dedup_window_seconds: float = 3.0
         # event log with stable seq numbers (bounded)
         self._seen = 0
         self._seq = 0
@@ -200,6 +210,13 @@ class NoviWebServer:
     def _loop(self) -> None:
         while not self._stop.wait(self.tick):
             if self.auto_step:
+                # Skip the background brain step while a chat reply is being
+                # composed — the LLM call is slow and a concurrent step can
+                # trigger initiative messages that appear as duplicate responses.
+                with self._lock:
+                    if self._chat_busy:
+                        self._drain()
+                        continue
                 try:
                     with self._lock:
                         self._last_step = self.brain.step()
@@ -263,45 +280,69 @@ class NoviWebServer:
         # as a greeting (the raw prefix would defeat the greeting/clarification
         # detectors and let the LLM mis-handle it).
         text = self._clean_chat_text(text)
-        with self._lock:
-            r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
-            adm = r["admission"]
-            conclusion = r["reasoning"]
-            heard_conf = r["confidence"]
-            step = self.brain.step()
-            trace = dict(self.brain._last_reasoning_trace)
 
-        # The brain owns the reply (docs/06-soul/07 §2): it renders a natural
-        # communicative act grounded in soul/relationship/identity/memory and
-        # enforces the no-assistant/no-repetition rules. The web layer only
-        # supplies conversation history, the addressee, and the LLM transport.
-        history = self._build_history(12)
-        addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
-        self.brain._learn_from_chat(text, addressee)
-        recent_novi = self._recent_novi(4)
-        last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
-        transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
-        reply_obj = self.brain.compose_reply(
-            text, person=addressee, history=history, llm_chat=transport,
-            last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi,
-        )
-        reply = reply_obj["text"]
-        self._append_chat({"role": "user", "text": text})
-        if reply is not None:
-            trace["conclusion"] = reply
-            trace["action"] = "respond"
-            trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
-            trace["route"] = f"ollama:{self.llm_model}"
-            trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
-            trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
-            novi_text = reply
-        else:
-            trace["conclusion"] = conclusion  # deterministic conclusion
-            trace["confidence"] = heard_conf
-            novi_text = conclusion
-        novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": bool(reply is not None)}
-        self._append_chat(novi)
-        return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": bool(reply is not None)}
+        # Deduplication: reject duplicate sends within the dedup window.
+        # This prevents double-sends from double-clicks or Enter key races.
+        import time as _time
+        now = _time.time()
+        with self._lock:
+            if (text == self._last_sent_text
+                    and (now - self._last_sent_time) < self._dedup_window_seconds):
+                # Return the last result instead of processing again.
+                if self._chat:
+                    last = self._chat[-1]
+                    if last.get("role") == "novi":
+                        return {"novi": last, "accepted": True, "memory_id": None, "llm": last.get("llm", False), "deduplicated": True}
+            self._last_sent_text = text
+            self._last_sent_time = now
+
+        # Set chat-busy flag to prevent the background loop from stepping
+        # while compose_reply is running (the LLM call is slow).
+        with self._lock:
+            self._chat_busy = True
+        try:
+            with self._lock:
+                r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
+                adm = r["admission"]
+                conclusion = r["reasoning"]
+                heard_conf = r["confidence"]
+                step = self.brain.step()
+                trace = dict(self.brain._last_reasoning_trace)
+
+            # The brain owns the reply (docs/06-soul/07 §2): it renders a natural
+            # communicative act grounded in soul/relationship/identity/memory and
+            # enforces the no-assistant/no-repetition rules. The web layer only
+            # supplies conversation history, the addressee, and the LLM transport.
+            history = self._build_history(12)
+            addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+            self.brain._learn_from_chat(text, addressee)
+            recent_novi = self._recent_novi(4)
+            last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
+            transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+            reply_obj = self.brain.compose_reply(
+                text, person=addressee, history=history, llm_chat=transport,
+                last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi,
+            )
+            reply = reply_obj["text"]
+            self._append_chat({"role": "user", "text": text})
+            if reply is not None:
+                trace["conclusion"] = reply
+                trace["action"] = "respond"
+                trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+                trace["route"] = f"ollama:{self.llm_model}"
+                trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
+                trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
+                novi_text = reply
+            else:
+                trace["conclusion"] = conclusion  # deterministic conclusion
+                trace["confidence"] = heard_conf
+                novi_text = conclusion
+            novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": bool(reply is not None)}
+            self._append_chat(novi)
+            return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": bool(reply is not None)}
+        finally:
+            with self._lock:
+                self._chat_busy = False
 
     def listen(self, seconds: float | None = None) -> dict[str, Any]:
         """Record from the microphone, transcribe locally, and respond in chat.
@@ -323,27 +364,34 @@ class NoviWebServer:
                 trace = dict(self.brain._last_reasoning_trace)
         if not text.strip():
             return {"heard": "", "accepted": True, "novi": None, "llm": False}
-        addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
-        self.brain._learn_from_chat(text, addressee)
-        recent_novi = self._recent_novi(4)
-        last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
-        transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
-        reply_obj = self.brain.compose_reply(text, person=addressee, history=self._build_history(12), llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi)
-        reply = reply_obj["text"]
-        self._append_chat({"role": "user", "text": f"[heard] {text}"})
-        if reply is not None:
-            trace["conclusion"] = reply
-            trace["action"] = "respond"
-            trace["route"] = f"ollama:{self.llm_model}"
-            trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
-            trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
-            trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
-            novi_text, llm = reply, True
-        else:
-            novi_text, llm = result["reasoning"], False
-        novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
-        self._append_chat(novi)
-        return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
+        # Set chat-busy flag to prevent the background loop from stepping.
+        with self._lock:
+            self._chat_busy = True
+        try:
+            addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+            self.brain._learn_from_chat(text, addressee)
+            recent_novi = self._recent_novi(4)
+            last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
+            transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+            reply_obj = self.brain.compose_reply(text, person=addressee, history=self._build_history(12), llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi)
+            reply = reply_obj["text"]
+            self._append_chat({"role": "user", "text": f"[heard] {text}"})
+            if reply is not None:
+                trace["conclusion"] = reply
+                trace["action"] = "respond"
+                trace["route"] = f"ollama:{self.llm_model}"
+                trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
+                trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
+                trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+                novi_text, llm = reply, True
+            else:
+                novi_text, llm = result["reasoning"], False
+            novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
+            self._append_chat(novi)
+            return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
+        finally:
+            with self._lock:
+                self._chat_busy = False
 
     def _llm_up(self) -> bool:
         if self._llm_available is None:

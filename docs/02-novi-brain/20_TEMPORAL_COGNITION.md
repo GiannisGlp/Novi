@@ -1,4 +1,6 @@
 # 20 — Temporal Cognition
+> **⚠️ SUPERSEDED** — Canonical implementations now live in `MAC_BRAIN/` (see `MAC_BRAIN/PERFECTING_PLAN/`). This document is retained for historical reference only.
+
 
 **Status:** SUPERSEDED — legacy Brain source document  
 **Canonical semantic owner:** `03-cognition/08_TEMPORAL_AND_CAUSAL_REASONING.md`  

@@ -1,4 +1,6 @@
 # 01 — Novi Brain Behavioral Contract
+> **⚠️ SUPERSEDED** — Canonical implementations now live in `MAC_BRAIN/` (see `MAC_BRAIN/PERFECTING_PLAN/`). This document is retained for historical reference only.
+
 
 **Status:** BOUNDARY REFERENCE — NOT CANONICAL NORTH STAR
 **Canonical North Star:** `docs/00-strategy/NOVI_NORTH_STAR.md`

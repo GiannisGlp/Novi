@@ -16,6 +16,26 @@ from typing import Any, Iterable
 
 from brain.b1_memory import MemoryAdmission, MemoryRecord, DeterministicMemoryManager, validate_contract, utc_now
 
+from .memory_hardening import (
+    ADMITTED,
+    OBSERVED,
+    STORE_EPISODE,
+    UNVERIFIED,
+    WriteGate,
+    RetrievalResult,
+    NO_RESULT,
+    AMBIGUOUS,
+    CONFLICTED,
+    STALE,
+    ABSTAIN,
+    EXPIRED,
+    ACTIVE as LIFE_ACTIVE,
+)
+import hashlib
+
+# Retrieval state constants (used locally, not exported from memory_hardening as constants).
+_RESOLVED = "RESOLVED"
+
 SCHEMA_MEMORY = """
 CREATE TABLE IF NOT EXISTS memory_records (
     memory_id            TEXT PRIMARY KEY,
@@ -164,6 +184,20 @@ CREATE TABLE IF NOT EXISTS chat (
 );
 """
 
+# Schema version table — added in migration for version-compatibility checks.
+SCHEMA_VERSION = """
+CREATE TABLE IF NOT EXISTS schema_version (
+    major       INTEGER NOT NULL,
+    minor       INTEGER NOT NULL,
+    upgraded_at TEXT NOT NULL
+);
+"""
+
+# Current schema version. Increment minor on additive migrations (new columns,
+# new tables). Increment major on breaking changes (removed/retyped columns).
+SCHEMA_MAJOR = 1
+SCHEMA_MINOR = 0
+
 
 def _json(value: Any) -> str | None:
     if value is None:
@@ -181,15 +215,23 @@ def _unjson(value: str | None, default: Any) -> Any:
 
 
 class DurableMemoryStore:
-    """SQLite-backed store exposing the same memory surface as ``DeterministicMemoryManager``."""
+    """SQLite-backed store exposing the same memory surface as ``DeterministicMemoryManager``.
 
-    def __init__(self, path: str | Path, embedder: Any | None = None) -> None:
+    When ``write_gate`` is provided, admission runs through the full write-gate
+    pipeline (identity → integrity → privacy → separation → poisoning → retention
+    → policy) and records include epistemic_status, evidence_class, source_class,
+    and independence_group. Without it, admission uses the legacy basic checks
+    for backward compatibility.
+    """
+
+    def __init__(self, path: str | Path, embedder: Any | None = None, *, write_gate: WriteGate | None = None) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         from .vector import EmbeddingIndex, HashingEmbedding
 
         self._embedder = embedder if embedder is not None else HashingEmbedding()
         self._embed_index = EmbeddingIndex(self._embedder)
+        self._write_gate = write_gate
         self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL;")
@@ -209,7 +251,9 @@ class DurableMemoryStore:
         self._conn.executescript(SCHEMA_IDENTITY)
         self._conn.executescript(SCHEMA_KNOWLEDGE)
         self._conn.executescript(SCHEMA_PLANS)
+        self._conn.executescript(SCHEMA_VERSION)
         self._migrate()
+        self._check_schema_compatible()
         # load persisted embeddings into the in-memory index
         for row in self._conn.execute("SELECT memory_id, text FROM vectors").fetchall():
             self._embed_index.add(row["memory_id"], row["text"])
@@ -221,22 +265,57 @@ class DurableMemoryStore:
         self._conn.close()
 
     def _migrate(self) -> None:
-        """Add lifecycle columns to databases created before consolidation existed."""
+        """Add lifecycle and hardened-contract columns to databases created before they existed."""
         cols = {row[1] for row in self._conn.execute("PRAGMA table_info(memory_records)").fetchall()}
-        if "state" not in cols:
-            self._conn.execute("ALTER TABLE memory_records ADD COLUMN state TEXT NOT NULL DEFAULT 'active'")
-        if "last_accessed_at" not in cols:
-            self._conn.execute("ALTER TABLE memory_records ADD COLUMN last_accessed_at TEXT")
-        if "expires_at" not in cols:
-            self._conn.execute("ALTER TABLE memory_records ADD COLUMN expires_at TEXT")
-        if "purpose" not in cols:
-            self._conn.execute("ALTER TABLE memory_records ADD COLUMN purpose TEXT")
-        if "consent" not in cols:
-            self._conn.execute("ALTER TABLE memory_records ADD COLUMN consent INTEGER NOT NULL DEFAULT 1")
+        migrations = [
+            ("state", "TEXT NOT NULL DEFAULT 'active'"),
+            ("last_accessed_at", "TEXT"),
+            ("expires_at", "TEXT"),
+            ("purpose", "TEXT"),
+            ("consent", "INTEGER NOT NULL DEFAULT 1"),
+            # Hardened-contract fields (PERFECTING_PLAN Step 2).
+            ("epistemic_status", "TEXT NOT NULL DEFAULT 'OBSERVED'"),
+            ("evidence_class", "TEXT NOT NULL DEFAULT 'OBSERVED'"),
+            ("source_class", "TEXT NOT NULL DEFAULT ''"),
+            ("independence_group", "TEXT"),
+            ("lifecycle_state", "TEXT NOT NULL DEFAULT 'active'"),
+            ("integrity_hash", "TEXT NOT NULL DEFAULT ''"),
+            ("derivation", "TEXT NOT NULL DEFAULT 'direct'"),
+            ("governance_status", "TEXT NOT NULL DEFAULT 'ungoverned'"),
+        ]
+        for col_name, col_def in migrations:
+            if col_name not in cols:
+                self._conn.execute(f"ALTER TABLE memory_records ADD COLUMN {col_name} {col_def}")
+        # Ensure chat table exists (pre-migration DBs won't have it).
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS chat (seq INTEGER PRIMARY KEY, role TEXT NOT NULL, text TEXT NOT NULL, created_at TEXT NOT NULL)"
         )
+        # Record current schema version after applying migrations.
+        from datetime import datetime, timezone
+        self._conn.execute(
+            "INSERT OR REPLACE INTO schema_version (major, minor, upgraded_at) VALUES (?, ?, ?)",
+            (SCHEMA_MAJOR, SCHEMA_MINOR, datetime.now(timezone.utc).isoformat()),
+        )
         self._conn.commit()
+
+    def _check_schema_compatible(self) -> None:
+        """Refuse to open a database created by a newer major schema version."""
+        from datetime import datetime, timezone
+        row = self._conn.execute("SELECT major, minor FROM schema_version ORDER BY major DESC, minor DESC LIMIT 1").fetchone()
+        if row is None:
+            # Pre-version table database — first open records current version.
+            self._conn.execute(
+                "INSERT OR REPLACE INTO schema_version (major, minor, upgraded_at) VALUES (?, ?, ?)",
+                (SCHEMA_MAJOR, SCHEMA_MINOR, datetime.now(timezone.utc).isoformat()),
+            )
+            self._conn.commit()
+            return
+        major = int(row["major"])
+        if major > SCHEMA_MAJOR:
+            raise RuntimeError(
+                f"Schema version {major}.{row['minor']} is newer than this code supports "
+                f"({SCHEMA_MAJOR}.{SCHEMA_MINOR}). Upgrade the Novi software to open this database."
+            )
 
     # ---- chat (conversation persistence) ----
     def save_chat(self, entries: list[dict[str, Any]]) -> None:
@@ -269,7 +348,52 @@ class DurableMemoryStore:
         temporal_context: Any = None,
         spatial_context: Any = None,
         retention_policy_ref: str | None = None,
+        # Hardened-contract fields (used when _write_gate is configured).
+        epistemic_status: str = OBSERVED,
+        evidence_class: str = OBSERVED,
+        source_class: str = "",
+        independence_source_id: str = "",
+        derivation: str = "direct",
+        created_at: str = "",
     ) -> MemoryAdmission:
+        if provenance is None:
+            provenance = {}
+        if not created_at:
+            created_at = utc_now()
+
+        # When a write gate is configured, run the full hardened pipeline.
+        if self._write_gate is not None:
+            if not source_class:
+                # Infer source class from memory_type and provenance.
+                source_map = {
+                    "perception": "DIRECT_SENSOR", "observation": "DIRECT_SENSOR",
+                    "utterance": "USER_STATEMENT", "preference": "USER_STATEMENT",
+                    "simulation": "SIMULATION", "prediction": "MODEL_INFERENCE",
+                    "summary": "DERIVED_MEMORY", "narrative": "DERIVED_MEMORY",
+                }
+                source_class = source_map.get(memory_type, "SYSTEM_STATE")
+                src = str(provenance.get("source", "")).lower()
+                if "camera" in src or "sensor" in src or "vision" in src:
+                    source_class = "DIRECT_SENSOR"
+                elif "audio" in src or "stt" in src or "microphone" in src:
+                    source_class = "DIRECT_SENSOR"
+                elif "user" in src or "web" in src:
+                    source_class = "USER_STATEMENT"
+                elif "sim" in src or "isaac" in src:
+                    source_class = "SIMULATION"
+                elif "model" in src or "llm" in src or "ollama" in src:
+                    source_class = "MODEL_INFERENCE"
+
+            gate_result = self._write_gate.evaluate(
+                memory_type=memory_type, content=content, confidence=confidence,
+                epistemic_status=epistemic_status, evidence_class=evidence_class,
+                source_class=source_class, provenance=provenance,
+                privacy_class=privacy_class,
+            )
+            if not gate_result.accepted:
+                return MemoryAdmission(False, None, gate_result.decision, f"write_gate:{gate_result.gate_stage}:{gate_result.reason}")
+
+        # Legacy basic checks (also catch issues when write_gate is not configured).
         if not 0.0 <= confidence <= 1.0:
             return MemoryAdmission(False, None, "DISCARD", "confidence_out_of_range")
         if provenance in (None, {}, ""):
@@ -277,10 +401,16 @@ class DurableMemoryStore:
         if content in (None, ""):
             return MemoryAdmission(False, None, "DISCARD", "empty_content")
 
+        # Compute integrity hash for hardened path.
+        integrity_hash = ""
+        if self._write_gate is not None:
+            integrity_input = f"{memory_type}:{content}:{confidence}:{source_class}"
+            integrity_hash = hashlib.sha256(integrity_input.encode("utf-8")).hexdigest()[:16]
+
         record = MemoryRecord(
             memory_id="",
             memory_type=memory_type,
-            created_at=utc_now(),
+            created_at=created_at,
             content=content,
             confidence=confidence,
             verification_status=verification_status,
@@ -301,17 +431,23 @@ class DurableMemoryStore:
         exists = self.get(memory_id)
         if exists is not None:
             return MemoryAdmission(True, memory_id, "KEEP_EXISTING", "duplicate_admission")
-        self._insert(record)
+        self._insert(record, epistemic_status=epistemic_status, evidence_class=evidence_class,
+                     source_class=source_class, independence_group="", lifecycle_state=LIFE_ACTIVE,
+                     integrity_hash=integrity_hash, derivation=derivation, governance_status="ungoverned")
         return MemoryAdmission(True, memory_id, "STORE_EPISODE", "admitted")
 
-    def _insert(self, record: MemoryRecord) -> None:
+    def _insert(self, record: MemoryRecord, *, epistemic_status: str = OBSERVED, evidence_class: str = OBSERVED,
+                source_class: str = "", independence_group: str = "", lifecycle_state: str = "active",
+                integrity_hash: str = "", derivation: str = "direct", governance_status: str = "ungoverned") -> None:
         cur = self._conn.execute(
             """INSERT OR IGNORE INTO memory_records
                (memory_id, memory_type, created_at, content, confidence, verification_status,
                 privacy_class, revision, provenance, event_refs, entity_refs,
                 semantic_index_ref, temporal_context, spatial_context, retention_policy_ref,
-                dependency_refs, deleted)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)""",
+                dependency_refs, deleted,
+                epistemic_status, evidence_class, source_class, independence_group,
+                lifecycle_state, integrity_hash, derivation, governance_status)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?)""",
             (
                 record.memory_id,
                 record.memory_type,
@@ -329,6 +465,14 @@ class DurableMemoryStore:
                 _json(record.spatial_context),
                 record.retention_policy_ref,
                 _json(list(record.dependency_refs)),
+                epistemic_status,
+                evidence_class,
+                source_class,
+                independence_group,
+                lifecycle_state,
+                integrity_hash,
+                derivation,
+                governance_status,
             ),
         )
         if cur.rowcount == 1:
@@ -751,3 +895,126 @@ class DurableMemoryStore:
             retention_policy_ref=row["retention_policy_ref"],
             dependency_refs=tuple(_unjson(row["dependency_refs"], [])),
         )
+
+    def _row_epistemic(self, row: sqlite3.Row) -> str:
+        """Read epistemic_status from a row, falling back to OBSERVED."""
+        try:
+            return row["epistemic_status"]
+        except (IndexError, KeyError):
+            return OBSERVED
+
+    def _row_evidence_class(self, row: sqlite3.Row) -> str:
+        try:
+            return row["evidence_class"]
+        except (IndexError, KeyError):
+            return OBSERVED
+
+    def _row_source_class(self, row: sqlite3.Row) -> str:
+        try:
+            return row["source_class"]
+        except (IndexError, KeyError):
+            return ""
+
+    def _row_independence_group(self, row: sqlite3.Row) -> str | None:
+        try:
+            return row["independence_group"]
+        except (IndexError, KeyError):
+            return None
+
+    # ---- hardened retrieval ----
+
+    def retrieve_with_states(
+        self,
+        query: str,
+        *,
+        entity: str | None = None,
+        memory_type: str | None = None,
+        limit: int = 5,
+        min_confidence: float = 0.0,
+        require_current: bool = False,
+        privacy_scope: str = "default",
+    ) -> RetrievalResult:
+        """Retrieve records with explicit typed failure states.
+
+        Returns a RetrievalResult with state:
+          RESOLVED — records found and consistent.
+          NO_RESULT — no matching records.
+          AMBIGUOUS — multiple records with similar relevance.
+          CONFLICTED — records with contradictory content.
+          STALE — records found but all are stale.
+          ABSTAIN — insufficient evidence for the consequence.
+        """
+        from datetime import datetime, timezone as dt_timezone
+
+        if limit <= 0:
+            return RetrievalResult((), NO_RESULT, "limit_is_zero", 0)
+
+        rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0 AND state='active'").fetchall()
+        terms = {term.lower() for term in query.split() if term}
+        scored: list[tuple[int, sqlite3.Row]] = []
+
+        for row in rows:
+            record = self._to_record(row)
+            if entity is not None and entity not in record.entity_refs:
+                continue
+            if memory_type is not None and record.memory_type != memory_type:
+                continue
+            if record.confidence < min_confidence:
+                continue
+            if privacy_scope == "restricted" and record.privacy_class != "unclassified":
+                continue
+            if privacy_scope == "default" and record.privacy_class in ("restricted", "private"):
+                continue
+            haystack = json.dumps(record.content, sort_keys=True, default=str).lower()
+            haystack += " " + " ".join(record.entity_refs)
+            score = sum(1 for term in terms if term in haystack)
+            if terms and score == 0:
+                continue
+            scored.append((score, row))
+
+        scored.sort(key=lambda item: (-item[0], -item[1]["confidence"]))
+
+        if not scored:
+            return RetrievalResult((), NO_RESULT, "no_matching_records", len(rows))
+
+        limit = min(limit, len(scored))
+        top_rows = [r for _, r in scored[:limit]]
+        top_records = [self._to_record(r) for r in top_rows]
+
+        # Conflict detection among top records.
+        conflicts: list[dict[str, Any]] = []
+        conflict_groups: dict[str, list[Any]] = {}
+        for rec in top_records:
+            key = " ". join(rec.entity_refs) if rec.entity_refs else rec.memory_type
+            conflict_groups.setdefault(key, []).append(rec)
+        for key, group in conflict_groups.items():
+            if len(group) > 1 and len(set(str(r.content) for r in group)) > 1:
+                conflicts.append({
+                    "entity_key": key,
+                    "records": [{"memory_id": r.memory_id, "content": r.content,
+                                  "confidence": r.confidence} for r in group],
+                })
+
+        # Staleness check.
+        now = datetime.now(dt_timezone.utc)
+        stale, fresh = [], []
+        for row in top_rows:
+            vs = row["verification_status"]
+            if vs == EXPIRED:
+                stale.append(row)
+            else:
+                fresh.append(row)
+
+        if require_current and not fresh and stale:
+            return RetrievalResult(tuple(self._to_record(r) for r in stale), STALE,
+                                    "all_records_stale", len(scored))
+
+        if conflicts:
+            return RetrievalResult(tuple(top_records), CONFLICTED, "contradictory_records",
+                                    len(scored), tuple(conflicts))
+
+        if len(top_records) > 1 and len(set(str(r.content) for r in top_records)) > 1:
+            return RetrievalResult(tuple(top_records), AMBIGUOUS, "multiple_distinct_results",
+                                    len(scored))
+
+        return RetrievalResult(tuple(top_records), _RESOLVED, "", len(scored))
