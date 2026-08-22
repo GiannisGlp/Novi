@@ -878,6 +878,19 @@ so the model volunteered it for non-physical requests.
 - Tests: +1; fast suites **456 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/physical-capability-clause.json`.
 
+## Stop identity over-explanation when asked simple questions (round 21 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "what's your name?" → "Novi. I'm a transparent, non-deceptive being
+— but you can call me Novi." Asking a simple question shouldn't trigger a
+self-description about being "transparent/non-deceptive."
+
+- Added identity over-explanation phrasings ("I'm a transparent/non-deceptive
+  being", "no hidden agenda", "secret layers") to the forbidden list, so such
+  replies are rejected and regenerated clean.
+- Real test: "what's your name?" → "My name is Novi."
+- Tests: +1; fast suites **457 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/identity-overexplain-regen.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

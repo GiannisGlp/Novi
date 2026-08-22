@@ -124,6 +124,16 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertTrue(_is_meta_referential("I'm not sure what you mean. That's the main interaction we've had."))
         self.assertFalse(_is_meta_referential("I remember that alice moved the door."))
 
+    def test_identity_overexplanation_forbidden(self):
+        # Answering a simple question shouldn't volunteer "I'm a transparent /
+        # non-deceptive being" or "no hidden agenda".
+        for s in ["Novi. I'm a transparent, non-deceptive being.",
+                  "I'm a transparent AI being.",
+                  "I don't have a hidden agenda or secret layers."]:
+            self.assertTrue(_is_forbidden(s), s)
+        # a natural reply is not rejected
+        self.assertFalse(_is_forbidden("Novi — I live in this room."))
+
     def test_guardrails_do_not_reject_legitimate_replies(self):
         # Replies that legitimately mention conversation/remembering must pass.
         for s in ["I'd love to keep this conversation going.",

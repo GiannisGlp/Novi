@@ -63,6 +63,14 @@ _FORBIDDEN = [
         r"\bas an ai\b",
         r"\bi('?m| am) (?:just )?a program\b",
         r"\bi have no feelings\b",
+        # Identity over-explanation: when asked something simple (name, what it is),
+        # the model shouldn't volunteer "I'm a transparent/non-deceptive being".
+        r"\bi('?m| am) (?:a )?(?:transparent|non-?deceptive)\b",
+        r"\b(?:transparent|non-?deceptive) (?:ai )?(?:being|entity|system|model)\b",
+        r"\b(?:no|don'?t have a|do not have a) (?:hidden agenda|secret layers)\b",
+        r"\bno (?:hidden agenda|secret layers|agenda)\b",
+        r"\bembodied ai being\b",
+        r"\bi have no hidden agenda\b",
     )
 ]
 

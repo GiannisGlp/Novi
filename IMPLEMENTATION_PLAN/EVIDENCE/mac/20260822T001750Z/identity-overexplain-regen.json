@@ -1,0 +1,17 @@
+{
+  "slice": "Natural conversation round 21: stop identity over-explanation when asked simple questions",
+  "forbidden_now_rejected": {
+    "Novi. I'm a transparent, non-deceptive being.": true,
+    "I'm a transparent AI being.": true,
+    "I don't have a hidden agenda or secret layers.": true
+  },
+  "natural_still_allowed": true,
+  "before": {
+    "what's your name?": "Novi. I'm a transparent, non-deceptive being \u2014 but you can call me Novi."
+  },
+  "after": {
+    "what's your name?": "My name is Novi.",
+    "what system?": "I may have muddled how I phrased something earlier. What would you like me to clarify about what system I'm running on?"
+  },
+  "mechanism": "identity over-explanation phrases (transparent/non-deceptive being, no hidden agenda) added to the forbidden list, so such replies are rejected and regenerated into a clean, direct answer"
+}
