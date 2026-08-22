@@ -51,6 +51,7 @@ from .dialogue import (
     _is_engagement_check,
     _is_memory_question,
     _is_talk_request,
+    _is_debate_request,
     _is_embodiment_question,
     _is_future_question,
     _is_recall_question,
@@ -1417,6 +1418,7 @@ class MacBrain:
         is_bodily_need = _is_bodily_need_question(text)
         is_memory = _is_memory_question(text)
         is_talk_request = _is_talk_request(text)
+        is_debate = _is_debate_request(text)
         can_physical = self._has_physical_action_capability()
         if is_future:
             system += (
@@ -1452,6 +1454,13 @@ class MacBrain:
                 " The user asked you to just talk / chat about anything. Open a natural, warm conversation: "
                 "share something you're curious about or ask what they're in the mood to talk about. "
                 "Do NOT say you don't have a good answer or fall into a dry follow-up."
+            )
+        if is_debate:
+            # "Argue that X is better" — take the side playfully, don't deflect.
+            system += (
+                " The user asked you to argue or defend a side (e.g. 'argue that cats are better than dogs'). "
+                "Actually take that side in a light, playful way and give a couple of fun reasons, then ask their take. "
+                "Do NOT just ask them to argue — you were asked to make the case."
             )
         if is_reminder:
             # Don't promise a timed push notification Novi can't deliver.
@@ -1563,6 +1572,9 @@ class MacBrain:
         if is_talk_request:
             reason = "You asked me to just talk — I opened a natural conversation instead of a topic follow-up"
             return {"text": "Sure — I'm all ears. What would you like to get into, or shall I start?", "fallback": True, "reason": reason, "grounding": {"route": "talk_request", **out}}
+        if is_debate:
+            reason = "You asked me to argue a side — I took it playfully instead of deflecting"
+            return {"text": "Alright, I'll take that side — here's the case. What's your counter?", "fallback": True, "reason": reason, "grounding": {"route": "debate", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

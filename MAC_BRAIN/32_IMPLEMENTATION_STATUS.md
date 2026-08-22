@@ -1093,6 +1093,20 @@ talk yet…". A request to converse was read as a topic ("talk").
 - Tests: +1; fast suites **472 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/talk-requests.json`.
 
+## Debate requests (round 37 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "argue that cats are better than dogs" → "Alright, let's hear it —
+why cats win this one?" Novi deflected the debate request back instead of taking
+a side.
+
+- `_is_debate_request` detects "argue that/for X", "defend X", "make the case for X",
+  "convince me that X", routed to a playful case-for-the-side + steer.
+- Real test: "argue that cats are better than dogs" → "Alright, I'll make the case
+  for cats. First off, they're basically tiny, furry philosophers…".
+- "tell me about your day" still answered normally (not over-triggered).
+- Tests: +1; fast suites **473 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/debate-requests.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

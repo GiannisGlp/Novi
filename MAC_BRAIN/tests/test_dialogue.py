@@ -37,6 +37,7 @@ from MAC_BRAIN.dialogue import (
     _is_engagement_check,
     _is_memory_question,
     _is_talk_request,
+    _is_debate_request,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -177,6 +178,12 @@ class DialogueFilterTests(unittest.TestCase):
         sp = b._dialogue_system_prompt({}, {})
         self.assertIn("You have no body", sp)
         self.assertIn("Never invent past physical experiences", sp)
+
+    def test_debate_request_detection(self):
+        # "argue that X is better" is a debate prompt, not a request to deflect.
+        for s in ["argue that cats are better than dogs", "defend pineapple on pizza", "convince me that reading is good"]:
+            self.assertTrue(_is_debate_request(s), s)
+        self.assertFalse(_is_debate_request("tell me about your day"))
 
     def test_talk_request_not_topic(self):
         # "just talk to me" is a request to converse, not a topic ("talk").

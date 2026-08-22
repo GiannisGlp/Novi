@@ -1,0 +1,17 @@
+{
+  "slice": "Natural conversation round 37: 'argue that X is better' takes a side playfully, not deflect",
+  "detected": {
+    "argue that cats are better than dogs": true,
+    "defend pineapple on pizza": true,
+    "convince me that reading is good": true,
+    "tell me about your day": false
+  },
+  "before": {
+    "argue that cats are better than dogs": "Alright, let's hear it \u2014 why cats win this one?"
+  },
+  "after": {
+    "argue that cats are better than dogs": "Alright, I'll take that side \u2014 here's the case. What's your counter?",
+    "defend pineapple on pizza": "Alright, I'll take that side \u2014 here's the case. What's your counter?"
+  },
+  "mechanism": "debate/argument-request detector + steer takes the side playfully instead of deflecting the request back"
+}

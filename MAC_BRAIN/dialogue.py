@@ -647,6 +647,19 @@ def _is_talk_request(text: str) -> bool:
     return bool(text) and bool(_TALK_REQUEST_RE.search(text))
 
 
+# Debate prompts ("argue that X is better", "defend X", "make the case for X") —
+# take a side playfully rather than deflecting the request back.
+_DEBATE_RE = re.compile(
+    r"\b(?:argue (?:that|for)\b|defend\b|make (?:the|a) case for\b|"
+    r"convince me that\b|argue (?:the )?case for\b|why (?:do you think )?(?:cats|dogs|apple|android) are better)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_debate_request(text: str) -> bool:
+    return bool(text) and bool(_DEBATE_RE.search(text))
+
+
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",
 # "set me a reminder"). Novi can remember these conversationally, but it cannot
 # push a timed notification, so it must not over-promise ("I'll remind you at 8am").
