@@ -594,3 +594,35 @@ class WorldModel:
             "contradictions": [c.snapshot() for c in self._contradictions],
             "active_events": list(self._active_events),
         }
+
+    # ---- compatibility bridge for legacy cognition ----
+
+    def to_world_state(self) -> Any:
+        """Return a WorldModelState-compatible object for legacy cognition code.
+
+        Converts the unified world model's entities to WorldEntityState objects
+        that MacCognition.build_situation() and MacCognition.cycle() can query.
+        This bridges the epistemic-status-aware UnifiedWorldModel to the
+        existing cognition interface without rewriting cognition.
+        """
+        from brain.b1_world import WorldEntityState, WorldModelState
+
+        entities: dict[str, WorldEntityState] = {}
+        for entity_id, entity in self._entities.items():
+            if entity.lifecycle in ("archived", "superseded"):
+                continue
+            # Use the label as the entity key (matching legacy convention).
+            key = entity.label() if entity.labels else entity_id
+            location = entity.state_value("location")
+            state = entity.state_value("presence") or entity.state_value("state") or "present"
+            confidence = entity.confidence
+            # Use the world_version as a proxy for last_observed_cycle.
+            last_cycle = self._world_version
+            entities[key] = WorldEntityState(
+                entity=key,
+                location=location,
+                state=str(state) if state else "present",
+                confidence=confidence,
+                last_observed_cycle=last_cycle,
+            )
+        return WorldModelState(entities=entities)

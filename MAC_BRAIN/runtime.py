@@ -109,6 +109,10 @@ from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode,
 from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
 from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult
 from .soul_acceptance import CommunicationDecision
+from .skill_contract import SkillExecutor, SkillInvocation, SUCCESS as SKILL_SUCCESS, FAILURE as SKILL_FAILURE
+from .situation_model import SituationModel
+from .failure_modes import FailureHandler, DegradedMode, PERCEPTION_UNCERTAINTY, MODEL_UNAVAILABLE, TOOL_FAILURE
+from .autonomy_state_machine import AutonomyStateMachine, AutonomyStateMachineState as ASMState
 from .models import (
     DeliberativeReasoningProvider,
     DeterministicReasoningProvider,
@@ -197,6 +201,12 @@ class MacBrain:
         self._last_governance_grant: dict[str, Any] | None = None
         self._last_loop_snapshot: dict[str, Any] | None = None
         self.communication_decision = CommunicationDecision()
+        self.skill_executor = SkillExecutor()
+        self._last_skill_invocation: dict[str, Any] | None = None
+        self.situation_model = SituationModel()
+        self._last_situations: list[dict[str, Any]] = []
+        self.failure_handler = FailureHandler()
+        self.autonomy_sm = AutonomyStateMachine()
         # Memory: HardenedMemoryManager (in-memory, canonical contract) or
         # DurableMemoryStore (SQLite, persistent). The hardened manager
         # enforces the write gate, retrieval failure states, contextual trust,
@@ -329,6 +339,12 @@ class MacBrain:
         # Register System-0 safety check (deterministic, never waits on LLM).
         if not self.multi_speed.tasks_by_tier(SYSTEM_0):
             self.multi_speed.register(SYSTEM_0, "safety_check", self._system0_safety_check, priority=1.0)
+        # Autonomy state machine: BOOTING → INITIALIZING → OBSERVING.
+        now = datetime.now(timezone.utc).isoformat()
+        t1 = self.autonomy_sm.transition("boot_complete", timestamp=now)
+        self._emit("autonomy.transition", {"cycle": 0, **t1.snapshot()})
+        t2 = self.autonomy_sm.transition("init_complete", timestamp=now)
+        self._emit("autonomy.transition", {"cycle": 0, **t2.snapshot()})
         self._emit("MAC_BRAIN.started", {"run_id": self.run_id})
 
     def step(self) -> dict[str, Any]:
@@ -337,10 +353,19 @@ class MacBrain:
         if self.camera is None:
             raise RuntimeError("camera provider is not configured")
         self._cycle += 1
+        # Failure handler: attempt recovery from degraded mode at the start of each cycle.
+        if self.failure_handler.is_degraded:
+            recovered = self.failure_handler.attempt_recovery()
+            if recovered:
+                self._emit("failure.recovered", {"cycle": self._cycle, "mode": "normal"})
+                self.multi_speed.set_state(AutonomyState.ACTIVE)
         # Multi-speed runtime: System-0 safety check runs first (never waits on LLM).
         msr_results = self.multi_speed.step({"cycle": self._cycle})
         if not self.multi_speed.system0_safety_clear:
             self._emit("safety.gate_failed", {"cycle": self._cycle, "results": msr_results})
+            # Autonomy state machine: emergency stop.
+            t = self.autonomy_sm.emergency_stop(timestamp=datetime.now(timezone.utc).isoformat())
+            self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
             # In safe-minimum mode, skip the rest of the step.
             self.multi_speed.set_state(AutonomyState.SAFE_MINIMUM)
             return {"cycle": self._cycle, "safety_gate": "failed", "detections": [], "action": "stop", "authorized": False}
@@ -354,15 +379,30 @@ class MacBrain:
         self.world.apply_many(observations)
         self._admit_detections(evidence.detections)
         self._update_unified_world(evidence.detections)
+        # Failure detection: perception uncertainty (low-confidence or no detections).
+        if not evidence.detections or all(d.confidence < 0.5 for d in evidence.detections):
+            failure = self.failure_handler.report_failure(
+                PERCEPTION_UNCERTAINTY,
+                severity="warning" if evidence.detections else "error",
+                component="perception",
+                message="low_confidence_or_no_detections",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+            self._emit("failure.detected", {"cycle": self._cycle, **failure.snapshot()})
+        # Autonomy state machine: OBSERVING → AWARE when significant events detected.
+        now_sm = datetime.now(timezone.utc).isoformat()
+        if self.autonomy_sm.state == ASMState.OBSERVING and evidence.detections:
+            t = self.autonomy_sm.transition("significant_event", timestamp=now_sm)
+            self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         # Cognition 2.0: two-pass — build a preliminary situation to form the
         # recall query, then ground the full situation in knowledge + goal + memory.
-        prelim = self.cognition.build_situation(self.world.state, observations, cycle=self._cycle)
+        prelim = self.cognition.build_situation(self.unified_world.to_world_state(), observations, cycle=self._cycle)
         recall = self._recall_context(prelim, evidence.detections)
         self._emit("memory.recall", {"cycle": self._cycle, "query": " ".join(recall["query"]), "recalled": len(recall["memories"])})
         knowledge_ctx = self._knowledge_context_for(prelim.salient_entities)
         goal_ctx = self._goal_context()
         cognitive = self.cognition.cycle(
-            self.world.state,
+            self.unified_world.to_world_state(),
             observations,
             cycle=self._cycle,
             knowledge=knowledge_ctx,
@@ -393,6 +433,30 @@ class MacBrain:
                 "candidates": self._last_attention_candidates,
                 "top_action": attention_candidates[0].suggested_action,
             })
+
+        # Situation Model: derive meaningful situations from the world state.
+        active_goal_ids = ()
+        if self.goals.has_active and self.goals.active is not None:
+            active_goal_ids = (self.goals.active.goal.goal_id,)
+        novi_state = {"cycle": self._cycle, "lifecycle": self.brain.lifecycle.value}
+        social_ctx = {
+            "conversation_active": False,
+            "participants": list(cognitive.situation.salient_entities),
+        }
+        situations = self.situation_model.derive(
+            self.unified_world,
+            novi_state=novi_state,
+            active_goals=active_goal_ids,
+            recent_events=[e for e in self.events[-20:]],
+            social_context=social_ctx,
+            cycle=self._cycle,
+        )
+        self._last_situations = [s.snapshot() for s in situations]
+        self._emit("situation.derived", {
+            "cycle": self._cycle,
+            "situations": self._last_situations,
+            "situation_count": len(situations),
+        })
 
         # Deepen cognition: update beliefs and learn/check expectations from current detections.
         now = datetime.now(timezone.utc).isoformat()
@@ -471,6 +535,15 @@ class MacBrain:
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)
 
         goal_was_active = self.goals.has_active
+        # Autonomy state machine: AWARE → sub-states.
+        now_sm2 = datetime.now(timezone.utc).isoformat()
+        if self.autonomy_sm.state == ASMState.AWARE:
+            if goal_was_active:
+                t = self.autonomy_sm.transition("planning_needed", timestamp=now_sm2)
+                self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
+            elif any(d.label in {"person", "human", "face"} for d in evidence.detections):
+                t = self.autonomy_sm.transition("interaction_started", timestamp=now_sm2)
+                self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         if goal_was_active:
             step_command = self.goals.step(self.body, cycle=self._cycle)
             action = step_command.action
@@ -534,9 +607,39 @@ class MacBrain:
 
         # Action executes only if BOTH the brain authorizes AND the governance guard allows.
         authorized = decision.authorized and governance_allowed
+
+        # Skill contract: invoke the formal skill contract for this action.
+        # If the skill's preconditions aren't met, the action is skipped.
+        skill_invocation = self._invoke_skill_for_action(action, parameters, goal_was_active)
+        skill_passed = True
+        if skill_invocation is not None:
+            skill_passed = skill_invocation.status == SKILL_SUCCESS
+            if not skill_passed:
+                authorized = False
+                self._emit("skill.failed", {
+                    "cycle": self._cycle,
+                    "action": action,
+                    "skill_id": skill_invocation.skill_id,
+                    "error": skill_invocation.error,
+                })
+                # Report skill failure to the failure handler.
+                failure = self.failure_handler.report_failure(
+                    TOOL_FAILURE,
+                    severity="warning",
+                    component="skill_executor",
+                    message=f"skill_{skill_invocation.skill_id}_failed: {skill_invocation.error}",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                )
+                self._emit("failure.detected", {"cycle": self._cycle, **failure.snapshot()})
+
         if authorized:
             outcome = self.brain.execute(proposal, decision)
             virtual_state = self.body.execute(action, **parameters)
+            # Autonomy state machine: → EXECUTING.
+            now_sm3 = datetime.now(timezone.utc).isoformat()
+            if self.autonomy_sm.state in (ASMState.PLANNING, ASMState.AWARE):
+                t = self.autonomy_sm.transition("execution_ready", timestamp=now_sm3)
+                self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         else:
             outcome = None
             virtual_state = self.body.snapshot()
@@ -546,6 +649,8 @@ class MacBrain:
             "brain_authorized": decision.authorized,
             "governance_allowed": governance_allowed,
             "governance_decision": gov_grant.decision,
+            "skill_passed": skill_passed,
+            "skill_invoked": skill_invocation is not None,
             "outcome": outcome.detail if outcome else (decision.reason if not decision.authorized else gov_grant.reason),
             "virtual_body": virtual_state,
         })
@@ -613,6 +718,15 @@ class MacBrain:
         initiative = self._maybe_initiate(person, has_active_goal=self.goals.has_active)
         # CommunicationDecision: advance fatigue cooldown each cycle.
         self.communication_decision.tick()
+        # Autonomy state machine: return to OBSERVING after action completes.
+        now_sm4 = datetime.now(timezone.utc).isoformat()
+        if self.autonomy_sm.state in (ASMState.EXECUTING, ASMState.INTERACTING, ASMState.LEARNING, ASMState.MAINTENANCE):
+            if not self.goals.has_active:
+                t = self.autonomy_sm.transition("action_completed", timestamp=now_sm4)
+                self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
+        elif self.autonomy_sm.state == ASMState.AWARE and not self.goals.has_active and not evidence.detections:
+            # Nothing significant — return to OBSERVING.
+            pass  # AWARE stays if we just transitioned; will go to OBSERVING next cycle
         return {
             "run_id": self.run_id,
             "cycle": self._cycle,
@@ -640,6 +754,8 @@ class MacBrain:
                 "interaction_count": self.communication_decision.interaction_count,
                 "is_fatigued": self.communication_decision.is_fatigued,
             },
+            "failure_handler": self.failure_handler.snapshot(),
+            "autonomy_state": self.autonomy_sm.snapshot(),
         }
 
     def consolidate(self, now: str | None = None) -> None:
@@ -840,7 +956,7 @@ class MacBrain:
             confidence=transcription.confidence,
             captured_cycle=self._cycle,
         )
-        cognitive = self.cognition.cycle(self.world.state, (speech,), cycle=self._cycle)
+        cognitive = self.cognition.cycle(self.unified_world.to_world_state(), (speech,), cycle=self._cycle)
         self._emit("cognition.completed", {"cycle": self._cycle, "conclusion": cognitive.reasoning.conclusion, "confidence": cognitive.reasoning.confidence, "source": "audio.stt"})
         now = datetime.now(timezone.utc).isoformat()
         self._pending_speech.append(
@@ -961,6 +1077,83 @@ class MacBrain:
         safe = self.brain.lifecycle is Lifecycle.ACTIVE
         return {"safe": safe, "deterministic": True}
 
+    # ---- Skill contract wiring ----
+
+    # Map runtime actions to skill contract IDs.
+    _ACTION_TO_SKILL: dict[str, str] = {
+        "move_forward": "navigate",
+        "turn_left": "navigate",
+        "turn_right": "navigate",
+        "observe": "inspect",
+        "speak": "speak",
+    }
+
+    def _skill_context(self, action: str, parameters: dict[str, Any], goal_was_active: bool) -> dict[str, Any]:
+        """Build the skill execution context from runtime state.
+
+        Maps runtime state to the precondition flags that skills check.
+        """
+        ctx: dict[str, Any] = {
+            # Navigate preconditions.
+            "robot_localized": True,  # virtual body always has a position
+            "target_location_known": goal_was_active and self.goals.has_active,
+            "path_clear": True,  # no obstacle detection in virtual body
+            # Inspect preconditions.
+            "entity_visible": len(self._seen_entities) > 0,
+            "camera_available": self.camera is not None,
+            # FindObject preconditions.
+            "object_description_known": bool(parameters.get("object_description")),
+            "search_area_defined": bool(parameters.get("search_area")),
+            # Pick preconditions.
+            "object_located": bool(parameters.get("object_id")),
+            "gripper_available": False,  # no gripper in virtual body
+            "robot_near_object": False,  # no proximity detection in virtual body
+            # Speak preconditions.
+            "message_composed": bool(parameters.get("text", "")),
+            "speaker_available": True,  # MacSpeaker is always available
+        }
+        return ctx
+
+    def _skill_parameters(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Map runtime action parameters to skill contract parameters."""
+        skill_id = self._ACTION_TO_SKILL.get(action, "")
+        if skill_id == "navigate":
+            target = ""
+            if self.goals.has_active and self.goals.active is not None:
+                t = self.goals.active.goal.target
+                target = str(t) if not isinstance(t, tuple) else f"{t[0]},{t[1]}"
+            return {"target_location": target or "current", "speed": 0.3}
+        if skill_id == "inspect":
+            entity_id = ""
+            if self._seen_entities:
+                # Use the most recently seen entity label.
+                entity_id = list(self._seen_entities)[-1]
+            return {"entity_id": entity_id or "unknown", "modality": "vision"}
+        if skill_id == "speak":
+            return {"text": parameters.get("text", action), "volume": 0.5}
+        return {}
+
+    def _invoke_skill_for_action(self, action: str, parameters: dict[str, Any], goal_was_active: bool) -> SkillInvocation | None:
+        """Invoke the skill contract for an action, if one exists.
+
+        Returns the SkillInvocation result, or None if no skill maps to this action.
+        """
+        skill_id = self._ACTION_TO_SKILL.get(action, "")
+        if not skill_id:
+            return None  # no skill contract for this action (e.g. wait, stop)
+        ctx = self._skill_context(action, parameters, goal_was_active)
+        skill_params = self._skill_parameters(action, parameters)
+        invocation = self.skill_executor.invoke(skill_id, skill_params, context=ctx)
+        self._last_skill_invocation = invocation.snapshot()
+        self._emit("skill.invoked", {
+            "cycle": self._cycle,
+            "skill_id": skill_id,
+            "action": action,
+            "status": invocation.status,
+            "error": invocation.error,
+        })
+        return invocation
+
     def _verify_criteria_for_action(self, action: str, goal_was_active: bool) -> tuple[str, ...]:
         """Determine the success criteria for the closed-loop VERIFY step."""
         if action in ("stop", "wait", "idle"):
@@ -1028,7 +1221,7 @@ class MacBrain:
         """
         from .privacy import _PERSON_LABELS
 
-        known = set(self.world.state.entities) | {
+        known = set(self.unified_world.to_world_state().entities) | {
             "alice", "bob", "door", "person", "table", "room", "kitchen", "object", "window", "lamp", "chair", "plant",
         } | set(_PERSON_LABELS)
         found = {n.lower() for n in known if n in text.lower()}
@@ -2014,6 +2207,10 @@ class MacBrain:
             self.memory.close()
         if self.brain.lifecycle is not Lifecycle.SHUTTING_DOWN:
             self.brain.shutdown()
+        # Autonomy state machine: → SHUTTING_DOWN.
+        now = datetime.now(timezone.utc).isoformat()
+        t = self.autonomy_sm.shutdown(timestamp=now)
+        self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         self._emit("MAC_BRAIN.stopped", {"run_id": self.run_id, "cycles": self._cycle})
 
     def _emit(self, event_type: str, payload: dict[str, Any]) -> None:
