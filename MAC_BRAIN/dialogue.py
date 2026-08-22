@@ -501,6 +501,33 @@ def reminder_reply() -> str:
             "but I'll remember it and bring it up when we talk.")
 
 
+# Short acknowledgments ("okay", "sure", "got it", "sounds good", "yeah") are
+# agreeing signals, not topics or introductions. They must not fall through to
+# "I don't have a good answer on <word> yet" (e.g. "got it" -> "got").
+_ACKNOWLEDGMENT = re.compile(
+    r"^\s*(?:ok(?:ay)?|k(?:ay)?|sure|yeah|yep|yup|got it|all right|alright|sounds good|"
+    r"cool|great|nice|fine|works for me|makes sense|right|true|fair enough|noted)"
+    r"[.!?]*\s*$",
+    re.IGNORECASE,
+)
+
+_ACKNOWLEDGMENT_REPLIES = [
+    "alright.",
+    "cool.",
+    "nice — sounds good to me.",
+    "yeah, that works.",
+    "good. I'm glad that's settled.",
+]
+
+
+def _is_acknowledgment(text: str) -> bool:
+    return bool(text) and bool(_ACKNOWLEDGMENT.match(text.strip()))
+
+
+def acknowledgment_reply(cycle: int = 0) -> str:
+    return _ACKNOWLEDGMENT_REPLIES[cycle % len(_ACKNOWLEDGMENT_REPLIES)]
+
+
 def _extract_topic(text: str) -> str:
     """Pull the most likely topic noun from a user line (deterministic, no NLP).
 

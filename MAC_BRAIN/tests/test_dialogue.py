@@ -29,6 +29,7 @@ from MAC_BRAIN.dialogue import (
     _is_reminder_request,
     _is_thanks,
     _is_time_greeting,
+    _is_acknowledgment,
     _is_repetitive,
     _time_greeting_part,
     _reduce_name_repetition,
@@ -237,6 +238,14 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(_is_reminder_request(s), s)
         self.assertFalse(_is_reminder_request("what's the time?"))
 
+    def test_acknowledgment_detection(self):
+        for s in ["okay", "sure", "got it", "sounds good", "yeah", "cool", "alright"]:
+            self.assertTrue(_is_acknowledgment(s), s)
+        self.assertFalse(_is_acknowledgment("what's the time?"))
+        self.assertFalse(_is_acknowledgment("hello"))
+        # a longer message is not a bare acknowledgment
+        self.assertFalse(_is_acknowledgment("okay so tell me about the garden"))
+
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
         r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")
@@ -443,6 +452,16 @@ class ComposeReplyTests(unittest.TestCase):
         # persists so it can be recalled later
         b._learn_from_chat("remind me to water the plants", person="alice")
         self.assertTrue(any("water the plants" in e for e in b._chat_experience("alice")))
+
+    def test_acknowledgment_not_topic_or_introduction(self):
+        b = self._brain()
+        for u in ["got it", "sure", "yeah", "okay"]:
+            r = b.compose_reply(u, llm_chat=lambda **k: "ignored")
+            self.assertIsNotNone(r["text"])
+            self.assertEqual(r["grounding"]["route"], "acknowledgment", u)
+            # must not be the "no good answer on X" topic fallback or an intro
+            self.assertNotIn("good answer", r["text"].lower())
+            self.assertNotIn("i'm novi", r["text"].lower())
 
 
 class ExperienceLearningTests(unittest.TestCase):

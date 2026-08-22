@@ -1,0 +1,22 @@
+{
+  "slice": "Natural conversation round 19: natural handling of short acknowledgments",
+  "detected": {
+    "okay": true,
+    "sure": true,
+    "got it": true,
+    "sounds good": true,
+    "yeah": true,
+    "cool": true,
+    "what's the time?": false
+  },
+  "replies": {
+    "got it": "alright.",
+    "sure": "alright.",
+    "yeah": "alright."
+  },
+  "before": {
+    "got it": "I don't have a good answer on got yet \u2014 what's it like from your side?",
+    "sure": "Hey! Nice to meet you. I'm Novo, and I'm curious \u2014 what brings you here today?"
+  },
+  "mechanism": "short acknowledgments ('okay/sure/got it/sounds good') get a brief natural reply instead of a topic follow-up ('no good answer on got') or a forced introduction"
+}

@@ -850,6 +850,19 @@ LLM produced the awkward "I noticed you greeted the system" reply.
 - Tests: +1 web; fast suites **453 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/heard-greeting-root-cause.json`.
 
+## Natural handling of short acknowledgments (round 19 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "got it" → "I don't have a good answer on got yet…" (treated "got"
+as a topic) and "sure" → "Hey! Nice to meet you. I'm Novo, and I'm curious…"
+(a forced introduction). Short acknowledgments are agreeing signals, not topics.
+
+- `_is_acknowledgment` detects "okay/sure/yeah/yep/got it/alright/sounds good/
+  cool/right/noted…".
+- Routed early (after thanks, before the LLM) to a brief natural reply bank, so
+  they never hit the topic follow-up or the LLM's forced introduction.
+- Tests: +2; fast suites **455 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/acknowledgment-handling.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

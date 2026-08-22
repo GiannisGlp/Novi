@@ -43,11 +43,13 @@ from .dialogue import (
     _is_joke_request,
     _is_perception_question,
     _is_physical_action_request,
+    _is_acknowledgment,
     _is_realtime_data_question,
     _is_recall_question,
     _is_reminder_request,
     _is_thanks,
     _is_time_greeting,
+    acknowledgment_reply,
     clarification_reply,
     continuation_reply,
     emotional_reply,
@@ -1355,6 +1357,11 @@ class MacBrain:
         # A simple thank-you gets a brief, warm line — not "I'm glad I could help".
         if _is_thanks(text):
             return {"text": thanks_reply(cycle=self._cycle), "fallback": False, "reason": "You thanked me, so I acknowledged it warmly and briefly.", "grounding": {"route": "thanks"}}
+        # A short acknowledgment ("okay", "sure", "got it", "sounds good") is not a
+        # topic or introduction — give a brief, natural acknowledgement instead of
+        # "I don't have a good answer on got yet" or a forced introduction.
+        if _is_acknowledgment(text):
+            return {"text": acknowledgment_reply(cycle=self._cycle), "fallback": False, "reason": "You acknowledged something, so I replied briefly and naturally.", "grounding": {"route": "acknowledgment"}}
         self_state = self._chat_self_state()
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)
