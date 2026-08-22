@@ -904,6 +904,18 @@ you." The intro detector read "i'm nervous" as a self-introduction because
 - Tests: +1; fast suites **458 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/emotional-state-not-intro.json`.
 
+## Casual slang acknowledgments (round 23 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "bet" → "You're betting on something? What's got you putting money on
+the line?" (read literally as gambling) and "no cap" → "I don't have a good answer
+on cap yet." Casual agreement markers were misread.
+
+- Extended `_ACKNOWLEDGMENT` with slang agreement terms (bet, facts, word, no cap,
+  fr, for real, preach, solid, agreed, etc.), so they get a brief natural reply
+  instead of being read literally or as a topic.
+- Tests: +1; fast suites **459 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/slang-acknowledgments.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

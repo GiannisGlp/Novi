@@ -85,5 +85,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Physical-action honesty only when asked | `20260822T001416Z/physical-capability-clause.json` | base caps clause no longer volunteers 'physical actions unavailable' for non-physical requests (e.g. homework help) |
 | Identity over-explanation regenerated | `20260822T001750Z/identity-overexplain-regen.json` | 'I'm a transparent/non-deceptive being' replies rejected & regenerated clean |
 | Emotional states not intro | `20260822T002137Z/emotional-state-not-intro.json` | 'i'm nervous/worried/down' read as states, not self-introductions |
+| Casual slang acknowledgments | `20260822T002511Z/slang-acknowledgments.json` | 'bet/facts/word/no cap/fr/preach' get a brief natural reply, not read literally or as a topic |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

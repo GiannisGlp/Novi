@@ -1,0 +1,23 @@
+{
+  "slice": "Natural conversation round 23: casual slang acknowledgments handled naturally",
+  "detected_as_acknowledgment": {
+    "bet": true,
+    "facts": true,
+    "word": true,
+    "no cap": true,
+    "fr": true,
+    "for real": true,
+    "preach": true
+  },
+  "replies": {
+    "bet": "alright.",
+    "facts": "alright.",
+    "word": "alright.",
+    "no cap": "alright."
+  },
+  "before": {
+    "bet": "You're betting on something? What's got you putting money on the line?",
+    "no cap": "I don't have a good answer on cap yet"
+  },
+  "mechanism": "extended the acknowledgment detector with casual agreement markers (bet/facts/word/no cap/fr/for real/preach) so they get a brief natural reply instead of being read literally (gambling) or as a topic ('no good answer on cap')"
+}

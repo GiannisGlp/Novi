@@ -264,6 +264,11 @@ class DialogueFilterTests(unittest.TestCase):
         # a longer message is not a bare acknowledgment
         self.assertFalse(_is_acknowledgment("okay so tell me about the garden"))
 
+    def test_slang_acknowledgment_detection(self):
+        # Casual agreement markers are acknowledgments, not literal topics or bets.
+        for s in ["bet", "facts", "word", "no cap", "fr", "for real", "preach"]:
+            self.assertTrue(_is_acknowledgment(s), s)
+
     def test_engine_rejects_meta_referential_reply(self):
         eng = DialogueEngine()
         r = eng.reply(system="s", user="u", llm_chat=lambda **k: "In our conversation, you greeted me and I responded warmly.")

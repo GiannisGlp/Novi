@@ -517,7 +517,8 @@ def reminder_reply() -> str:
 # "I don't have a good answer on <word> yet" (e.g. "got it" -> "got").
 _ACKNOWLEDGMENT = re.compile(
     r"^\s*(?:ok(?:ay)?|k(?:ay)?|sure|yeah|yep|yup|got it|all right|alright|sounds good|"
-    r"cool|great|nice|fine|works for me|makes sense|right|true|fair enough|noted)"
+    r"cool|great|nice|fine|works for me|makes sense|right|true|fair enough|noted|"
+    r"bet|facts|word|no cap|fr|for real|preach|solid|say less|done|agreed)"
     r"[.!?]*\s*$",
     re.IGNORECASE,
 )
