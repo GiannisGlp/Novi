@@ -292,6 +292,11 @@ _STATE_WORDS = {
     "fine", "okay", "hungry", "in", "up", "off", "around", "here",
     "leaving", "going", "just", "back", "on", "down", "about", "into", "done",
     "worried", "excited", "confused", "proud",
+    "starving", "coming", "working", "dying", "trying", "waiting", "running",
+    "heading", "starting", "thinking", "wondering", "learning", "reading",
+    "driving", "walking", "writing", "listening", "watching", "planning",
+    "hoping", "doing", "making", "having", "feeling", "getting", "kidding",
+    "joking", "seriously", "almost", "totally", "completely",
 }
 
 

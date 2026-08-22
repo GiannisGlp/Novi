@@ -1435,6 +1435,15 @@ class MacBrain:
         is_embodiment = _is_embodiment_question(text)
         is_future = _is_future_question(text)
         is_bodily_need = _is_bodily_need_question(text)
+        is_food_talk = bool(
+            re.search(
+                r"\b(i'?m (?:so |really )?hungry|i ate|i (?:had|ate) (?:breakfast|lunch|dinner|brunch)|"
+                r"i'?m (?:gonna|going to) (?:eat|get food|make)\b|what should i (?:eat|order|cook)\b|"
+                r"i (?:want|need) (?:food|a snack|something to eat)\b|i'm starving)\b",
+                text,
+                re.IGNORECASE,
+            )
+        )
         is_memory = _is_memory_question(text)
         is_talk_request = _is_talk_request(text)
         is_debate = _is_debate_request(text)
@@ -1460,6 +1469,13 @@ class MacBrain:
                 "Do NOT say you like or dislike a food or drink (e.g. don't say 'I like coffee' or 'my favorite food is...'). "
                 "Answer honestly and briefly (e.g. 'I don't eat — no body to feed') and don't invent a meal, a dream, a "
                 "night's sleep, or a taste. You can ask about their preference instead."
+            )
+        if is_food_talk:
+            # User is hungry/eating — relate without claiming your own hunger.
+            system += (
+                " The user mentioned being hungry or eating. You have no body, so you don't feel hunger or eat. "
+                "Do NOT claim you're hungry or that you ate something (e.g. don't say 'I'm feeling peckish myself' or "
+                "'I just ate'). Engage warmly with what they want to eat instead."
             )
         if is_memory:
             # Asked whether Novi remembers/forgets — answer warmly, no internals.

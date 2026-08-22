@@ -19,6 +19,7 @@ from MAC_BRAIN.dialogue import (
     _is_forbidden,
     _is_greeting,
     _is_introduction,
+    _extract_self_name,
     _is_joke_request,
     _is_meta_referential,
     _is_near_repetitive,
@@ -443,6 +444,15 @@ class ComposeReplyTests(unittest.TestCase):
         clause = b._character_clause({"traits": {"curious": 0.8, "warm": 0.7}, "values": {"kindness": "kindness", "honesty": "honesty"}})
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
+
+    def test_state_word_not_intro(self):
+        # "i'm starving/tired/coming" are states, not self-introductions.
+        for s in ["i'm starving", "i'm coming", "i'm just kidding", "i'm tired"]:
+            self.assertFalse(_is_introduction(s), s)
+            self.assertEqual(_extract_self_name(s), "", s)
+        # Real names are still recognized.
+        self.assertTrue(_is_introduction("i'm novi"))
+        self.assertEqual(_extract_self_name("i'm john"), "john")
 
     def test_reassurance_question_detection(self):
         # "are you mad at me? / do you hate me?" get warm reassurance, never a

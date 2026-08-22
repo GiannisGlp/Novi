@@ -1,0 +1,19 @@
+{
+  "slice": "Natural conversation round 46: no hunger fabrication and 'i'm starving' is no longer read as a name",
+  "before": {
+    "i'm hungry": "I'm feeling a bit peckish myself \u2014 what are you in the mood for?",
+    "i'm starving": "Starving \u2014 nice to put a name to you. I'll remember that."
+  },
+  "intro_fix": {
+    "i'm starving": false,
+    "i'm coming": false,
+    "i'm just kidding": false,
+    "i'm novi": true,
+    "i'm john": true
+  },
+  "replies": {
+    "i'm hungry": "I'm still forming my thoughts on hungry \u2014 what's your take?",
+    "i'm starving": "I'm still forming my thoughts on starving \u2014 what's your take?"
+  },
+  "mechanism": "added a food/hunger steer (never claim your own hunger/eating) and added common state/gerund words to the intro false-positive guard"
+}

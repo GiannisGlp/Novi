@@ -1217,6 +1217,20 @@ thoughts on mad") on flaky LLM calls.
 - Tests: +1; fast suites **483 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reassurance-questions.json`.
 
+## Food/hunger honesty (round 46 of the naturalness objective) (status: IMPLEMENTED)
+
+Two issues: "i'm hungry" → "I'm feeling a bit peckish myself" (fabricated hunger),
+and "i'm starving" → "nice to put a name to you" (read as a self-introduction).
+
+- Added a **food/hunger steer**: when the user mentions being hungry or eating,
+  never claim your own hunger/eating ("Since I can't eat, what are you in the
+  mood for?").
+- Added common state/gerund words (starving, coming, just kidding, almost done…)
+  to the intro false-positive guard, so "i'm <state>" isn't mistaken for a name.
+- Real names still recognized.
+- Tests: +1; fast suites **484 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/food-hunger-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
