@@ -1255,6 +1255,23 @@ affected real usage).
 - Tests: +1; fast suites **486 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/state-adjectives-not-intro.json`.
 
+## Check-in honesty (round 49 of the naturalness objective) (status: IMPLEMENTED)
+
+"how are you?" → "The system's running smoothly" and "how have you been?" →
+"My internal state has been steady — I've been processing conversations" — the
+LLM leaked implementation on the most common conversational question, and "how
+are you doing today?" fell to a catch-all.
+
+- Added a deterministic **check-in handler** ("how are you / what's up / how's it
+  going / how have you been") that answers like a person ("I'm doing well — thanks
+  for asking. What's new with you?"), pre-LLM so the leak can't happen.
+- Added internal-state/digital-ether phrases ("running smoothly", "digital ether",
+  "my internal state", "i've been processing") to the forbidden list.
+- Also verified the exact reported example end-to-end over HTTP: "hello" →
+  "hey, nice to hear from you.", "what system?" → a natural clarification.
+- Tests: +1; fast suites **487 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/check-in-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

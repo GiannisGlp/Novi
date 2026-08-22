@@ -59,6 +59,8 @@ from .dialogue import (
     praise_reply,
     _is_reassurance_question,
     reassurance_reply,
+    _is_check_in,
+    check_in_reply,
     _is_capability_question,
     _is_remote_action_request,
     farewell_reply,
@@ -1382,6 +1384,10 @@ class MacBrain:
         if _is_greeting(text):
             g = greeting_reply(cycle=self._cycle)
             return {"text": g, "fallback": False, "reason": "You just greeted me, so I replied warmly and briefly — no need to over-explain.", "grounding": {"route": "greeting"}}
+        # "how are you? / what's up? / how's it going?" — answer like a person,
+        # never "the system's running smoothly" (implementation leak).
+        if _is_check_in(text):
+            return {"text": check_in_reply(cycle=self._cycle), "fallback": False, "reason": "You asked how I am, so I answered warmly in plain human terms — no internal/system talk.", "grounding": {"route": "check_in"}}
         # A farewell ("bye", "i'm leaving", "see you later") — wish them well.
         if _is_farewell(text):
             return {"text": farewell_reply(cycle=self._cycle), "fallback": False, "reason": "You're leaving or said goodbye, so I wished you well.", "grounding": {"route": "farewell"}}

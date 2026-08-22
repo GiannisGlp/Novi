@@ -1,0 +1,22 @@
+{
+  "slice": "Natural conversation round 49: 'how are you?' never says 'the system's running smoothly' or 'processing'",
+  "before": {
+    "how are you?": "I'm doing well, thanks for asking! The system's running smoothly and I'm ready to chat.",
+    "how have you been?": "My internal state has been steady \u2014 I've been processing conversations..."
+  },
+  "detected": {
+    "how are you?": true,
+    "how's it going?": true,
+    "how have you been?": true,
+    "what's up?": true,
+    "how are you doing today?": true,
+    "what's the time?": false
+  },
+  "replies": {
+    "how are you?": "I'm doing well \u2014 thanks for asking. What's new with you?",
+    "what's up?": "I'm doing well \u2014 thanks for asking. What's new with you?",
+    "how have you been?": "I'm doing well \u2014 thanks for asking. What's new with you?",
+    "how are you doing today?": "I'm doing well \u2014 thanks for asking. What's new with you?"
+  },
+  "mechanism": "deterministic check-in handler answers like a person; added internal-state/digital-ether phrases to the forbidden list"
+}

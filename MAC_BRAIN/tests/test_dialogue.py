@@ -46,6 +46,7 @@ from MAC_BRAIN.dialogue import (
     _is_capability_question,
     _is_remote_action_request,
     _is_reassurance_question,
+    _is_check_in,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -444,6 +445,14 @@ class ComposeReplyTests(unittest.TestCase):
         clause = b._character_clause({"traits": {"curious": 0.8, "warm": 0.7}, "values": {"kindness": "kindness", "honesty": "honesty"}})
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
+
+    def test_check_in_detection(self):
+        # "how are you? / what's up? / how's it going?" are casual check-ins that
+        # get a natural human reply, never "the system's running smoothly".
+        for s in ["how are you?", "how's it going?", "how have you been?",
+                  "what's up?", "how's your day going?", "how are you doing today?"]:
+            self.assertTrue(_is_check_in(s), s)
+        self.assertFalse(_is_check_in("what's the time?"))
 
     def test_state_adjectives_not_intro(self):
         # "i'm great/new/annoyed/thrilled/all set" are states, not names.

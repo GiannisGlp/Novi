@@ -111,5 +111,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Food/hunger honesty | `20260822T023459Z/food-hunger-honesty.json` | no hunger fabrication; 'i'm starving' no longer read as a name |
 | Gerund states not intro | `20260822T023839Z/gerund-state-not-intro.json` | 'i feel like i'm failing at everything' no longer read as a name |
 | State adjectives not intro | `20260822T024400Z/state-adjectives-not-intro.json` | 'i'm great/new/annoyed/thrilled/all set' no longer read as names |
+| Check-in honesty | `20260822T025202Z/check-in-honesty.json` | 'how are you?' never says 'the system's running smoothly'/'processing' |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

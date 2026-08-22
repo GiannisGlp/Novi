@@ -87,6 +87,14 @@ _FORBIDDEN = [
         r"\bi was (?:not )?(?:sent|given|shown) (?:any )?(?:previous|prior) message\b",
         r"\bi (?:wasn'?t|was not) (?:sent|given|shown) (?:any )?(?:previous|prior) message\b",
         r"\b(?:no|no previous|no prior) message was (?:sent|given|shown)\b",
+        # Internal-state / digital implementation leaks on "how are you"-type
+        # check-ins. Novi answers like a person, not like a running system.
+        r"\b(?:system|everything)(?:'?s| is) running smoothly\b",
+        r"\bdigital ether\b",
+        r"\bmy internal state\b",
+        r"\bi(?:'| )ve been processing\b",
+        r"\b(?:i'?m|i am) just processing\b",
+        r"\bprocessing (?:some|whatever) (?:interesting )?things\b",
     )
 ]
 
@@ -778,6 +786,32 @@ def _is_reassurance_question(text: str) -> bool:
 
 def reassurance_reply(cycle: int = 0) -> str:
     return _REASSURANCE_REPLIES[cycle % len(_REASSURANCE_REPLIES)]
+
+
+# Casual check-ins ("how are you?", "what's up?", "how's it going?") are
+# greetings, not requests to explain internals. Novi must answer like a person,
+# never "the system's running smoothly" / "processing".
+_CHECK_IN_RE = re.compile(
+    r"\b(?:how are you\b|how'?re you\b|how is it going\b|how'?s it going\b|how'?s (?:it )?going\b|"
+    r"how are you (?:doing|feeling)(?: today)?\b|how'?s your (?:day|week|morning|evening) going\b|"
+    r"how have you been\b|what'?s up\b|what'?s new\b|how are things\b|how'?s everything\b|"
+    r"what'?s happening\b|how do you do\b)\b",
+    re.IGNORECASE,
+)
+
+_CHECK_IN_REPLIES = [
+    "I'm doing well — thanks for asking. What's new with you?",
+    "I'm good, just present and ready to chat. What about you?",
+    "I'm well — always glad to be talking with you. How are you doing?",
+]
+
+
+def _is_check_in(text: str) -> bool:
+    return bool(text) and bool(_CHECK_IN_RE.search(text))
+
+
+def check_in_reply(cycle: int = 0) -> str:
+    return _CHECK_IN_REPLIES[cycle % len(_CHECK_IN_REPLIES)]
 
 
 # Debate prompts ("argue that X is better", "defend X", "make the case for X") —
