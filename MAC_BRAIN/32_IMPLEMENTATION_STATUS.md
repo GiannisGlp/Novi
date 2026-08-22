@@ -1139,6 +1139,19 @@ hitting the dry topic follow-up.
 - Tests: +1; fast suites **477 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/identity-questions.json`.
 
+## Praise + capability questions (round 40 of the naturalness objective) (status: IMPLEMENTED)
+
+A fallback sweep found "you're amazing" → "no good answer on amazing" and
+"can you sing?" → "no good answer on sing".
+
+- `_is_praise` catches "you're amazing/the best/my favorite", "i love you" → a
+  warm acceptance reply.
+- `_is_capability_question` catches "can you sing/dance", "dance for me", "are you
+  smart" → honest "no body for that" reply.
+- Real LLM handles these even more richly; these make the fallback natural too.
+- Tests: +1; fast suites **478 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/praise-and-capability.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

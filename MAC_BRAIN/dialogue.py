@@ -678,6 +678,45 @@ def _is_identity_question(text: str) -> bool:
     return bool(text) and bool(_IDENTITY_RE.search(text))
 
 
+# Praise/affection directed at Novi ("you're amazing", "i love you", "you're my
+# favorite") — accept it warmly, never "no good answer on amazing".
+_PRAISE_RE = re.compile(
+    r"\b(?:you'?re (?:amazing|awesome|great|wonderful|incredible|the best|my favorite|so smart|cool|funny|good)\b|"
+    r"i (?:love|like|adore) you\b|i love talking to you\b|you'?re (?:so )?good\b|"
+    r"i think you'?re great\b)\b",
+    re.IGNORECASE,
+)
+
+_PRAISE_REPLIES = [
+    "That's really kind of you — thank you.",
+    "Aw, I appreciate that. You're pretty great yourself.",
+    "That means a lot coming from you.",
+    "You flatter me. I like our talks too.",
+]
+
+
+def _is_praise(text: str) -> bool:
+    return bool(text) and bool(_PRAISE_RE.search(text))
+
+
+def praise_reply(cycle: int = 0) -> str:
+    return _PRAISE_REPLIES[cycle % len(_PRAISE_REPLIES)]
+
+
+# Capability/ability questions ("can you sing?", "dance for me", "are you smart?",
+# "can you understand me?") — be honest about what you can/can't do.
+_CAPABILITY_RE = re.compile(
+    r"\b(?:can you (?:sing|dance|fly|run|jump|draw|paint|breathe|swim|eat|sleep)\b|"
+    r"can you understand me\b|are you (?:smart|strong|fast|tall|good at)\b|"
+    r"(?:sing|dance|whistle|wiggle) for me\b|are you good at\b)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_capability_question(text: str) -> bool:
+    return bool(text) and bool(_CAPABILITY_RE.search(text))
+
+
 # Debate prompts ("argue that X is better", "defend X", "make the case for X") —
 # take a side playfully rather than deflecting the request back.
 _DEBATE_RE = re.compile(

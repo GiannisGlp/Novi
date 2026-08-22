@@ -1,0 +1,23 @@
+{
+  "slice": "Natural conversation round 40: praise ('you're amazing') and capability ('can you sing?') answered naturally, never 'no good answer on X'",
+  "praise": {
+    "you're amazing": true,
+    "i love you": true,
+    "you're my favorite": true,
+    "you're the best": true,
+    "what's the time?": false
+  },
+  "capability": {
+    "can you sing?": true,
+    "dance for me": true,
+    "are you smart?": true,
+    "what's the time?": false
+  },
+  "replies": {
+    "you're amazing": "That's really kind of you \u2014 thank you.",
+    "i love you": "That's really kind of you \u2014 thank you.",
+    "can you sing?": "Honestly? I can't sing, dance, or move in the physical world \u2014 no body for that. But I can talk, think things through, and help with ideas.",
+    "dance for me": "Honestly? I can't sing, dance, or move in the physical world \u2014 no body for that. But I can talk, think things through, and help with ideas."
+  },
+  "mechanism": "praise/affection detector -> warm acceptance; capability detector -> honest 'no body for that' reply"
+}

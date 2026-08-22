@@ -55,6 +55,9 @@ from .dialogue import (
     _is_farewell,
     _is_world_question,
     _is_identity_question,
+    _is_praise,
+    praise_reply,
+    _is_capability_question,
     farewell_reply,
     _is_embodiment_question,
     _is_future_question,
@@ -1399,6 +1402,9 @@ class MacBrain:
         # "Can you keep a secret?" is a social trust question, not a topic.
         if _is_assurance_question(text):
             return {"text": assurance_reply(cycle=self._cycle), "fallback": False, "reason": "You asked if I can keep a secret / be trusted, so I reassured you warmly.", "grounding": {"route": "assurance"}}
+        # "you're amazing / i love you" — accept the praise warmly, not a topic.
+        if _is_praise(text):
+            return {"text": praise_reply(cycle=self._cycle), "fallback": False, "reason": "You praised or said you like me, so I accepted it warmly.", "grounding": {"route": "praise"}}
         # "Are you there? / can you hear me?" — acknowledge present, warm.
         if _is_engagement_check(text):
             return {"text": self._engagement_reply(), "fallback": False, "reason": "You checked whether I'm here/listening, so I acknowledged warmly.", "grounding": {"route": "engagement"}}
@@ -1585,6 +1591,9 @@ class MacBrain:
         if is_identity:
             reason = "You asked what/who I am — I answered honestly about being Novi with no physical body, not a topic follow-up"
             return {"text": "I'm Novi — I'm present here, sensing and listening, but I don't have a physical body or an ordinary human life. What made you ask?", "fallback": True, "reason": reason, "grounding": {"route": "identity_honesty", **out}}
+        if _is_capability_question(text):
+            reason = "You asked what I can do — I answered honestly instead of a topic follow-up"
+            return {"text": "Honestly? I can't sing, dance, or move in the physical world — no body for that. But I can talk, think things through, and help with ideas.", "fallback": True, "reason": reason, "grounding": {"route": "capability_honesty", **out}}
         if _is_repeat_question(text):
             reason = "You asked me to repeat what I said — I acknowledged it naturally instead of a topic follow-up"
             return {"text": "Sure — which part would you like me to repeat, or shall I say it all again?", "fallback": True, "reason": reason, "grounding": {"route": "repeat", **out}}

@@ -41,6 +41,8 @@ from MAC_BRAIN.dialogue import (
     _is_farewell,
     _is_world_question,
     _is_identity_question,
+    _is_praise,
+    _is_capability_question,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -430,6 +432,16 @@ class ComposeReplyTests(unittest.TestCase):
         clause = b._character_clause({"traits": {"curious": 0.8, "warm": 0.7}, "values": {"kindness": "kindness", "honesty": "honesty"}})
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
+
+    def test_praise_and_capability_detection(self):
+        # "you're amazing / i love you" get a warm reply, not "no good answer".
+        for s in ["you're amazing", "i love you", "you're my favorite", "you're the best"]:
+            self.assertTrue(_is_praise(s), s)
+        self.assertFalse(_is_praise("what's the time?"))
+        # "can you sing/dance?" are capability questions, answered honestly.
+        for s in ["can you sing?", "dance for me", "are you smart?"]:
+            self.assertTrue(_is_capability_question(s), s)
+        self.assertFalse(_is_capability_question("what's the time?"))
 
     def test_identity_question_detection(self):
         # "are you a robot? / do you have hands? / who made you?" are identity

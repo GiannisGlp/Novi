@@ -102,5 +102,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Debate requests | `20260822T013215Z/debate-requests.json` | 'argue that X is better' takes a side playfully, not deflect |
 | Farewells + smoke hardening | `20260822T014531Z/farewells-and-smoke-hardening.json` | 'i'm leaving now'/'goodbye' farewell; world-news honesty; engagement reply cleaned |
 | Identity questions | `20260822T015647Z/identity-questions.json` | 'are you a robot?/do you have hands?' answered honestly, never 'no good answer on X' |
+| Praise + capability | `20260822T020144Z/praise-and-capability.json` | 'you're amazing'/'can you sing?' answered naturally, never 'no good answer on X' |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
