@@ -916,6 +916,19 @@ on cap yet." Casual agreement markers were misread.
 - Tests: +1; fast suites **459 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/slang-acknowledgments.json`.
 
+## Honest answers to embodiment/presence questions (round 24 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "are you in the room with me right now?" → "You can see me right
+here, standing in the room with you." — overclaims a physical body Novi doesn't
+have (contradicting its honest "I don't have a body" answers).
+
+- `_is_embodiment_question` detects "are you in the room/here", "do you have a
+  body", "where are you", "can you stand/move", "what do you look like".
+- An honesty steer answers that Novi senses and is present in the space but has no
+  physical body, never claiming to physically stand beside the person.
+- Tests: +1; fast suites **460 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/embodiment-honesty.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

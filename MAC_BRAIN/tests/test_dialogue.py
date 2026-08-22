@@ -30,6 +30,7 @@ from MAC_BRAIN.dialogue import (
     _is_thanks,
     _is_time_greeting,
     _is_acknowledgment,
+    _is_embodiment_question,
     _is_repetitive,
     _time_greeting_part,
     _reduce_name_repetition,
@@ -141,6 +142,12 @@ class DialogueFilterTests(unittest.TestCase):
         # real names are still introductions
         self.assertTrue(_is_introduction("i'm alex"))
         self.assertTrue(_is_introduction("my name is alice"))
+
+    def test_embodiment_question_detection(self):
+        for s in ["are you in the room with me right now?", "do you have a body?",
+                  "where are you?", "can you stand?"]:
+            self.assertTrue(_is_embodiment_question(s), s)
+        self.assertFalse(_is_embodiment_question("what's the time?"))
 
     def test_guardrails_do_not_reject_legitimate_replies(self):
         # Replies that legitimately mention conversation/remembering must pass.

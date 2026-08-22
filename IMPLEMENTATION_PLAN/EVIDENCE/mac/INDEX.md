@@ -86,5 +86,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Identity over-explanation regenerated | `20260822T001750Z/identity-overexplain-regen.json` | 'I'm a transparent/non-deceptive being' replies rejected & regenerated clean |
 | Emotional states not intro | `20260822T002137Z/emotional-state-not-intro.json` | 'i'm nervous/worried/down' read as states, not self-introductions |
 | Casual slang acknowledgments | `20260822T002511Z/slang-acknowledgments.json` | 'bet/facts/word/no cap/fr/preach' get a brief natural reply, not read literally or as a topic |
+| Embodiment/presence honesty | `20260822T002917Z/embodiment-honesty.json` | 'are you in the room / do you have a body' answered honestly — senses the space, has no body |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

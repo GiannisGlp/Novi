@@ -1,0 +1,16 @@
+{
+  "slice": "Natural conversation round 24: honest answers to embodiment/presence questions",
+  "detected": {
+    "are you in the room with me right now?": true,
+    "do you have a body?": true,
+    "where are you?": true,
+    "what's the time?": false
+  },
+  "before": {
+    "are you in the room with me right now?": "You can see me right here, standing in the room with you."
+  },
+  "after": {
+    "are you in the room with me right now?": "I'm present in this space through my senses, but I don't have a physical body \u2014 no hands, no feet, I can't stand beside you. I'm here as a presence you can talk to."
+  },
+  "mechanism": "embodiment questions ('are you in the room', 'do you have a body', 'can you stand') get an honesty steer so Novi never claims to physically stand in the room \u2014 it senses the space but has no body"
+}

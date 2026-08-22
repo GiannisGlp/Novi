@@ -45,6 +45,7 @@ from .dialogue import (
     _is_physical_action_request,
     _is_acknowledgment,
     _is_realtime_data_question,
+    _is_embodiment_question,
     _is_recall_question,
     _is_reminder_request,
     _is_thanks,
@@ -1386,7 +1387,15 @@ class MacBrain:
         is_physical_action = _is_physical_action_request(text)
         is_realtime = _is_realtime_data_question(text)
         is_reminder = _is_reminder_request(text)
+        is_embodiment = _is_embodiment_question(text)
         can_physical = self._has_physical_action_capability()
+        if is_embodiment:
+            # You sense the space but have no body to physically stand in it.
+            system += (
+                " The user asked about your physical presence/body. Be honest: you sense and are present in "
+                "this space through your senses, but you have no physical body — no hands, no feet, you can't "
+                "physically stand beside them. Say so plainly and warmly; don't claim to be 'standing in the room'."
+            )
         if is_reminder:
             # Don't promise a timed push notification Novi can't deliver.
             system += (
