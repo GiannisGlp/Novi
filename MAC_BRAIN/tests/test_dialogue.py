@@ -136,6 +136,8 @@ class DialogueFilterTests(unittest.TestCase):
                   "I'm a transparent AI being.",
                   "I don't have a hidden agenda or secret layers."]:
             self.assertTrue(_is_forbidden(s), s)
+        # ...even with intervening words between the term and "being".
+        self.assertTrue(_is_forbidden("I'm Novi — a transparent, non-deceptive embodied being."))
         # a natural reply is not rejected
         self.assertFalse(_is_forbidden("Novi — I live in this room."))
 

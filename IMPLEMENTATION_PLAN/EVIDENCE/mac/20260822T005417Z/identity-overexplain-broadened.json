@@ -1,0 +1,16 @@
+{
+  "slice": "Natural conversation round 30: identity over-explanation caught even with intervening words",
+  "forbidden": {
+    "I'm Novi \u2014 a transparent, non-deceptive embodied being.": true,
+    "I'm a transparent, non-deceptive being \u2014 but you can call me Novi.": true,
+    "I'm a transparent AI being.": true
+  },
+  "allowed": "Novi \u2014 I live in this room.",
+  "before": {
+    "what are you exactly?": "I'm Novi \u2014 a transparent, non-deceptive embodied being. I don't hide what I am\u2026"
+  },
+  "after": {
+    "what are you exactly?": "I'm Novi \u2014 a being who exists in this space as something between tool and companion\u2026"
+  },
+  "mechanism": "broadened forbidden pattern to catch 'transparent/non-deceptive' + any intervening words + being/entity, not just directly adjacent"
+}

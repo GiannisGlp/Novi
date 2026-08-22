@@ -994,6 +994,19 @@ through to the topic follow-up ("no good answer on say").
 - Tests: +2; fast suites **466 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/repeat-and-impl-leak.json`.
 
+## Identity over-explanation caught with intervening words (round 30 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "what are you exactly?" → "I'm Novi — a transparent, non-deceptive
+embodied being." The forbidden pattern only matched when "transparent/non-deceptive"
+directly preceded "being", so it slipped through.
+
+- Broadened to `transparent|non-deceptive [^.!?]{0,30} (being|entity)` — catches
+  intervening words ("transparent, non-deceptive embodied being").
+- Real test: "what are you exactly?" → "I'm Novi — a being who exists in this space…"
+  (no over-explanation).
+- Tests: +1; fast suites **466 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/identity-overexplain-broadened.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
