@@ -1124,6 +1124,21 @@ contained the forbidden "what's on your mind?".
 - Tests: +2; fast suites **476 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/farewells-and-smoke-hardening.json`.
 
+## Identity questions answered honestly (round 39 of the naturalness objective) (status: IMPLEMENTED)
+
+A broad fallback sweep found "are you a robot?" → "I don't have a good answer on
+robot yet", plus similar for hands/born/made/live/real. Identity questions were
+hitting the dry topic follow-up.
+
+- `_is_identity_question` detects "what are you / are you a robot / do you have
+  hands / when were you born / who made you / where do you live / are you real /
+  can you feel", routed to an honest identity steer + fallback ("I'm Novi —
+  present here, sensing, no physical body").
+- Real LLM still gives richer answers; affection/compliments ("i love you",
+  "you're amazing") confirmed natural via the LLM.
+- Tests: +1; fast suites **477 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/identity-questions.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

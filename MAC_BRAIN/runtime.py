@@ -54,6 +54,7 @@ from .dialogue import (
     _is_debate_request,
     _is_farewell,
     _is_world_question,
+    _is_identity_question,
     farewell_reply,
     _is_embodiment_question,
     _is_future_question,
@@ -1425,6 +1426,7 @@ class MacBrain:
         is_memory = _is_memory_question(text)
         is_talk_request = _is_talk_request(text)
         is_debate = _is_debate_request(text)
+        is_identity = _is_identity_question(text)
         can_physical = self._has_physical_action_capability()
         if is_future:
             system += (
@@ -1460,6 +1462,14 @@ class MacBrain:
                 " The user asked you to just talk / chat about anything. Open a natural, warm conversation: "
                 "share something you're curious about or ask what they're in the mood to talk about. "
                 "Do NOT say you don't have a good answer or fall into a dry follow-up."
+            )
+        if is_identity:
+            # "What are you? / are you a robot? / do you have hands?" — honest, warm.
+            system += (
+                " The user asked what or who you are, whether you're a robot/person/alive, or whether you have a body. "
+                "Answer honestly and warmly in your own voice: you're Novi, present in this space, sensing and listening; "
+                "you have no physical body and no ordinary human life (no hands, no family, no birthplace). "
+                "Don't over-explain or lecture — a couple of warm, plain sentences, then turn it back to them."
             )
         if is_debate:
             # "Argue that X is better" — take the side playfully, don't deflect.
@@ -1572,6 +1582,9 @@ class MacBrain:
         if _is_world_question(text):
             reason = "You asked what's happening in the world — I said honestly I don't have live news, no fabricated errands"
             return {"text": "I don't have live news from outside this space — I can't see what's happening in the wider world. But tell me what's going on for you.", "fallback": True, "reason": reason, "grounding": {"route": "world_honesty", **out}}
+        if is_identity:
+            reason = "You asked what/who I am — I answered honestly about being Novi with no physical body, not a topic follow-up"
+            return {"text": "I'm Novi — I'm present here, sensing and listening, but I don't have a physical body or an ordinary human life. What made you ask?", "fallback": True, "reason": reason, "grounding": {"route": "identity_honesty", **out}}
         if _is_repeat_question(text):
             reason = "You asked me to repeat what I said — I acknowledged it naturally instead of a topic follow-up"
             return {"text": "Sure — which part would you like me to repeat, or shall I say it all again?", "fallback": True, "reason": reason, "grounding": {"route": "repeat", **out}}

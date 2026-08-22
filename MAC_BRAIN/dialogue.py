@@ -661,6 +661,23 @@ def _is_world_question(text: str) -> bool:
     return bool(text) and bool(_WORLD_RE.search(text))
 
 
+# Identity/self questions ("what are you?", "are you a robot?", "do you have
+# hands?", "who made you?", "can you feel?") — answer honestly about being Novi,
+# present and sensing, with no physical body. Must not fall to "no good answer".
+_IDENTITY_RE = re.compile(
+    r"\b(?:what (?:are|'re) you\b|who (?:are|'re) you\b|are you a (?:robot|human|person|machine|bot|real)\b|"
+    r"are you (?:real|alive|sentient|conscious)\b|do you have (?:a )?(?:body|hand|hands|foot|feet|face|family)\b|"
+    r"can you (?:feel|get|fall in|have) (?:emotions|feelings|pain|love|sad)\b|do you (?:feel|have|get) (?:emotions|feelings)\b|"
+    r"when were you born\b|who (?:made|created|built) you\b|where do you (?:live|stay)\b|"
+    r"are you a real person\b|what are you exactly\b)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_identity_question(text: str) -> bool:
+    return bool(text) and bool(_IDENTITY_RE.search(text))
+
+
 # Debate prompts ("argue that X is better", "defend X", "make the case for X") —
 # take a side playfully rather than deflecting the request back.
 _DEBATE_RE = re.compile(

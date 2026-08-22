@@ -40,6 +40,7 @@ from MAC_BRAIN.dialogue import (
     _is_debate_request,
     _is_farewell,
     _is_world_question,
+    _is_identity_question,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -430,6 +431,15 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
 
+    def test_identity_question_detection(self):
+        # "are you a robot? / do you have hands? / who made you?" are identity
+        # questions that must answer honestly, not "no good answer on <word>".
+        for s in ["are you a robot?", "do you have hands?", "when were you born?",
+                  "who made you?", "where do you live?", "are you real?",
+                  "what are you exactly?", "can you fall in love?"]:
+            self.assertTrue(_is_identity_question(s), s)
+        self.assertFalse(_is_identity_question("what's the time?"))
+
     def test_farewell_detection(self):
         # "bye / i'm leaving now / see you later" are farewells, not intros/topics.
         for s in ["goodbye", "bye", "i'm leaving now", "i'm going home", "see you later"]:
@@ -454,6 +464,7 @@ class ComposeReplyTests(unittest.TestCase):
             "are you going to forget me?", "what's going on in the world?",
             "just talk to me about anything", "argue that cats are better than dogs",
             "what did you have for breakfast?", "yes", "do you like coffee?",
+            "are you a robot?", "do you have hands?", "when were you born?",
         ]
         for u in cases:
             r = b.compose_reply(u, llm_chat=lambda **k: None)
