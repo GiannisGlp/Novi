@@ -1,0 +1,21 @@
+{
+  "slice": "Natural conversation round 28: departure/action statements not mistaken for introductions",
+  "not_intros": {
+    "i'm leaving now": true,
+    "i'm going home": true,
+    "i'm on my way": true,
+    "i'm leaving the office": true
+  },
+  "names_still_intros": {
+    "i'm alex": true,
+    "my name is bob": true,
+    "i'm john": true
+  },
+  "before": {
+    "i'm leaving now": "Leaving Now \u2014 nice to put a name to you. I'll remember that."
+  },
+  "after": {
+    "i'm leaving now": "Alright then. Take care."
+  },
+  "mechanism": "expanded the state/action-word blocklist (leaving, going, just, done, away, etc.) so 'i'm <action>' is never read as a self-introduction, while real names still are"
+}

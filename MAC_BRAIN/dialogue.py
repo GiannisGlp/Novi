@@ -274,6 +274,8 @@ _STATE_WORDS = {
     "calm", "confused", "proud", "content", "guilty", "relieved", "hopeful",
     "sleepy", "awake", "ready", "still", "alone", "tired", "amazed", "awkward",
     "fine", "okay", "hungry", "in", "up", "off", "around", "here",
+    "leaving", "going", "just", "back", "on", "down", "about", "into", "done",
+    "worried", "excited", "confused", "proud",
 }
 
 

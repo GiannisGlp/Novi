@@ -146,6 +146,12 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertTrue(_is_introduction("i'm alex"))
         self.assertTrue(_is_introduction("my name is alice"))
 
+    def test_departure_not_an_introduction(self):
+        # "i'm leaving / going home / on my way" are actions, not self-introductions.
+        for s in ["i'm leaving now", "i'm going home", "i'm on my way"]:
+            self.assertFalse(_is_introduction(s), s)
+        self.assertTrue(_is_introduction("i'm alex"))
+
     def test_embodiment_question_detection(self):
         for s in ["are you in the room with me right now?", "do you have a body?",
                   "where are you?", "can you stand?"]:

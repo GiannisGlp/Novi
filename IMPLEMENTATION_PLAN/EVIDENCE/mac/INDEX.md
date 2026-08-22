@@ -90,5 +90,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Future/prediction questions | `20260822T003325Z/future-question-handling.json` | 'what will happen / what's next' answered honestly, not read as a topic ('no good answer on happen') |
 | No fabricated eating/sleeping/dreaming | `20260822T003742Z/bodily-need-honesty.json` | 'what did you have for breakfast?' never fabricates a meal/dream — Novi has no body |
 | Assurance/trust questions | `20260822T004157Z/assurance-questions.json` | 'can you keep a secret?' answered socially, not as a dry topic |
+| Departures not introductions | `20260822T004524Z/departure-not-intro.json` | 'i'm leaving/going home/on my way' read as actions, not self-introductions |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

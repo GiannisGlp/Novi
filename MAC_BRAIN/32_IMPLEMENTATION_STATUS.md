@@ -967,6 +967,19 @@ yet…" — a social trust question read as a topic.
 - Tests: +1; fast suites **463 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/assurance-questions.json`.
 
+## Departures not mistaken for introductions (round 28 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "i'm leaving now" → "Leaving Now — nice to put a name to you." The
+intro detector read "i'm leaving" as a self-introduction because "leaving" wasn't
+in the state/action blocklist.
+
+- Expanded `_STATE_WORDS` with action/departure words (leaving, going, just, done,
+  away, about, into, etc.), so "i'm <action>" is never a self-introduction.
+- Real names ("i'm alex", "my name is bob") still detected.
+- Real test: "i'm leaving now" → "Alright then. Take care."
+- Tests: +1; fast suites **464 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/departure-not-intro.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
