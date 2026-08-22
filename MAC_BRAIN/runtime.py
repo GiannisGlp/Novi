@@ -110,6 +110,7 @@ from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as L
 from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult, WriteGate
 from .soul_acceptance import CommunicationDecision, VocabularyScopeModel, GLOBAL_SCOPE, RELATIONSHIP_SCOPE
 from .p0_gate_runner import run_p0_gate
+from .nvidia_experiments import EpisodeRecorder, NoviEpisode, ALL_ADAPTERS, OBSERVED as EP_OBSERVED
 from .skill_contract import SkillExecutor, SkillInvocation, SUCCESS as SKILL_SUCCESS, FAILURE as SKILL_FAILURE
 from .situation_model import SituationModel
 from .failure_modes import FailureHandler, DegradedMode, PERCEPTION_UNCERTAINTY, MODEL_UNAVAILABLE, TOOL_FAILURE
@@ -209,6 +210,8 @@ class MacBrain:
         self._last_situations: list[dict[str, Any]] = []
         self.failure_handler = FailureHandler()
         self.autonomy_sm = AutonomyStateMachine()
+        self.episode_recorder: EpisodeRecorder | None = None
+        self._recording_enabled: bool = False
         # Memory: HardenedMemoryManager (in-memory, canonical contract) or
         # DurableMemoryStore (SQLite, persistent). Both paths now use the
         # same WriteGate so the durable path has the same hardening
@@ -731,6 +734,9 @@ class MacBrain:
         elif self.autonomy_sm.state == ASMState.AWARE and not self.goals.has_active and not evidence.detections:
             # Nothing significant — return to OBSERVING.
             pass  # AWARE stays if we just transitioned; will go to OBSERVING next cycle
+        # Episode recording: if recording is enabled, record this step.
+        if self._recording_enabled and self.episode_recorder is not None:
+            self.episode_recorder.record_runtime_step(self, cycle=self._cycle)
         return {
             "run_id": self.run_id,
             "cycle": self._cycle,
@@ -1348,6 +1354,52 @@ class MacBrain:
         snap = gate.snapshot()
         self._emit("p0.gate", {"cycle": self._cycle, **snap})
         return snap
+
+    # ---- Episode recording ----
+
+    def start_recording(self, task_name: str = "runtime_observation", *, description: str = "") -> None:
+        """Start recording an episode from subsequent steps."""
+        self.episode_recorder = EpisodeRecorder(
+            task_name=task_name,
+            description=description,
+            evidence_class=EP_OBSERVED,
+            source="mac_brain",
+            platform={"runtime": "mac_brain", "recording": "auto"},
+        )
+        self._recording_enabled = True
+        self._emit("episode.recording_started", {
+            "cycle": self._cycle, "task_name": task_name, "description": description,
+        })
+
+    def stop_recording(self) -> NoviEpisode | None:
+        """Stop recording and return the built episode."""
+        self._recording_enabled = False
+        if self.episode_recorder is None:
+            return None
+        episode = self.episode_recorder.build_episode()
+        self._emit("episode.recording_stopped", {
+            "cycle": self._cycle, "episode_id": episode.episode_id,
+            "step_count": len(episode.steps),
+        })
+        self.episode_recorder = None
+        return episode
+
+    def export_episode(self, episode: NoviEpisode, *, format: str = "novi_native") -> dict[str, Any]:
+        """Export an episode through one of the adapters (LeRobot/IsaacLab/ROSBag/NoviNative)."""
+        adapter = ALL_ADAPTERS.get(format)
+        if adapter is None:
+            raise ValueError(f"unknown format: {format!r}. Available: {list(ALL_ADAPTERS.keys())}")
+        return adapter.to_format(episode)
+
+    @property
+    def is_recording(self) -> bool:
+        return self._recording_enabled and self.episode_recorder is not None
+
+    @property
+    def recording_step_count(self) -> int:
+        if self.episode_recorder is None:
+            return 0
+        return self.episode_recorder.step_count
 
     def metrics_snapshot(self) -> list[dict[str, Any]]:
         return self.metrics.snapshot()

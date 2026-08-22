@@ -707,6 +707,25 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"result": novi.set_goal(x=data.get("x", 1.0), y=data.get("y", 1.0), max_steps=int(data.get("max_steps", 60)))})
             elif path == "/api/health":
                 self._json({"result": novi.health()})
+            elif path == "/api/episode/start":
+                with novi._lock:
+                    novi.brain.start_recording(
+                        task_name=str(data.get("task_name", "runtime_observation")),
+                        description=str(data.get("description", "")),
+                    )
+                self._json({"result": {"recording": True, "task_name": data.get("task_name", "runtime_observation")}})
+            elif path == "/api/episode/stop":
+                with novi._lock:
+                    episode = novi.brain.stop_recording()
+                if episode is None:
+                    self._json({"error": "not recording"}, 400)
+                else:
+                    fmt = str(data.get("format", "novi_native"))
+                    exported = novi.brain.export_episode(episode, format=fmt)
+                    self._json({"result": {"episode_id": episode.episode_id, "step_count": len(episode.steps), "format": fmt, "export": exported}})
+            elif path == "/api/episode/status":
+                with novi._lock:
+                    self._json({"result": {"recording": novi.brain.is_recording, "step_count": novi.brain.recording_step_count}})
             else:
                 self._json({"error": "unknown endpoint"}, 404)
         except Exception as exc:  # noqa: BLE001
