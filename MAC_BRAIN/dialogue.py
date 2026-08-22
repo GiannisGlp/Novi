@@ -689,7 +689,14 @@ def _extract_topic(text: str) -> str:
     # don't turn it into "no good answer on <word>".
     if len(words) == 1 and len(words[0]) <= 4:
         return ""
-    cands = [w for w in words if w and w.lower() not in _STOPWORDS and not w.isdigit()]
+    cands = []
+    for w in words:
+        if not w or w.isdigit():
+            continue
+        n = w.lower().replace("'", "")  # "what's" -> "whats", "it's" -> "its"
+        if n in _STOPWORDS or n[:-1] in _STOPWORDS:  # "whats" -> "what", "hows" -> "how"
+            continue
+        cands.append(w)
     if not cands:
         return ""
     return max(cands, key=lambda w: (len(w), len(set(w))))

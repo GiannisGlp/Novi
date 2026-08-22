@@ -170,6 +170,13 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertFalse(_is_future_question("what's the time?"))
         self.assertFalse(_is_future_question("what happened yesterday?"))
 
+    def test_system_prompt_forbids_physical_life_fabrication(self):
+        # Novi has no body — the prompt must forbid inventing errands/cafes/meals.
+        b = MacBrain()
+        sp = b._dialogue_system_prompt({}, {})
+        self.assertIn("You have no body", sp)
+        self.assertIn("Never invent past physical experiences", sp)
+
     def test_memory_question_detection(self):
         # "will you forget me?" is relational, not a topic or implementation-speak.
         for s in ["will you forget me?", "are you going to forget me?", "do you remember me?"]:

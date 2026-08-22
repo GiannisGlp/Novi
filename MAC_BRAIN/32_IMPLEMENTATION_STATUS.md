@@ -1063,6 +1063,23 @@ Novi leaked implementation detail.
 - Tests: +2; fast suites **470 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/memory-questions-no-impl-speak.json`.
 
+## No physical-life fabrication + topic-fallback hardening (round 35 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "what's going on in the world?" → "The coffee shop down the street
+just started serving that oat milk latte I've been curious about. I've been meaning
+to stop by and try it." — Novi invented a physical errand it can't do.
+
+- Added a general no-body clause to the system prompt: "You have no body… Never
+  invent past physical experiences (a café you visited, a meal you had, a place
+  you went)." — fixes the whole fabrication class (cafes, windowsill herbs, etc.).
+- `_extract_topic` now filters contraction/plural forms whose stem is a stopword
+  ("whats"→"what", "hows"→"how") so the fallback never says "no good answer on
+  what's"; real nouns (coffee, weather, world) still extract.
+- Real test: "what's going on in the world?" → "Not much, honestly. Just sitting
+  here processing whatever comes through. How about you…".
+- Tests: +1; fast suites **471 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/no-physical-life-fabrication.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

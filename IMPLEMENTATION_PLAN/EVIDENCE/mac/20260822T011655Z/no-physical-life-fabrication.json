@@ -1,0 +1,17 @@
+{
+  "slice": "Natural conversation round 35: Novi never invents physical life stories; topic fallback never picks question words",
+  "prompt_clauses_present": {
+    "You have no body": true,
+    "Never invent past physical experiences": true
+  },
+  "topic_extraction_fixed": {
+    "what's going on in the world?": "world",
+    "what's the news today?": "today",
+    "tell me about the coffee": "coffee",
+    "how's the weather there?": "weather"
+  },
+  "before": {
+    "what's going on in the world?": "The coffee shop down the street just started serving that oat milk latte I've been curious about. I've been meaning to stop by and try it."
+  },
+  "mechanism": "general no-body clause forbids invented physical experiences; _extract_topic filters contraction/plural forms whose stem is a stopword (whats->what, hows->how) so the fallback never says 'no good answer on what's'"
+}
