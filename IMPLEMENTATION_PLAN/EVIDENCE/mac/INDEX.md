@@ -82,5 +82,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Guardrail robustness | `20260821T235846Z/guardrail-robustness.json` | meta/program-speak guardrails reject only genuine cases, never legitimate conversation/remembering replies |
 | `[heard]` greeting root-cause fix | `20260822T000407Z/heard-greeting-root-cause.json` | the `[heard] ` STT marker was defeating the greeting detector; now stripped before detection |
 | Short-acknowledgment handling | `20260822T000818Z/acknowledgment-handling.json` | 'okay/sure/got it/sounds good' get a brief natural reply, not a topic follow-up or forced intro |
+| Physical-action honesty only when asked | `20260822T001416Z/physical-capability-clause.json` | base caps clause no longer volunteers 'physical actions unavailable' for non-physical requests (e.g. homework help) |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

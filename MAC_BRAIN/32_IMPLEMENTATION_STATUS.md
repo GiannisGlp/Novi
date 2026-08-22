@@ -863,6 +863,21 @@ as a topic) and "sure" → "Hey! Nice to meet you. I'm Novo, and I'm curious…"
 - Tests: +2; fast suites **455 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/acknowledgment-handling.json`.
 
+## Physical-action honesty only when asked (round 20 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "hey, can you help me with my homework?" → "I'm actually not set up
+to help with homework right now — my physical actions are unavailable." The base
+`caps_clause` listed `physical_actions` as "degraded/unavailable" on EVERY message,
+so the model volunteered it for non-physical requests.
+
+- `physical_actions: FAIL` is a permanent build fact (no actuators), not a
+  transient sensing degradation. Excluded it from the base "capabilities
+  degraded" clause (which is about perception).
+- Physical-action honesty now only fires from the targeted clause when the user
+  actually asks to manipulate something (turn on light, open door).
+- Tests: +1; fast suites **456 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/physical-capability-clause.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

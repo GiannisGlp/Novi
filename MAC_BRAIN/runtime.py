@@ -1222,7 +1222,13 @@ class MacBrain:
         expr = relationship.get("expression", {}) or {}
         caps_clause = ""
         if capabilities:
-            bad = [k for k, v in capabilities.items() if v in ("WARN", "FAIL")]
+            # physical_actions absence is a permanent build fact, not a transient
+            # sensing degradation — it's handled by the targeted honesty clause only
+            # when the user actually asks for physical manipulation. Listing it here
+            # makes the model volunteer "physical actions unavailable" for any
+            # request (e.g. homework help). Exclude it from this perception clause.
+            bad = [k for k, v in capabilities.items()
+                   if k != "physical_actions" and v in ("WARN", "FAIL")]
             if bad:
                 # Capability honesty (docs/06-soul/01 §7): say what you can't perceive/act.
                 caps_clause = (

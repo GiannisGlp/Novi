@@ -1,0 +1,11 @@
+{
+  "slice": "Natural conversation round 20: physical-action honesty only when asked, not on every message",
+  "caps_clause_removed_from_base_prompt": true,
+  "physical_actions_not_in_base_caps": true,
+  "homework_help_no_longer_says_physical_unavailable": "I'm curious \u2014 what kind of homework do you need help with?",
+  "targeted_honesty_still_active_for_light": "I don't have physical actuators, so I can't actually turn on lights or move objects. But I'd be happy to chat about lighting design, or help you think through what kind of light you're looking for. What's the vibe you're going for?",
+  "before": {
+    "hey, can you help me with my homework?": "I'm actually not set up to help with homework right now \u2014 my physical actions are unavailable."
+  },
+  "mechanism": "physical_actions: FAIL is a permanent build fact, so it's excluded from the base 'capabilities degraded' clause (which is for sensing). Physical-action honesty now only fires from the targeted clause when the user actually asks to manipulate something."
+}

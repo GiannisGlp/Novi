@@ -463,6 +463,17 @@ class ComposeReplyTests(unittest.TestCase):
             self.assertNotIn("good answer", r["text"].lower())
             self.assertNotIn("i'm novi", r["text"].lower())
 
+    def test_homework_not_flagged_as_physical_action(self):
+        # A mental/intellectual request must not trigger the physical-action honesty
+        # clause; the base caps clause should not volunteer "physical actions
+        # unavailable" for non-physical requests.
+        from MAC_BRAIN.runtime import MacBrain
+        b = MacBrain()
+        st = b._chat_self_state()
+        rel = {"tier": "friend", "expression": {"warmth": 0.8, "formality": "low", "playful": True}}
+        prompt = b._dialogue_system_prompt(st, rel, capabilities=b.self_model().get("capabilities"))
+        self.assertNotIn("degraded or unavailable", prompt)
+
 
 class ExperienceLearningTests(unittest.TestCase):
     def _brain(self) -> MacBrain:
