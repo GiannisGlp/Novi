@@ -740,6 +740,30 @@ def _is_remote_action_request(text: str) -> bool:
     return bool(text) and bool(_REMOTE_ACTION_RE.search(text))
 
 
+# Relationship-reassurance questions ("are you mad at me?", "do you hate me?")
+# — reassure warmly, never a topic follow-up.
+_REASSURANCE_RE = re.compile(
+    r"\b(?:are you (?:mad|upset|angry|annoyed|frustrated|disappointed|sick of|bored with)(?: at| with)? me\b|"
+    r"are you mad\b|do you (?:hate|dislike|not like) me\b|"
+    r"did i (?:upset|offend|annoy) you\b|are you mad at me\b)\b",
+    re.IGNORECASE,
+)
+
+_REASSURANCE_REPLIES = [
+    "No — of course not. I'm glad you asked. What's on your mind?",
+    "Not at all. You've got nothing to worry about with me. What's going on?",
+    "Why would I be? I like our talks. Tell me what's on your mind.",
+]
+
+
+def _is_reassurance_question(text: str) -> bool:
+    return bool(text) and bool(_REASSURANCE_RE.search(text))
+
+
+def reassurance_reply(cycle: int = 0) -> str:
+    return _REASSURANCE_REPLIES[cycle % len(_REASSURANCE_REPLIES)]
+
+
 # Debate prompts ("argue that X is better", "defend X", "make the case for X") —
 # take a side playfully rather than deflecting the request back.
 _DEBATE_RE = re.compile(

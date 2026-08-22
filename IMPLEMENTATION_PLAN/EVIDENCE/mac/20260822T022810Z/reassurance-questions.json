@@ -1,0 +1,22 @@
+{
+  "slice": "Natural conversation round 45: 'are you mad at me?'/'do you hate me?' get warm reassurance, never a topic follow-up",
+  "detected": {
+    "are you mad at me?": true,
+    "are you upset with me?": true,
+    "are you angry at me?": true,
+    "do you hate me?": true,
+    "are you bored with me?": true,
+    "did i upset you?": true,
+    "what's the time?": false
+  },
+  "before_observed": {
+    "are you mad at me?": "I'm still forming my thoughts on mad \u2014 what's your take? (flaky LLM path)"
+  },
+  "replies": {
+    "are you mad at me?": "No \u2014 of course not. I'm glad you asked. What's on your mind?",
+    "are you upset with me?": "No \u2014 of course not. I'm glad you asked. What's on your mind?",
+    "are you bored with me?": "No \u2014 of course not. I'm glad you asked. What's on your mind?",
+    "do you hate me?": "No \u2014 of course not. I'm glad you asked. What's on your mind?"
+  },
+  "mechanism": "relationship-reassurance detector (mad/upset/angry/hate me) routed deterministic pre-LLM with a warm reply bank, so it never falls to a catch-all"
+}

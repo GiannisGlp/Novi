@@ -1205,6 +1205,18 @@ because it was neither a physical-action nor capability request.
 - Tests: +1; fast suites **482 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/empathy-statements.json`.
 
+## Relationship-reassurance questions (round 45 of the naturalness objective) (status: IMPLEMENTED)
+
+"are you mad at me?" intermittently fell to the catch-all ("I'm still forming my
+thoughts on mad") on flaky LLM calls.
+
+- `_is_reassurance_question` catches "are you mad/upset/angry/bored with me",
+  "do you hate me", "did i upset you" → routed deterministic pre-LLM with a warm
+  reply bank ("No — of course not. I'm glad you asked."). No more catch-all.
+- Real LLM also answers these well; the deterministic path guarantees stability.
+- Tests: +1; fast suites **483 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/reassurance-questions.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

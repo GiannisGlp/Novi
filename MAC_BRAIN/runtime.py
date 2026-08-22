@@ -57,6 +57,8 @@ from .dialogue import (
     _is_identity_question,
     _is_praise,
     praise_reply,
+    _is_reassurance_question,
+    reassurance_reply,
     _is_capability_question,
     _is_remote_action_request,
     farewell_reply,
@@ -1406,6 +1408,9 @@ class MacBrain:
         # "you're amazing / i love you" — accept the praise warmly, not a topic.
         if _is_praise(text):
             return {"text": praise_reply(cycle=self._cycle), "fallback": False, "reason": "You praised or said you like me, so I accepted it warmly.", "grounding": {"route": "praise"}}
+        # "are you mad at me? / do you hate me?" — reassure warmly, not a topic.
+        if _is_reassurance_question(text):
+            return {"text": reassurance_reply(cycle=self._cycle), "fallback": False, "reason": "You worried I'm upset with you, so I reassured you warmly.", "grounding": {"route": "reassurance"}}
         # "Are you there? / can you hear me?" — acknowledge present, warm.
         if _is_engagement_check(text):
             return {"text": self._engagement_reply(), "fallback": False, "reason": "You checked whether I'm here/listening, so I acknowledged warmly.", "grounding": {"route": "engagement"}}

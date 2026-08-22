@@ -44,6 +44,7 @@ from MAC_BRAIN.dialogue import (
     _is_praise,
     _is_capability_question,
     _is_remote_action_request,
+    _is_reassurance_question,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -442,6 +443,14 @@ class ComposeReplyTests(unittest.TestCase):
         clause = b._character_clause({"traits": {"curious": 0.8, "warm": 0.7}, "values": {"kindness": "kindness", "honesty": "honesty"}})
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
+
+    def test_reassurance_question_detection(self):
+        # "are you mad at me? / do you hate me?" get warm reassurance, never a
+        # topic follow-up.
+        for s in ["are you mad at me?", "are you upset with me?", "are you angry at me?",
+                  "do you hate me?", "are you bored with me?", "did i upset you?"]:
+            self.assertTrue(_is_reassurance_question(s), s)
+        self.assertFalse(_is_reassurance_question("what's the time?"))
 
     def test_empathy_statement_detection(self):
         # "my head hurts / i can't sleep / i miss my dog / today was rough" are
