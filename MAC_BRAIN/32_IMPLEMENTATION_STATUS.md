@@ -891,6 +891,19 @@ self-description about being "transparent/non-deceptive."
 - Tests: +1; fast suites **457 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/identity-overexplain-regen.json`.
 
+## Emotional states not mistaken for introductions (round 22 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "give me a pep talk, i'm nervous" → "Nervous — nice to put a name to
+you." The intro detector read "i'm nervous" as a self-introduction because
+"nervous" wasn't in the state-word blocklist.
+
+- Expanded `_STATE_WORDS` (nervous, worried, frustrated, calm, proud, content,
+  relieved, hopeful, sleepy, etc.), so "i'm <state>" is never a self-introduction.
+- Real names ("i'm alex", "my name is alice") still detected.
+- Real test: "give me a pep talk, i'm nervous" → a proper pep talk.
+- Tests: +1; fast suites **458 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/emotional-state-not-intro.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

@@ -270,7 +270,10 @@ _STATE_WORDS = {
     "feeling", "trying", "looking", "getting", "going", "being", "a", "the",
     "and", "today", "tonight", "now", "sure", "serious", "curious", "upset",
     "angry", "busy", "stressed", "anxious", "exhausted", "overwhelmed", "lonely",
-    "depressed", "down",
+    "depressed", "down", "nervous", "worried", "sick", "unwell", "frustrated",
+    "calm", "confused", "proud", "content", "guilty", "relieved", "hopeful",
+    "sleepy", "awake", "ready", "still", "alone", "tired", "amazed", "awkward",
+    "fine", "okay", "hungry", "in", "up", "off", "around", "here",
 }
 
 

@@ -134,6 +134,14 @@ class DialogueFilterTests(unittest.TestCase):
         # a natural reply is not rejected
         self.assertFalse(_is_forbidden("Novi — I live in this room."))
 
+    def test_emotional_state_not_an_introduction(self):
+        # "i'm nervous / worried / down" are states, not self-introductions.
+        for s in ["i'm nervous", "i'm worried about the exam", "give me a pep talk, i'm nervous"]:
+            self.assertFalse(_is_introduction(s), s)
+        # real names are still introductions
+        self.assertTrue(_is_introduction("i'm alex"))
+        self.assertTrue(_is_introduction("my name is alice"))
+
     def test_guardrails_do_not_reject_legitimate_replies(self):
         # Replies that legitimately mention conversation/remembering must pass.
         for s in ["I'd love to keep this conversation going.",

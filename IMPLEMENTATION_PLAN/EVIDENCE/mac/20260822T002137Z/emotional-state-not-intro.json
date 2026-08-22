@@ -1,0 +1,21 @@
+{
+  "slice": "Natural conversation round 22: emotional states not mistaken for introductions",
+  "states_not_intros": {
+    "i'm nervous": true,
+    "i'm worried about the exam": true,
+    "give me a pep talk, i'm nervous": true,
+    "i'm feeling down today": true
+  },
+  "real_names_still_intros": {
+    "i'm alex": true,
+    "my name is alice": true,
+    "i'm john": true
+  },
+  "before": {
+    "give me a pep talk, i'm nervous": "Nervous \u2014 nice to put a name to you. I'll remember that."
+  },
+  "after": {
+    "give me a pep talk, i'm nervous": "Hey. I'm here. Take a breath \u2014 in, and out. You've gotten through things before. You've got this."
+  },
+  "mechanism": "expanded the state-word blocklist (nervous, worried, frustrated, calm, proud, etc.) so 'i'm <state>' is never read as a self-introduction, while real names still are"
+}
