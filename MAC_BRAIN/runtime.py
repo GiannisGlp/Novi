@@ -49,6 +49,7 @@ from .dialogue import (
     _is_realtime_data_question,
     _is_assurance_question,
     _is_engagement_check,
+    _is_memory_question,
     _is_embodiment_question,
     _is_future_question,
     _is_recall_question,
@@ -1410,6 +1411,7 @@ class MacBrain:
         is_embodiment = _is_embodiment_question(text)
         is_future = _is_future_question(text)
         is_bodily_need = _is_bodily_need_question(text)
+        is_memory = _is_memory_question(text)
         can_physical = self._has_physical_action_capability()
         if is_future:
             system += (
@@ -1431,6 +1433,13 @@ class MacBrain:
                 "Do NOT say you like or dislike a food or drink (e.g. don't say 'I like coffee' or 'my favorite food is...'). "
                 "Answer honestly and briefly (e.g. 'I don't eat — no body to feed') and don't invent a meal, a dream, a "
                 "night's sleep, or a taste. You can ask about their preference instead."
+            )
+        if is_memory:
+            # Asked whether Novi remembers/forgets — answer warmly, no internals.
+            system += (
+                " The user asked whether you remember them or will forget them. Reassure them warmly and honestly: "
+                "you do remember what they share with you and you won't forget them. Keep it in plain, warm language. "
+                "Do NOT mention buffers, sessions, internal processing, memory architecture, or any implementation detail."
             )
         if is_reminder:
             # Don't promise a timed push notification Novi can't deliver.
@@ -1536,6 +1545,9 @@ class MacBrain:
         if _is_repeat_question(text):
             reason = "You asked me to repeat what I said — I acknowledged it naturally instead of a topic follow-up"
             return {"text": "Sure — which part would you like me to repeat, or shall I say it all again?", "fallback": True, "reason": reason, "grounding": {"route": "repeat", **out}}
+        if is_memory:
+            reason = "You asked whether I remember/forget you — I reassured you warmly, no implementation details"
+            return {"text": "Of course — I remember what you've shared, and I'm not going to forget you.", "fallback": True, "reason": reason, "grounding": {"route": "memory", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

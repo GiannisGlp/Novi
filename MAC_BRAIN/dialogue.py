@@ -77,6 +77,13 @@ _FORBIDDEN = [
         r"\bsystem prompt\b",
         r"\bmy (?:last|previous) message was blank\b",
         r"\b(?:token|context) (?:window|limit|budget)\b",
+        # Memory/buffer implementation-speak when asked whether Novi forgets.
+        r"\b(?:separate )?(?:forget|delete) button\b",
+        r"\btemporary buffer\b",
+        r"\b(?:erasing|clearing|cleared|wiped|erased|erases) (?:anything |everything )?between sessions\b",
+        r"\bmy memory is built into how i process\b",
+        r"\bshapes my responses\b",
+        r"\bi don'?t (?:have|keep) a separate memory\b",
         r"\bi was (?:not )?(?:sent|given|shown) (?:any )?(?:previous|prior) message\b",
         r"\bi (?:wasn'?t|was not) (?:sent|given|shown) (?:any )?(?:previous|prior) message\b",
         r"\b(?:no|no previous|no prior) message was (?:sent|given|shown)\b",
@@ -611,6 +618,20 @@ _ENGAGEMENT_RE = re.compile(
 
 def _is_engagement_check(text: str) -> bool:
     return bool(text) and bool(_ENGAGEMENT_RE.search(text))
+
+
+# Memory/forgetting questions ("will you forget me?", "do you remember me?") —
+# answer warmly and honestly, never with buffer/session implementation-speak.
+_MEMORY_RE = re.compile(
+    r"\b(?:will you forget me|are you going to forget|do you (?:remember|forget) (?:me|things)\b|"
+    r"do you (?:remember|forget) me\b|will you remember me|is your memory|"
+    r"how (?:good |well )?(?:is|'s) your memory|are you going to remember me)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_memory_question(text: str) -> bool:
+    return bool(text) and bool(_MEMORY_RE.search(text))
 
 
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",

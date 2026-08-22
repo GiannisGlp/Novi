@@ -35,6 +35,7 @@ from MAC_BRAIN.dialogue import (
     _is_assurance_question,
     _is_repeat_question,
     _is_engagement_check,
+    _is_memory_question,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -168,6 +169,19 @@ class DialogueFilterTests(unittest.TestCase):
             self.assertTrue(_is_future_question(s), s)
         self.assertFalse(_is_future_question("what's the time?"))
         self.assertFalse(_is_future_question("what happened yesterday?"))
+
+    def test_memory_question_detection(self):
+        # "will you forget me?" is relational, not a topic or implementation-speak.
+        for s in ["will you forget me?", "are you going to forget me?", "do you remember me?"]:
+            self.assertTrue(_is_memory_question(s), s)
+        self.assertFalse(_is_memory_question("what's the time?"))
+
+    def test_memory_impl_leak_is_forbidden(self):
+        for s in ["my memory is built into how I process things.",
+                  "I don't have a separate 'forget' button or a temporary buffer.",
+                  "nothing is erased between sessions.",
+                  "it shapes my responses."]:
+            self.assertTrue(_is_forbidden(s), s)
 
     def test_engagement_check_detection(self):
         # "are you there / can you hear me" deserve a warm presence reply, not a topic.

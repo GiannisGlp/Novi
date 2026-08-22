@@ -1,0 +1,22 @@
+{
+  "slice": "Natural conversation round 34: 'will you forget me?' answered warmly, never with buffer/session implementation-speak",
+  "detected": {
+    "will you forget me?": true,
+    "are you going to forget me?": true,
+    "do you remember me?": true,
+    "what's the time?": false
+  },
+  "impl_speak_now_forbidden": {
+    "my memory is built into how I process things.": true,
+    "I don't have a separate 'forget' button or a temporary buffer.": true,
+    "nothing is erased between sessions.": true
+  },
+  "before": {
+    "are you going to forget me?": "my memory is built into how I process things \u2014 I don't have a separate 'forget' button or a temporary buffer that clears."
+  },
+  "after": {
+    "are you going to forget me?": "Of course \u2014 I remember what you've shared, and I'm not going to forget you.",
+    "do you remember me?": "Honestly, I don't have much on you yet \u2014 tell me a bit about yourself and I'll remember it."
+  },
+  "mechanism": "memory/forgetting questions route to a warm reassuring steer + fallback; buffer/session/process phrasings are forbidden and regenerated"
+}

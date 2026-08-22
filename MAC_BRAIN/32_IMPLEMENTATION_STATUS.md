@@ -1048,6 +1048,21 @@ answered with a warm, consistent presence acknowledgment, not a program-y meta r
 - Tests: +1; fast suites **468 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/engagement-checks-and-endtoend.json`.
 
+## Memory questions, no implementation-speak (round 34 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "are you going to forget me?" → "…my memory is built into how I
+process things — I don't have a separate 'forget' button or a temporary buffer."
+Novi leaked implementation detail.
+
+- `_is_memory_question` detects "will you forget me / do you remember me",
+  routed to a warm reassuring steer + fallback (no internals).
+- Forbidden: "temporary buffer", "forget button", "erased between sessions",
+  "memory is built into how I process", "shapes my responses".
+- Real test: "are you going to forget me?" → "You're safe with me — I remember
+  what you share, and I won't forget you."
+- Tests: +2; fast suites **470 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/memory-questions-no-impl-speak.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
