@@ -90,6 +90,23 @@ from .dialogue import (
 )
 from .self_model import SelfModel, build_self_model
 from .temporal import TemporalModel
+from .world_model import WorldModel as UnifiedWorldModel
+from .world_model import (
+    PERSON as WM_PERSON,
+    OBJECT as WM_OBJECT,
+    ROOM as WM_ROOM,
+    BUILDING as WM_BUILDING,
+    PLACE as WM_PLACE,
+    DEVICE as WM_DEVICE,
+    OBSERVED as WM_OBSERVED,
+    INFERRED as WM_INFERRED,
+    UNKNOWN as WM_UNKNOWN,
+)
+from .context_assembler import ContextAssembler, ContextRequest
+from .attention import AttentionRanker
+from .governance_guard import GovernanceGuard, ActionProposal as GovernanceActionProposal, GovernanceGrant
+from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode, SYSTEM_0, SYSTEM_1, SYSTEM_2, SYSTEM_3
+from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
 from .models import (
     DeliberativeReasoningProvider,
     DeterministicReasoningProvider,
@@ -167,6 +184,16 @@ class MacBrain:
         self.reflection = ReflectionEngine()
         self.stt = stt or DeterministicSTTProvider()
         self.world = TemporalWorldModel()
+        self.unified_world = UnifiedWorldModel()
+        self.context_assembler = ContextAssembler()
+        self.attention_ranker = AttentionRanker()
+        self.governance_guard = GovernanceGuard()
+        self.multi_speed = MultiSpeedRuntime()
+        self.closed_loop = ClosedLoopRuntime()
+        self._last_attention_candidates: list[dict[str, Any]] = []
+        self._last_context_package: dict[str, Any] | None = None
+        self._last_governance_grant: dict[str, Any] | None = None
+        self._last_loop_snapshot: dict[str, Any] | None = None
         self.memory = DurableMemoryStore(store_path) if store_path else DeterministicMemoryManager()
         if body is None and isinstance(self.memory, DurableMemoryStore):
             pose = self.memory.load_body()
@@ -291,6 +318,9 @@ class MacBrain:
 
     def start(self) -> None:
         self.brain.start()
+        # Register System-0 safety check (deterministic, never waits on LLM).
+        if not self.multi_speed.tasks_by_tier(SYSTEM_0):
+            self.multi_speed.register(SYSTEM_0, "safety_check", self._system0_safety_check, priority=1.0)
         self._emit("MAC_BRAIN.started", {"run_id": self.run_id})
 
     def step(self) -> dict[str, Any]:
@@ -299,13 +329,23 @@ class MacBrain:
         if self.camera is None:
             raise RuntimeError("camera provider is not configured")
         self._cycle += 1
+        # Multi-speed runtime: System-0 safety check runs first (never waits on LLM).
+        msr_results = self.multi_speed.step({"cycle": self._cycle})
+        if not self.multi_speed.system0_safety_clear:
+            self._emit("safety.gate_failed", {"cycle": self._cycle, "results": msr_results})
+            # In safe-minimum mode, skip the rest of the step.
+            self.multi_speed.set_state(AutonomyState.SAFE_MINIMUM)
+            return {"cycle": self._cycle, "safety_gate": "failed", "detections": [], "action": "stop", "authorized": False}
         frame = self.camera.read()
         self._emit("sensor.camera.frame", {"frame_id": frame.frame_id, "width": frame.width, "height": frame.height, "captured_at": frame.captured_at, "metadata": frame.metadata})
+        # Closed-loop OBSERVE: record the start of a new cycle.
+        self.closed_loop.observe({"cycle": self._cycle, "frame_id": frame.frame_id})
         evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
         self._emit("perception.completed", {"frame_id": evidence.frame_id, "detection_count": len(evidence.detections), "provenance": dict(evidence.provenance)})
         observations = tuple(SensorObservation(cycle=self._cycle, source=f"{self.config.sensor_id}.perception", entity=detection.label, location=None, state="present", confidence=detection.confidence, captured_cycle=self._cycle) for detection in evidence.detections)
         self.world.apply_many(observations)
         self._admit_detections(evidence.detections)
+        self._update_unified_world(evidence.detections)
         # Cognition 2.0: two-pass — build a preliminary situation to form the
         # recall query, then ground the full situation in knowledge + goal + memory.
         prelim = self.cognition.build_situation(self.world.state, observations, cycle=self._cycle)
@@ -330,6 +370,21 @@ class MacBrain:
             "hypotheses": list(cognitive.reasoning.hypotheses),
             "relations": list(cognitive.situation.relations),
         })
+
+        # Attention candidates: Cognition emits ranked candidates for Autonomy.
+        goal_target = goal_ctx.get("target") if goal_ctx else None
+        attention_candidates = self.attention_ranker.rank(
+            self.unified_world,
+            active_goal_target=str(goal_target) if goal_target else None,
+            known_entities=self._seen_entities,
+        )
+        self._last_attention_candidates = [c.snapshot() for c in attention_candidates[:10]]
+        if attention_candidates:
+            self._emit("cognition.attention", {
+                "cycle": self._cycle,
+                "candidates": self._last_attention_candidates,
+                "top_action": attention_candidates[0].suggested_action,
+            })
 
         # Deepen cognition: update beliefs and learn/check expectations from current detections.
         now = datetime.now(timezone.utc).isoformat()
@@ -383,6 +438,8 @@ class MacBrain:
             self._emit("reasoning.route", {"cycle": self._cycle, "route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")})
             route_info = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
         self._emit("reasoning.completed", {"cycle": self._cycle, "action": intent.action, "rationale": intent.rationale})
+        # Closed-loop PLAN: record the reasoning decision.
+        self.closed_loop.plan({"action": intent.action, "rationale": intent.rationale, "cycle": self._cycle})
         deliberation = getattr(self.reasoning, "last_deliberation", None)
         if deliberation is not None:
             self._emit("reasoning.deliberation", {"cycle": self._cycle, "action": intent.action, "deliberation": deliberation})
@@ -444,16 +501,49 @@ class MacBrain:
         body_before = self.body.snapshot()
         proposal = RuntimeActionProposal(action=action, parameters=parameters, reason=reason, correlation_id=str(uuid4()))
         decision = self.brain.propose(proposal)
-        if decision.authorized:
+
+        # Governance guard: a runtime guard between proposal and execution.
+        # Models never command action; even deterministic actions pass it.
+        risk_class = self._risk_class_for_action(action)
+        gov_proposal = GovernanceActionProposal(
+            proposal_id=proposal.correlation_id,
+            action=action,
+            parameters=parameters,
+            risk_class=risk_class,
+            source="deterministic",
+            rationale=reason,
+        )
+        gov_grant = self.governance_guard.evaluate(gov_proposal)
+        governance_allowed = gov_grant.is_allowed
+        self._last_governance_grant = gov_grant.snapshot()
+        self._emit("governance.evaluated", {
+            "cycle": self._cycle,
+            "action": action,
+            "risk_class": risk_class,
+            "decision": gov_grant.decision,
+            "reason": gov_grant.reason,
+        })
+
+        # Action executes only if BOTH the brain authorizes AND the governance guard allows.
+        authorized = decision.authorized and governance_allowed
+        if authorized:
             outcome = self.brain.execute(proposal, decision)
             virtual_state = self.body.execute(action, **parameters)
         else:
             outcome = None
             virtual_state = self.body.snapshot()
-        self._emit("action.completed", {"action": action, "authorized": decision.authorized, "outcome": outcome.detail if outcome else decision.reason, "virtual_body": virtual_state})
+        self._emit("action.completed", {
+            "action": action,
+            "authorized": authorized,
+            "brain_authorized": decision.authorized,
+            "governance_allowed": governance_allowed,
+            "governance_decision": gov_grant.decision,
+            "outcome": outcome.detail if outcome else (decision.reason if not decision.authorized else gov_grant.reason),
+            "virtual_body": virtual_state,
+        })
         # Reflection / self-correction: judge whether the action had its intended effect.
         body_after = self.body.snapshot()
-        effective = self._action_effective(action, body_before, body_after, decision.authorized, cognitive.situation.salient_entities, cognitive.reasoning.inferences)
+        effective = self._action_effective(action, body_before, body_after, authorized, cognitive.situation.salient_entities, cognitive.reasoning.inferences)
         reflection = self.reflection.record(
             cycle=self._cycle,
             action=action,
@@ -462,6 +552,20 @@ class MacBrain:
             note=self._reflection_note(action, effective),
         )
         self._emit("reasoning.reflection", {"cycle": self._cycle, **reflection.snapshot()})
+
+        # Closed-loop ACT + VERIFY: first-class verification of the action outcome.
+        self.closed_loop.act({"action": action, "authorized": authorized, "outcome": LOOP_SUCCESS if effective else LOOP_FAILURE})
+        verify_criteria = self._verify_criteria_for_action(action, goal_was_active)
+        observed_state = {"action_executed": authorized, "body_changed": body_before != body_after, "effective": effective}
+        loop_verify = self.closed_loop.verify(verify_criteria, observed_state)
+        self._last_loop_snapshot = self.closed_loop.snapshot()
+        self._emit("loop.verify", {
+            "cycle": self._cycle,
+            "phase": loop_verify.phase,
+            "outcome": loop_verify.outcome,
+            "met": self.closed_loop._verify_result.get("met", []),
+            "unmet": self.closed_loop._verify_result.get("unmet", []),
+        })
         soul_success: bool | None = None
         if goal_was_active and not self.goals.has_active:
             terminal = self.goals.history[-1]
@@ -777,6 +881,116 @@ class MacBrain:
             if admission.accepted and admission.memory_id:
                 self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
             self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "perception", "accepted": admission.accepted, "entity": detection.label})
+
+    def _update_unified_world(self, detections: Any) -> None:
+        """Update the unified WorldModel with perception detections.
+
+        Each detection is admitted as a typed entity with epistemic status
+        OBSERVED (or UNKNOWN if confidence is very low). Known entity labels
+        from the knowledge graph and person identity are used to assign
+        entity types.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        from .kgraph import infer_entity_type
+        for detection in detections:
+            label = detection.label
+            entity_type = infer_entity_type(label)
+            # Map kgraph types to world_model types.
+            wm_type = {
+                "person": WM_PERSON,
+                "place": WM_PLACE,
+                "building": WM_BUILDING,
+                "object": WM_OBJECT,
+            }.get(entity_type, WM_OBJECT)
+            entity_id = f"det:{label}:{self._cycle}"
+            # Check if this label is already in the world model (by label).
+            existing = self.unified_world.resolve(label)
+            if existing is not None:
+                entity_id = existing.entity_id
+            else:
+                self.unified_world.add_entity(
+                    entity_id, wm_type,
+                    labels=[label],
+                    epistemic_status=WM_OBSERVED if detection.confidence >= 0.5 else WM_UNKNOWN,
+                    confidence=detection.confidence,
+                    created_at=now,
+                )
+            self.unified_world.update_entity_state(
+                entity_id, "presence", "present",
+                epistemic_status=WM_OBSERVED,
+                confidence=detection.confidence,
+                source=self.config.sensor_id,
+                timestamp=now,
+            )
+            self._seen_entities.add(entity_id)
+
+    # Risk class mapping for governance (docs/02-autonomy/09 §Risk Classes).
+    # In the brain phase, the body is virtual (simulated actuation), so
+    # movement actions are R1 (reversible digital) not R3 (physical movement).
+    _R0_ACTIONS = frozenset({"wait", "observe", "stop", "idle"})
+    _R1_ACTIONS = frozenset({"speak", "move_forward", "turn_left", "turn_right"})
+
+    def _risk_class_for_action(self, action: str) -> str:
+        """Map an action to its risk class for governance evaluation."""
+        if action in self._R0_ACTIONS:
+            return "R0"
+        if action in self._R1_ACTIONS:
+            return "R1"
+        return "R1"  # default to reversible digital action
+
+    def _system0_safety_check(self, ctx: dict[str, Any]) -> dict[str, Any]:
+        """Deterministic System-0 safety check — never waits on an LLM.
+
+        Checks that the runtime is in a safe state for execution.
+        """
+        safe = self.brain.lifecycle is Lifecycle.ACTIVE
+        return {"safe": safe, "deterministic": True}
+
+    def _verify_criteria_for_action(self, action: str, goal_was_active: bool) -> tuple[str, ...]:
+        """Determine the success criteria for the closed-loop VERIFY step."""
+        if action in ("stop", "wait", "idle"):
+            return ("action_executed",)
+        if goal_was_active:
+            return ("action_executed", "effective")
+        return ("action_executed",)
+
+    def _assemble_world_context(self, text: str, person: str = "") -> dict[str, Any]:
+        """Assemble a bounded, provenance-filtered context package from the
+        unified world model for dialogue/reasoning grounding (Step 1).
+
+        Returns a compact dict with visible entities, relations, attention
+        summary, and contradictions — all provenance-tagged.
+        """
+        if not self.unified_world.entities:
+            return {}
+        request = ContextRequest(
+            speaker_label=person if person else None,
+            utterance=text,
+            token_budget=2000,
+            privacy_scope="default",
+        )
+        ctx = self.context_assembler.assemble(self.unified_world, request)
+        self._last_context_package = ctx.to_dict()
+        return {
+            "visible_entities": [
+                {"id": e.data.get("entity_id"), "type": e.data.get("entity_type"),
+                 "label": (e.data.get("labels") or [""])[0] if e.data.get("labels") else "",
+                 "epistemic_status": e.epistemic_status, "confidence": e.confidence}
+                for e in ctx.entities()
+            ],
+            "relations": [
+                {"subject": r.data.get("subject_id") or r.data.get("subject"),
+                 "type": r.data.get("relation_type") or r.data.get("predicate"),
+                 "object": r.data.get("object_id") or r.data.get("object"),
+                 "confidence": r.confidence}
+                for r in ctx.relations()
+            ],
+            "contradictions": list(ctx.contradictions),
+            "uncertainty": self.unified_world.uncertainty_summary(),
+            "attention_top": self._last_attention_candidates[:3] if self._last_attention_candidates else [],
+            "item_count": len(ctx.items),
+            "items_dropped": ctx.items_dropped,
+        }
 
     # Capitalized words that are not real proper nouns (start-of-sentence articles,
     # pronouns, small function words) are not candidate entities.
@@ -1560,6 +1774,7 @@ class MacBrain:
             "relationship": relationship,
             "self_model": self_model,
             "experience": experience,
+            "world_context": self._assemble_world_context(text, person or addressee_name),
         }
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")
