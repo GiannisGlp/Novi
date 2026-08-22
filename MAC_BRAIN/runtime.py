@@ -45,6 +45,7 @@ from .dialogue import (
     _is_physical_action_request,
     _is_acknowledgment,
     _is_bodily_need_question,
+    _is_repeat_question,
     _is_realtime_data_question,
     _is_assurance_question,
     _is_embodiment_question,
@@ -1519,6 +1520,9 @@ class MacBrain:
         if is_bodily_need:
             reason = "You asked what I ate/slept/dreamed — I have no body, so I said so instead of fabricating a meal or dream"
             return {"text": "I don't have a body, so I don't eat, sleep, or dream. But tell me about yours — did you get a good night's rest?", "fallback": True, "reason": reason, "grounding": {"route": "bodily_honesty", **out}}
+        if _is_repeat_question(text):
+            reason = "You asked me to repeat what I said — I acknowledged it naturally instead of a topic follow-up"
+            return {"text": "Sure — which part would you like me to repeat, or shall I say it all again?", "fallback": True, "reason": reason, "grounding": {"route": "repeat", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

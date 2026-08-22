@@ -1,0 +1,20 @@
+{
+  "slice": "Natural conversation round 29: repeat requests handled; no implementation leaks",
+  "repeat_not_topic": {
+    "what did you just say?": true,
+    "can you repeat that?": true,
+    "say it again please": true,
+    "what's the time?": false
+  },
+  "impl_leaks_now_forbidden": {
+    "my last message was blank, just the system prompt.": true,
+    "due to the context window limit, I can't see earlier turns.": true
+  },
+  "before": {
+    "what did you just say?": "my last message was blank, just the system prompt. Did I miss something, or are you testing me?"
+  },
+  "after": {
+    "can you repeat that?": "Hmm? I'm not sure what I said before \u2014 this looks like our first exchange. Could you remind me what you'd like me to repeat?"
+  },
+  "mechanism": "repeat requests are routed as repeat questions (not a topic); replies that mention the system prompt / blank message / context limit are forbidden and regenerated"
+}

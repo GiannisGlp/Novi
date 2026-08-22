@@ -71,6 +71,14 @@ _FORBIDDEN = [
         r"\bno (?:hidden agenda|secret layers|agenda)\b",
         r"\bembodied ai being\b",
         r"\bi have no hidden agenda\b",
+        # Implementation leaks: never mention the system prompt, token budget, or
+        # "my last message was blank" — just answer or ask for a repeat.
+        r"\bsystem prompt\b",
+        r"\bmy (?:last|previous) message was blank\b",
+        r"\b(?:token|context) (?:window|limit|budget)\b",
+        r"\bi was (?:not )?(?:sent|given|shown) (?:any )?(?:previous|prior) message\b",
+        r"\bi (?:wasn'?t|was not) (?:sent|given|shown) (?:any )?(?:previous|prior) message\b",
+        r"\b(?:no|no previous|no prior) message was (?:sent|given|shown)\b",
     )
 ]
 
@@ -571,6 +579,21 @@ def _is_assurance_question(text: str) -> bool:
 
 def assurance_reply(cycle: int = 0) -> str:
     return _ASSURANCE_REPLIES[cycle % len(_ASSURANCE_REPLIES)]
+
+
+# Repeat requests ("what did you just say?", "say that again", "can you repeat
+# that?") are about the prior turn, not a topic — they must not hit the topic
+# follow-up ("no good answer on say").
+_REPEAT_RE = re.compile(
+    r"\b(?:repeat (?:that|it|this)?|say (?:that|it) again|say it again|"
+    r"what did you (?:just )?say\b|what did you say\b|can you repeat|pardon\b|"
+    r"i didn'?t (?:catch|hear) that|say again|run that by me)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_repeat_question(text: str) -> bool:
+    return bool(text) and bool(_REPEAT_RE.search(text))
 
 
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",

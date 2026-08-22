@@ -33,6 +33,7 @@ from MAC_BRAIN.dialogue import (
     _is_bodily_need_question,
     _is_embodiment_question,
     _is_assurance_question,
+    _is_repeat_question,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -177,6 +178,18 @@ class DialogueFilterTests(unittest.TestCase):
         for s in ["can you keep a secret?", "promise you won't tell?", "can i trust you?"]:
             self.assertTrue(_is_assurance_question(s), s)
         self.assertFalse(_is_assurance_question("what's the time?"))
+
+    def test_repeat_question_not_topic(self):
+        # "what did you just say?" is about the prior turn, not a topic.
+        for s in ["what did you just say?", "can you repeat that?", "say it again please"]:
+            self.assertTrue(_is_repeat_question(s), s)
+        self.assertFalse(_is_repeat_question("what's the time?"))
+
+    def test_implementation_leak_is_forbidden(self):
+        # Novi must never mention its system prompt / blank message.
+        for s in ["my last message was blank, just the system prompt.",
+                  "due to the context window limit, I can't see earlier turns."]:
+            self.assertTrue(_is_forbidden(s), s)
 
     def test_guardrails_do_not_reject_legitimate_replies(self):
         # Replies that legitimately mention conversation/remembering must pass.

@@ -980,6 +980,20 @@ in the state/action blocklist.
 - Tests: +1; fast suites **464 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/departure-not-intro.json`.
 
+## Repeat requests + no implementation leaks (round 29 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "what did you just say?" → "…my last message was blank, just the
+system prompt." — Novi leaked implementation detail, and repeat requests could fall
+through to the topic follow-up ("no good answer on say").
+
+- `_is_repeat_question` detects "what did you just say / say that again / can you
+  repeat / pardon", routed as a repeat request (not a topic).
+- Forbidden: "system prompt", "context/token window", "my last message was blank",
+  "wasn't given any previous message" — so impl leaks are rejected and regenerated.
+- Real test: "can you repeat that?" → "Hmm? I'm not sure what I said before…".
+- Tests: +2; fast suites **466 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/repeat-and-impl-leak.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.
