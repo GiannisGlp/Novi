@@ -1,0 +1,22 @@
+{
+  "slice": "Natural conversation round 44: distress/empathy statements ('my head hurts', 'i miss my dog') get empathy in fallback, never a topic follow-up",
+  "detected": {
+    "my head hurts": true,
+    "i can't sleep": true,
+    "i miss my dog": true,
+    "today was rough": true,
+    "long day at work": true,
+    "i miss you": true,
+    "it's a beautiful day": false,
+    "what's the time?": false
+  },
+  "fallback_replies": {
+    "my head hurts": "I hear you \u2014 that's a lot to carry. I'm here if you want to talk it out, or we can just sit with it.",
+    "i can't sleep": "I hear you \u2014 that's a lot to carry. I'm here if you want to talk it out, or we can just sit with it.",
+    "i miss my dog": "I hear you \u2014 that's a lot to carry. I'm here if you want to talk it out, or we can just sit with it."
+  },
+  "real_llm_reply": {
+    "my head hurts": "Oh no, I'm sorry to hear that. Is it a sharp pain or more of a dull ache?"
+  },
+  "mechanism": "broadened the fallback emotional detector to physical pain, trouble sleeping, missing someone, and rough/long days"
+}

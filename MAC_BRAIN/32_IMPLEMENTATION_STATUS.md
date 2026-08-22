@@ -1192,6 +1192,19 @@ because it was neither a physical-action nor capability request.
 - Tests: +1; fast suites **481 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/remote-action-honesty.json`.
 
+## Empathy for distress statements (round 44 of the naturalness objective) (status: IMPLEMENTED)
+
+"my head hurts" / "i can't sleep" / "i miss my dog" reached the catch-all
+("I'm still forming my thoughts on hurts") in the fallback path.
+
+- Broadened the fallback emotional detector to physical pain, trouble sleeping,
+  missing someone, and rough/long days/nights. Real LLM still gives richer
+  empathy ("Oh no, I'm sorry to hear that. Is it a sharp pain or more of a dull
+  ache?"); the fallback now responds with warmth too.
+- Verified no over-triggering ("it's a beautiful day" → not emotional).
+- Tests: +1; fast suites **482 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/empathy-statements.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

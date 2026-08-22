@@ -458,6 +458,11 @@ _EMOTIONAL_RE = [
     re.compile(r"\bi(?:'m| am)?\s+(?:really |so |feeling )?(?:sad|down|depressed|stressed|anxious|tired|exhausted|overwhelmed|lonely|scared|nervous|hopeless|ok|fine|happy|great|good|bored)\b", re.IGNORECASE),
     re.compile(r"\bi(?:'m|'ve )?\s*(?:had|been having) (?:a |a really )?(?:rough|long|hard|terrible|awful|bad) (?:day|week|time)\b", re.IGNORECASE),
     re.compile(r"\bi(?:'m| am)?\s+(?:struggling|not doing well|having a hard time)\b", re.IGNORECASE),
+    re.compile(r"\bi (?:really |so )?miss (?:my |our |the |them |him |her |you\b)", re.IGNORECASE),
+    re.compile(r"\b(?:my |a )?(?:head|stomach|back|neck|knee|leg|arm|throat|tooth)\s*(?:is )?(?:hurts|aches|aching|killing me|sore)\b", re.IGNORECASE),
+    re.compile(r"\bi can'?t (?:get to |fall )?(?:to )?sleep\b|i couldn'?t sleep\b", re.IGNORECASE),
+    re.compile(r"\b(?:today|tonight|this week|the day) (?:was|is|has been) (?:really |so )?(?:rough|hard|awful|brutal|long|tough)\b", re.IGNORECASE),
+    re.compile(r"\b(?:a )?(?:long|rough|hard|tough|bad) (?:day|week|night)\b", re.IGNORECASE),
 ]
 
 _EMOTIONAL_REPLIES = [

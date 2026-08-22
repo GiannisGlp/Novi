@@ -443,6 +443,15 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
 
+    def test_empathy_statement_detection(self):
+        # "my head hurts / i can't sleep / i miss my dog / today was rough" are
+        # distress statements that get empathy, not a topic follow-up.
+        for s in ["my head hurts", "i can't sleep", "i miss my dog",
+                  "today was rough", "long day at work", "i miss you"]:
+            self.assertTrue(_is_emotional_statement(s), s)
+        self.assertFalse(_is_emotional_statement("it's a beautiful day"))
+        self.assertFalse(_is_emotional_statement("what's the time?"))
+
     def test_remote_action_request_detection(self):
         # "send an email / book a flight / call my mom / order a pizza" are
         # actions Novi can't do — answer honestly, never "no good answer".
