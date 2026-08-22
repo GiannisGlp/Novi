@@ -1243,6 +1243,18 @@ name to you" (intro false-positive).
 - Tests: +1; fast suites **485 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/gerund-state-not-intro.json`.
 
+## State adjectives not introductions (round 48 of the naturalness objective) (status: IMPLEMENTED)
+
+A sweep of "i'm X" found more states read as names: "i'm great/new/annoyed/
+thrilled/all set" → "nice to put a name to you" (pre-LLM deterministic, so it
+affected real usage).
+
+- Added common state adjectives (great, new, annoyed, thrilled, all, glad,
+  cheerful, calm, delighted…) to the intro false-positive guard.
+- Real names still recognized ("i'm Jake", "i'm Miguel", "my name is bob").
+- Tests: +1; fast suites **486 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/state-adjectives-not-intro.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

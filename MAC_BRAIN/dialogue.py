@@ -300,6 +300,10 @@ _STATE_WORDS = {
     "failing", "losing", "trying", "wondering", "waiting", "struggling",
     "there", "quitting", "moving", "starting", "ending", "betting", "saying",
     "asking", "telling", "thinking", "lying", "sitting", "standing",
+    "great", "new", "annoyed", "thrilled", "delighted", "surprised", "shocked",
+    "grateful", "distracted", "exhausted", "free", "mad", "calm", "content",
+    "upset", "busy", "amused", "cheerful", "glad", "pleased", "relaxed",
+    "curious", "certain", "unsure", "uncertain", "lost", "stuck", "all",
 }
 
 

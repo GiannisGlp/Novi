@@ -1,0 +1,24 @@
+{
+  "slice": "Natural conversation round 48: 'i'm great/new/annoyed/thrilled/all set' no longer read as names",
+  "before": {
+    "i'm great": "Great \u2014 nice to put a name to you. I'll remember that.",
+    "i'm all set": "All Set \u2014 nice to put a name to you. I'll remember that."
+  },
+  "not_intro": [
+    "i'm great",
+    "i'm new",
+    "i'm annoyed",
+    "i'm thrilled",
+    "i'm all set",
+    "i'm happy",
+    "i'm good"
+  ],
+  "still_intro": [
+    "i'm Jake",
+    "i'm Miguel",
+    "i'm sarah",
+    "i'm John Smith",
+    "my name is bob"
+  ],
+  "mechanism": "added common state adjectives (great, new, annoyed, thrilled, all, glad, cheerful...) to the intro false-positive guard"
+}

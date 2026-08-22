@@ -445,6 +445,13 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
 
+    def test_state_adjectives_not_intro(self):
+        # "i'm great/new/annoyed/thrilled/all set" are states, not names.
+        for s in ["i'm great", "i'm new", "i'm annoyed", "i'm thrilled", "i'm all set"]:
+            self.assertFalse(_is_introduction(s), s)
+        # Real names still recognized.
+        self.assertTrue(_is_introduction("i'm Jake"))
+
     def test_gerund_phrase_not_intro(self):
         # "i'm failing at everything" / "i'm working on a project" are states/
         # verb phrases, not self-introductions.
