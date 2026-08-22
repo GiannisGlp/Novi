@@ -108,6 +108,7 @@ from .governance_guard import GovernanceGuard, ActionProposal as GovernanceActio
 from .multi_speed_runtime import MultiSpeedRuntime, AutonomyState, ResourceMode, SYSTEM_0, SYSTEM_1, SYSTEM_2, SYSTEM_3
 from .closed_loop import ClosedLoopRuntime, OBSERVE as LOOP_OBSERVE, VERIFY as LOOP_VERIFY, OUTCOME_SUCCESS as LOOP_SUCCESS, OUTCOME_FAILURE as LOOP_FAILURE
 from .memory_hardening import HardenedMemoryManager, AdmissionResult as HardenedAdmissionResult, RetrievalResult as HardenedRetrievalResult
+from .soul_acceptance import CommunicationDecision
 from .models import (
     DeliberativeReasoningProvider,
     DeterministicReasoningProvider,
@@ -195,6 +196,7 @@ class MacBrain:
         self._last_context_package: dict[str, Any] | None = None
         self._last_governance_grant: dict[str, Any] | None = None
         self._last_loop_snapshot: dict[str, Any] | None = None
+        self.communication_decision = CommunicationDecision()
         # Memory: HardenedMemoryManager (in-memory, canonical contract) or
         # DurableMemoryStore (SQLite, persistent). The hardened manager
         # enforces the write gate, retrieval failure states, contextual trust,
@@ -609,6 +611,8 @@ class MacBrain:
             social_expression = self.social.expression(person, self.relationships, self.soul.affect.dimensions, {"serious": uncertain})
             self._emit("social.interaction", {"cycle": self._cycle, "person": person, "category": self.relationships.category_for(person).value, "expression": social_expression})
         initiative = self._maybe_initiate(person, has_active_goal=self.goals.has_active)
+        # CommunicationDecision: advance fatigue cooldown each cycle.
+        self.communication_decision.tick()
         return {
             "run_id": self.run_id,
             "cycle": self._cycle,
@@ -618,7 +622,7 @@ class MacBrain:
             "reasoning_confidence": cognitive.reasoning.confidence,
             "reasoning_route": route_info,
             "action": action,
-            "authorized": decision.authorized,
+            "authorized": authorized,
             "virtual_body": virtual_state,
             "goal": goal_info,
             "soul": {"tone": tone["tone"], "identity": self.soul.identity.name, "affect": self.soul.affect.dimensions},
@@ -631,6 +635,11 @@ class MacBrain:
             "hearing": {"events": self._last_audio_events},
             "observability": observability,
             "plan": active_plan.snapshot() if active_plan is not None and active_plan.status == "running" else (active_plan.snapshot() if active_plan else None),
+            "communication": {
+                "fatigue_level": self.communication_decision.fatigue_level,
+                "interaction_count": self.communication_decision.interaction_count,
+                "is_fatigued": self.communication_decision.is_fatigued,
+            },
         }
 
     def consolidate(self, now: str | None = None) -> None:
@@ -1317,7 +1326,10 @@ class MacBrain:
         if person and self.preferences.has_for(person, "response_length"):
             scope["response_length"] = self.preferences.preference_for(person, "response_length")
         self._emit("audio.speech.requested", {"text": text, **scope})
+        self.communication_decision.set_speaking(True)
         self.speaker.speak(text)
+        self.communication_decision.set_speaking(False)
+        self.communication_decision.record_interaction()
         self._emit("audio.speech.completed", {"text": text})
 
     def _chat_knowledge(self, text: str, limit: int = 6) -> str:
@@ -1595,6 +1607,29 @@ class MacBrain:
                      recent_novi: list[str] | None = None) -> dict[str, Any]:
         """Compose a natural conversational reply (Brain speech-runtime layer).
 
+        Wraps _compose_reply_impl with CommunicationDecision: records each
+        successful interaction and respects prefer-silence / social-fatigue.
+        """
+        result = self._compose_reply_impl(
+            text, person=person, history=history, llm_chat=llm_chat,
+            last_novi_text=last_novi_text, addressee_name=addressee_name,
+            recent_novi=recent_novi,
+        )
+        # Record the interaction if a reply was produced (not silent).
+        if result.get("text") is not None and not result.get("silent"):
+            self.communication_decision.record_interaction()
+            self._emit("communication.interaction", {
+                "cycle": self._cycle,
+                "fatigue_level": self.communication_decision.fatigue_level,
+                "interaction_count": self.communication_decision.interaction_count,
+            })
+        return result
+
+    def _compose_reply_impl(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
+                     llm_chat: Any = None, last_novi_text: str = "", addressee_name: str = "",
+                     recent_novi: list[str] | None = None) -> dict[str, Any]:
+        """Compose a natural conversational reply (Brain speech-runtime layer).
+
         Per docs/06-soul/07 §2: the brain renders the approved communicative act
         from soul/affect/relationship/identity/memory/surroundings; the caller
         supplies conversation history and an optional LLM transport. This keeps
@@ -1608,6 +1643,20 @@ class MacBrain:
         """
         if llm_chat is None:
             return {"text": None, "fallback": False, "grounding": {}}
+        # CommunicationDecision: decide whether, when, and how to communicate.
+        # "Prefer silence" when there's no useful communicative reason; respect
+        # social-fatigue budget and turn-taking (docs/06-soul/08 §S60, §S61).
+        addressee = person or addressee_name
+        should, silence_reason = self.communication_decision.should_speak(
+            has_communicative_reason=True,  # a user message is a communicative reason
+            addressee=addressee,
+        )
+        if not should:
+            self._emit("communication.silent", {
+                "cycle": self._cycle, "reason": silence_reason, "addressee": addressee,
+                "fatigue_level": self.communication_decision.fatigue_level,
+            })
+            return {"text": None, "fallback": False, "grounding": {}, "silent": True, "silence_reason": silence_reason}
         # A time-of-day greeting ("good morning/night") gets a matching, natural
         # reply, not a generic "hey".
         if _is_time_greeting(text):
