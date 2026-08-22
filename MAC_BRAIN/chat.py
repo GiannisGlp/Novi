@@ -79,11 +79,14 @@ class ChatMixin:
         """
         if not self.unified_world.entities:
             return {}
+        # Include derived situations in the context request.
+        situations = tuple(s.snapshot() for s in self.situation_model.current_situations)
         request = ContextRequest(
             speaker_label=person if person else None,
             utterance=text,
             token_budget=2000,
             privacy_scope="default",
+            situations=situations,
         )
         ctx = self.context_assembler.assemble(self.unified_world, request)
         self._last_context_package = ctx.to_dict()
@@ -101,6 +104,7 @@ class ChatMixin:
                  "confidence": r.confidence}
                 for r in ctx.relations()
             ],
+            "situations": situations,
             "contradictions": list(ctx.contradictions),
             "uncertainty": self.unified_world.uncertainty_summary(),
             "attention_top": self._last_attention_candidates[:3] if self._last_attention_candidates else [],

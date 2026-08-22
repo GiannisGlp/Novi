@@ -122,6 +122,7 @@ class ContextRequest:
     token_budget: int = 2000
     privacy_scope: str = "default"  # default | restricted | internal
     referenced_labels: tuple[str, ...] = ()  # labels mentioned in utterance for reference resolution
+    situations: tuple[dict[str, Any], ...] = ()  # derived situations from SituationModel
 
 
 class ContextAssembler:
@@ -161,6 +162,9 @@ class ContextAssembler:
 
         # ---- Layer 5: Relationship ----
         items.extend(self._relationship_layer(world, request))
+
+        # ---- Layer 5b: Situations (from SituationModel) ----
+        items.extend(self._situations_layer(request))
 
         # ---- Layer 6: Long-horizon ----
         items.extend(self._long_horizon_layer(request))
@@ -298,6 +302,19 @@ class ContextAssembler:
                         confidence=rel.confidence,
                         epistemic_status=rel.epistemic_status,
                     ))
+        return items
+
+    def _situations_layer(self, request: ContextRequest) -> list[ContextItem]:
+        """Include derived situations from the SituationModel in the context."""
+        items: list[ContextItem] = []
+        for sit in request.situations:
+            items.append(ContextItem(
+                layer=LAYER_SITUATIONAL, kind="situation",
+                data=sit,
+                source=sit.get("provenance", {}).get("source", "situation_model"),
+                confidence=sit.get("confidence", 0.5),
+                epistemic_status=sit.get("freshness", "fresh").upper() if isinstance(sit.get("freshness"), str) else "FRESH",
+            ))
         return items
 
     def _long_horizon_layer(self, request: ContextRequest) -> list[ContextItem]:

@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from brain.b1_cognition import DeterministicCognition
 from brain.b1_memory import DeterministicMemoryManager
-from brain.b1_world import SensorObservation, TemporalWorldModel
+from brain.b1_world import SensorObservation
 from brain.b2_perception import SpecialistPerception
 from brain.runtime import ActionProposal as RuntimeActionProposal
 from brain.runtime import BrainSupervisor, Lifecycle
@@ -137,7 +137,6 @@ class MacBrain(ChatMixin):
         self.reasoning = reasoning or DeliberativeReasoningProvider()
         self.reflection = ReflectionEngine()
         self.stt = stt or DeterministicSTTProvider()
-        self.world = TemporalWorldModel()
         self.unified_world = UnifiedWorldModel()
         self.context_assembler = ContextAssembler()
         self.attention_ranker = AttentionRanker()
@@ -329,7 +328,6 @@ class MacBrain(ChatMixin):
         evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
         self._emit("perception.completed", {"frame_id": evidence.frame_id, "detection_count": len(evidence.detections), "provenance": dict(evidence.provenance)})
         observations = tuple(SensorObservation(cycle=self._cycle, source=f"{self.config.sensor_id}.perception", entity=detection.label, location=None, state="present", confidence=detection.confidence, captured_cycle=self._cycle) for detection in evidence.detections)
-        self.world.apply_many(observations)
         self._admit_detections(evidence.detections)
         self._update_unified_world(evidence.detections)
         # Failure detection: perception uncertainty (low-confidence or no detections).
