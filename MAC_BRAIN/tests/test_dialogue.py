@@ -36,6 +36,7 @@ from MAC_BRAIN.dialogue import (
     _is_repeat_question,
     _is_engagement_check,
     _is_memory_question,
+    _is_talk_request,
     _is_future_question,
     _is_repetitive,
     _time_greeting_part,
@@ -176,6 +177,13 @@ class DialogueFilterTests(unittest.TestCase):
         sp = b._dialogue_system_prompt({}, {})
         self.assertIn("You have no body", sp)
         self.assertIn("Never invent past physical experiences", sp)
+
+    def test_talk_request_not_topic(self):
+        # "just talk to me" is a request to converse, not a topic ("talk").
+        for s in ["just talk to me about anything", "let's chat", "chat with me", "talk to me"]:
+            self.assertTrue(_is_talk_request(s), s)
+        self.assertFalse(_is_talk_request("tell me about cats"))
+        self.assertFalse(_is_talk_request("what's the time?"))
 
     def test_memory_question_detection(self):
         # "will you forget me?" is relational, not a topic or implementation-speak.

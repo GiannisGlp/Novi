@@ -98,5 +98,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Engagement checks + end-to-end | `20260822T010854Z/engagement-checks-and-endtoend.json` | 'are you there?' answered warmly; reported example verified end-to-end in running app |
 | Memory questions, no impl-speak | `20260822T011324Z/memory-questions-no-impl-speak.json` | 'will you forget me?' answered warmly; no buffer/session implementation-speak |
 | No physical-life fabrication | `20260822T011655Z/no-physical-life-fabrication.json` | no invented cafes/errands/meals; topic fallback never picks question words |
+| Talk requests | `20260822T012358Z/talk-requests.json` | 'just talk to me' opens a real conversation, never a topic follow-up |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

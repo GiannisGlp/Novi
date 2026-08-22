@@ -1080,6 +1080,19 @@ to stop by and try it." — Novi invented a physical errand it can't do.
 - Tests: +1; fast suites **471 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/no-physical-life-fabrication.json`.
 
+## Talk requests (round 36 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "just talk to me about anything" → "I don't have a good answer on
+talk yet…". A request to converse was read as a topic ("talk").
+
+- `_is_talk_request` detects "just talk / let's chat / chat with me / talk to me",
+  routed to a natural conversational opener + steer (no topic follow-up).
+- Real test: "just talk to me about anything" → "Hey there. I'm Novi. I've been
+  thinking about how people actually spend their time…".
+- "tell me about cats" still answered normally (not over-triggered).
+- Tests: +1; fast suites **472 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/talk-requests.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

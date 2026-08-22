@@ -50,6 +50,7 @@ from .dialogue import (
     _is_assurance_question,
     _is_engagement_check,
     _is_memory_question,
+    _is_talk_request,
     _is_embodiment_question,
     _is_future_question,
     _is_recall_question,
@@ -1415,6 +1416,7 @@ class MacBrain:
         is_future = _is_future_question(text)
         is_bodily_need = _is_bodily_need_question(text)
         is_memory = _is_memory_question(text)
+        is_talk_request = _is_talk_request(text)
         can_physical = self._has_physical_action_capability()
         if is_future:
             system += (
@@ -1443,6 +1445,13 @@ class MacBrain:
                 " The user asked whether you remember them or will forget them. Reassure them warmly and honestly: "
                 "you do remember what they share with you and you won't forget them. Keep it in plain, warm language. "
                 "Do NOT mention buffers, sessions, internal processing, memory architecture, or any implementation detail."
+            )
+        if is_talk_request:
+            # "Just talk to me" — open a natural conversation, not a topic follow-up.
+            system += (
+                " The user asked you to just talk / chat about anything. Open a natural, warm conversation: "
+                "share something you're curious about or ask what they're in the mood to talk about. "
+                "Do NOT say you don't have a good answer or fall into a dry follow-up."
             )
         if is_reminder:
             # Don't promise a timed push notification Novi can't deliver.
@@ -1551,6 +1560,9 @@ class MacBrain:
         if is_memory:
             reason = "You asked whether I remember/forget you — I reassured you warmly, no implementation details"
             return {"text": "Of course — I remember what you've shared, and I'm not going to forget you.", "fallback": True, "reason": reason, "grounding": {"route": "memory", **out}}
+        if is_talk_request:
+            reason = "You asked me to just talk — I opened a natural conversation instead of a topic follow-up"
+            return {"text": "Sure — I'm all ears. What would you like to get into, or shall I start?", "fallback": True, "reason": reason, "grounding": {"route": "talk_request", **out}}
         fq = followup_question(text)
         topic = _extract_topic(text)
         if fq and topic and len(topic) > 2:

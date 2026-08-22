@@ -634,6 +634,19 @@ def _is_memory_question(text: str) -> bool:
     return bool(text) and bool(_MEMORY_RE.search(text))
 
 
+# "Just talk to me", "chat with me", "let's talk" — a request to converse, not a
+# topic. Must not fall through to "no good answer on talk".
+_TALK_REQUEST_RE = re.compile(
+    r"\b(?:just talk|let'?s (?:just )?talk|talk to me|chat with me|let'?s chat|"
+    r"make conversation|talk about anything|anything at all|let'?s (?:have )?a chat)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_talk_request(text: str) -> bool:
+    return bool(text) and bool(_TALK_REQUEST_RE.search(text))
+
+
 # Reminder / to-do requests ("remind me to water the plants", "don't forget to X",
 # "set me a reminder"). Novi can remember these conversationally, but it cannot
 # push a timed notification, so it must not over-promise ("I'll remind you at 8am").
