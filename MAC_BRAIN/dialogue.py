@@ -297,6 +297,9 @@ _STATE_WORDS = {
     "driving", "walking", "writing", "listening", "watching", "planning",
     "hoping", "doing", "making", "having", "feeling", "getting", "kidding",
     "joking", "seriously", "almost", "totally", "completely",
+    "failing", "losing", "trying", "wondering", "waiting", "struggling",
+    "there", "quitting", "moving", "starting", "ending", "betting", "saying",
+    "asking", "telling", "thinking", "lying", "sitting", "standing",
 }
 
 
@@ -312,6 +315,10 @@ def _extract_self_name(text: str) -> str:
     if not (1 <= len(words) <= 3):
         return ""
     if words[0].lower() in _STATE_WORDS:
+        return ""
+    # A multi-word phrase starting with a gerund ("i'm failing at everything",
+    # "i'm trying to work") is a state/verb phrase, not a name.
+    if len(words) >= 2 and words[0].lower().endswith("ing") and not words[0][0].isupper():
         return ""
     if not all(w.replace("-", "").replace("'", "").isalpha() for w in words):
         return ""

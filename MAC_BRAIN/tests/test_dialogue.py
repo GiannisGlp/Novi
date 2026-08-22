@@ -445,6 +445,16 @@ class ComposeReplyTests(unittest.TestCase):
         self.assertIn("curious", clause)
         self.assertIn("kindness", clause)
 
+    def test_gerund_phrase_not_intro(self):
+        # "i'm failing at everything" / "i'm working on a project" are states/
+        # verb phrases, not self-introductions.
+        for s in ["i feel like i'm failing at everything", "i'm struggling with work",
+                  "i'm trying to sleep", "i'm working on a project"]:
+            self.assertFalse(_is_introduction(s), s)
+            self.assertEqual(_extract_self_name(s), "", s)
+        # Multi-word real names still recognized.
+        self.assertEqual(_extract_self_name("i'm John Smith"), "John Smith")
+
     def test_state_word_not_intro(self):
         # "i'm starving/tired/coming" are states, not self-introductions.
         for s in ["i'm starving", "i'm coming", "i'm just kidding", "i'm tired"]:

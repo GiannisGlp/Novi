@@ -109,5 +109,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Empathy statements | `20260822T022245Z/empathy-statements.json` | 'my head hurts'/'i miss my dog' get empathy in fallback, never a topic follow-up |
 | Reassurance questions | `20260822T022810Z/reassurance-questions.json` | 'are you mad at me?'/'do you hate me?' get warm reassurance, never a topic follow-up |
 | Food/hunger honesty | `20260822T023459Z/food-hunger-honesty.json` | no hunger fabrication; 'i'm starving' no longer read as a name |
+| Gerund states not intro | `20260822T023839Z/gerund-state-not-intro.json` | 'i feel like i'm failing at everything' no longer read as a name |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |

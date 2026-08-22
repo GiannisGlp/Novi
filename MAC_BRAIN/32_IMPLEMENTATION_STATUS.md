@@ -1231,6 +1231,18 @@ and "i'm starving" → "nice to put a name to you" (read as a self-introduction)
 - Tests: +1; fast suites **484 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/food-hunger-honesty.json`.
 
+## Gerund states not introductions (round 47 of the naturalness objective) (status: IMPLEMENTED)
+
+"i feel like i'm failing at everything" → "Failing At Everything — nice to put a
+name to you" (intro false-positive).
+
+- Added more state/gerund words (failing, struggling, trying, moving…).
+- Added a guard in `_extract_self_name` rejecting multi-word names whose first
+  word is a lowercase gerund ("i'm working on a project" → follow-up, not name).
+- Real multi-word names still recognized ("i'm John Smith").
+- Tests: +1; fast suites **485 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/gerund-state-not-intro.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

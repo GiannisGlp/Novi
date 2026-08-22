@@ -1,0 +1,19 @@
+{
+  "slice": "Natural conversation round 47: 'i feel like i'm failing at everything' no longer read as a name",
+  "before": {
+    "i feel like i'm failing at everything": "Failing At Everything \u2014 nice to put a name to you. I'll remember that."
+  },
+  "intro_fix": {
+    "i feel like i'm failing at everything": false,
+    "i'm struggling with work": false,
+    "i'm working on a project": false,
+    "i'm John Smith": true,
+    "i'm sarah": true
+  },
+  "name_extract": {
+    "i'm John Smith": "John Smith",
+    "i'm sarah": "sarah",
+    "my name is bob jones": "bob jones"
+  },
+  "mechanism": "added state/gerund words (failing, struggling...) and a guard rejecting multi-word names starting with a lowercase gerund"
+}
