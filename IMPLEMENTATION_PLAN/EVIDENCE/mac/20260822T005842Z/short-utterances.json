@@ -1,0 +1,25 @@
+{
+  "slice": "Natural conversation round 31: short single-word replies never become 'no good answer on <word>'",
+  "acknowledged": {
+    "yes": true,
+    "k": true,
+    "ok": true,
+    "sure": true
+  },
+  "no_topic": {
+    "yes": true,
+    "hm": true,
+    "no": true,
+    "k": true
+  },
+  "topic_still_works": "weather",
+  "before": {
+    "yes": "I don't have a good answer on yes yet \u2014 what's it like from your side?"
+  },
+  "after": {
+    "yes": "alright.",
+    "hm": "hey, i'm here.",
+    "no": "hey, i'm here."
+  },
+  "mechanism": "'yes' added to acknowledgment; _extract_topic returns '' for a single <=4-char word so the topic follow-up never fires on a bare interjection"
+}

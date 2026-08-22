@@ -1007,6 +1007,18 @@ directly preceded "being", so it slipped through.
 - Tests: +1; fast suites **466 passing**, web **26 passing**.
 - Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/identity-overexplain-broadened.json`.
 
+## Short single-word replies (round 31 of the naturalness objective) (status: IMPLEMENTED)
+
+Real probing: "yes" → "I don't have a good answer on yes yet…". Bare short words
+("yes", "hm", "no") were being read as topics.
+
+- Added "yes" to the acknowledgment detector ("yes" → "alright.").
+- `_extract_topic` now returns "" for a single ≤4-char word, so the topic
+  follow-up never fires on a bare interjection; real topics still extract.
+- Real test: "yes" → "alright."; "hm" → "hey, i'm here."; "no" → a natural pause note.
+- Tests: +1; fast suites **467 passing**, web **26 passing**.
+- Evidence: `IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/short-utterances.json`.
+
 ## Next implementation slice
 
 - **Regression:** full suite `python -m pytest MAC_BRAIN/tests brain/tests` → **201 passed**.

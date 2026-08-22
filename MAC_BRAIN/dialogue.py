@@ -617,7 +617,7 @@ def reminder_reply() -> str:
 # agreeing signals, not topics or introductions. They must not fall through to
 # "I don't have a good answer on <word> yet" (e.g. "got it" -> "got").
 _ACKNOWLEDGMENT = re.compile(
-    r"^\s*(?:ok(?:ay)?|k(?:ay)?|sure|yeah|yep|yup|got it|all right|alright|sounds good|"
+    r"^\s*(?:ok(?:ay)?|k(?:ay)?|sure|yeah|yep|yup|yes|got it|all right|alright|sounds good|"
     r"cool|great|nice|fine|works for me|makes sense|right|true|fair enough|noted|"
     r"bet|facts|word|no cap|fr|for real|preach|solid|say less|done|agreed)"
     r"[.!?]*\s*$",
@@ -648,6 +648,10 @@ def _extract_topic(text: str) -> str:
     subject over connective words. Returns "" when there is nothing useful.
     """
     words = [w.strip(".,!?;:\"'()[]{}") for w in text.split()]
+    # A single very-short word ("yes", "hm", "no", "what") is rarely a real topic —
+    # don't turn it into "no good answer on <word>".
+    if len(words) == 1 and len(words[0]) <= 4:
+        return ""
     cands = [w for w in words if w and w.lower() not in _STOPWORDS and not w.isdigit()]
     if not cands:
         return ""

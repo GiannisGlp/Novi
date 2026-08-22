@@ -308,12 +308,18 @@ class DialogueFilterTests(unittest.TestCase):
         self.assertFalse(_is_reminder_request("what's the time?"))
 
     def test_acknowledgment_detection(self):
-        for s in ["okay", "sure", "got it", "sounds good", "yeah", "cool", "alright"]:
+        for s in ["okay", "sure", "got it", "sounds good", "yeah", "cool", "alright", "yes"]:
             self.assertTrue(_is_acknowledgment(s), s)
         self.assertFalse(_is_acknowledgment("what's the time?"))
         self.assertFalse(_is_acknowledgment("hello"))
         # a longer message is not a bare acknowledgment
         self.assertFalse(_is_acknowledgment("okay so tell me about the garden"))
+
+    def test_single_short_word_not_a_topic(self):
+        # "yes"/"hm"/"no" must not become "no good answer on <word>".
+        for s in ["yes", "hm", "no", "k"]:
+            self.assertEqual(_extract_topic(s), "", s)
+        self.assertEqual(_extract_topic("what about the weather?"), "weather")
 
     def test_slang_acknowledgment_detection(self):
         # Casual agreement markers are acknowledgments, not literal topics or bets.

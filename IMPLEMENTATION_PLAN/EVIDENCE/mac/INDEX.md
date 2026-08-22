@@ -93,5 +93,6 @@ directory (`commit_sha.txt`, `collection_time.txt`).
 | Departures not introductions | `20260822T004524Z/departure-not-intro.json` | 'i'm leaving/going home/on my way' read as actions, not self-introductions |
 | Repeat requests + no impl leaks | `20260822T004934Z/repeat-and-impl-leak.json` | 'what did you just say?' handled as repeat, never a topic; no 'system prompt' leaks |
 | Identity over-explain (broadened) | `20260822T005417Z/identity-overexplain-broadened.json` | 'transparent, non-deceptive embodied being' caught even with intervening words |
+| Short single-word replies | `20260822T005842Z/short-utterances.json` | 'yes'/'hm'/'no' never become 'no good answer on <word>' |
 | Retrieval index / FTS | `20260820T215645Z/retrieval-benchmark.json` | 3× / 9.7× / 18.4× read-latency speedup at 500/2000/5000 records |
 | Final integration run | `20260820T215958Z/integration.json` | full pipeline across all subsystems + restart durability |
