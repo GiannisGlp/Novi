@@ -6,7 +6,7 @@
 
 ```
 ┌──────────────────────────────────────────────┐
-│  MAC_BRAIN/   (canonical brain — 1013 tests) │
+│  MAC_BRAIN/   (canonical brain — 1028 tests) │
 │  ├── runtime.py       MacBrain orchestrator  │
 │  ├── cognition.py     BeliefSystem, etc.     │
 │  ├── cognition2.py    MacCognition           │
@@ -123,12 +123,12 @@ the brain phase.
 
 | Suite | Count | Owner | Status |
 |-------|-------|-------|--------|
-| `MAC_BRAIN/tests/` | 1013 | MAC_BRAIN canonical | ✅ All green |
+| `MAC_BRAIN/tests/` | 1028 | MAC_BRAIN canonical | ✅ All green |
 | `brain/tests/` | 105 | brain portable library | ✅ All green |
 | `web/tests/` | 41 | Web server integration | ⚠️ Slow (~70s), not in fast suite |
 | `contracts/tests/` | 13 | Contract validation (via pytest shim) | ✅ All green |
 | `cognition/tests/` | 34 | Typed cognition contracts + replay | ✅ All green |
-| **Fast suite total** | **1165** | MAC_BRAIN + brain + contracts + cognition | ✅ All green |
+| **Fast suite total** | **1180** | MAC_BRAIN + brain + contracts + cognition | ✅ All green |
 
 ## Key architecture rules
 

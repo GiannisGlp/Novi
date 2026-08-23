@@ -56,6 +56,7 @@ from .p0_gate_runner import run_p0_gate
 from .planner import Plan, Planner
 from .privacy import PrivacyGovernance
 from .reflection import ReflectionEngine
+from .resource_telemetry import ResourceTelemetry, combine_resource_modes
 from .self_model import build_self_model
 from .situation_model import SituationModel
 from .skill_contract import SUCCESS as SKILL_SUCCESS
@@ -142,6 +143,7 @@ class MacBrain(ChatMixin):
         governance_guard: GovernanceGuard | None = None,
         config: MacBrainConfig | None = None,
         spatial_map: Any | None = None,
+        telemetry: ResourceTelemetry | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -179,6 +181,11 @@ class MacBrain(ChatMixin):
         self._last_situations: list[dict[str, Any]] = []
         self._last_typed_cognition: dict[str, Any] | None = None
         self.failure_handler = FailureHandler()
+        # Real resource telemetry (gap-analysis Step 3, item 19): samples host
+        # CPU/memory pressure each cycle so the runtime degrades under genuine
+        # load, not only when a subsystem reports a failure.
+        self.telemetry = telemetry or ResourceTelemetry()
+        self._last_resource_sample: dict | None = None
         self.autonomy_sm = AutonomyStateMachine()
         self.episode_recorder: EpisodeRecorder | None = None
         self._recording_enabled: bool = False
@@ -1072,27 +1079,39 @@ class MacBrain(ChatMixin):
         return {"events": [e.snapshot() for e in events], "quality": quality.snapshot(), "admitted": admitted}
 
     def _apply_resource_adaptation(self) -> None:
-        """Map the failure-handler degraded mode to the MultiSpeedRuntime resource mode.
+        """Map failure-handler degraded mode + real telemetry to a resource mode.
 
         Gap-analysis Step 3, item 19 (resource-aware behavioral adaptation):
         when a subsystem is degraded the runtime must run in a matching resource
-        mode instead of always assuming FULL resources.
+        mode instead of always assuming FULL resources. The failure-handler
+        mode is combined with a live host telemetry sample (CPU/memory
+        pressure); the more conservative of the two wins.
         """
         mode = self.failure_handler.degraded_mode
         if mode == DegradedMode.NORMAL:
-            self.multi_speed.set_resource_mode(ResourceMode.FULL)
-            if self.multi_speed.state not in (AutonomyState.INTERRUPTED,):
-                self.multi_speed.set_state(AutonomyState.ACTIVE)
+            failure_mode = ResourceMode.FULL
         elif mode in (DegradedMode.PERCEPTION_DEGRADED, DegradedMode.IDENTITY_DEGRADED):
             # Perception is unreliable: react deterministically, skip deliberation.
-            self.multi_speed.set_resource_mode(ResourceMode.REACTIVE_ONLY)
-            self.multi_speed.set_state(AutonomyState.DEGRADED)
+            failure_mode = ResourceMode.REACTIVE_ONLY
         elif mode == DegradedMode.SAFETY_ONLY:
-            self.multi_speed.set_resource_mode(ResourceMode.SAFE_MINIMUM)
-            self.multi_speed.set_state(AutonomyState.SAFE_MINIMUM)
+            failure_mode = ResourceMode.SAFE_MINIMUM
         else:  # reasoning/memory degraded
-            self.multi_speed.set_resource_mode(ResourceMode.DEGRADED)
+            failure_mode = ResourceMode.DEGRADED
+
+        # Real telemetry feed: sample host pressure and fold it in.
+        sample = self.telemetry.sample()
+        self._last_resource_sample = sample.snapshot()
+        telemetry_mode = self.telemetry.to_resource_mode(sample)
+        resource_mode = combine_resource_modes(failure_mode, telemetry_mode)
+
+        self.multi_speed.set_resource_mode(resource_mode)
+        if resource_mode == ResourceMode.SAFE_MINIMUM:
+            self.multi_speed.set_state(AutonomyState.SAFE_MINIMUM)
+        elif resource_mode == ResourceMode.REACTIVE_ONLY or resource_mode == ResourceMode.DEGRADED:
             self.multi_speed.set_state(AutonomyState.DEGRADED)
+        elif self.multi_speed.state not in (AutonomyState.INTERRUPTED,):
+            self.multi_speed.set_state(AutonomyState.ACTIVE)
+        self._emit("resource.telemetry", {"cycle": self._cycle, **sample.snapshot(), "resource_mode": resource_mode.value})
 
     def _admit_detections(self, detections: Any) -> None:
         for detection in detections:
