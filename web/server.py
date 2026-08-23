@@ -97,6 +97,10 @@ class NoviWebServer:
         self.stt_device = stt_device
         self.listen_seconds = listen_seconds
         self._llm_available: bool | None = None
+        self._llm_probed_at: float = 0.0
+        # How often to re-probe Ollama availability so a server that started
+        # before the LLM was ready can reconnect without a restart.
+        self._llm_probe_ttl = 3.0
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -414,13 +418,18 @@ class NoviWebServer:
                 self._chat_busy = False
 
     def _llm_up(self) -> bool:
-        if self._llm_available is None:
+        # Re-probe when the cached result is stale so a server that started
+        # before Ollama was reachable (or when a model was still loading)
+        # reconnects automatically instead of staying offline forever.
+        now = time.time()
+        if self._llm_available is None or (now - self._llm_probed_at) > self._llm_probe_ttl:
             try:
                 req = urllib.request.Request(f"{self.llm_url}/api/tags", method="GET")
                 with urllib.request.urlopen(req, timeout=2) as response:
                     self._llm_available = response.status == 200
             except Exception:  # noqa: BLE001 - offline fallback
                 self._llm_available = False
+            self._llm_probed_at = now
         return self._llm_available
 
     def model(self) -> dict[str, Any]:

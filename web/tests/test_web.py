@@ -188,8 +188,10 @@ class NoviWebServerTests(unittest.TestCase):
             s.stop()
 
     def test_chat_falls_back_to_deterministic_when_llm_down(self) -> None:
+        import time as _t
         s = self._server(chat_llm=True)
         s._llm_available = False
+        s._llm_probed_at = _t.time()  # fresh offline probe: do not re-probe
         s.start()
         try:
             r = s.chat_send("alice moved the door")
@@ -203,8 +205,10 @@ class NoviWebServerTests(unittest.TestCase):
         spoken reply must never be the internal cognition label (e.g.
         human_speech_observed). When no LLM transport is available the web layer
         supplies a natural deterministic fallback instead of leaking the label."""
+        import time as _t
         s = self._server(chat_llm=True)
         s._llm_available = False
+        s._llm_probed_at = _t.time()  # fresh offline probe: do not re-probe
         s.start()
         try:
             r = s.chat_send("alice moved the door")
@@ -216,6 +220,42 @@ class NoviWebServerTests(unittest.TestCase):
             self.assertEqual(r["novi"]["trace"]["conclusion"], "human_speech_observed")
             self.assertEqual(r["novi"]["trace"]["route_reason"], "no_llm_transport")
             self.assertFalse(r["llm"])
+        finally:
+            s.stop()
+
+    def test_llm_reconnects_after_stale_offline_cache(self) -> None:
+        """A server that started before Ollama was ready caches _llm_available
+        False; once the TTL passes it must re-probe and reconnect, without a
+        restart."""
+        import urllib.request
+        real = urllib.request.urlopen
+        calls = {"n": 0}
+
+        class _Resp:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        def fake(req, timeout=120):
+            calls["n"] += 1
+            return _Resp()
+
+        s = self._server(chat_llm=True)
+        s.start()
+        try:
+            # Stale offline cache from a startup probe.
+            s._llm_available = False
+            s._llm_probed_at = 0.0  # force immediate re-probe
+            urllib.request.urlopen = fake
+            try:
+                self.assertTrue(s._llm_up())
+            finally:
+                urllib.request.urlopen = real
+            self.assertTrue(calls["n"] >= 1)
         finally:
             s.stop()
 

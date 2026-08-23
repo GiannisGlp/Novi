@@ -22,8 +22,21 @@ from MAC_BRAIN.failure_modes import (
     DegradedMode,
     FailureHandler,
 )
+from MAC_BRAIN.resource_telemetry import ResourceSample, ResourceTelemetry
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
+
+
+class IdleTelemetry(ResourceTelemetry):
+    """Reports an idle host — resource-adaptation tests must assert the
+    failure-handler logic, not the real host's current CPU/memory pressure.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(cpu_count=4)
+
+    def sample(self) -> ResourceSample:
+        return ResourceSample(cpu_load_1m=0.5, cpu_count=4, memory_available_ratio=0.6)
 
 
 class EmptyBackend(DeterministicPerceptionBackend):
@@ -197,7 +210,7 @@ class ResourceAdaptationTests(unittest.TestCase):
 
     def _brain(self, backend):
         return MacBrain(camera=FakeCamera(), perception=SpecialistPerception(backend),
-                        config=MacBrainConfig(curiosity_enabled=False))
+                        config=MacBrainConfig(curiosity_enabled=False), telemetry=IdleTelemetry())
 
     def test_normal_cycle_uses_full_resources(self):
         brain = self._brain(CupBackend())
