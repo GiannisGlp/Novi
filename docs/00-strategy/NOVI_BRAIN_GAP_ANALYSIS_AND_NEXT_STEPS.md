@@ -18,7 +18,27 @@ The project's own `MAC_BRAIN/PERFECTING_PLAN/` (13 files) is the canonical gap a
 ## 2. What Is Actually Implemented (verified against code + tests)
 
 The `MAC_BRAIN/runtime.py` orchestrator (~1460 lines) wires ~30 subsystems into a continuous loop:
-perception → cognition → attention → situation → reasoning → governance → skill → closed-loop VERIFY → reflection → soul → social.
+
+```mermaid
+flowchart LR
+    accTitle: Novi Runtime Loop
+    accDescr: The MacBrain orchestrator cycles perception through cognition, attention, situation, reasoning, governance, skill, closed-loop verify, reflection, soul, and social, then loops back to perception.
+
+    perception["👁 Perception"] --> cognition["🧠 Cognition"]
+    cognition --> attention["🎯 Attention"]
+    attention --> situation["📍 Situation"]
+    situation --> reasoning["💭 Reasoning"]
+    reasoning --> governance["🛡 Governance"]
+    governance --> skill["⚙️ Skill"]
+    skill --> verify["✅ Closed-loop VERIFY"]
+    verify --> reflection["🔁 Reflection"]
+    reflection --> soul["💜 Soul"]
+    soul --> social["👥 Social"]
+    social --> perception
+
+    classDef stage fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
+    class perception,cognition,attention,situation,reasoning,governance,skill,verify,reflection,soul,social stage
+```
 
 **Measured test baseline (this analysis):**
 - MAC_BRAIN: **1013** passing (in this working session: prior rounds wrote +8 governance/runtime/durable-independence tests, +5 confirmation-flow, +17 event-bus contract, +11 goal-lifecycle/conflict, +13 audit-trail, +27 scenario/adversarial/endurance, +11 affect→communication mapping, +15 P1–P3 acceptance catalog/gate/runner, +14 spatial model, +9 typed cognition emission, +17 learning pipeline, +10 memory-class decision + schema-evolution hooks)
@@ -135,6 +155,22 @@ perception → cognition → attention → situation → reasoning → governanc
 ---
 
 ## 5. Prioritized Next Steps (roadmap)
+
+```mermaid
+flowchart LR
+    accTitle: Novi Brain Roadmap
+    accDescr: The six-step roadmap runs from scope freeze and documentation fixes through cognition, memory, autonomy, soul acceptance, NVIDIA experiments, and closed-loop validation.
+
+    s0["📋 Freeze scope + docs"] --> s1["🧠 Cognition world/context"]
+    s1 --> s2["💾 Memory hardening"]
+    s2 --> s3["🛡 Autonomy + safety"]
+    s3 --> s4["💜 Soul acceptance"]
+    s4 --> s5["🧪 NVIDIA experiments"]
+    s5 --> s6["✅ Closed-loop validation"]
+
+    classDef step fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
+    class s0,s1,s2,s3,s4,s5,s6 step
+```
 
 ### Step 0 — Freeze scope & fix documentation (do first; cheap, unblocks everything)
 - [x] 1. Update `MAC_BRAIN/32_IMPLEMENTATION_STATUS.md`: correct test counts (now **1013** MAC_BRAIN + 105 brain + 41 web + 13 contracts + 34 cognition = **1206**), document the PERFECTING_PLAN wave, remove the stale goal-resume limitation and the stale "Next implementation slice" sections.
