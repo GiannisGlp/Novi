@@ -22,7 +22,23 @@ from dataclasses import dataclass
 from typing import Any
 
 CONTRADICTION_FLIP_EVIDENCE = 2
-LEARN_GAIN = 0.25
+
+# Gap-audit Phase C1: evidence is weighted by how it was obtained before it is
+# combined. A camera seeing something is stronger evidence than being told.
+SOURCE_WEIGHTS = {
+    "direct_sensor": 0.9,
+    "model_inference": 0.6,
+    "user_statement": 0.5,
+}
+DEFAULT_SOURCE = "direct_sensor"
+
+# Contradictions weaken confidence multiplicatively (proportional doubt), so a
+# near-certain belief loses more absolute confidence than a weak one.
+CONTRADICTION_DECAY = 0.7
+
+
+def source_weight(source: str) -> float:
+    return SOURCE_WEIGHTS.get(str(source).lower(), SOURCE_WEIGHTS[DEFAULT_SOURCE])
 
 
 def _clamp01(v: float) -> float:
@@ -39,6 +55,7 @@ class Belief:
     contradictions: int = 0
     first_observed: str = ""
     last_observed: str = ""
+    last_source: str = ""
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -48,6 +65,7 @@ class Belief:
             "confidence": self.confidence,
             "evidence_count": self.evidence_count,
             "contradictions": self.contradictions,
+            "last_source": self.last_source,
         }
 
 
@@ -58,30 +76,52 @@ class BeliefSystem:
         self._beliefs: dict[tuple[str, str], Belief] = {}
         self._property_index: dict[str, dict[str, Any]] = {}
 
-    def observe(self, entity: str, value: Any, *, confidence: float = 0.8, property: str = "presence", now: str = "") -> Belief:
+    def observe(
+        self,
+        entity: str,
+        value: Any,
+        *,
+        confidence: float = 0.8,
+        property: str = "presence",
+        now: str = "",
+        source: str = DEFAULT_SOURCE,
+    ) -> Belief:
+        """Fuse one observation into the belief (Bayesian noisy-OR).
+
+        Confirming evidence combines as ``1 - (1-prior)*(1-evidence)`` where
+        ``evidence`` is the raw confidence weighted by the source class
+        (direct_sensor > model_inference > user_statement). Contradictions
+        decay confidence multiplicatively and never silently flip the belief;
+        only repeated contradiction flips it.
+        """
+        evidence = _clamp01(confidence) * source_weight(source)
         key = (entity, property)
         belief = self._beliefs.get(key)
         if belief is None:
-            belief = Belief(entity=entity, value=value, property=property, confidence=_clamp01(confidence), evidence_count=1, first_observed=now, last_observed=now)
+            belief = Belief(entity=entity, value=value, property=property, confidence=_clamp01(evidence), evidence_count=1, first_observed=now, last_observed=now, last_source=str(source))
             self._beliefs[key] = belief
             return belief
 
         if belief.value == value:
             belief.evidence_count += 1
-            belief.confidence = _clamp01(belief.confidence + LEARN_GAIN * _clamp01(confidence))
+            # Noisy-OR: diminishing returns, asymptotic to 1, never decreases.
+            belief.confidence = _clamp01(1.0 - (1.0 - belief.confidence) * (1.0 - evidence))
             belief.last_observed = now
+            belief.last_source = str(source)
         else:
             belief.contradictions += 1
             belief.evidence_count += 1
             belief.last_observed = now
+            belief.last_source = str(source)
             if belief.contradictions >= CONTRADICTION_FLIP_EVIDENCE:
                 # repeated strong evidence flips the belief
                 belief.value = value
-                belief.confidence = _clamp01(confidence)
+                belief.confidence = _clamp01(evidence)
                 belief.contradictions = 0
             else:
-                # single contradiction weakens confidence without silently flipping
-                belief.confidence = _clamp01(belief.confidence - 0.15)
+                # single contradiction weakens confidence proportionally
+                # without silently flipping
+                belief.confidence = _clamp01(belief.confidence * CONTRADICTION_DECAY)
         return belief
 
     def belief_for(self, entity: str, property: str = "presence") -> Belief | None:
@@ -104,6 +144,7 @@ class BeliefSystem:
                 confidence=row["confidence"],
                 evidence_count=row["evidence_count"],
                 contradictions=row["contradictions"],
+                last_source=row.get("last_source", ""),
             )
             sys._beliefs[(b.entity, b.property)] = b
         return sys

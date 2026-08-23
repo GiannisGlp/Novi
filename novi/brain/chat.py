@@ -19,6 +19,7 @@ from typing import Any
 
 from .context_assembler import ContextRequest
 from .dialogue import (
+    _extract_self_name,
     _extract_topic,
     _is_acknowledgment,
     _is_assurance_question,
@@ -156,11 +157,11 @@ class ChatMixin:
         currently-perceived world entities, then adds capitalized proper nouns
         (so brand-new people and places — like a user's name — are learned).
         """
-        from .privacy import _PERSON_LABELS
+        from .privacy import _PERSON_LABELS, COMMON_ENTITY_LABELS
 
-        known = set(self.unified_world.to_world_state().entities) | {
-            "alice", "bob", "door", "person", "table", "room", "kitchen", "object", "window", "lamp", "chair", "plant",
-        } | set(_PERSON_LABELS)
+        known = (set(self.unified_world.to_world_state().entities)
+                 | set(COMMON_ENTITY_LABELS)
+                 | set(_PERSON_LABELS))
         found = {n.lower() for n in known if n in text.lower()}
         tokens = re.findall(r"[A-Za-z][A-Za-z'-]*", text)
         for idx, word in enumerate(tokens):
@@ -233,7 +234,16 @@ class ChatMixin:
 
     @staticmethod
     def _memory_score(record: Any, idx: int, now: Any) -> float:
-        """Weighted recall score: relevance (FTS rank) × recency × importance."""
+        """Weighted recall score (gap-audit Phase C4):
+
+        ``0.4*relevance + 0.25*recency + 0.2*importance + 0.15*trust``
+
+        - relevance: FTS rank proxy for cosine similarity (1 at rank 0);
+        - recency: exponential-ish decay over minutes;
+        - importance: cognition-stamped score, falling back to confidence;
+        - trust: verification/source provenance weighting.
+        """
+        from .importance import provenance_trust, record_importance
         relevance = 1.0 / (1 + idx)
         try:
             created = datetime.fromisoformat(record.created_at.replace("Z", "+00:00")).astimezone(timezone.utc)
@@ -241,8 +251,9 @@ class ChatMixin:
         except Exception:  # noqa: BLE001
             age_s = 0.0
         recency = 1.0 / (1.0 + age_s / 60.0)
-        importance = float(record.confidence)
-        return 0.5 * relevance + 0.3 * recency + 0.2 * importance
+        importance = record_importance(record)
+        trust = provenance_trust(record)
+        return 0.4 * relevance + 0.25 * recency + 0.2 * importance + 0.15 * trust
 
     def _episodic_narrative(self, limit: int = 5) -> list[str]:
         """Reconstruct a short narrative from recent episodic memories (Memory 2.0).
@@ -555,13 +566,16 @@ class ChatMixin:
 
     def compose_reply(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
                      llm_chat: Any = None, last_novi_text: str = "", addressee_name: str = "",
-                     recent_novi: list[str] | None = None) -> dict[str, Any]:
+                     recent_novi: list[str] | None = None, topic_hint: str = "") -> dict[str, Any]:
         """Compose a natural conversational reply (Brain speech-runtime layer).
 
         Wraps _compose_reply_impl with CommunicationDecision: records each
         successful interaction and respects prefer-silence / social-fatigue.
         Attaches the affect→expression directive (docs/06-soul/05 §12/§14)
         to the reply for observability (roadmap item 26).
+
+        ``topic_hint`` carries the discourse-resolved topic for anaphoric
+        follow-ups ("is it still there?") so grounding can find referents.
         """
         affect = dict(self.soul.affect.dimensions)
         directive = affect_expression(affect, serious=self._affect_serious_context(text))
@@ -569,6 +583,7 @@ class ChatMixin:
             text, person=person, history=history, llm_chat=llm_chat,
             last_novi_text=last_novi_text, addressee_name=addressee_name,
             recent_novi=recent_novi,
+            topic_hint=topic_hint,
         )
         # Record the interaction if a reply was produced (not silent).
         if result.get("text") is not None and not result.get("silent"):
@@ -582,6 +597,74 @@ class ChatMixin:
         if isinstance(result.get("grounding"), dict):
             result["grounding"]["affect_expression"] = directive
         return result
+
+    def resolve_addressee(self, text: str, person: str = "") -> str:
+        """Identity-first addressee resolution (gap-audit Phase A2).
+
+        Order:
+          1. an explicit person argument from the calling source;
+          2. a speech self-introduction ("i am Maya") — the name is bound to
+             the current speaker via PersonIdentity (modality="speech",
+             confidence 0.6) and returned as the addressee;
+          3. a regex candidate matching the speaker's currently bound name;
+          4. legacy regex fallback (first person-name-looking candidate).
+
+        Mentioning a third party ("is Alice coming?") no longer invents an
+        addressee identity — only self-introductions bind names.
+        """
+        text = (text or "").strip()
+        if person:
+            return person
+        cycle = getattr(self, "_cycle", 0)
+        # Speech self-introduction: bind and return the introduced name.
+        # Names are stored lowercase to match the entity-ref convention that
+        # memory, lexicon and relationship lookups already use.
+        extracted = _extract_self_name(text)
+        if extracted:
+            name = extracted.lower()
+            try:
+                self.identity.observe("person", name=name, confidence=0.6, modality="speech", cycle=cycle)
+                if hasattr(self, "_persist_identity"):
+                    self._persist_identity()
+                self._emit("identity.named", {"cycle": cycle, "name": name, "confidence": 0.6})
+            except Exception:  # noqa: BLE001 - identity binding must not break chat
+                pass
+            return name
+        candidates = [ref for ref in self._entities_in_text(text) if self._is_person_name(ref)]
+        if not candidates:
+            return ""
+        # Prefer a candidate that matches the speaker's already-bound name.
+        belief = getattr(self.identity, "identity_for", lambda _: None)("person")
+        bound_name = (belief.name if belief is not None else None) or ""
+        if bound_name:
+            for ref in candidates:
+                if ref.lower() == bound_name.lower():
+                    return ref
+        # Legacy regex fallback.
+        return candidates[0]
+
+    def note_user_message(self, text: str) -> dict[str, Any]:
+        """Record a user turn in discourse state and resolve anaphora.
+
+        Returns {"resolved_topic": str, "status": RESOLVED|UNKNOWN|NONE}.
+        When the message is a pronoun follow-up ("is it still there?"),
+        resolved_topic carries the ongoing conversation topic so grounding
+        (knowledge/recall) can use it (gap-audit plan Phase B1).
+        """
+        resolution = self.discourse.resolve(text)
+        self.discourse.observe(text, cycle=getattr(self, "_cycle", 0), intent="chat")
+        snap = self.discourse.snapshot()
+        self._emit("discourse.updated", {
+            "cycle": getattr(self, "_cycle", 0),
+            "topic": snap["topic"],
+            "status": resolution.status,
+            "resolved_topic": resolution.resolved_topic,
+            "turns": len(snap["turns"]),
+        })
+        return {
+            "resolved_topic": resolution.resolved_topic if resolution.status == "RESOLVED" else "",
+            "status": resolution.status,
+        }
 
     def respond(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
                 llm_chat: Any = None, last_novi_text: str = "", recent_novi: list[str] | None = None,
@@ -599,16 +682,29 @@ class ChatMixin:
         text = (text or "").strip()
         if not text:
             return {"text": None, "reply_source": "none", "addressee": person or "", "trace": {}}
-        addressee = person or next((ref for ref in self._entities_in_text(text) if self._is_person_name(ref)), "")
+        addressee = self.resolve_addressee(text, person=person)
         if learn:
             with contextlib.suppress(Exception):
                 self._learn_from_chat(text, addressee)
         cycle = getattr(self, "_cycle", 0)
+        discourse_hint = self.note_user_message(text)["resolved_topic"]
         reply_obj = self.compose_reply(
             text, person=addressee, history=history, llm_chat=llm_chat,
             last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
+            topic_hint=discourse_hint,
         )
         reply = reply_obj.get("text")
+        if reply is not None:
+            # Slow personality learning from typed interactions (Phase E1):
+            # only clear moments nudge traits, by ≤0.01 each, so character
+            # changes come from repetition, not single messages.
+            try:
+                if _is_joke_request(text):
+                    self.soul.learn_from_interaction(addressee or "user", "play")
+                elif _is_emotional_statement(text):
+                    self.soul.learn_from_interaction(addressee or "user", "comfort")
+            except Exception:  # noqa: BLE001 - soul learning is best-effort
+                pass
         if reply is None:
             fb = self.natural_reply_fallback(text=text, cycle=cycle)
             return {
@@ -616,6 +712,7 @@ class ChatMixin:
                 "reply_source": "fallback",
                 "addressee": addressee,
                 "reason": fb.get("reason") or "No LLM reply available; used a natural acknowledgement.",
+                "grounding": reply_obj.get("grounding", {}),
                 "trace": {"conclusion": None, "route": "deterministic", "route_reason": "no_llm_transport"},
             }
         return {
@@ -623,13 +720,14 @@ class ChatMixin:
             "reply_source": "fallback" if reply_obj.get("fallback") else "dialogue",
             "addressee": addressee,
             "reason": reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state.",
+            "grounding": reply_obj.get("grounding", {}),
             "trace": {"conclusion": reply, "route": "local_llm",
                       "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
         }
 
     def _compose_reply_impl(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
                      llm_chat: Any = None, last_novi_text: str = "", addressee_name: str = "",
-                     recent_novi: list[str] | None = None) -> dict[str, Any]:
+                     recent_novi: list[str] | None = None, topic_hint: str = "") -> dict[str, Any]:
         """Compose a natural conversational reply (Brain speech-runtime layer).
 
         Per docs/06-soul/07 §2: the brain renders the approved communicative act
@@ -712,8 +810,26 @@ class ChatMixin:
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)
         self_model = self.self_model()
-        facts = [f for f in self._chat_knowledge(text).split("; ") if f]
-        facts.extend(self._chat_memory_summaries())
+        # Discourse grounding: an anaphoric follow-up ("is it still there?")
+        # carries its resolved topic so knowledge lookup can hit the referent.
+        grounding_text = f"{text} {topic_hint}".strip() if topic_hint else text
+        # One auditable ContextPackage grounds this reply (gap-audit Phase B3):
+        # knowledge + memory facts come from its provenance-tagged layers.
+        world_context = self._assemble_world_context(grounding_text, person or addressee_name)
+        pkg_items = (self._last_context_package or {}).get("items", [])
+        knowledge_items = [i for i in pkg_items if i.get("layer") == "knowledge"]
+        memory_items = [i for i in pkg_items if i.get("layer") == "memory"]
+        facts = [f for f in self._chat_knowledge(grounding_text).split("; ") if f]
+        for item in knowledge_items[:8]:
+            d = item.get("data") or {}
+            triple = " ".join(str(d.get(k)) for k in ("subject", "predicate", "object") if d.get(k))
+            if triple and triple not in facts:
+                facts.append(triple)
+        if topic_hint:
+            facts.append(f"(Continuing the conversation about: {topic_hint})")
+        pkg_summaries = [str((m.get("data") or {}).get("content") or "") for m in memory_items]
+        pkg_summaries = [s for s in pkg_summaries if s]
+        facts.extend(pkg_summaries[:3] if pkg_summaries else self._chat_memory_summaries())
         narrative = self._episodic_narrative()
         if narrative:
             facts.append("Recent events: " + " ".join(narrative))
@@ -857,7 +973,7 @@ class ChatMixin:
             "relationship": relationship,
             "self_model": self_model,
             "experience": experience,
-            "world_context": self._assemble_world_context(text, person or addressee_name),
+            "world_context": world_context,
             "vocabulary_scope": self._vocabulary_scope_for(person or addressee_name),
         }
         user_json = json.dumps(user_payload, sort_keys=True)
@@ -881,7 +997,15 @@ class ChatMixin:
                 f"Reply grounded in {n_facts} recalled fact(s)/summary(ies), "
                 f"{len(experience)} learned experience(s), and the conversation so far ({len(history or [])} prior turns)"
             )
-            return {"text": out["text"], "fallback": False, "reason": reason, "grounding": {"route": "dialogue", **out}}
+            grounding = {
+                "route": "dialogue",
+                "context_items": len(pkg_items),
+                "context_knowledge_items": len(knowledge_items),
+                "context_memory_items": len(memory_items),
+                "discourse_topic_hint": topic_hint,
+                **out,
+            }
+            return {"text": out["text"], "fallback": False, "reason": reason, "grounding": grounding}
         # No usable reply. A clarification request ("what system?", "what do you
         # mean?") is answered by acknowledging + re-engaging, never by guessing at
         # a topic. Otherwise, when we have nothing on a substantive topic, ask a

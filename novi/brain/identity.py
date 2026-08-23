@@ -52,6 +52,18 @@ class IdentityBelief:
         }
 
 
+@dataclass
+class IdentityMatch:
+    """A recognition result from a face/voice identity provider."""
+
+    name: str
+    confidence: float
+    modality: str = ""  # face | voice
+
+    def snapshot(self) -> dict[str, Any]:
+        return {"name": self.name, "confidence": round(self.confidence, 3), "modality": self.modality}
+
+
 class PersonIdentity:
     """Accumulates per-person identity evidence and yields identity beliefs."""
 
@@ -87,7 +99,6 @@ class PersonIdentity:
         if not bindings:
             return IdentityBelief(person, None, 0.0, "detected", 0, (), last)
         best = None
-        best_key = None
         best_score = (-1.0, -1, -1)
         for name, binding in bindings.items():
             conf = self._combined(binding["confidences"])

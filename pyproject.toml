@@ -56,6 +56,12 @@ embeddings = [
     "torch>=2.0",  # for MPS acceleration on Apple Silicon
 ]
 
+# Knowledge-graph analytics (multi-hop query, pagerank); pure-python
+# fallbacks exist in kgraph.py when absent
+graph = [
+    "networkx>=3.0",
+]
+
 # Development and testing
 dev = [
     "pytest>=8",

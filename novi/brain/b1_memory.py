@@ -111,7 +111,15 @@ class DeterministicMemoryManager:
         self._deleted.discard(memory_id)
         return MemoryAdmission(True, memory_id, "STORE_EPISODE", "admitted")
 
-    def retrieve(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+    @staticmethod
+    def _record_place(record: Any) -> str:
+        sc = getattr(record, "spatial_context", None)
+        if isinstance(sc, dict):
+            return str(sc.get("place") or "")
+        return ""
+
+    def retrieve(self, query: str, *, entity: str | None = None, memory_type: str | None = None, place: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+        """Retrieve records; ``place`` filters by spatial_context.place (Phase C3)."""
         if limit <= 0:
             return ()
         terms = {term.lower() for term in query.split() if term}
@@ -122,6 +130,8 @@ class DeterministicMemoryManager:
             if entity is not None and entity not in record.entity_refs:
                 continue
             if memory_type is not None and memory_type != record.memory_type:
+                continue
+            if place is not None and self._record_place(record) != place:
                 continue
             haystack = json.dumps(record.content, sort_keys=True, default=str).lower()
             haystack += " " + " ".join(record.entity_refs)

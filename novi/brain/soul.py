@@ -65,6 +65,36 @@ AFFECT_BASELINE: dict[str, float] = {
     "social_comfort": 0.6,
 }
 
+# Interaction types → personality traits they slowly reinforce (Phase E1).
+INTERACTION_TRAIT_MAP: dict[str, tuple[str, ...]] = {
+    "play": ("playfulness",),
+    "joke": ("playfulness", "expressiveness"),
+    "comfort": ("warmth",),
+    "care": ("warmth",),
+    "question": ("curiosity",),
+    "teach": ("thoughtfulness", "curiosity"),
+    "correction": ("patience", "thoughtfulness"),
+    "boundary": ("caution",),
+}
+
+# Characteristic per-event delta for each interaction type (≤0.01).
+INTERACTION_DELTAS: dict[str, float] = {
+    "play": 0.008,
+    "joke": 0.006,
+    "comfort": 0.006,
+    "care": 0.006,
+    "question": 0.004,
+    "teach": 0.005,
+    "correction": 0.007,
+    "boundary": 0.006,
+}
+DEFAULT_INTERACTION_DELTA = 0.005
+
+# Personality moves slowly: one interaction can shift a trait by at most this.
+MAX_INTERACTION_DELTA = 0.01
+# Unreinforced traits decay back to baseline over roughly this many cycles.
+TRAIT_DECAY_HORIZON_CYCLES = 100
+
 
 def _clamp01(v: float) -> float:
     return max(0.0, min(1.0, v))
@@ -131,6 +161,8 @@ class Soul:
             self.motivations.update(motivations)
         self.affect = affect or AffectState()
         self.expression_override: str | None = None
+        # Slow personality-learning history: person -> {interaction_type: count}
+        self.interaction_history: dict[str, dict[str, int]] = {}
 
     # ---- affect updates ----
     def update(self, event: dict[str, Any], *, decay_factor: float = 0.9) -> None:
@@ -150,6 +182,61 @@ class Soul:
             self.update({"kind": "speech_observed"})
         if uncertain:
             self.update({"kind": "uncertain"})
+
+    # --- slow personality learning from interactions (gap-audit Phase E1) ---
+
+    def learn_from_interaction(self, person: str, interaction_type: str, *, delta: float | None = None) -> dict[str, float]:
+        """Nudge personality traits from a repeated interaction type.
+
+        Personality is *slow*: each interaction moves its mapped traits by at
+        most ±0.01 (clamped), so single moments cannot reshape the character;
+        only repetition does. Each interaction type has a characteristic delta
+        (``INTERACTION_DELTAS``, default 0.005). Returns the trait values.
+        """
+        kind = str(interaction_type).lower()
+        raw = INTERACTION_DELTAS.get(kind, DEFAULT_INTERACTION_DELTA) if delta is None else float(delta)
+        d = max(-MAX_INTERACTION_DELTA, min(MAX_INTERACTION_DELTA, raw))
+        traits = INTERACTION_TRAIT_MAP.get(kind, ("playfulness",))
+        changed: dict[str, float] = {}
+        for name in traits:
+            base = DEFAULT_TRAITS.get(name, 0.5)
+            new = _clamp01(self.personality.traits.get(name, base) + d)
+            self.personality.traits[name] = new
+            changed[name] = new
+        history = self.interaction_history.setdefault(str(person).lower(), {})
+        key = str(interaction_type).lower()
+        history[key] = history.get(key, 0) + 1
+        return changed
+
+    def decay_toward_baseline(self, *, cycles: int = 1, horizon: int = TRAIT_DECAY_HORIZON_CYCLES) -> None:
+        """Unreinforced traits drift back to their baseline over ~``horizon`` cycles."""
+        if cycles <= 0 or horizon <= 0:
+            return
+        step = min(1.0, cycles / horizon)  # fraction of remaining gap closed
+        for name, base in DEFAULT_TRAITS.items():
+            cur = self.personality.traits.get(name, base)
+            self.personality.traits[name] = cur + (base - cur) * step
+
+    def motivation_priority(
+        self,
+        *,
+        attention_relevance: dict[str, float] | None = None,
+        goal_priority: float | None = None,
+    ) -> list[tuple[str, float]]:
+        """Rank motivations, weighted by attention relevance and goal priority.
+
+        ``attention_relevance`` maps salient entities to [0,1] salience — high
+        relevance boosts ``understand``/``explore``; ``goal_priority`` in
+        [0,1] boosts ``help``. Deterministic: sorted by weight desc, then name.
+        """
+        weights = dict(self.motivations)
+        rel = attention_relevance or {}
+        avg_rel = sum(max(0.0, min(1.0, v)) for v in rel.values()) / len(rel) if rel else 0.0
+        weights["understand"] = weights.get("understand", 0.0) + 0.2 * avg_rel
+        weights["explore"] = weights.get("explore", 0.0) + 0.1 * avg_rel
+        gp = max(0.0, min(1.0, goal_priority)) if goal_priority is not None else 0.0
+        weights["help"] = weights.get("help", 0.0) + 0.3 * gp
+        return sorted(weights.items(), key=lambda kv: (-kv[1], kv[0]))
 
     # --- expression ---
     def tone(self, context: dict[str, Any] | None = None) -> dict[str, Any]:

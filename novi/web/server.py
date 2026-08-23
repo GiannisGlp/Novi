@@ -25,13 +25,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from novi.brain.contracts import utc_now
 from novi.brain.audio import AudioFrame
 from novi.brain.autonomy import Goal
+from novi.brain.contracts import utc_now
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
 from novi.brain.models.stt import TranscriptionResult
-from novi.brain.engine import MacBrain, MacBrainConfig
 
 _ROUTED = Path(__file__).resolve().parent
 
@@ -409,7 +409,8 @@ class NoviWebServer:
         with self._lock:
             self._chat_busy = True
         try:
-            addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+            addressee = self.brain.resolve_addressee(text)
+            discourse_hint = self.brain.note_user_message(text)["resolved_topic"]
             self.brain._learn_from_chat(text, addressee)
             recent_novi = self._recent_novi(4)
             last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
@@ -428,7 +429,7 @@ class NoviWebServer:
                 self._append_chat(novi)
                 return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
             transport = self._llm_chat
-            reply_obj = self.brain.compose_reply(text, person=addressee, history=self._build_history(12), llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi)
+            reply_obj = self.brain.compose_reply(text, person=addressee, history=self._build_history(12), llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi, topic_hint=discourse_hint)
             reply = reply_obj["text"]
             self._append_chat({"role": "user", "text": f"[heard] {text}"})
             if reply is not None:
@@ -591,7 +592,8 @@ class NoviWebServer:
                 step = self.brain.step()
                 trace = dict(self.brain._last_reasoning_trace)
             history = self._build_history(12)
-            addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
+            addressee = self.brain.resolve_addressee(text)
+            discourse_hint = self.brain.note_user_message(text)["resolved_topic"]
             self.brain._learn_from_chat(text, addressee)
             recent_novi = self._recent_novi(4)
             last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
@@ -657,6 +659,7 @@ class NoviWebServer:
             full_reply_obj = self.brain.compose_reply(
                 text, person=addressee, history=history, llm_chat=self._llm_chat,
                 last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi,
+                topic_hint=discourse_hint,
             )
             full_reply = full_reply_obj.get("text") if full_reply_obj else None
             if full_reply is None:
@@ -918,7 +921,13 @@ class NoviWebServer:
                     pkg = self.brain._assemble_world_context("", person="")
                 except Exception:
                     pkg = {}
-            return {"cycle": self.brain._cycle, "package": pkg}
+            discourse = {}
+            try:
+                discourse = self.brain.discourse.snapshot()
+                discourse.pop("turns", None)  # keep the API payload bounded
+            except Exception:
+                pass
+            return {"cycle": self.brain._cycle, "package": pkg, "discourse": discourse}
 
     def soul_detail(self) -> dict[str, Any]:
         with self._lock:

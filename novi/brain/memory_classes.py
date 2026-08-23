@@ -61,6 +61,41 @@ DEFERRED_CLASSES = frozenset({
     MemoryClass.AUTOBIOGRAPHICAL,
 })
 
+# Deterministic memory_type -> class routing used at admission time so every
+# record carries its canonical class (gap-audit Phase C2).
+_MEMORY_TYPE_CLASS: dict[str, MemoryClass] = {
+    "utterance": MemoryClass.EPISODIC,
+    "audio_event": MemoryClass.EPISODIC,
+    "observation": MemoryClass.EPISODIC,
+    "perception": MemoryClass.EPISODIC,
+    "episode": MemoryClass.EPISODIC,
+    "goal_outcome": MemoryClass.EPISODIC,
+    "knowledge": MemoryClass.SEMANTIC,
+    "fact": MemoryClass.SEMANTIC,
+    "triple": MemoryClass.SEMANTIC,
+    "summary": MemoryClass.SEMANTIC,
+    "preference": MemoryClass.PREFERENCE,
+    "routine": MemoryClass.ROUTINE_CANDIDATE,
+    "routine_candidate": MemoryClass.ROUTINE_CANDIDATE,
+    "procedural_candidate": MemoryClass.PROCEDURAL_CANDIDATE,
+    "spatial": MemoryClass.SPATIAL,
+    "temporal": MemoryClass.TEMPORAL,
+    "causal_link": MemoryClass.TEMPORAL,
+}
+
+
+def classify_memory(memory_type: str) -> MemoryClass:
+    """Map an engine ``memory_type`` to its canonical class (EPISODIC default)."""
+    mt = str(memory_type).lower()
+    if mt in _MEMORY_TYPE_CLASS:
+        return _MEMORY_TYPE_CLASS[mt]
+    if "candidate" in mt:
+        return MemoryClass.PROCEDURAL_CANDIDATE if "procedural" in mt else MemoryClass.ROUTINE_CANDIDATE
+    if mt in {c.value for c in MemoryClass}:
+        return MemoryClass(mt)
+    return MemoryClass.EPISODIC
+
+
 _DEFERRAL_RATIONALE = {
     MemoryClass.PROCEDURAL_COMPETENCE: (
         "depends on the body/actuator phase and verified execution outcomes; "
@@ -116,6 +151,16 @@ class MemoryClassDecisionRegistry:
 
     def decision(self, memory_class: MemoryClass) -> MemoryClassDecision:
         return self._decisions[memory_class]
+
+    def gate(self, memory_type: str) -> tuple[bool, str, str]:
+        """Admission gate for a memory_type (gap-audit Phase C2).
+
+        Returns (allowed, memory_class_value, state). Deferred classes are
+        refused at admission instead of being stored flat.
+        """
+        cls = classify_memory(memory_type)
+        d = self._decisions[cls]
+        return (d.state == "implemented", cls.value, d.state)
 
     def implemented(self) -> tuple[MemoryClass, ...]:
         return tuple(c for c, d in self._decisions.items() if d.state == "implemented")

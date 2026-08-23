@@ -75,7 +75,7 @@ The absence of H/P/L evidence today is not treated as a gap where the requiremen
 | Contract/API | Canonical contract registry and versioned JSON Schemas under `contracts/` |
 | Implementation | Contract validation tooling and registry artifacts |
 | Test | Contract validation workflow and positive/negative fixtures |
-| Evidence | `25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md`; `contracts/tests/README.md` |
+| Evidence | `25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md`; `novi/contracts/tests/README.md` |
 | Status | TESTED / EVIDENCED |
 | Limitation | Domain implementation may still expand the contract set; additions must follow the canonical ownership rule. |
 
@@ -88,7 +88,7 @@ The absence of H/P/L evidence today is not treated as a gap where the requiremen
 | Contract/API | Versioned schemas under `contracts/` |
 | Implementation | Contract test suite |
 | Test | Positive fixture validation in contract CI |
-| Evidence | `25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md`; `contracts/tests/README.md` |
+| Evidence | `25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md`; `novi/contracts/tests/README.md` |
 | Status | TESTED |
 | Limitation | This proves contract validation, not every future domain runtime consumer. |
 
@@ -101,7 +101,7 @@ The absence of H/P/L evidence today is not treated as a gap where the requiremen
 | Contract/API | Versioned JSON Schemas and semantic validation rules |
 | Implementation | Negative-fixture contract tests |
 | Test | Contract CI negative validation |
-| Evidence | `25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md`; `contracts/tests/README.md` |
+| Evidence | `25_ARCH_CLOSE_001_VALIDATION_EVIDENCE.md`; `novi/contracts/tests/README.md` |
 | Status | TESTED |
 | Limitation | Runtime semantic checks beyond schema scope remain domain implementation work. |
 
@@ -114,7 +114,7 @@ The absence of H/P/L evidence today is not treated as a gap where the requiremen
 | Contract/API | Versioned contract paths and compatibility fixtures |
 | Implementation | Compatibility validation suite |
 | Test | Compatibility CI |
-| Evidence | `contracts/tests/compatibility/README.md`; repository contract validation workflow |
+| Evidence | `novi/contracts/tests/compatibility/README.md`; repository contract validation workflow |
 | Status | TESTED |
 | Limitation | Compatibility policy must be re-evaluated when a contract introduces a breaking semantic change. |
 

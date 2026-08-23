@@ -31,3 +31,4 @@ novi/contracts/tests/fixtures/negative/
 # DeepSeek Harness local artifacts (agent tooling, not project code)
 .dsh/
 skills-lock.json
+brain_evidence.json

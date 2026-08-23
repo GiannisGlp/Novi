@@ -225,6 +225,16 @@ class SpatialMap:
     def pose_of(self, entity_id: str) -> SpatialReference | None:
         return self._entity_poses.get(entity_id)
 
+    def region_at(self, x: float, y: float, *, frame: str = "map") -> str | None:
+        """First registered region whose bounds contain the point (deterministic).
+
+        Gap-audit Phase C3: lets the brain name the place its body is in.
+        """
+        for region in self._regions.values():
+            if region.frame == frame and region.contains(float(x), float(y)):
+                return region.region_id
+        return None
+
     def region_of(self, entity_id: str) -> str | None:
         ref = self._entity_poses.get(entity_id)
         if ref is None:

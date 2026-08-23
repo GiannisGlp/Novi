@@ -160,6 +160,87 @@ class EntityKnowledgeGraph:
         out.sort(key=lambda t: (-t.confidence, -t.evidence_count))
         return tuple(out[:limit])
 
+    # ---- graph analytics (gap-audit Phase D1) ----
+
+    def query(self, entity: str, *, predicate: str | None = None, hops: int = 1) -> list[dict[str, Any]]:
+        """BFS multi-hop neighbourhood query from ``entity``.
+
+        Follows triple edges outward (subject→object) and inward (object→
+        subject) up to ``hops``; ``predicate`` filters edges when given.
+        Returns deduplicated rows with the hop distance. Deterministic order:
+        by hop, then subject/predicate/object.
+        """
+        entity = str(entity).strip()
+        if not entity or hops < 1:
+            return []
+        out_edges: dict[str, list[tuple[str, str]]] = {}   # node -> [(predicate, node)]
+        in_edges: dict[str, list[tuple[str, str]]] = {}
+        for (s, p, o) in self._triples:
+            out_edges.setdefault(s, []).append((p, o))
+            in_edges.setdefault(o, []).append((p, s))
+        rows: dict[tuple[str, str, str, int], dict[str, Any]] = {}
+        seen_nodes = {entity}
+        frontier = [entity]
+        for depth in range(1, hops + 1):
+            nxt: list[str] = []
+            for node in frontier:
+                for p, other in out_edges.get(node, []):
+                    if predicate is not None and p != predicate:
+                        continue
+                    key = (node, p, other, depth)
+                    if key not in rows:
+                        rows[key] = {"subject": node, "predicate": p, "object": other, "hops": depth}
+                    if other not in seen_nodes:
+                        seen_nodes.add(other)
+                        nxt.append(other)
+                for p, other in in_edges.get(node, []):
+                    if predicate is not None and p != predicate:
+                        continue
+                    key = (other, p, node, depth)
+                    if key not in rows:
+                        rows[key] = {"subject": other, "predicate": p, "object": node, "hops": depth}
+                    if other not in seen_nodes:
+                        seen_nodes.add(other)
+                        nxt.append(other)
+            frontier = nxt
+        return sorted(rows.values(), key=lambda r: (r["hops"], r["subject"], r["predicate"], r["object"]))
+
+    def pagerank(self) -> dict[str, float]:
+        """Entity importance via PageRank (networkx when available).
+
+        Fallback without networkx: normalized confidence-weighted degree — a
+        principled, cheap proxy that keeps the API honest offline. All scores
+        are in [0, 1].
+        """
+        if not self._triples:
+            return {}
+        weights: dict[str, float] = {}
+        for (s, _p, o), t in self._triples.items():
+            w = max(0.0, min(1.0, float(t.confidence)))
+            weights[s] = weights.get(s, 0.0) + w
+            weights[o] = weights.get(o, 0.0) + w
+        try:
+            import networkx as nx
+        except Exception:  # noqa: BLE001 - optional extra; degree fallback below
+            total = sum(weights.values()) or 1.0
+            return {k: round(v / total, 6) for k, v in sorted(weights.items())}
+        # Undirected view: importance = how strongly an entity participates
+        # in relations at all, regardless of argument order.
+        g = nx.Graph()
+        for (s, p, o), t in sorted(self._triples.items()):
+            w = max(0.0, min(1.0, float(t.confidence)))
+            if g.has_edge(s, o):
+                g[s][o]["weight"] += w
+                g[s][o]["predicates"].add(p)
+            else:
+                g.add_edge(s, o, weight=w, predicates={p})
+        ranks = nx.pagerank(g, weight="weight")
+        return {k: round(float(v), 6) for k, v in sorted(ranks.items())}
+
+    def top_entities(self, *, limit: int = 5) -> list[tuple[str, float]]:
+        ranks = self.pagerank()
+        return sorted(ranks.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+
     def entity_types(self) -> dict[str, str]:
         return dict(self._entities)
 

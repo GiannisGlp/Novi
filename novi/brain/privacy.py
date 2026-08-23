@@ -32,6 +32,14 @@ SENSITIVITY_RANK = {name: i for i, name in enumerate(PRIVACY_CLASSES)}
 
 _PERSON_LABELS = {"alice", "bob", "vano", "charlie", "dana", "eve"}
 
+# Common object/place labels every brain recognizes even before they are
+# observed (single source of truth for chat entity extraction, discourse
+# topic grounding and privacy classification).
+COMMON_ENTITY_LABELS = frozenset({
+    "alice", "bob", "door", "person", "table", "room", "kitchen",
+    "object", "window", "lamp", "chair", "plant",
+})
+
 # Deterministic classification lexicon (class -> keywords). Matched on normalized text.
 _KEYWORDS: dict[str, tuple[str, ...]] = {
     "credential": ("password", "token", "secret", "apikey", "api_key", "pin", "credential", "passphrase"),

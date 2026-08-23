@@ -3,9 +3,9 @@ import unittest
 from pathlib import Path
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.identity import PersonIdentity
 from novi.brain.models.stt import TranscriptionResult
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.storage import DurableMemoryStore
 from novi.brain.tests.test_mac_brain import FakeCamera
 
@@ -83,7 +83,8 @@ class BrainIdentityTests(unittest.TestCase):
             brain = self._brain(store_path=str(Path(td) / "b.db"))
             brain.start()
             brain.step()  # person detected (vision)
-            tr = TranscriptionResult(text="hi alice", language="en", confidence=0.9, audio_path="", provider="test", model_id="test")
+            # Only a self-introduction binds the speaker's name (gap-audit A2).
+            tr = TranscriptionResult(text="hi, i am alice", language="en", confidence=0.9, audio_path="", provider="test", model_id="test")
             brain.ingest_transcript(tr)
             brain.step()  # vision again + speech binding active
             result = brain.step()
@@ -91,6 +92,18 @@ class BrainIdentityTests(unittest.TestCase):
             self.assertEqual(result["identity"]["name"], "alice")
             self.assertIn("identity.observed", [e["event_type"] for e in brain.events])
             self.assertIn("identity.named", [e["event_type"] for e in brain.events])
+
+    def test_third_party_mention_does_not_bind_speaker_name(self):
+        """Mentioning another person must not invent the speaker's identity."""
+        with tempfile.TemporaryDirectory() as td:
+            brain = self._brain(store_path=str(Path(td) / "b.db"))
+            brain.start()
+            tr = TranscriptionResult(text="is alice coming to the kitchen?", language="en", confidence=0.9, audio_path="", provider="test", model_id="test")
+            brain.ingest_transcript(tr)
+            brain.stop()
+            belief = brain.identity.identity_for("person")
+            self.assertTrue(belief is None or belief.name is None)
+            self.assertNotIn("identity.named", [e["event_type"] for e in brain.events])
 
 
 if __name__ == "__main__":

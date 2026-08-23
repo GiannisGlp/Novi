@@ -262,9 +262,7 @@ def _is_clarification(text: str) -> bool:
     if t in _EXACT:
         return True
     # "what <single word>?" style clarifying question, e.g. "what system?"
-    if re.match(r"^what\s+[a-z]+\s*$", t):
-        return True
-    return False
+    return bool(re.match(r"^what\s+[a-z]+\s*$", t))
 
 
 def clarification_reply(cycle: int = 0) -> str:
@@ -276,7 +274,10 @@ def clarification_reply(cycle: int = 0) -> str:
     return _CLARIFICATION_REPLIES[cycle % len(_CLARIFICATION_REPLIES)]
 
 
-_INTRO = re.compile(r"\b(?:my name is|i am|i'm|i am called) ([a-z][a-z\-' ]{1,30}?)(?:[.!?,]|$)", re.IGNORECASE)
+_INTRO = re.compile(
+    r"\b(?:my name is|i am called|i am|i'm|it's me|its me|it is me) ([a-z][a-z\-' ]{1,30}?)(?:[.!?,]|$)",
+    re.IGNORECASE,
+)
 
 _INTRO_REPLIES = [
     "{name} — nice to put a name to you. I'll remember that.",
@@ -458,11 +459,9 @@ def _is_realtime_data_question(text: str) -> bool:
     if any(p.search(t) for p in _REALTIME_RE):
         return True
     # "how much is bitcoin right now?"-style without the exact pattern.
-    if re.search(r"\b(how much is|what's the (?:current )?price of)\b", t) and any(
+    return bool(re.search(r"\b(how much is|what's the (?:current )?price of)\b", t) and any(
         w in t for w in ("bitcoin", "crypto", "stock", "gold", "oil", "eth", "btc", "shares")
-    ):
-        return True
-    return False
+    ))
 
 
 def realtime_honest_reply() -> str:
@@ -963,7 +962,6 @@ def _reduce_name_repetition(text: str, name: str) -> str:
     """Rule 9: do not say the addressee's name more than once without reason."""
     if not name:
         return text
-    low = name.lower()
     # case-insensitive count, preserve the first occurrence
     count = 0
     out: list[str] = []
@@ -1036,10 +1034,7 @@ class DialogueEngine:
         Returns a dict with: text (str|None), silent (bool), rejected (bool).
         text is None when the reply should be replaced by a natural fallback.
         """
-        if llm_chat is not None:
-            raw = llm_chat(system=system, user=user)
-        else:
-            raw = self._chat(system, user)
+        raw = llm_chat(system=system, user=user) if llm_chat is not None else self._chat(system, user)
         if raw is None:
             return {"text": None, "silent": False, "rejected": False}
         text = raw.strip()

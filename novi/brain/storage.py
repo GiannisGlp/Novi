@@ -524,7 +524,15 @@ class DurableMemoryStore:
         row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0", (memory_id,)).fetchone()
         return self._to_record(row) if row else None
 
-    def retrieve(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+    @staticmethod
+    def _place_of(record: Any) -> str:
+        sc = getattr(record, "spatial_context", None)
+        if isinstance(sc, dict):
+            return str(sc.get("place") or "")
+        return ""
+
+    def retrieve(self, query: str, *, entity: str | None = None, memory_type: str | None = None, place: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+        """Full-scan retrieval; ``place`` filters by spatial_context.place (Phase C3)."""
         if limit <= 0:
             return ()
         rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0 AND state='active'").fetchall()
@@ -536,6 +544,8 @@ class DurableMemoryStore:
                 continue
             if memory_type is not None and memory_type != record.memory_type:
                 continue
+            if place is not None and self._place_of(record) != place:
+                continue
             haystack = json.dumps(record.content, sort_keys=True, default=str).lower()
             haystack += " " + " ".join(record.entity_refs)
             score = sum(1 for term in terms if term in haystack)
@@ -545,7 +555,7 @@ class DurableMemoryStore:
         scored.sort(key=lambda item: (-item[0], item[1]))
         return tuple(item[2] for item in scored[:limit])
 
-    def retrieve_indexed(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+    def retrieve_indexed(self, query: str, *, entity: str | None = None, memory_type: str | None = None, place: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
         """FTS5-backed retrieval: candidate memory_ids are found via MATCH, so only
         the (small) matched subset is fetched and JSON-parsed instead of a full scan.
 
@@ -556,7 +566,7 @@ class DurableMemoryStore:
             return ()
         terms = [t.lower() for t in query.split() if t]
         if not terms:
-            return self.retrieve(query, entity=entity, memory_type=memory_type, limit=limit)
+            return self.retrieve(query, entity=entity, memory_type=memory_type, place=place, limit=limit)
         matcher = " OR ".join(f'"{t}"' for t in terms)
         try:
             wide = max(limit * 20, 50)
@@ -564,7 +574,7 @@ class DurableMemoryStore:
                 "SELECT memory_id FROM memory_fts WHERE memory_fts MATCH ? ORDER BY rank LIMIT ?", (matcher, wide)
             ).fetchall()
         except Exception:
-            return self.retrieve(query, entity=entity, memory_type=memory_type, limit=limit)
+            return self.retrieve(query, entity=entity, memory_type=memory_type, place=place, limit=limit)
         scored: list[tuple[int, str, MemoryRecord]] = []
         for (memory_id,) in candidates:
             row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
@@ -575,6 +585,8 @@ class DurableMemoryStore:
                 continue
             if memory_type is not None and memory_type != record.memory_type:
                 continue
+            if place is not None and self._place_of(record) != place:
+                continue
             haystack = self._fts_document(record)
             score = sum(1 for term in terms if term in haystack)
             if score == 0:
@@ -583,7 +595,7 @@ class DurableMemoryStore:
         scored.sort(key=lambda item: (-item[0], item[1]))
         return tuple(item[2] for item in scored[:limit])
 
-    def retrieve_semantic(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
+    def retrieve_semantic(self, query: str, *, entity: str | None = None, memory_type: str | None = None, place: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
         """Vector-similarity retrieval over the embedding index."""
         if limit <= 0:
             return ()
@@ -597,6 +609,8 @@ class DurableMemoryStore:
             if entity is not None and entity not in record.entity_refs:
                 continue
             if memory_type is not None and memory_type != record.memory_type:
+                continue
+            if place is not None and self._place_of(record) != place:
                 continue
             scored.append((score, record))
         scored.sort(key=lambda item: -item[0])
@@ -975,8 +989,6 @@ class DurableMemoryStore:
           STALE — records found but all are stale.
           ABSTAIN — insufficient evidence for the consequence.
         """
-        from datetime import datetime
-        from datetime import timezone as dt_timezone
 
         if limit <= 0:
             return RetrievalResult((), NO_RESULT, "limit_is_zero", 0)
@@ -1028,7 +1040,6 @@ class DurableMemoryStore:
                 })
 
         # Staleness check.
-        now = datetime.now(dt_timezone.utc)
         stale, fresh = [], []
         for row in top_rows:
             vs = row["verification_status"]

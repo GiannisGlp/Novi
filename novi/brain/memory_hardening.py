@@ -357,10 +357,10 @@ class WriteGate:
                     return AdmissionResult(False, None, DISCARD, f"poisoning_detected:{pattern}", "poisoning")
 
         # Stage 5: Poisoning / anomaly check
-        if isinstance(content, str):
-            # Check for injection-like patterns.
-            if "ignore previous" in content.lower() or "disregard all" in content.lower():
-                return AdmissionResult(False, None, DISCARD, "instruction_injection_detected", "poisoning")
+        if isinstance(content, str) and (
+            "ignore previous" in content.lower() or "disregard all" in content.lower()
+        ):
+            return AdmissionResult(False, None, DISCARD, "instruction_injection_detected", "poisoning")
 
         # Stage 6: Retention decision — simulated evidence cannot become fact.
         if self.reject_simulated_as_fact:
@@ -394,10 +394,7 @@ class IndependenceTracker:
 
     def assign(self, memory_id: str, source_id: str, *, parent_group: str | None = None) -> str:
         """Assign a record to an independence group. Returns the group_id."""
-        if parent_group and parent_group in self._groups:
-            group_id = parent_group
-        else:
-            group_id = f"ind:{source_id[:16]}"
+        group_id = parent_group if (parent_group and parent_group in self._groups) else f"ind:{source_id[:16]}"
         self._groups.setdefault(group_id, set()).add(source_id)
         self._record_groups[memory_id] = group_id
         return group_id
@@ -652,6 +649,7 @@ class HardenedMemoryManager:
         *,
         entity: str | None = None,
         memory_type: str | None = None,
+        place: str | None = None,
         limit: int = 5,
         min_confidence: float = 0.0,
         require_current: bool = False,
@@ -664,6 +662,7 @@ class HardenedMemoryManager:
         """
         result = self.retrieve_with_states(
             query, entity=entity, memory_type=memory_type,
+            place=place,
             limit=limit, min_confidence=min_confidence,
             require_current=require_current, privacy_scope=privacy_scope,
         )
@@ -675,6 +674,7 @@ class HardenedMemoryManager:
         *,
         entity: str | None = None,
         memory_type: str | None = None,
+        place: str | None = None,
         limit: int = 5,
         min_confidence: float = 0.0,
         require_current: bool = False,
@@ -682,6 +682,7 @@ class HardenedMemoryManager:
     ) -> tuple[CanonicalMemoryRecord, ...]:
         """Alias for retrieve() — compatible with DurableMemoryStore.retrieve_indexed."""
         return self.retrieve(query, entity=entity, memory_type=memory_type,
+                             place=place,
                              limit=limit, min_confidence=min_confidence,
                              require_current=require_current, privacy_scope=privacy_scope)
 
@@ -691,6 +692,7 @@ class HardenedMemoryManager:
         *,
         entity: str | None = None,
         memory_type: str | None = None,
+        place: str | None = None,
         limit: int = 5,
         min_confidence: float = 0.0,
         require_current: bool = False,
@@ -723,6 +725,11 @@ class HardenedMemoryManager:
                 continue
             if memory_type is not None and record.memory_type != memory_type:
                 continue
+            if place is not None:
+                sc = getattr(record, "spatial_context", None)
+                got = str(sc.get("place") or "") if isinstance(sc, dict) else ""
+                if got != place:
+                    continue
             if record.confidence < min_confidence:
                 continue
             # Privacy filtering.

@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
+from .importance import PROTECTED_IMPORTANCE
+
 
 class MemoryState(str, Enum):
     ACTIVE = "active"
@@ -147,6 +149,35 @@ def _parse_utc(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
 
 
+def _record_importance(record: Any) -> float:
+    """Stamped importance, falling back to confidence (Phase C4)."""
+    provenance = getattr(record, "provenance", None)
+    if isinstance(provenance, dict):
+        raw = provenance.get("importance")
+        if raw is not None:
+            try:
+                return max(0.0, min(1.0, float(raw)))
+            except (TypeError, ValueError):
+                return 0.0
+    conf = getattr(record, "confidence", 0.0)
+    try:
+        return max(0.0, min(1.0, float(conf)))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _recency_factor(age_s: float, half_life_s: float = 3600.0) -> float:
+    """Exponential recency in (0, 1]: 1.0 now, 0.5 at one half-life."""
+    if age_s <= 0:
+        return 1.0
+    return 0.5 ** (age_s / max(1e-9, half_life_s))
+
+
+def _priority(record: Any, age_s: float) -> float:
+    """Consolidation priority = importance × recency; lower archives first."""
+    return _record_importance(record) * _recency_factor(age_s)
+
+
 class MemoryConsolidator:
     """Bounded consolidation pass over a durable store (or any store exposing the row API)."""
 
@@ -160,6 +191,7 @@ class MemoryConsolidator:
         now_dt = _parse_utc(now) if now else datetime.now(timezone.utc)
         rows = self.store.active_rows()
         report = ConsolidationReport()
+        archive_candidates: list[tuple[dict[str, Any], float]] = []
 
         if self.config.contradiction_types:
             report.superseded = self._resolve_contradictions(rows)
@@ -179,11 +211,26 @@ class MemoryConsolidator:
             new_conf = self._decayed(record.confidence, age_s)
             if new_conf < record.confidence:
                 if new_conf < self.config.min_confidence:
-                    self.store.set_state(record.memory_id, MemoryState.ARCHIVED)
-                    report.archived += 1
+                    archive_candidates.append((item, age_s))
                 else:
                     self.store.set_confidence(record.memory_id, new_conf)
                     report.decayed += 1
+        # Archival is prioritized by importance × recency (Phase C4): the least
+        # important, stalest records go first; high-importance records are
+        # exempt from automatic archival even when their confidence decays.
+        ranked = sorted(
+            archive_candidates,
+            key=lambda pair: (_priority(pair[0]["record"], pair[1]),),
+        )
+        for item, _age in ranked:
+            record = item["record"]
+            if self.store.get_state(record.memory_id) != MemoryState.ACTIVE.value:
+                continue  # superseded/expired earlier in this pass
+            imp = _record_importance(record)
+            if imp >= PROTECTED_IMPORTANCE:
+                continue  # cherished: decayed but kept
+            self.store.set_state(record.memory_id, MemoryState.ARCHIVED)
+            report.archived += 1
         return report
 
     def _decayed(self, confidence: float, age_s: float) -> float:
