@@ -7,7 +7,7 @@ plus temporal/causal inferences.
 
 import unittest
 
-from brain.b1_cognition import SensorObservation
+from brain.b1_cognition import ReasoningResult, SensorObservation, Situation
 from brain.b1_world import WorldEntityState, WorldModelState
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from MAC_BRAIN.autonomy import Goal
@@ -66,6 +66,21 @@ class MacCognitionTests(unittest.TestCase):
             "environmental_change_is_relevant",
             "no_high_salience_change_detected",
         })
+
+    def test_inferences_never_lower_confidence_below_base(self):
+        # Regression: adding inferences capped confidence at 0.9, which dropped
+        # a 0.95 base down to 0.9. Inferences must not lower confidence.
+        c = MacCognition()
+        base = ReasoningResult(
+            conclusion="some_conclusion", confidence=0.95,
+            basis=("base",), provenance=(),
+        )
+        situation = Situation(
+            cycle=1, entities=(), salient_entities=(), recent_events=(),
+            uncertainty=(), evidence=(),
+        )
+        _, confidence, _ = c._refine(base, situation, ("alice likely moved door",))
+        self.assertGreaterEqual(confidence, 0.95)
 
 
 class AliceBackend(DeterministicPerceptionBackend):

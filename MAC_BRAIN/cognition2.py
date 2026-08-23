@@ -141,7 +141,9 @@ class MacCognition(DeterministicCognition):
         basis = list(base.basis)
         if inferences:
             conclusion = "causal_change_inferred"
-            confidence = min(0.9, base.confidence + 0.1)
+            # Inferences boost confidence but never lower it below the base
+            # (capping at 0.9 used to drop a 0.95 base down to 0.9).
+            confidence = max(base.confidence, min(0.9, base.confidence + 0.1))
             basis = basis + list(inferences)
         goal = situation.goal
         if goal and goal.get("distance_to_goal") is not None and float(goal["distance_to_goal"]) < 2.0:

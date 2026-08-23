@@ -35,6 +35,10 @@ def utc_now() -> str:
 # Media-like payload keys that must never be stored verbatim (doc 13 §Privacy).
 _FORBIDDEN_RAW_KEYS = frozenset({"audio", "video", "frame", "image", "raw_audio", "raw_video", "pcm", "wav"})
 
+# Public alias so user_view's comprehension can reference it (defined here,
+# before user_view, so it is not resolved only by call-time luck).
+_FORBIDDEN_MEDIA_KEYS = _FORBIDDEN_RAW_KEYS
+
 
 @dataclass(frozen=True)
 class AuditEntry:
@@ -93,10 +97,6 @@ class AuditEntry:
             "actor": self.actor or None,
             "details": {k: v for k, v in self.details.items() if k not in _FORBIDDEN_MEDIA_KEYS},
         }
-
-
-# Public alias so user_view's comprehension can reference it.
-_FORBIDDEN_MEDIA_KEYS = _FORBIDDEN_RAW_KEYS
 
 
 def _redact(payload: dict[str, Any]) -> dict[str, Any]:

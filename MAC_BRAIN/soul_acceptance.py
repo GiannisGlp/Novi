@@ -664,8 +664,6 @@ class AcceptanceGateEvaluator:
 
         violations: list[str] = []
         for r in failed:
-            if r.result == "inconclusive":
-                continue
             for s in scenarios:
                 if s.scenario_id == r.scenario_id:
                     violations.extend(s.expected_invariants)
