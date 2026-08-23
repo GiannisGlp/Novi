@@ -196,23 +196,27 @@ class BrainDriver:
                 outcome.reply_source = "initiative"
         return outcome
 
-    # ---- reply composition (brain-owned, like ChatMixin) --------------------
+    # ---- reply composition (brain-owned, consolidated via respond) -----------
 
     def _compose(self, inp: AgentInput, person: str) -> tuple[str | None, str]:
-        """Compose the brain's own natural reply for a text input."""
+        """Compose the brain's own natural reply for a text input.
+
+        Delegates to the brain's source-agnostic ``respond()`` so reply
+        orchestration stays in the brain (docs/06-soul/07 §2), not the driver.
+        """
         try:
-            reply_obj = self.brain.compose_reply(
+            reply_obj = self.brain.respond(
                 inp.text,
                 person=person,
                 history=[],
                 llm_chat=self.llm_chat,
                 last_novi_text="",
-                addressee_name=person,
                 recent_novi=[],
+                learn=True,
             )
             text = reply_obj.get("text")
             if text is not None:
-                return text, "dialogue"
+                return text, reply_obj.get("reply_source", "dialogue")
         except Exception:  # noqa: BLE001
             pass
         fb = self.brain.natural_reply_fallback(text=inp.text, cycle=self.brain._cycle)

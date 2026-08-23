@@ -11,6 +11,7 @@ as self.method_name() without any delegation layer.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 from datetime import datetime, timezone
@@ -581,6 +582,50 @@ class ChatMixin:
         if isinstance(result.get("grounding"), dict):
             result["grounding"]["affect_expression"] = directive
         return result
+
+    def respond(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
+                llm_chat: Any = None, last_novi_text: str = "", recent_novi: list[str] | None = None,
+                learn: bool = True) -> dict[str, Any]:
+        """Source-agnostic, brain-owned reply orchestration.
+
+        Consolidates the chat/reply path the web layer previously assembled by
+        calling brain privates: detect the addressee, learn from the message,
+        compose the natural reply (or the deterministic fallback), and return a
+        structured result. Any source (web chat, CLI, voice) can call this and
+        get the same brain-owned communicative act (docs/06-soul/07 §2).
+
+        Returns {"text", "reply_source", "addressee", "trace"}.
+        """
+        text = (text or "").strip()
+        if not text:
+            return {"text": None, "reply_source": "none", "addressee": person or "", "trace": {}}
+        addressee = person or next((ref for ref in self._entities_in_text(text) if self._is_person_name(ref)), "")
+        if learn:
+            with contextlib.suppress(Exception):
+                self._learn_from_chat(text, addressee)
+        cycle = getattr(self, "_cycle", 0)
+        reply_obj = self.compose_reply(
+            text, person=addressee, history=history, llm_chat=llm_chat,
+            last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
+        )
+        reply = reply_obj.get("text")
+        if reply is None:
+            fb = self.natural_reply_fallback(text=text, cycle=cycle)
+            return {
+                "text": fb.get("text"),
+                "reply_source": "fallback",
+                "addressee": addressee,
+                "reason": fb.get("reason") or "No LLM reply available; used a natural acknowledgement.",
+                "trace": {"conclusion": None, "route": "deterministic", "route_reason": "no_llm_transport"},
+            }
+        return {
+            "text": reply,
+            "reply_source": "fallback" if reply_obj.get("fallback") else "dialogue",
+            "addressee": addressee,
+            "reason": reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state.",
+            "trace": {"conclusion": reply, "route": "local_llm",
+                      "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
+        }
 
     def _compose_reply_impl(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
                      llm_chat: Any = None, last_novi_text: str = "", addressee_name: str = "",

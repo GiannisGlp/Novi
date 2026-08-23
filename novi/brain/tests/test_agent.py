@@ -127,6 +127,29 @@ class BrainDriverTest(unittest.TestCase):
         self.assertIn("tone", s)
         self.assertIn("affect", s)
 
+    def test_respond_is_brain_owned(self) -> None:
+        """The brain's respond() consolidates reply orchestration:
+        addressee detection + learn + compose/fallback in one call."""
+        brain = self.driver.brain
+
+        # No LLM transport -> deterministic fallback.
+        r = brain.respond("hello there", person="alice")
+        self.assertEqual(r["reply_source"], "fallback")
+        self.assertEqual(r["addressee"], "alice")
+        self.assertIn("text", r)
+
+        # With an LLM transport -> dialogue path, brain still owns the act.
+        def fake_llm(*, system, user, temperature=0.5, timeout=120):  # noqa: ANN002, ANN003, ANN001
+            return "hello, alice"
+        r2 = brain.respond("hi", person="alice", llm_chat=fake_llm, learn=False)
+        self.assertIn(r2["reply_source"], {"dialogue", "fallback"})
+        self.assertIsNotNone(r2["text"])
+
+        # Empty input yields no reply.
+        r3 = brain.respond("   ", learn=False)
+        self.assertIsNone(r3["text"])
+        self.assertEqual(r3["reply_source"], "none")
+
 
 if __name__ == "__main__":
     unittest.main()
