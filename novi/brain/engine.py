@@ -499,6 +499,17 @@ class MacBrain(ChatMixin):
         if violations:
             self._emit("cognition.predicted", {"cycle": self._cycle, "violations": [v.snapshot() for v in violations]})
 
+        # Autonomous learning from experience (docs/02-autonomy/01 §Learning):
+        # feed the current detected-event set into the routine detector so Novi
+        # learns recurring co-occurrence patterns, and promote stable patterns
+        # into the knowledge graph as inferred relations.
+        if present:
+            self.routines.observe(self._cycle, present)
+            for routine in self.routines.routines(min_occurrences=self.routines.min_occurrences):
+                self._emit("learning.routine", {"cycle": self._cycle, "pattern": list(routine.pattern),
+                                                 "occurrences": routine.occurrences, "confidence": routine.confidence})
+                self._promote_routine_to_knowledge(routine)
+
         # Multimodal fusion: combine vision detections + pending speech into fused events.
         vision_obs = [
             ModalityObservation(modality="vision", entity=d.label, value="present", confidence=d.confidence, captured_at=now, received_at=now, source="camera")
@@ -1759,10 +1770,33 @@ class MacBrain(ChatMixin):
         """Feed a cycle's event set to the routine detector."""
         self.routines.observe(self._cycle, events)
         routines = self.routines.routines(min_occurrences=self.routines.min_occurrences)
-        if routines and routines[0].occurrences >= self.routines.min_occurrences:
+        for routine in routines:
             self._emit("learning.routine", {"cycle": self._cycle,
-                                             "pattern": list(routines[0].pattern),
-                                             "occurrences": routines[0].occurrences})
+                                             "pattern": list(routine.pattern),
+                                             "occurrences": routine.occurrences,
+                                             "confidence": routine.confidence})
+            self._promote_routine_to_knowledge(routine)
+
+    def _promote_routine_to_knowledge(self, routine: Any) -> None:
+        """Promote a stable co-occurrence routine into an inferred relation.
+
+        A recurring pattern (A, B) is recorded as ``A co_occurs_with B`` in the
+        knowledge graph with the routine's confidence. This is experience-driven
+        learning (docs/06-soul/06 §Learning): patterns that persist across many
+        cycles become part of Novi's understanding of its environment. It is
+        always INFERRED and reversible.
+        """
+        from .learning_pipeline import INFERRED
+        pattern = list(routine.pattern)
+        if len(pattern) >= 2:
+            for i in range(1, len(pattern)):
+                cand = self.learning.observe(
+                    pattern[0], "co_occurs_with", pattern[i],
+                    confidence=routine.confidence, source="routine_detector",
+                    cycle=self._cycle, epistemic=INFERRED,
+                )
+                if cand.epistemic in (INFERRED,) and cand.evidence_count >= self.learning.promote_min_evidence:
+                    self.learning.promote(cand, self.knowledge, cycle=self._cycle)
 
     def counterfactual(self, *, premise: str, if_evidence: dict[str, Any],
                        then_prediction: str, confidence: float = 0.4) -> dict[str, Any]:
@@ -1773,6 +1807,41 @@ class MacBrain(ChatMixin):
         )
         self._emit("learning.counterfactual", {"cycle": self._cycle, **result})
         return result
+
+    def learning_state(self) -> dict[str, Any]:
+        """Expose the learning subsystems' state (routines, counterfactuals,
+        corrections, memory-class decisions, schema-evolution gate).
+
+        Makes the candidate/promotion learning observable and auditable without
+        exposing the model to the ability to silently mutate authoritative state.
+        """
+        try:
+            routines = [r.snapshot() for r in self.routines.routines()]
+        except Exception:  # noqa: BLE001
+            routines = []
+        try:
+            counterfactuals = list(self.counterfactuals.queries())
+        except Exception:  # noqa: BLE001
+            counterfactuals = []
+        try:
+            corrections = self.corrections.snapshot()
+        except Exception:  # noqa: BLE001
+            corrections = []
+        try:
+            memory_classes = self.memory_classes.snapshot()
+        except Exception:  # noqa: BLE001
+            memory_classes = {}
+        try:
+            schema = self.schema_evolution.snapshot()
+        except Exception:  # noqa: BLE001
+            schema = {}
+        return {
+            "routines": routines,
+            "counterfactuals": counterfactuals,
+            "corrections": corrections,
+            "memory_classes": memory_classes,
+            "schema_evolution": schema,
+        }
 
     def record_correction(self, person: str, kind: str, value, *, now: str = "") -> None:
         pref = self.preferences.record_correction(person, kind, value, now=now)

@@ -234,6 +234,37 @@ class RuntimeLearningTests(unittest.TestCase):
         finally:
             brain.stop()
 
+    def test_recurring_routine_promotes_to_knowledge(self):
+        """A recurring co-occurrence pattern becomes an inferred knowledge relation
+        (autonomous, experience-driven learning — docs/02-autonomy/01 §Learning)."""
+        brain = self._brain()
+        brain.start()
+        try:
+            for _ in range(8):
+                brain.observe_routine({"alice", "kitchen"})
+            ls = brain.learning_state()
+            self.assertTrue(ls["routines"], "a routine hypothesis should have emerged")
+            self.assertEqual(ls["routines"][0]["epistemic"], "INFERRED")
+            # The stable pattern is promoted into the knowledge graph.
+            self.assertGreaterEqual(brain.knowledge.counts()["triples"], 1)
+        finally:
+            brain.stop()
+
+    def test_learning_state_exposes_subsystems(self):
+        """learning_state() surfaces routines, counterfactuals, corrections,
+        memory-class decisions and the schema-evolution gate (auditable)."""
+        brain = self._brain()
+        brain.start()
+        try:
+            ls = brain.learning_state()
+            for key in ("routines", "counterfactuals", "corrections",
+                        "memory_classes", "schema_evolution"):
+                self.assertIn(key, ls)
+            self.assertIn("L0_runtime_state", ls["schema_evolution"]["levels"])
+            self.assertIn("implemented", ls["memory_classes"])
+        finally:
+            brain.stop()
+
 
 if __name__ == "__main__":
     unittest.main()
