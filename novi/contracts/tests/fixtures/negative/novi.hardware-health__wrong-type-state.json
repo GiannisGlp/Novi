@@ -1,0 +1,15 @@
+{
+  "calibration_state": "fixture-value",
+  "communication_state": "fixture-value",
+  "device_id": "fixture-value",
+  "device_type": "fixture-value",
+  "driver_version": "fixture-value",
+  "fault_codes": [
+    "fixture-value"
+  ],
+  "firmware_version": "fixture-value",
+  "health_metrics": {},
+  "observed_at": "2026-01-01T00:00:00Z",
+  "provenance": {},
+  "state": 123
+}

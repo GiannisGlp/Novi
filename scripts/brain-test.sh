@@ -14,9 +14,9 @@ OUT="$ROOT/mac_test_results/brain/$RUN_ID"
 mkdir -p "$OUT"
 
 set +e
-"$PYTHON" -m unittest discover -s "$ROOT/brain/tests" -t "$ROOT" -p 'test_*.py' >"$OUT/tests.log" 2>&1
+"$PYTHON" -m unittest discover -s "$ROOT/novi/brain/tests" -t "$ROOT" -p 'test_*.py' >"$OUT/tests.log" 2>&1
 TEST_STATUS=$?
-"$PYTHON" -m brain.cli --cycles 3 --evidence "$OUT/runtime.json" >"$OUT/runtime.log" 2>&1
+"$PYTHON" -m novi.brain.cli --cycles 3 --evidence "$OUT/runtime.json" >"$OUT/runtime.log" 2>&1
 RUNTIME_STATUS=$?
 set -e
 

@@ -1,0 +1,13 @@
+{
+  "authorization_ref": "fixture-value",
+  "capability": "fixture-value",
+  "execution_attempt": 1,
+  "execution_id": "fixture-value",
+  "operation_id": "fixture-value",
+  "proposal_ref": "fixture-value",
+  "provenance": {},
+  "runtime_version": "fixture-value",
+  "safety_ref": "fixture-value",
+  "started_at": "2026-01-01T00:00:00Z",
+  "status": 123
+}

@@ -4,7 +4,7 @@
 Runs the three no-hardware NVIDIA experiments on the Mac with deterministic
 mocks (Exp 1 context-aware reference resolution, Exp 2 skill contract,
 Exp 3 NoviEpisode demo dataset + adapters), then writes an evidence record
-into IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/ with:
+into docs/plans/EVIDENCE/mac/<stamp>/ with:
 
   - one evidence file per experiment, each labeled with a validation evidence
     class (docs/01-system-architecture/10_ARCHITECTURE_VALIDATION_AND_TRACEABILITY.md
@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-EVIDENCE_ROOT = ROOT / "IMPLEMENTATION_PLAN" / "EVIDENCE" / "mac"
+EVIDENCE_ROOT = ROOT / "docs" / "plans" / "EVIDENCE" / "mac"
 INDEX = EVIDENCE_ROOT / "INDEX.md"
 
 
@@ -47,11 +47,11 @@ def git_sha() -> str:
 
 
 # Validation evidence classes come from the experiment module itself
-# (MAC_BRAIN.nvidia_experiments.VALIDATION_CLASS_BY_EXPERIMENT), labelling each
+# (brain.nvidia_experiments.VALIDATION_CLASS_BY_EXPERIMENT), labelling each
 # run with E0-E5 per docs/01-system-architecture/10_ARCHITECTURE_VALIDATION_AND_TRACEABILITY.md.
 
 def main() -> int:
-    from MAC_BRAIN.nvidia_experiments import run_nvidia_experiments
+    from novi.brain.nvidia_experiments import run_nvidia_experiments
 
     stamp = utc_stamp()
     dest = EVIDENCE_ROOT / stamp

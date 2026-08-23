@@ -1,0 +1,15 @@
+{
+  "__unexpected_fixture_property__": true,
+  "authorization_context": {},
+  "capability": "fixture-value",
+  "constraints": {},
+  "expected_effects": {},
+  "expires_at": "2026-01-01T00:00:00Z",
+  "idempotency_key": "fixture-value",
+  "parameters": {},
+  "proposal_id": "fixture-value",
+  "provenance": {},
+  "requester_id": "fixture-value",
+  "risks": {},
+  "semantic_intent": {}
+}

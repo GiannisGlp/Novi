@@ -89,11 +89,12 @@ mac = [
 ]
 
 [project.scripts]
-novi-brain = "brain.cli:main"
-novi-web = "web.server:main"
+novi-brain = "novi.brain.cli:main"
+novi-web = "novi.web.server:main"
+brain-cli = "novi.brain.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["brain*", "web*", "contracts*", "cognition*"]
+include = ["novi*", "web*", "contracts*"]
 exclude = ["tests*", "docs*", "scripts*"]
 
 [tool.ruff]
@@ -118,6 +119,6 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["brain/tests", "web/tests", "contracts/tests"]
+testpaths = ["novi/brain/tests", "novi/web/tests", "novi/contracts/tests", "novi/cognition/tests"]
 pythonpath = ["."]
 addopts = "-v --tb=short"

@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 # Running a file under scripts/mac directly makes sys.path point at scripts/mac,
-# not the repository root. Add the root explicitly so the canonical MAC_BRAIN
+# not the repository root. Add the root explicitly so the canonical brain
 # package can always be imported from any working directory.
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -42,7 +42,7 @@ def base_evidence() -> dict:
 
 def run_image(path: Path) -> int:
     from PIL import Image
-    from MAC_BRAIN.models.torchvision_detector import TorchvisionSSDLiteDetector
+    from novi.brain.models.torchvision_detector import TorchvisionSSDLiteDetector
 
     evidence = base_evidence()
     evidence["test"] = "M1-image"
@@ -74,8 +74,8 @@ def run_image(path: Path) -> int:
 
 
 def run_camera(device: int, frames: int) -> int:
-    from MAC_BRAIN.io import MacCamera
-    from MAC_BRAIN.models.torchvision_detector import TorchvisionSSDLiteDetector
+    from novi.brain.io import MacCamera
+    from novi.brain.models.torchvision_detector import TorchvisionSSDLiteDetector
 
     evidence = base_evidence()
     evidence["test"] = "M1-camera"

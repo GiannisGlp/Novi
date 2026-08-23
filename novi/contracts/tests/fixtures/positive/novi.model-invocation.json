@@ -1,0 +1,15 @@
+{
+  "artifact_digest": "fixture-value",
+  "completed_at": "2026-01-01T00:00:00Z",
+  "hardware": {},
+  "input_schema_version": "fixture-value",
+  "invocation_id": "fixture-value",
+  "latency": {},
+  "model_id": "fixture-value",
+  "model_version": "fixture-value",
+  "output_schema_version": "fixture-value",
+  "provenance": {},
+  "runtime": "fixture-value",
+  "runtime_version": "fixture-value",
+  "started_at": "2026-01-01T00:00:00Z"
+}

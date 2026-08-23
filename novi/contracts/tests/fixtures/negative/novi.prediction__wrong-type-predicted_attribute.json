@@ -1,0 +1,9 @@
+{
+  "basis": "fixture-value",
+  "confidence": 1.0,
+  "created_at": "2026-01-01T00:00:00Z",
+  "id": "fixture-value",
+  "predicted_attribute": 123,
+  "predicts_at": "2026-01-01T00:00:00Z",
+  "subject_ref": "fixture-value"
+}

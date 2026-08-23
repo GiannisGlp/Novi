@@ -62,18 +62,18 @@ def command_for(name: str) -> list[str] | None:
     pytest = shutil.which("pytest")
     python = sys.executable
     if name == "brain":
-        if pytest and (ROOT / "brain/tests").exists():
-            return [pytest, "brain/tests", "--junitxml={JUNIT}", "--cov=brain", "--cov-report=term-missing", "--cov-report=json:{COV}"]
+        if pytest and (ROOT / "novi/brain/tests").exists():
+            return [pytest, "novi/brain/tests", "--junitxml={JUNIT}", "--cov=novi.brain", "--cov-report=term-missing", "--cov-report=json:{COV}"]
     if name == "unit":
         if pytest:
-            return [pytest, "brain/tests", "--junitxml={JUNIT}", "--cov=brain", "--cov-report=term-missing", "--cov-report=json:{COV}"]
+            return [pytest, "novi/brain/tests", "--junitxml={JUNIT}", "--cov=novi.brain", "--cov-report=term-missing", "--cov-report=json:{COV}"]
     if name == "full":
         if pytest:
-            return [pytest, "--junitxml={JUNIT}", "--cov=brain", "--cov-report=term-missing", "--cov-report=json:{COV}"]
+            return [pytest, "--junitxml={JUNIT}", "--cov=novi.brain", "--cov-report=term-missing", "--cov-report=json:{COV}"]
     if name == "lint" and command_exists("ruff"):
         return ["ruff", "check", "."]
     if name == "typecheck" and command_exists("mypy"):
-        return ["mypy", "brain"]
+        return ["mypy", "novi.brain"]
     return None
 
 

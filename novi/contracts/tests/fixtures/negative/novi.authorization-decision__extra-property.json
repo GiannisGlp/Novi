@@ -1,0 +1,15 @@
+{
+  "__unexpected_fixture_property__": true,
+  "capability": "fixture-value",
+  "decision": "fixture-value",
+  "decision_id": "fixture-value",
+  "policy_version": "fixture-value",
+  "principal": {},
+  "provenance": {},
+  "purpose": {},
+  "scope": {},
+  "state_revision": 1,
+  "target": {},
+  "valid_from": "2026-01-01T00:00:00Z",
+  "valid_until": "2026-01-01T00:00:00Z"
+}

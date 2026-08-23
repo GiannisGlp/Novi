@@ -1,0 +1,9 @@
+{
+  "confidence": {},
+  "object_entity": 123,
+  "provenance": {},
+  "relationship_id": "fixture-value",
+  "relationship_type": "fixture-value",
+  "subject_entity": "fixture-value",
+  "verification_status": "fixture-value"
+}

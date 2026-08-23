@@ -55,7 +55,7 @@ case "$MODE" in
     if ! command -v say >/dev/null 2>&1; then
       note "macOS 'say' not found; TTS will be skipped"
     fi
-    exec "$PYTHON" -m brain.cli \
+    exec "$PYTHON" -m novi.brain.cli \
       --live --rounds "$ROUNDS" --live-steps "$LIVE_STEPS" \
       $CAMERA_FLAG --neural \
       --reasoning router --listen-seconds "$LISTEN_SECONDS" --stt-model "$STT_MODEL" \
@@ -63,25 +63,25 @@ case "$MODE" in
     ;;
   neural)
     note "real neural (MPS) object detection on test-image.png (no camera)"
-    exec "$PYTHON" -m brain.cli --cycles "${NOVI_CYCLES:-5}" --neural \
+    exec "$PYTHON" -m novi.brain.cli --cycles "${NOVI_CYCLES:-5}" --neural \
       --neural-image test-image.png --store "$STORE" "$@"
     ;;
   image)
     note "real neural (MPS) object detection on test-image.png (alias of 'neural')"
-    exec "$PYTHON" -m brain.cli --cycles "${NOVI_CYCLES:-5}" --neural \
+    exec "$PYTHON" -m novi.brain.cli --cycles "${NOVI_CYCLES:-5}" --neural \
       --neural-image test-image.png --store "$STORE" "$@"
     ;;
   hear)
     note "offline demo-hear session (deterministic speech, no microphone)"
-    exec "$PYTHON" -m brain.cli --cycles "${NOVI_CYCLES:-8}" \
+    exec "$PYTHON" -m novi.brain.cli --cycles "${NOVI_CYCLES:-8}" \
       --demo-hear "${NOVI_DEMO_HEAR:-alice moved the door}" --store "$STORE" "$@"
     ;;
   quick)
     note "deterministic brain snapshot (no camera/mic/model needed)"
-    exec "$PYTHON" -m brain.cli --cycles "${NOVI_CYCLES:-10}" --store "$STORE" "$@"
+    exec "$PYTHON" -m novi.brain.cli --cycles "${NOVI_CYCLES:-10}" --store "$STORE" "$@"
     ;;
   *)
-    note "passing arguments straight through to brain.cli"
-    exec "$PYTHON" -m brain.cli "$@"
+    note "passing arguments straight through to novi.brain.cli"
+    exec "$PYTHON" -m novi.brain.cli "$@"
     ;;
 esac

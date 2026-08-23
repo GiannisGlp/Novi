@@ -6,7 +6,7 @@ source .venv/bin/activate
 
 python - <<'PY'
 from pathlib import Path
-from MAC_BRAIN.io import MacMicrophone, MacSpeaker
+from novi.brain.io import MacMicrophone, MacSpeaker
 
 out = Path("mac_test_results/io")
 out.mkdir(parents=True, exist_ok=True)

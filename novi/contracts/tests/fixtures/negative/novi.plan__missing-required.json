@@ -1,0 +1,14 @@
+{
+  "expected_outcomes": {},
+  "goal_ref": "fixture-value",
+  "policy_context": {},
+  "preconditions": {},
+  "provenance": {},
+  "resource_budget": {},
+  "risks": {},
+  "status": "fixture-value",
+  "steps": [
+    {}
+  ],
+  "version": 1
+}

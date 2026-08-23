@@ -1,0 +1,15 @@
+{
+  "authority_source": {},
+  "confidence": {},
+  "evidence_refs": [
+    "fixture-value"
+  ],
+  "object": {},
+  "predicate": "fixture-value",
+  "privacy_class": "fixture-value",
+  "provenance": {},
+  "revision": 1,
+  "subject": {},
+  "validity_interval": {},
+  "verification_status": "fixture-value"
+}

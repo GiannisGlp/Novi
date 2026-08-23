@@ -1,0 +1,10 @@
+{
+  "OS": "fixture-value",
+  "__unexpected_fixture_property__": true,
+  "application_version": "fixture-value",
+  "creation_verification_metadata": {},
+  "deployment_id": "fixture-value",
+  "hardware_target": {},
+  "schema_versions": {},
+  "source_commit": "fixture-value"
+}

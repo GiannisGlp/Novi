@@ -1,0 +1,13 @@
+{
+  "claim": {},
+  "confidence": {},
+  "created_at": "2026-01-01T00:00:00Z",
+  "evidence_id": "fixture-value",
+  "evidence_type": 123,
+  "provenance": {},
+  "source_observation_refs": [
+    "fixture-value"
+  ],
+  "uncertainty": {},
+  "verification_status": "fixture-value"
+}

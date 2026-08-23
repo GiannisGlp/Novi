@@ -1,0 +1,7 @@
+{
+  "actor_ref": "fixture-value",
+  "confidence": 1.0,
+  "created_at": "2026-01-01T00:00:00Z",
+  "id": "fixture-value",
+  "intent": 123
+}

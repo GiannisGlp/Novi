@@ -1,0 +1,14 @@
+{
+  "authorization_context": {},
+  "capability": "fixture-value",
+  "constraints": {},
+  "expected_effects": {},
+  "expires_at": 123,
+  "idempotency_key": "fixture-value",
+  "parameters": {},
+  "proposal_id": "fixture-value",
+  "provenance": {},
+  "requester_id": "fixture-value",
+  "risks": {},
+  "semantic_intent": {}
+}

@@ -10,4 +10,4 @@ if [[ -x "$ROOT/.venv/bin/python" ]]; then
 fi
 
 export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
-exec "$PYTHON" -m brain.cli "$@"
+exec "$PYTHON" -m novi.brain.cli "$@"

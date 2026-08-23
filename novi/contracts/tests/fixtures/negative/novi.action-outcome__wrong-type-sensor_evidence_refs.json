@@ -1,0 +1,11 @@
+{
+  "completed_at": "2026-01-01T00:00:00Z",
+  "execution_ref": "fixture-value",
+  "expected_effect_comparison": {},
+  "observed_effects": {},
+  "outcome_id": "fixture-value",
+  "provenance": {},
+  "recovery_state": {},
+  "sensor_evidence_refs": {},
+  "status": "fixture-value"
+}

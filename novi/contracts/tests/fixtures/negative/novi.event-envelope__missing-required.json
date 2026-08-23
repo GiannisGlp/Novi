@@ -1,0 +1,7 @@
+{
+  "event_type": "fixture-value",
+  "occurred_at": "2026-01-01T00:00:00Z",
+  "payload": {},
+  "producer_id": "fixture-value",
+  "schema_version": "1.0.0"
+}

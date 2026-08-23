@@ -5,7 +5,7 @@ Runs the canonical acceptance gates (P0–P3) plus the Step-1 pipeline items
 (spatial model, typed cognition emission, learning pipeline, memory-class
 decision) end-to-end against a live MacBrain, verifies the fast suite is green
 (subprocess), runs the architecture-integrity checker, and writes an evidence
-record into IMPLEMENTATION_PLAN/EVIDENCE/mac/<stamp>/:
+record into docs/plans/EVIDENCE/mac/<stamp>/:
 
   - one evidence file summarizing the cross-system acceptance run (E2
     reproducible / E3 integration evidence class);
@@ -29,7 +29,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-EVIDENCE_ROOT = ROOT / "IMPLEMENTATION_PLAN" / "EVIDENCE" / "mac"
+EVIDENCE_ROOT = ROOT / "docs" / "plans" / "EVIDENCE" / "mac"
 INDEX = EVIDENCE_ROOT / "INDEX.md"
 
 
@@ -47,10 +47,10 @@ def git_sha() -> str:
 
 
 def _build_brain():
-    from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-    from brain.contracts import utc_now
-    from MAC_BRAIN.io import CameraFrame
-    from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
+    from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+    from novi.brain.contracts import utc_now
+    from novi.brain.io import CameraFrame
+    from novi.brain.engine import MacBrain, MacBrainConfig
 
     class FakeCamera:
         def __init__(self):
@@ -86,8 +86,8 @@ def _run_gates() -> dict:
     memory), so sharing one instance across gates would make later gates
     order-dependent. Each gate is a clean-boot acceptance run instead.
     """
-    from MAC_BRAIN.p0_gate_runner import run_acceptance_gate
-    from MAC_BRAIN.soul_acceptance import AcceptanceClass
+    from novi.brain.p0_gate_runner import run_acceptance_gate
+    from novi.brain.soul_acceptance import AcceptanceClass
 
     results = {}
     all_green = True
@@ -116,7 +116,7 @@ def _run_pipeline_checks(brain) -> list[dict]:
     checks = []
 
     # Spatial model: place robot, resolve region, reachable regions.
-    from MAC_BRAIN.spatial_map import SpatialReference
+    from novi.brain.spatial_map import SpatialReference
     brain.spatial.place("robot_001", SpatialReference(
         frame_id="map", pose={"x": 5.0, "y": 2.0}))
     region = brain.spatial.region_of("robot_001")
@@ -174,8 +174,8 @@ def _run_pipeline_checks(brain) -> list[dict]:
 def _run_full_suite() -> dict:
     """Run the fast suite + integrity checker; returns summary."""
     fast = subprocess.run(
-        [sys.executable, "-m", "pytest", "MAC_BRAIN/tests", "brain/tests",
-         "contracts/tests", "cognition/tests", "-q", "--disable-warnings"],
+        [sys.executable, "-m", "pytest", "novi/brain/tests",
+         "novi/contracts/tests", "novi/cognition/tests", "-q", "--disable-warnings"],
         cwd=ROOT, capture_output=True, text=True,
     )
     integrity = subprocess.run(

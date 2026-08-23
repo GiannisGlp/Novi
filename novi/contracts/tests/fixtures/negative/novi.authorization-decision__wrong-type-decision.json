@@ -1,0 +1,14 @@
+{
+  "capability": "fixture-value",
+  "decision": 123,
+  "decision_id": "fixture-value",
+  "policy_version": "fixture-value",
+  "principal": {},
+  "provenance": {},
+  "purpose": {},
+  "scope": {},
+  "state_revision": 1,
+  "target": {},
+  "valid_from": "2026-01-01T00:00:00Z",
+  "valid_until": "2026-01-01T00:00:00Z"
+}

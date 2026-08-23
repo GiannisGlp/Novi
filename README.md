@@ -20,7 +20,7 @@ The current focus is building the first working Novi Brain on a Mac before commi
 
 ### Mac Brain prototype
 
-The root-level [`MAC_BRAIN/`](MAC_BRAIN/) directory is the canonical home for the Mac Brain prototype, its implementation, documentation, models, tests, scenarios and evidence.
+The [`novi/brain/`](novi/brain/) package is the canonical home for the Novi brain implementation, its documentation, models, tests, scenarios and evidence.
 
 The Mac acts as Novi's temporary body:
 
@@ -81,7 +81,7 @@ real Mac camera
 continuous perception
 ```
 
-See [`MAC_BRAIN/34_M1_REAL_NEURAL_PERCEPTION.md`](MAC_BRAIN/34_M1_REAL_NEURAL_PERCEPTION.md) and [`MAC_BRAIN/33_MAC_FIRST_RUN_GUIDE.md`](MAC_BRAIN/33_MAC_FIRST_RUN_GUIDE.md).
+See [`docs/specs/brain/34_M1_REAL_NEURAL_PERCEPTION.md`](docs/specs/brain/34_M1_REAL_NEURAL_PERCEPTION.md) and [`docs/specs/brain/33_MAC_FIRST_RUN_GUIDE.md`](docs/specs/brain/33_MAC_FIRST_RUN_GUIDE.md).
 
 ## Cognitive Loop
 
@@ -190,7 +190,7 @@ See:
 - [`docs/TECHNOLOGY_REFERENCE.md`](docs/TECHNOLOGY_REFERENCE.md) — ecosystem catalog.
 - [`docs/TECHNOLOGY_STACK_BASELINE.md`](docs/TECHNOLOGY_STACK_BASELINE.md) — implementation-oriented stack baseline.
 - [`docs/00-strategy/NOVI_PRE_IMPLEMENTATION_READINESS_AUDIT.md`](docs/00-strategy/NOVI_PRE_IMPLEMENTATION_READINESS_AUDIT.md) — readiness and gap register.
-- [`MAC_BRAIN/31_MAC_MODEL_COMPATIBILITY_MATRIX.md`](MAC_BRAIN/31_MAC_MODEL_COMPATIBILITY_MATRIX.md) — Mac model compatibility policy.
+- [`docs/specs/brain/31_MAC_MODEL_COMPATIBILITY_MATRIX.md`](docs/specs/brain/31_MAC_MODEL_COMPATIBILITY_MATRIX.md) — Mac model compatibility policy.
 
 Technology decisions must follow:
 
@@ -225,13 +225,11 @@ The final physical BOM is deliberately deferred until the cognitive workload, ro
 ## Repository Structure
 
 ```text
-MAC_BRAIN/
-├── implementation/runtime
-├── models/
-├── tests/
-├── scenarios/
-├── evidence/
-└── Mac Brain program documentation
+novi/
+├── brain/          # brain unit (reasoning, cognition, soul, memory, knowledge, context)
+├── cognition/      # typed cognition contracts (Pydantic)
+├── contracts/      # canonical JSON schemas
+└── web/            # thin brain runner / HTTP interface
 
 docs/
 ├── 00-strategy/
@@ -247,7 +245,7 @@ scripts/
 └── Mac Brain setup, diagnostics and test runners
 ```
 
-`MAC_BRAIN/` is the single canonical Mac Brain namespace. There is no separate lowercase `mac_brain/` package.
+`novi/` is the single canonical namespace. There is no separate `MAC_BRAIN/` package.
 
 ## Validation Status
 

@@ -1,0 +1,11 @@
+{
+  "change_id": "fixture-value",
+  "confidence": {},
+  "effective_at": "2026-01-01T00:00:00Z",
+  "entity_ref": "fixture-value",
+  "evidence_refs": {},
+  "field": "fixture-value",
+  "provenance": {},
+  "recorded_at": "2026-01-01T00:00:00Z",
+  "state_revision": 1
+}

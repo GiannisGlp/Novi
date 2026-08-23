@@ -1,0 +1,14 @@
+{
+  "authorization_scope": {},
+  "constraints": {},
+  "created_at": "2026-01-01T00:00:00Z",
+  "description": 123,
+  "goal_id": "fixture-value",
+  "owner": {},
+  "priority": {},
+  "provenance": {},
+  "resource_budget": {},
+  "source": {},
+  "status": "fixture-value",
+  "updated_at": "2026-01-01T00:00:00Z"
+}

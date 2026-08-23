@@ -1,0 +1,11 @@
+{
+  "modality": "fixture-value",
+  "observation_id": "fixture-value",
+  "observed_at": 123,
+  "provenance": {},
+  "quality": {},
+  "source_id": "fixture-value",
+  "source_type": "fixture-value",
+  "uncertainty": {},
+  "value": {}
+}
