@@ -177,4 +177,5 @@ class VirtualBody:
             "heading_deg": self.heading_deg,
             "velocity_mps": self.velocity_mps,
             "last_action": self.last_action,
+            "ALLOWED_ACTIONS": sorted(self.ALLOWED_ACTIONS),
         }

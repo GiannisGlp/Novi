@@ -144,6 +144,25 @@ class ContextAssemblerTests(unittest.TestCase):
         ctx = assembler.assemble(wm, request)
         self.assertGreater(ctx.items_dropped, 0)
 
+    def test_referenced_items_ranked_before_unreferenced(self):
+        """Regression: _rank sorted relevance/confidence ascending, so the
+        least-relevant items were ranked first (and kept first when trimming).
+        Referenced (relevant) items must rank before unreferenced ones."""
+        from MAC_BRAIN.context_assembler import ContextItem
+        assembler = ContextAssembler()
+        request = ContextRequest(referenced_labels=("cup",))
+        items = [
+            ContextItem(layer=LAYER_IMMEDIATE, kind="entity",
+                        data={"label": "mug", "aliases": ["cup"]}, confidence=0.8),
+            ContextItem(layer=LAYER_IMMEDIATE, kind="entity",
+                        data={"label": "cup"}, confidence=0.85),
+            ContextItem(layer=LAYER_IMMEDIATE, kind="entity",
+                        data={"label": "spoon"}, confidence=0.9),
+        ]
+        ranked = assembler._rank(items, request)
+        # The referenced "cup" item must rank before the unreferenced "spoon".
+        self.assertLess(ranked.index(items[1]), ranked.index(items[2]))
+
     def test_provenance_preserved_on_items(self):
         wm = _kitchen_world()
         assembler = ContextAssembler()

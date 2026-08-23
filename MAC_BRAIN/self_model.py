@@ -71,7 +71,7 @@ def build_self_model(brain: Any) -> SelfModel:
     # physical world. If only locomotion/observation actions exist (no actuators),
     # mark object manipulation as FAIL so the dialogue prompt steers Novi to say
     # it honestly can't turn on a light / open a door instead of hallucinating.
-    allowed_actions = set(getattr(body, "ALLOWED_ACTIONS", set()) or set())
+    allowed_actions = set(body.get("ALLOWED_ACTIONS", set()) or set())
     object_manip = bool({"open", "close", "turn_on", "turn_off", "move", "pick_up"} & allowed_actions)
     checks.setdefault("physical_actions", "PASS" if object_manip else "FAIL")
     known: list[str] = []

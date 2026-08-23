@@ -120,6 +120,7 @@ class SituationModel:
         novi_state = novi_state or {}
         social_context = social_context or {}
         world_version = world.world_version
+        prev_version = self._last_world_version
         self._last_world_version = world_version
 
         # Collect active entities.
@@ -172,9 +173,11 @@ class SituationModel:
             if entity.epistemic_status == "PREDICTED":
                 predictions.append(f"entity:{entity.label()}:predicted")
 
-        # Determine freshness.
-        freshness = "fresh" if world_version > self._last_world_version - 5 else "recent"
-        if world_version == self._last_world_version:
+        # Determine freshness relative to the previously seen world version.
+        # (prev_version is captured before _last_world_version is updated, so
+        # this reflects actual change rather than always comparing to itself.)
+        freshness = "fresh" if world_version > prev_version + 5 else "recent"
+        if world_version == prev_version:
             freshness = "stale"
 
         situations: list[Situation] = []

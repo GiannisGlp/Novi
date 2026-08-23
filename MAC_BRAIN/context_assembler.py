@@ -347,7 +347,9 @@ class ContextAssembler:
                     relevance = 1.0
             # Confidence.
             conf = item.confidence
-            return (lp, relevance, conf)
+            # Ascending sort: negate relevance/confidence so higher values rank
+            # first (relevant, high-confidence items are kept when trimming).
+            return (lp, -relevance, -conf)
 
         return sorted(items, key=score)
 

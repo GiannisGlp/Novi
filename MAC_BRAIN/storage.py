@@ -447,7 +447,7 @@ class DurableMemoryStore:
                 source_class: str = "", independence_group: str = "", lifecycle_state: str = "active",
                 integrity_hash: str = "", derivation: str = "direct", governance_status: str = "ungoverned") -> None:
         cur = self._conn.execute(
-            """INSERT OR IGNORE INTO memory_records
+            """INSERT OR REPLACE INTO memory_records
                (memory_id, memory_type, created_at, content, confidence, verification_status,
                 privacy_class, revision, provenance, event_refs, entity_refs,
                 semantic_index_ref, temporal_context, spatial_context, retention_policy_ref,
@@ -482,7 +482,10 @@ class DurableMemoryStore:
                 governance_status,
             ),
         )
-        if cur.rowcount == 1:
+        # rowcount is 1 for a fresh insert and 2 for a REPLACE (delete+insert),
+        # so >= 1 covers both. REPLACE resurrects a soft-deleted row (deleted=0
+        # is hardcoded in VALUES) and re-indexes it.
+        if cur.rowcount >= 1:
             self._fts_insert(record)
             self._vector_insert(record)
         self._conn.commit()

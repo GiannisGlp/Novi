@@ -114,6 +114,24 @@ class SituationModelTests(unittest.TestCase):
         self.assertIn(s.freshness, ("fresh", "recent", "stale"))
         self.assertTrue(s.created_at)
 
+    def test_freshness_reflects_world_change(self):
+        """Regression: freshness was always 'stale' because the last-seen
+        world version was updated before the freshness comparison, so the
+        model always compared the version to itself."""
+        wm = WorldModel()
+        wm.add_entity("cup_001", OBJECT, labels=["cup"], epistemic_status=OBSERVED, confidence=0.85)
+        sm = SituationModel()
+        # First derivation: world has advanced from the initial -1 sentinel.
+        first = sm.derive(wm)[0]
+        self.assertNotEqual(first.freshness, "stale")
+        # Second derivation with no world change: now stale.
+        second = sm.derive(wm)[0]
+        self.assertEqual(second.freshness, "stale")
+        # World changes again: no longer stale.
+        wm.add_entity("cup_002", OBJECT, labels=["cup2"], epistemic_status=OBSERVED, confidence=0.8)
+        third = sm.derive(wm)[0]
+        self.assertNotEqual(third.freshness, "stale")
+
     def test_situation_snapshot(self):
         wm = WorldModel()
         wm.add_entity("alice_001", PERSON, labels=["Alice"], epistemic_status=OBSERVED, confidence=0.95)

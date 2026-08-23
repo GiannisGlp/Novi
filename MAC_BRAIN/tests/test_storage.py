@@ -78,6 +78,45 @@ class DurableMemoryStoreTests(unittest.TestCase):
             self.assertEqual(reopened.deleted_count, 1)
             reopened.close()
 
+    def test_readmit_after_forget_resurrects_record(self):
+        """Regression: re-admitting the same content after a soft delete used
+        to silently no-op (INSERT OR IGNORE hit the still-present PK) while
+        still reporting success, leaving the record unrecoverable."""
+        with tempfile.TemporaryDirectory() as td:
+            db = self._path(td)
+            store = DurableMemoryStore(db)
+            admission = store.admit(
+                memory_type="perception",
+                content="alice",
+                confidence=0.95,
+                verification_status="verified",
+                privacy_class="public",
+                provenance={"source": "vision"},
+                entity_refs=("alice",),
+            )
+            self.assertTrue(store.forget(admission.memory_id))
+            self.assertEqual(store.active_count, 0)
+            # Re-admit the identical content: must resurrect, not silently no-op.
+            readmission = store.admit(
+                memory_type="perception",
+                content="alice",
+                confidence=0.95,
+                verification_status="verified",
+                privacy_class="public",
+                provenance={"source": "vision"},
+                entity_refs=("alice",),
+            )
+            self.assertTrue(readmission.accepted)
+            self.assertEqual(readmission.memory_id, admission.memory_id)
+            self.assertEqual(store.active_count, 1)
+            self.assertEqual(store.deleted_count, 0)
+            record = store.get(readmission.memory_id)
+            self.assertIsNotNone(record)
+            self.assertEqual(record.content, "alice")
+            # It must be retrievable again (FTS/vector re-indexed).
+            self.assertEqual(len(store.retrieve("alice", entity="alice")), 1)
+            store.close()
+
     def test_goal_history_persists(self):
         with tempfile.TemporaryDirectory() as td:
             db = self._path(td)

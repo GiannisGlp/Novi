@@ -12,7 +12,7 @@ import unittest
 from brain.b2_perception import Detection, SpecialistPerception
 from MAC_BRAIN.io import CameraFrame
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
-from MAC_BRAIN.self_model import SelfModel
+from MAC_BRAIN.self_model import SelfModel, build_self_model
 
 
 class FakeCamera:
@@ -83,6 +83,27 @@ class SelfModelTests(unittest.TestCase):
         m = SelfModel(name="Novi", persona="", origin="", tone="warm", affect={}, traits={}, values={}, capabilities={"perception": "PASS", "hearing": "FAIL"}, embodiment={}, active_goal=None, mode="WARN")
         self.assertTrue(m.can_see)
         self.assertFalse(m.can_hear)
+
+    def test_physical_actions_honors_body_capabilities(self):
+        """Regression: build_self_model read ALLOWED_ACTIONS off the body
+        snapshot with getattr() on a dict (always empty), so physical_actions
+        was always FAIL even for a body that can manipulate objects."""
+        class ManipBody:
+            def snapshot(self):
+                return {"x_m": 0.0, "y_m": 0.0, "heading_deg": 0.0,
+                        "ALLOWED_ACTIONS": ["open", "close", "pick_up", "move_forward"]}
+        class FakeBrain:
+            def __init__(self):
+                self.body = ManipBody()
+                self.soul = type("S", (), {"identity": type("I", (), {"name": "Novi", "persona": "", "origin": ""})(),
+                                          "tone": lambda self, ctx: {"tone": "warm"},
+                                          "affect": type("A", (), {"dimensions": {}})(),
+                                          "personality": type("P", (), {"traits": {}, "values": {}})()})()
+                self._last_health = None
+                self._chat_known_persons = lambda: []
+                self._goal_context = lambda: None
+        sm = build_self_model(FakeBrain())
+        self.assertEqual(sm.capabilities.get("physical_actions"), "PASS")
 
 
 if __name__ == "__main__":
