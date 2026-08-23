@@ -349,57 +349,38 @@ class NoviWebServer:
             # The brain owns the reply (docs/06-soul/07 §2): it renders a natural
             # communicative act grounded in soul/relationship/identity/memory and
             # enforces the no-assistant/no-repetition rules. The web layer only
-            # supplies conversation history, the addressee, and the LLM transport.
+            # supplies conversation history and the LLM transport; the brain's
+            # respond() detects the addressee, learns from the message, and
+            # composes the reply (or the deterministic fallback) in one call.
             history = self._build_history(12)
-            addressee = next((ref for ref in self.brain._entities_in_text(text) if self.brain._is_person_name(ref)), "")
-            self.brain._learn_from_chat(text, addressee)
             recent_novi = self._recent_novi(4)
             last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
-            llm_available = self.chat_llm and self._llm_up()
-            if not llm_available:
-                # Fast path: Ollama offline — skip DialogueEngine's own 120s _chat attempt
-                # and go straight to the deterministic natural fallback.
-                fb = self.brain.natural_reply_fallback(text=text, cycle=step.get("cycle"))
-                trace["conclusion"] = conclusion
-                trace["action"] = "respond"
-                trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
-                trace["route"] = "deterministic"
-                trace["route_reason"] = "no_llm_transport"
-                trace["confidence"] = heard_conf
-                novi_text = fb["text"]
-                novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": False}
-                self._append_chat({"role": "user", "text": text})
-                self._append_chat(novi)
-                return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False}
-            transport = self._llm_chat
-            reply_obj = self.brain.compose_reply(
-                text, person=addressee, history=history, llm_chat=transport,
-                last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi,
+            transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+            resp = self.brain.respond(
+                text, history=history, llm_chat=transport,
+                last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
             )
-            reply = reply_obj["text"]
-            self._append_chat({"role": "user", "text": text})
-            if reply is not None:
-                trace["conclusion"] = reply
-                trace["action"] = "respond"
-                trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            novi_text = resp.get("text")
+            reply_source = resp.get("reply_source", "dialogue")
+            llm = reply_source == "dialogue"
+            # The trace always records the real cognition conclusion; only the
+            # spoken text is rendered naturally. For a dialogue reply the conclusion
+            # is the reply; for a deterministic fallback it stays the cognition label.
+            trace["conclusion"] = novi_text if llm else conclusion
+            trace["action"] = "respond"
+            trace["rationale"] = resp.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            if llm:
                 trace["route"] = f"ollama:{self.llm_model}"
-                trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
-                trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
-                novi_text = reply
+                trace["route_reason"] = "local LLM"
+                trace["confidence"] = 0.85
             else:
-                # LLM transport returned no usable reply (e.g. rejected as repetition) —
-                # still fall back deterministically but keep the real conclusion in the trace.
-                fb = self.brain.natural_reply_fallback(text=text, cycle=step.get("cycle"))
-                trace["conclusion"] = conclusion  # real conclusion kept for the trace
-                trace["action"] = "respond"
-                trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
                 trace["route"] = "deterministic"
                 trace["route_reason"] = "no_llm_transport"
                 trace["confidence"] = heard_conf
-                novi_text = fb["text"]
-            novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": bool(reply is not None)}
+            novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
+            self._append_chat({"role": "user", "text": text})
             self._append_chat(novi)
-            return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": bool(reply is not None)}
+            return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": llm}
         finally:
             with self._lock:
                 self._chat_busy = False
