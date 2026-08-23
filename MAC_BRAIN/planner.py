@@ -186,6 +186,8 @@ class PlanValidator:
     def _check_terminability(self, plan: Plan) -> PlanCheck:
         # A plan must be safely terminable: the final step verifies/stops, or
         # any step can issue "stop" (a safe terminal action).
+        if not plan.steps:
+            return PlanCheck("safety", False, "plan has no steps to terminate")
         last = plan.steps[-1]
         if last.action == "stop":
             return PlanCheck("safety", True, "final step is a safe stop")

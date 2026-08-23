@@ -744,7 +744,6 @@ class HardenedMemoryManager:
 
         # Check for conflicts among top candidates.
         top_records = [r for _, r in candidates[:limit]]
-        top_contents = [str(r.content) for r in top_records]
 
         # Check for explicit conflicts: records with overlapping entity_refs
         # where the content differs (same entity, different claims).

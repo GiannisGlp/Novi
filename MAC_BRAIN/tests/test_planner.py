@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from MAC_BRAIN.autonomy import Goal
-from MAC_BRAIN.planner import Plan, Planner
+from MAC_BRAIN.planner import Plan, PlanValidator, Planner
 from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
 from MAC_BRAIN.tests.test_mac_brain import FakeCamera
 
@@ -55,6 +55,14 @@ class PlannerTests(unittest.TestCase):
         restored = Plan.from_snapshot(plan.snapshot())
         self.assertEqual(restored.goal_kind, "reach")
         self.assertEqual(restored.current_step().kind, "evaluate")
+
+    def test_empty_plan_validates_cleanly_not_crash(self):
+        # Regression: an empty plan used to raise IndexError in the
+        # terminability check instead of returning a clean validation result.
+        plan = Plan(plan_id="p-empty", goal_id="g1", goal_kind="reach", steps=[])
+        result = PlanValidator().validate(plan)
+        self.assertFalse(result.valid)
+        self.assertIn("plan has no steps", result.issues)
 
 
 class BrainPlannerTests(unittest.TestCase):
