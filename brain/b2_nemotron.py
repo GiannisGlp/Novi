@@ -10,6 +10,7 @@ from .b2_model_runtime import (
     ModelResult,
     ModelRuntime,
 )
+from .contracts import utc_now
 
 NEMOTRON_3_NANO_OMNI_MODEL_ID = "nvidia/nemotron-3-nano-omni-30b-a3b"
 NEMOTRON_3_NANO_OMNI_VERSION = "3.0"
@@ -78,7 +79,7 @@ class NemotronAdapter:
             hardware=hardware,
             input_schema_version="1.0.0",
             output_schema_version="1.0.0",
-            started_at="2026-08-19T00:00:00Z",
+            started_at=utc_now(),
             correlation_id=correlation_id,
             input_payload=input_data.as_payload(),
         )

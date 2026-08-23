@@ -194,7 +194,7 @@ class ModelRuntime:
         }
         validate_contract(
             "novi.model-invocation",
-            request.contract_payload(request.started_at if status == "failed" else utc_now(), latency_ms, provenance),
+            request.contract_payload(utc_now(), latency_ms, provenance),
         )
         return ModelResult(
             invocation_id=request.invocation_id,

@@ -103,9 +103,12 @@ class DeterministicMemoryManager:
         validate_contract("novi.memory-record", record.as_contract())
 
         existing = self._records.get(memory_id)
-        if existing is not None:
+        if existing is not None and memory_id not in self._deleted:
             return MemoryAdmission(True, memory_id, "KEEP_EXISTING", "duplicate_admission")
+        # A tombstoned (forgotten) record is not a live duplicate; re-store so
+        # the memory becomes retrievable again.
         self._records[memory_id] = record
+        self._deleted.discard(memory_id)
         return MemoryAdmission(True, memory_id, "STORE_EPISODE", "admitted")
 
     def retrieve(self, query: str, *, entity: str | None = None, memory_type: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:

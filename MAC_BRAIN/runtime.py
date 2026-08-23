@@ -801,7 +801,8 @@ class MacBrain(ChatMixin):
                 self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         elif self.autonomy_sm.state == ASMState.AWARE and not self.goals.has_active and not evidence.detections:
             # Nothing significant — return to OBSERVING.
-            pass  # AWARE stays if we just transitioned; will go to OBSERVING next cycle
+            t = self.autonomy_sm.transition("no_longer_significant", timestamp=now_sm4)
+            self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         # Episode recording: if recording is enabled, record this step.
         if self._recording_enabled and self.episode_recorder is not None:
             self.episode_recorder.record_runtime_step(self, cycle=self._cycle)

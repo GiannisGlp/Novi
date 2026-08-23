@@ -144,7 +144,7 @@ def main() -> int:
             listen_seconds=args.listen_seconds,
             demo_hear=args.demo_hear,
             speaker=speaker,
-            on_round=lambda i, r: print(f"[round {i}] saw={r['steps'][-1].get('detections')} heard={r.get('heard')!r} tone={r['tone'].get('tone')} -> {r['reply']}"),
+            on_round=lambda i, r: print(f"[round {i}] saw={r['steps'][-1].get('detections') if r['steps'] else None} heard={r.get('heard')!r} tone={r['tone'].get('tone')} -> {r['reply']}"),
         )
         summary = session.run()
         print(json.dumps(summary, indent=2, sort_keys=True, default=str))

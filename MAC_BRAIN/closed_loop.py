@@ -174,9 +174,12 @@ class ClosedLoopRuntime:
         )
         self._steps.append(step)
 
-        if outcome == OUTCOME_SUCCESS:
+        if outcome in (OUTCOME_SUCCESS, OUTCOME_DENIED):
+            # A fresh cycle begins: either the action succeeded or it was
+            # denied (governance / held for confirmation) and not executed.
+            # Both are non-retryable, so reset the recovery budget.
             self._current_phase = OBSERVE
-            self._recovery_attempts = 0  # reset for next cycle
+            self._recovery_attempts = 0
         else:
             self._current_phase = next_phase
 

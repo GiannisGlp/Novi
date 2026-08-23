@@ -242,6 +242,7 @@ class LeRobotAdapter(EpisodeAdapter):
                     "reward": 1.0 if s.outcome.get("status") == "SUCCESS" else 0.0,
                     "done": s.outcome.get("status") == "SUCCESS",
                     # Provenance preserved as metadata (not a native LeRobot field).
+                    "_novi_outcome": s.outcome,
                     "_novi_evidence_class": s.evidence_class,
                     "_novi_provenance": s.provenance,
                 }
@@ -257,7 +258,8 @@ class LeRobotAdapter(EpisodeAdapter):
                 step_id=str(uuid4()), step_index=f["frame_index"],
                 timestamp=f["timestamp"],
                 observation=f["observation"], action=f["action"],
-                outcome={"status": "SUCCESS" if f.get("reward", 0) >= 1.0 else "RUNNING"},
+                outcome=f.get("_novi_outcome")
+                or {"status": "SUCCESS" if f.get("reward", 0) >= 1.0 else "RUNNING"},
                 evidence_class=f.get("_novi_evidence_class", OBSERVED),
                 provenance=f.get("_novi_provenance", {}),
             )

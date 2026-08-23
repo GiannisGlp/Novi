@@ -61,6 +61,24 @@ class B2EvaluationTests(unittest.TestCase):
         self.assertIn("checks", serialized)
         self.assertIn("output_digest", serialized)
 
+    def test_artifact_digest_and_runtime_read_from_request(self):
+        """artifact_digest/runtime must come from the request object, not the
+        free-form provenance dict (which only carries backend/deadline_ms)."""
+        harness = InferenceEvaluationHarness(FakeInvoker())
+        request = type("Request", (), {
+            "input_schema_version": "1.0.0",
+            "output_schema_version": "1.0.0",
+            "artifact_digest": "sha256:request-digest",
+            "runtime": "request-runtime",
+        })()
+        result = harness.evaluate(
+            EvaluationCase("scene-4", "image", {"image": "fixture"}, ("scene",)),
+            request,
+        )
+        self.assertEqual(result.provenance.artifact_digest, "sha256:request-digest")
+        self.assertEqual(result.provenance.runtime, "request-runtime")
+        self.assertEqual(result.provenance.backend, "test-backend")
+
 
 if __name__ == "__main__":
     unittest.main()

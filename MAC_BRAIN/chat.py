@@ -520,10 +520,10 @@ class ChatMixin:
 
     def _engagement_reply(self) -> str:
         """Warm, honest reply to an engagement/presence check (are you there?)."""
-        can_hear = self._has_vision() or getattr(self, "audio_enabled", False) or True
+        can_hear = self._has_vision() or bool(getattr(self, "audio_enabled", False))
         if can_hear:
             return "I'm right here — I can hear you. What would you like to say?"
-        return "I'm here. I'm picking up your words even though I can't see you right now."
+        return "I'm here — I can't hear you right now, but I'm reading what you send me. What would you like to say?"
 
     def _perception_reply(self, text: str) -> str:
         """Honest, natural answer to a perception question ("can you hear/see me?")."""
