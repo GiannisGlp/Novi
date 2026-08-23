@@ -224,6 +224,8 @@ flowchart LR
 
 ## 6. Open Decisions Requiring Human Input
 
+> Each decision is structured with options, tradeoffs, evidence, a proposal, and a revisit trigger in [`NOVI_OPEN_DECISIONS_LOG.md`](NOVI_OPEN_DECISIONS_LOG.md) (scientific-brainstorming decision log). Proposals are recommendations for the human decision owner to confirm.
+
 1. **Brain-phase scope:** keep real-model selection (B2.9), hardware, and ROS2/Isaac entirely out of the brain-phase core (recommended) vs start thin seams now?
 2. **Acceptance priority:** cognition world/context first (Step 1, recommended) vs memory hardening first?
 3. **Minimum governance guard:** deterministic only, or a GovernanceRequest/Decision contract between proposal and execution (docs require the latter)?
