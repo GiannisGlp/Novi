@@ -94,7 +94,7 @@ novi-web = "novi.web.server:main"
 brain-cli = "novi.brain.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["novi*", "web*", "contracts*"]
+include = ["novi*"]
 exclude = ["tests*", "docs*", "scripts*"]
 
 [tool.ruff]
