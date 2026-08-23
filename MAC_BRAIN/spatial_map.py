@@ -27,6 +27,26 @@ from cognition.contracts.common import SpatialReference
 METRE = "m"
 DEG = "deg"
 
+
+def convert_distance_m(value_m: float, to_unit: str) -> float:
+    """Convert a distance in metres to ``to_unit`` using pint (lazy import).
+
+    Units are attached at input (metres) and stripped only at output, per the
+    uncertainty-and-units skill. Raises ``ValueError`` for a non-length unit.
+    Falls back to identity (returns ``value_m``) if pint is unavailable.
+    """
+    try:
+        from pint import UnitRegistry
+    except ImportError:  # pragma: no cover - pint optional
+        return value_m
+    ureg = UnitRegistry()
+    q = value_m * ureg.metre
+    try:
+        return q.to(to_unit).magnitude
+    except Exception as exc:  # pint raises DimensionalityError / UndefinedUnitError
+        raise ValueError(f"cannot convert metres to {to_unit!r}: {exc}") from exc
+
+
 # Convenience literals for bounding boxes that lint cleanly.
 Bounds2D = tuple[float, float]
 RegionBounds = tuple[Bounds2D, Bounds2D]
@@ -37,8 +57,10 @@ def _bounds_covered(inner: Region, outer: Region) -> bool:
     if inner.frame != outer.frame:
         return False
     return (
-        outer.bounds_x[0] <= inner.bounds_x[0] and inner.bounds_x[1] <= outer.bounds_x[1]
-        and outer.bounds_y[0] <= inner.bounds_y[0] and inner.bounds_y[1] <= outer.bounds_y[1]
+        outer.bounds_x[0] <= inner.bounds_x[0]
+        and inner.bounds_x[1] <= outer.bounds_x[1]
+        and outer.bounds_y[0] <= inner.bounds_y[0]
+        and inner.bounds_y[1] <= outer.bounds_y[1]
     )
 
 
@@ -54,27 +76,63 @@ def _contains_bounds(ra: Region, rb: Region) -> bool:
 
 
 def _same_bounds(ra: Region, rb: Region) -> bool:
-    return (
-        ra.frame == rb.frame
-        and ra.bounds_x == rb.bounds_x
-        and ra.bounds_y == rb.bounds_y
-    )
+    return ra.frame == rb.frame and ra.bounds_x == rb.bounds_x and ra.bounds_y == rb.bounds_y
 
 
 @dataclass(frozen=True, order=True)
 class Pose2D:
-    """A 2-D pose in a named frame (x_m, y_m, heading_rad)."""
+    """A 2-D pose in a named frame (x_m, y_m, heading_rad).
+
+    Units are attached at input (the ``_m`` / ``_rad`` suffixes) and stripped
+    only at output. Standard uncertainties (``*_unc_*``) are carried alongside
+    each coordinate so downstream distance/heading calculations can propagate
+    them (uncertainty-and-units skill: GUM linearization).
+    """
+
     x_m: float = 0.0
     y_m: float = 0.0
     heading_rad: float = 0.0
+    x_unc_m: float = 0.0
+    y_unc_m: float = 0.0
+    heading_unc_rad: float = 0.0
+
+    def distance_to(self, other: "Pose2D") -> tuple[float, float]:
+        """Euclidean distance to ``other`` and its propagated standard uncertainty.
+
+        Returns ``(distance_m, distance_uncertainty_m)``. The uncertainty is
+        propagated by GUM linearization (sensitivity coefficients times the
+        input standard uncertainties, combined in quadrature). A zero distance
+        with non-zero input uncertainty yields a conservative ``0.0``
+        uncertainty (the linearization is singular at the origin).
+        """
+        dx = other.x_m - self.x_m
+        dy = other.y_m - self.y_m
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist == 0.0:
+            return 0.0, 0.0
+        # Sensitivity coefficients: c_x = dx/d, c_y = dy/d.
+        cx = dx / dist
+        cy = dy / dist
+        u = (
+            (cx * self.x_unc_m) ** 2 + (cx * other.x_unc_m) ** 2 + (cy * self.y_unc_m) ** 2 + (cy * other.y_unc_m) ** 2
+        ) ** 0.5
+        return dist, u
 
     def snapshot(self) -> dict[str, float]:
-        return {"x": self.x_m, "y": self.y_m, "heading_rad": self.heading_rad}
+        return {
+            "x": self.x_m,
+            "y": self.y_m,
+            "heading_rad": self.heading_rad,
+            "x_unc_m": self.x_unc_m,
+            "y_unc_m": self.y_unc_m,
+            "heading_unc_rad": self.heading_unc_rad,
+        }
 
 
 @dataclass(frozen=True)
 class SpatialFrame:
     """A named coordinate frame with its parent and static transform."""
+
     name: str
     parent: str | None = None
     origin: Pose2D = Pose2D()
@@ -83,8 +141,10 @@ class SpatialFrame:
 
     def snapshot(self) -> dict[str, Any]:
         return {
-            "name": self.name, "parent": self.parent,
-            "origin": self.origin.snapshot(), "units": self.units,
+            "name": self.name,
+            "parent": self.parent,
+            "origin": self.origin.snapshot(),
+            "units": self.units,
             "description": self.description,
         }
 
@@ -92,6 +152,7 @@ class SpatialFrame:
 @dataclass(frozen=True)
 class Region:
     """A metric region (room/zone/door) in a frame with a semantic tag."""
+
     region_id: str
     frame: str
     kind: str  # "room" | "floor" | "zone" | "door"
@@ -107,6 +168,7 @@ class Region:
 @dataclass(frozen=True)
 class DoorLink:
     """A door joins two regions (topological connectivity)."""
+
     door_id: str
     connects: tuple[str, str]
 
@@ -213,7 +275,7 @@ class SpatialMap:
         # through it (same physical space, no door required).
         items = list(self._regions.values())
         for i, ra in enumerate(items):
-            for rb in items[i + 1:]:
+            for rb in items[i + 1 :]:
                 if _contains_bounds(ra, rb):
                     adj[ra.region_id].add(rb.region_id)
                     adj[rb.region_id].add(ra.region_id)
@@ -233,16 +295,12 @@ class SpatialMap:
         """Same region, directly door-connected, or one contains the other."""
         if a == b:
             return True
-        if any(
-            (door.connects == (a, b)) or (door.connects == (b, a))
-            for door in self._doors
-        ):
+        if any((door.connects == (a, b)) or (door.connects == (b, a)) for door in self._doors):
             return True
         ra = self._regions.get(a)
         rb = self._regions.get(b)
         return bool(
-            ra is not None and rb is not None
-            and (_same_bounds(ra, rb) or _contains(ra, rb) or _contains(rb, ra))
+            ra is not None and rb is not None and (_same_bounds(ra, rb) or _contains(ra, rb) or _contains(rb, ra))
         )
 
     def snapshot(self) -> dict[str, Any]:
@@ -250,9 +308,14 @@ class SpatialMap:
             "version": self._version,
             "frames": [f.snapshot() for f in self._frames.values()],
             "regions": [
-                {"region_id": r.region_id, "frame": r.frame, "kind": r.kind,
-                 "bounds_x": list(r.bounds_x), "bounds_y": list(r.bounds_y),
-                 "occupancy": self._occupancy.get(r.region_id, "unknown")}
+                {
+                    "region_id": r.region_id,
+                    "frame": r.frame,
+                    "kind": r.kind,
+                    "bounds_x": list(r.bounds_x),
+                    "bounds_y": list(r.bounds_y),
+                    "occupancy": self._occupancy.get(r.region_id, "unknown"),
+                }
                 for r in self._regions.values()
             ],
             "doors": [{"door_id": d.door_id, "connects": list(d.connects)} for d in self._doors],
@@ -264,8 +327,13 @@ class SpatialMap:
         return {
             "frames": [f.snapshot() for f in self._frames.values()],
             "regions": [
-                {"region_id": r.region_id, "frame": r.frame, "kind": r.kind,
-                 "bounds_x": list(r.bounds_x), "bounds_y": list(r.bounds_y)}
+                {
+                    "region_id": r.region_id,
+                    "frame": r.frame,
+                    "kind": r.kind,
+                    "bounds_x": list(r.bounds_x),
+                    "bounds_y": list(r.bounds_y),
+                }
                 for r in self._regions.values()
             ],
             "occupancy": dict(self._occupancy),

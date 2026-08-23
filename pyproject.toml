@@ -63,9 +63,15 @@ typed = [
     "pydantic>=2.7",
 ]
 
+# Units + measurement-uncertainty propagation (spatial model, fusion engine)
+metrology = [
+    "pint>=0.25",
+    "uncertainties>=3.2",
+]
+
 # Everything for a full Mac Brain setup
 mac = [
-    "novi[neural,audio,vision,llm,typed,dev]",
+    "novi[neural,audio,vision,llm,typed,metrology,dev]",
 ]
 
 [project.scripts]

@@ -109,7 +109,7 @@ flowchart LR
 24. **No depth/LiDAR/IMU sensors** — only RGB camera (SSLDite). No 3D scene representation or localization.
 25. **Multi-person group handling thin** — addressee discrimination, turn-taking, restrained interruption weaker than docs require. — **✅ PARTIAL**: addressee discrimination + turn-taking yielding in `CommunicationDecision` (S60/S61/`yielding_to_interruption`) now enforced and runner-tested; full multi-person group session modeling remains open.
 26. **Affect→communication mapping and social-fatigue / "prefer silence" budget not fully enforced.** — **✅ FIXED**: `CommunicationDecision.should_speak` consumes affect (social-overload → `social_overload_reduction` silence, docs/06-soul/05 §14); `affect_expression()` maps affect → expression directive (tone/energy/verbosity/playful/warmth, calmer/quieter in serious contexts per §12/S30); `compose_reply` attaches the directive; `_maybe_initiate` suppresses proactive initiative under overload (15 tests).
-27. **No active perception** (repositioning to reduce uncertainty) — no movement actuators. — **OPEN** (deferred to body/hardware phase; virtual-body actuation is Open Decision 10).
+27. **No active perception** (repositioning to reduce uncertainty) — no movement actuators. — **OPEN** (deferred to body/hardware phase; virtual-body actuation is Open Decision 10). The spatial model now carries per-coordinate standard uncertainties and propagates them through distance queries (`Pose2D.distance_to`, GUM linearization), and the fusion engine reports the uncertainty of each fused confidence (`FusedEvent.confidence_uncertainty`), so the uncertainty signal active perception would act on is now available.
 
 ### P5 — Autonomy / safety / runtime completeness
 

@@ -63,12 +63,18 @@ class FusedEvent:
     contributions: tuple[ModalityObservation, ...]
     conflict: bool
     captured_at: str = ""
+    # Standard uncertainty of the fused confidence: the sample std-dev of the
+    # contributing confidences (0.0 for a single source). Propagated through
+    # the fusion model so downstream consumers can see how much the estimate
+    # is spread (uncertainty-and-units skill).
+    confidence_uncertainty: float = 0.0
 
     def snapshot(self) -> dict[str, Any]:
         return {
             "entity": self.entity,
             "value": self.value,
             "confidence": round(self.confidence, 3),
+            "confidence_uncertainty": round(self.confidence_uncertainty, 3),
             "modalities": list(self.modalities),
             "conflict": self.conflict,
             "captured_at": self.captured_at,
@@ -81,6 +87,17 @@ def _noisy_or(confidences: Iterable[float]) -> float:
     for c in confidences:
         product *= 1.0 - _clamp01(c)
     return 1.0 - product
+
+
+def _sample_std(values: Iterable[float]) -> float:
+    """Sample standard deviation of ``values`` (0.0 for <2 samples)."""
+    vals = list(values)
+    n = len(vals)
+    if n < 2:
+        return 0.0
+    mean = sum(vals) / n
+    var = sum((v - mean) ** 2 for v in vals) / (n - 1)
+    return var**0.5
 
 
 class MultimodalFusion:
@@ -110,10 +127,20 @@ class MultimodalFusion:
                 by_value.setdefault(o.value, []).append(o)
             for value, vgroup in by_value.items():
                 conf = _noisy_or(o.confidence for o in vgroup)
+                conf_unc = _sample_std(o.confidence for o in vgroup)
                 mods = tuple(sorted({o.modality for o in vgroup}))
                 latest = max((o.received_at for o in vgroup), default="")
                 events.append(
-                    FusedEvent(entity=entity, value=value, confidence=conf, modalities=mods, contributions=tuple(vgroup), conflict=False, captured_at=latest)
+                    FusedEvent(
+                        entity=entity,
+                        value=value,
+                        confidence=conf,
+                        modalities=mods,
+                        contributions=tuple(vgroup),
+                        conflict=False,
+                        captured_at=latest,
+                        confidence_uncertainty=conf_unc,
+                    )
                 )
             # conflict handling: several strong, disagreeing values for the same entity
             strong = [e for e in events if e.entity == entity and e.confidence >= self.conflict_threshold]
@@ -159,7 +186,13 @@ class MultimodalFusion:
                     modalities=tuple(row["modalities"]),
                     contributions=tuple(
                         ModalityObservation(
-                            modality=c["modality"], entity=c["entity"], value=c["value"], confidence=c["confidence"], captured_at=c.get("captured_at", ""), received_at=c.get("received_at", ""), source=c.get("source", "")
+                            modality=c["modality"],
+                            entity=c["entity"],
+                            value=c["value"],
+                            confidence=c["confidence"],
+                            captured_at=c.get("captured_at", ""),
+                            received_at=c.get("received_at", ""),
+                            source=c.get("source", ""),
                         )
                         for c in row.get("contributions", [])
                     ),
