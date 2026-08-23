@@ -72,7 +72,9 @@ class DeliberativeReasoningProvider:
 
     def decide(self, *, conclusion: str, confidence: float, situation: dict[str, Any], recall: Any = ()) -> ActionIntent:
         scores = self._score(conclusion, confidence, situation, recall)
-        action = max(scores, key=scores.get)
+        # When no signal is present every score is 0.0; fall back to the
+        # configured safe default instead of picking the first action.
+        action = max(scores, key=scores.get) if any(scores.values()) else self.default_action
         recalled = f" recalled={len(recall)}" if recall else ""
         rationale = f"deliberative:{conclusion} best={action}{recalled}"
         return ActionIntent(action=action, parameters={}, rationale=rationale)

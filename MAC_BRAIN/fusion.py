@@ -198,6 +198,7 @@ class MultimodalFusion:
                     ),
                     conflict=row.get("conflict", False),
                     captured_at=row.get("captured_at", ""),
+                    confidence_uncertainty=row.get("confidence_uncertainty", 0.0),
                 )
             )
         return model

@@ -102,6 +102,10 @@ class MultiSpeedRuntime:
         self._system0_safety_clear: bool = True
         self._cycle: int = 0
         self._interrupted_tasks: set[str] = set()
+        # True when the current interrupt was triggered by a System-0 safety
+        # failure inside step(); such an interrupt auto-clears once the gate
+        # recovers, whereas an external interrupt() persists until resume().
+        self._safety_interrupt: bool = False
 
     # ---- task registration ----
 
@@ -147,11 +151,13 @@ class MultiSpeedRuntime:
         self._interrupted_tasks = {
             tid for tid, t in self._tasks.items() if t.tier != SYSTEM_0
         }
+        self._safety_interrupt = False  # external interrupt persists until resume()
         self.state = AutonomyState.INTERRUPTED
 
     def resume(self) -> None:
         """Resume after an interruption."""
         self._interrupted_tasks.clear()
+        self._safety_interrupt = False
         self.state = AutonomyState.ACTIVE if self.resource_mode == ResourceMode.FULL else AutonomyState.DEGRADED
 
     # ---- execution ----
@@ -178,10 +184,18 @@ class MultiSpeedRuntime:
         if not self._system0_safety_clear:
             # Safety gate failed — interrupt higher tiers.
             self.interrupt()
+            self._safety_interrupt = True  # auto-clear once the gate recovers
             results["system_1"] = {"interrupted": True}
             results["system_2"] = {"interrupted": True}
             results["system_3"] = {"interrupted": True}
             return results
+
+        # Safety gate is clear: release a safety-triggered interruption so
+        # System 1/2/3 resume instead of staying latched off after a transient
+        # safety failure. An external interrupt() persists until resume().
+        if self._safety_interrupt:
+            self._interrupted_tasks.clear()
+            self._safety_interrupt = False
 
         # ---- System 1: fast reactive (if not in safe minimum) ----
         if self.resource_mode != ResourceMode.SAFE_MINIMUM:

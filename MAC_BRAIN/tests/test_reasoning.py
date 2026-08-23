@@ -1,11 +1,27 @@
 import unittest
 
 from MAC_BRAIN.models import (
+    DeliberativeReasoningProvider,
     DeterministicReasoningProvider,
     LLMReasoningProvider,
     MacModelProvider,
     MacModelSpec,
 )
+
+
+class DeliberativeReasoningProviderTests(unittest.TestCase):
+    def test_no_signal_falls_back_to_configured_default(self) -> None:
+        # Regression: when no signal is present all scores are 0.0 and the
+        # provider used to return the first action ("inspect") instead of the
+        # configured safe default.
+        provider = DeliberativeReasoningProvider(default_action="wait")
+        intent = provider.decide(conclusion="unknown", confidence=0.0, situation={})
+        self.assertEqual(intent.action, "wait")
+
+    def test_signal_still_drives_action(self) -> None:
+        provider = DeliberativeReasoningProvider(default_action="wait")
+        intent = provider.decide(conclusion="causal_change_inferred", confidence=0.9, situation={})
+        self.assertEqual(intent.action, "inspect")
 
 
 class DeterministicReasoningProviderTests(unittest.TestCase):

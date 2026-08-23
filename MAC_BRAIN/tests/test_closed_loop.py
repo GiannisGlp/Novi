@@ -13,6 +13,7 @@ from MAC_BRAIN.closed_loop import (
     ACT,
     ASK,
     OBSERVE,
+    OUTCOME_DENIED,
     OUTCOME_FAILURE,
     OUTCOME_SUCCESS,
     PLAN,
@@ -50,6 +51,18 @@ class ClosedLoopRuntimeTests(unittest.TestCase):
         verify_step = rt.verify(["object_grasped"], {"object_grasped": False})
         self.assertEqual(verify_step.outcome, OUTCOME_FAILURE)
         self.assertEqual(rt.current_phase, RECOVER)
+
+    def test_denied_action_does_not_enter_recovery(self):
+        # Regression: a governance-denied action was treated as an execution
+        # failure and retried via RECOVER. A denied action is not retryable.
+        rt = ClosedLoopRuntime()
+        rt.observe({"entities": ["cup"]})
+        rt.plan({"goal": "pick"})
+        rt.act({"skill": "pick", "authorized": False, "outcome": OUTCOME_DENIED})
+        verify_step = rt.verify(["object_grasped"], {"object_grasped": False})
+        self.assertEqual(verify_step.outcome, OUTCOME_DENIED)
+        self.assertEqual(rt.current_phase, OBSERVE)
+        self.assertEqual(rt._recovery_attempts, 0)
 
     def test_recovery_then_retry(self):
         rt = ClosedLoopRuntime()

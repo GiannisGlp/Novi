@@ -14,6 +14,7 @@ import unittest
 
 from brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from MAC_BRAIN.failure_modes import (
+    IDENTITY_AMBIGUITY,
     MODEL_UNAVAILABLE,
     PERCEPTION_UNCERTAINTY,
     RESOURCE_EXHAUSTION,
@@ -111,6 +112,17 @@ class FailureHandlerTests(unittest.TestCase):
         # A more restrictive failure should escalate.
         fh.report_failure(RESOURCE_EXHAUSTION, severity="error", component="system", message="cpu")
         self.assertEqual(fh.degraded_mode, DegradedMode.COMPUTE_CONSTRAINED)
+
+    def test_clear_component_recomputes_mode(self):
+        # Regression: clearing one component left a stale mode even when another
+        # component was still degraded.
+        fh = FailureHandler()
+        fh.report_failure(PERCEPTION_UNCERTAINTY, component="perception", message="low")
+        fh.report_failure(IDENTITY_AMBIGUITY, component="identity", message="ambiguous")
+        fh.clear_component("identity")
+        self.assertEqual(fh.degraded_mode, DegradedMode.PERCEPTION_DEGRADED)
+        fh.clear_component("perception")
+        self.assertEqual(fh.degraded_mode, DegradedMode.NORMAL)
 
 
 class FailureHandlerRuntimeIntegrationTests(unittest.TestCase):

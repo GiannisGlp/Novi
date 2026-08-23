@@ -84,6 +84,7 @@ class KnowledgePromotionPipeline:
         self.record_exposure = record_exposure
         self._candidates: dict[tuple[str, str, str], PromotionCandidate] = {}
         self._promotions: list[dict[str, Any]] = []
+        self._promoted_keys: set[tuple[str, str, str]] = set()
 
     def observe(
         self,
@@ -133,11 +134,15 @@ class KnowledgePromotionPipeline:
             return False
         if candidate.confidence < self.promote_min_confidence:
             return False
+        key = (candidate.subject, candidate.predicate, candidate.object)
+        if key in self._promoted_keys:
+            return False  # already promoted; do not re-inflate evidence/confidence
         triple = graph.add(
             candidate.subject, candidate.predicate, candidate.object,
             confidence=candidate.confidence, source="|".join(candidate.sources) or "pipeline",
             cycle=cycle,
         )
+        self._promoted_keys.add(key)
         self._promotions.append({
             "subject": candidate.subject, "predicate": candidate.predicate,
             "object": candidate.object, "confidence": round(candidate.confidence, 3),
@@ -167,6 +172,7 @@ class KnowledgePromotionPipeline:
             "candidates": [c.snapshot() for c in self._candidates.values()],
             "promotion_count": len(self._promotions),
             "promotions": list(self._promotions),
+            "promoted_keys": sorted(self._promoted_keys),
         }
 
 

@@ -165,6 +165,21 @@ class HardenedMemoryManagerAdmissionTests(unittest.TestCase):
         self.assertEqual(result1.memory_id, result2.memory_id)
         self.assertEqual(result2.decision, KEEP_EXISTING)
 
+    def test_identical_content_dedups_across_timestamps(self):
+        # Regression: the in-memory id used to include created_at, so identical
+        # content at different times was stored twice, unlike the durable path.
+        mgr = HardenedMemoryManager()
+        base = dict(
+            memory_type="perception", content={"label": "cup"}, confidence=0.85,
+            epistemic_status=OBSERVED, evidence_class=OBSERVED,
+            verification_status=UNVERIFIED, source_class=DIRECT_SENSOR,
+            privacy_class="unclassified", provenance=_valid_provenance(),
+        )
+        r1 = mgr.admit(created_at="2026-01-01T10:00:00Z", **base)
+        r2 = mgr.admit(created_at="2026-01-02T10:00:00Z", **base)
+        self.assertEqual(r1.memory_id, r2.memory_id)
+        self.assertEqual(r2.decision, KEEP_EXISTING)
+
     def test_admit_rejects_simulated_as_fact(self):
         mgr = HardenedMemoryManager()
         result = mgr.admit(

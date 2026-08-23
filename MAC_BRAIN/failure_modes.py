@@ -165,6 +165,10 @@ class FailureHandler:
         self._category_recovery: dict[str, dict[str, Any]] = {}
         # Track which components are degraded.
         self._degraded_components: set[str] = set()
+        # Per-component degraded mode, so the overall mode is recomputed from
+        # the most restrictive currently-degraded component (not overwritten by
+        # the most recent failure).
+        self._component_modes: dict[str, DegradedMode] = {}
 
     @property
     def degraded_mode(self) -> DegradedMode:
@@ -206,15 +210,13 @@ class FailureHandler:
         if severity == "critical":
             new_mode = DegradedMode.SAFETY_ONLY
 
-        # Transition to the more restrictive degraded mode.
-        if new_mode != DegradedMode.NORMAL:
-            if self._should_escalate(new_mode):
-                self._degraded_mode = new_mode
-                if not self._degraded_since:
-                    self._degraded_since = timestamp
-
-        # Track the degraded component.
+        # Track the degraded component and its mode, then recompute the overall
+        # mode as the most restrictive among all currently-degraded components.
         self._degraded_components.add(component)
+        self._component_modes[component] = new_mode
+        self._degraded_mode = self._most_restrictive()
+        if self._degraded_mode != DegradedMode.NORMAL and not self._degraded_since:
+            self._degraded_since = timestamp
 
         # Reset per-category recovery for this category (new failure).
         self._category_recovery[category] = {"attempts": 0, "last_failure_timestamp": timestamp}
@@ -247,6 +249,22 @@ class FailureHandler:
             DegradedMode.SAFETY_ONLY: 4,
         }
         return mode_order.get(new_mode, 4) >= mode_order.get(self._degraded_mode, 0)
+
+    def _most_restrictive(self) -> DegradedMode:
+        """The most restrictive mode among currently-degraded components."""
+        mode_order = {
+            DegradedMode.NORMAL: 0,
+            DegradedMode.PERCEPTION_DEGRADED: 1,
+            DegradedMode.IDENTITY_DEGRADED: 1,
+            DegradedMode.MEMORY_DEGRADED: 2,
+            DegradedMode.REASONING_DEGRADED: 2,
+            DegradedMode.NETWORK_OFFLINE: 2,
+            DegradedMode.COMPUTE_CONSTRAINED: 3,
+            DegradedMode.SAFETY_ONLY: 4,
+        }
+        if not self._component_modes:
+            return DegradedMode.NORMAL
+        return max(self._component_modes.values(), key=lambda m: mode_order.get(m, 0))
 
     def attempt_recovery(
         self,
@@ -285,15 +303,17 @@ class FailureHandler:
         self._degraded_since = ""
         self._recovery_attempts = 0
         self._degraded_components.clear()
+        self._component_modes.clear()
         self._category_recovery.clear()
         return True
 
     def clear_component(self, component: str) -> None:
         """Mark a component as recovered (no longer degraded)."""
         self._degraded_components.discard(component)
-        # If no components are degraded, return to normal.
-        if not self._degraded_components:
-            self._degraded_mode = DegradedMode.NORMAL
+        self._component_modes.pop(component, None)
+        # Recompute the overall mode from the remaining degraded components.
+        self._degraded_mode = self._most_restrictive()
+        if self._degraded_mode == DegradedMode.NORMAL:
             self._degraded_since = ""
             self._recovery_attempts = 0
 

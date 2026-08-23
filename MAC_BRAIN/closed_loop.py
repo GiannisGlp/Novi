@@ -38,9 +38,10 @@ OUTCOME_SUCCESS = "SUCCESS"
 OUTCOME_FAILURE = "FAILURE"
 OUTCOME_PARTIAL = "PARTIAL"
 OUTCOME_TIMEOUT = "TIMEOUT"
+OUTCOME_DENIED = "DENIED"  # action was not executed (governance denial / held)
 OUTCOME_UNKNOWN = "UNKNOWN"
 
-ALL_OUTCOMES = frozenset({OUTCOME_SUCCESS, OUTCOME_FAILURE, OUTCOME_PARTIAL, OUTCOME_TIMEOUT, OUTCOME_UNKNOWN})
+ALL_OUTCOMES = frozenset({OUTCOME_SUCCESS, OUTCOME_FAILURE, OUTCOME_PARTIAL, OUTCOME_TIMEOUT, OUTCOME_DENIED, OUTCOME_UNKNOWN})
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +151,12 @@ class ClosedLoopRuntime:
             else:
                 unmet.append(criterion)
 
-        if not unmet:
+        # A denied action (governance denial / held for confirmation) was not
+        # executed, so it is not a retryable failure — do not enter RECOVER.
+        if self._action_outcome == OUTCOME_DENIED:
+            outcome = OUTCOME_DENIED
+            next_phase = OBSERVE
+        elif not unmet:
             outcome = OUTCOME_SUCCESS
             next_phase = OBSERVE  # loop back to observe
         elif self._recovery_attempts < self._max_recovery:

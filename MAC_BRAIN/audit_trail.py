@@ -20,6 +20,7 @@ The trail:
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -108,7 +109,11 @@ def _redact(payload: dict[str, Any]) -> dict[str, Any]:
         if k.lower() in _FORBIDDEN_RAW_KEYS:
             digest = ""
             try:
-                digest = str(hash(json.dumps(v, sort_keys=True, default=str)))
+                # Stable referential hash (not Python's salted hash()) so the
+                # same media redacts identically across processes/restarts.
+                digest = hashlib.sha256(
+                    json.dumps(v, sort_keys=True, default=str).encode("utf-8")
+                ).hexdigest()[:16]
             except Exception:  # pragma: no cover - defensive
                 digest = "unhashable"
             out[k] = f"<redacted:{digest}>"

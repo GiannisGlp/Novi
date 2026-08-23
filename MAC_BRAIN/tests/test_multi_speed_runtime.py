@@ -199,6 +199,26 @@ class ResourceModeTests(unittest.TestCase):
 
 
 class InterruptResumeTests(unittest.TestCase):
+    def test_safety_interrupt_auto_clears_when_gate_recovers(self):
+        # Regression: a safety-gate failure latched System 1/2/3 off forever
+        # because the interrupt was never cleared once the gate recovered.
+        state = {"fail": True}
+        rt = MultiSpeedRuntime()
+        rt.register(SYSTEM_0, "safety", lambda ctx: {"safe": not state["fail"]}, priority=1.0)
+        rt.register(SYSTEM_1, "reactive", lambda ctx: {"ran": True}, priority=1.0)
+        r1 = rt.step({})
+        self.assertEqual(r1["system_1"], {"interrupted": True})
+        state["fail"] = False
+        r2 = rt.step({})
+        self.assertIn("ran", str(r2.get("system_1")))
+
+    def test_external_interrupt_persists_until_resume(self):
+        rt = runtime_with_safety()
+        task = rt.register(SYSTEM_1, "reactive", lambda ctx: {"ran": True})
+        rt.interrupt()
+        results = rt.step()
+        self.assertEqual(results["system_1"][task.task_id], {"interrupted": True})
+
     def test_interrupt_skips_non_system0_tasks(self):
         rt = runtime_with_safety()
         task = rt.register(SYSTEM_1, "reactive", lambda ctx: {"ran": True})

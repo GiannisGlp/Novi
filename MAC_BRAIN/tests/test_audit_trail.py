@@ -8,7 +8,7 @@ reproducible traces.
 
 import unittest
 
-from MAC_BRAIN.audit_trail import AuditEntry, AuditTrail
+from MAC_BRAIN.audit_trail import AuditEntry, AuditTrail, _redact
 
 
 def rec(trail: AuditTrail, **kw) -> AuditEntry:
@@ -72,6 +72,14 @@ class AuditTrailPrivacyTests(unittest.TestCase):
         self.assertNotIn("audio", view["details"])
         self.assertNotIn("frame", view["details"])
         self.assertEqual(view["details"]["xyz"], 1)
+
+    def test_redact_digest_is_stable(self):
+        # Regression: _redact used Python's salted hash(), so the same media
+        # redacted to different digests across processes/restarts.
+        a = _redact({"audio": {"frames": 100, "data": "x" * 50}})
+        b = _redact({"audio": {"frames": 100, "data": "x" * 50}})
+        self.assertEqual(a, b)
+        self.assertIn("<redacted:", a["audio"])
 
 
 class AuditTrailRetentionTests(unittest.TestCase):

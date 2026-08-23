@@ -18,6 +18,7 @@ from .autonomy import BoundedGoalController, Goal, GoalState, GoalStatus
 from .autonomy_state_machine import AutonomyStateMachine
 from .autonomy_state_machine import AutonomyStateMachineState as ASMState
 from .chat import ChatMixin
+from .closed_loop import OUTCOME_DENIED as LOOP_DENIED
 from .closed_loop import OUTCOME_FAILURE as LOOP_FAILURE
 from .closed_loop import OUTCOME_SUCCESS as LOOP_SUCCESS
 from .closed_loop import ClosedLoopRuntime
@@ -738,7 +739,10 @@ class MacBrain(ChatMixin):
         self._emit("reasoning.reflection", {"cycle": self._cycle, **reflection.snapshot()})
 
         # Closed-loop ACT + VERIFY: first-class verification of the action outcome.
-        self.closed_loop.act({"action": action, "authorized": authorized, "outcome": LOOP_SUCCESS if effective else LOOP_FAILURE})
+        # A denied action (not authorized) is recorded as DENIED, not FAILURE, so
+        # the loop does not retry a policy-denied action.
+        act_outcome = LOOP_DENIED if not authorized else (LOOP_SUCCESS if effective else LOOP_FAILURE)
+        self.closed_loop.act({"action": action, "authorized": authorized, "outcome": act_outcome})
         verify_criteria = self._verify_criteria_for_action(action, goal_was_active)
         observed_state = {"action_executed": authorized, "body_changed": body_before != body_after, "effective": effective}
         loop_verify = self.closed_loop.verify(verify_criteria, observed_state)

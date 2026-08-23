@@ -61,6 +61,16 @@ class KnowledgePromotionTests(unittest.TestCase):
         self.assertTrue(pp.promote_all_ready(kg))
         self.assertEqual(kg.leading("kitchen", "has").object, "coffee_maker")
 
+    def test_candidate_promoted_only_once(self):
+        # Regression: promote_all_ready used to re-promote every ready candidate
+        # on each call, inflating graph evidence/confidence without new evidence.
+        pp = KnowledgePromotionPipeline(promote_min_evidence=1, promote_min_confidence=0.0)
+        kg = EntityKnowledgeGraph()
+        pp.observe("a", "r", "b", confidence=0.9)
+        self.assertEqual(pp.promote_all_ready(kg), 1)
+        self.assertEqual(pp.promote_all_ready(kg), 0)
+        self.assertEqual(len(pp.promotions()), 1)
+
 
 class UserCorrectionTests(unittest.TestCase):
     def setUp(self):

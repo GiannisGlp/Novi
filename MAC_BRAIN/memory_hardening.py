@@ -594,9 +594,11 @@ class HardenedMemoryManager:
         integrity_input = f"{memory_type}:{content}:{confidence}:{source_class}"
         integrity_hash = sha256(str(integrity_input).encode("utf-8")).hexdigest()[:16]
 
-        # Create the canonical record.
+        # Create the canonical record. The id is a content hash (excluding
+        # created_at) so identical content dedups consistently with the durable
+        # path (DurableMemoryStore.admit), regardless of when it was observed.
         memory_id = "mem-" + sha256(
-            f"{integrity_hash}:{created_at}".encode("utf-8")
+            f"{integrity_hash}".encode("utf-8")
         ).hexdigest()[:24]
 
         # Check for duplicate (idempotency).
