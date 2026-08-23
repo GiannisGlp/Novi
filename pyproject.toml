@@ -80,17 +80,20 @@ simulation = [
     "simpy>=4.1",
 ]
 
-# Everything for a full Mac Brain setup
-mac = [
+# Everything for a full Brain setup (mac kept as alias for backward compat)
+brain = [
     "novi[neural,audio,vision,llm,typed,metrology,simulation,embeddings,dev]",
+]
+mac = [
+    "novi[brain]",
 ]
 
 [project.scripts]
-novi-brain = "MAC_BRAIN.cli:main"
+novi-brain = "brain.cli:main"
 novi-web = "web.server:main"
 
 [tool.setuptools.packages.find]
-include = ["brain*", "MAC_BRAIN*", "web*", "contracts*", "cognition*"]
+include = ["brain*", "web*", "contracts*", "cognition*"]
 exclude = ["tests*", "docs*", "scripts*"]
 
 [tool.ruff]
@@ -115,6 +118,6 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["MAC_BRAIN/tests", "brain/tests", "web/tests", "contracts/tests"]
+testpaths = ["brain/tests", "web/tests", "contracts/tests"]
 pythonpath = ["."]
 addopts = "-v --tb=short"

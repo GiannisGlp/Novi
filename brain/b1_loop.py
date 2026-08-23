@@ -1,12 +1,12 @@
 """Stage-0 closed-simulation-loop scaffold — LEGACY.
 
-This module is **not used by MAC_BRAIN** (the canonical brain implementation).
+This module is **not used by brain** (the canonical brain implementation).
 It is retained only for the brain/tests/ suite (105 tests). The types defined
 here (SimulatedObservation, Situation, Goal, Experience, ClosedSimulatedLoop,
-and the Protocol ports) are simulation scaffolding from Stage 0. MAC_BRAIN
+and the Protocol ports) are simulation scaffolding from Stage 0. brain
 owns its own runtime types and does not import from this module.
 
-Do not extend these types for the brain phase. New work targets MAC_BRAIN/.
+Do not extend these types for the brain phase. New work targets brain/.
 """
 
 from __future__ import annotations

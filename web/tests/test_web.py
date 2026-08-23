@@ -106,7 +106,7 @@ class NoviWebServerTests(unittest.TestCase):
         self.assertIn("conclusion", st["reasoning_trace"])
 
     def test_knowledge_context_recalls_learned_fact(self) -> None:
-        from MAC_BRAIN.models.stt import TranscriptionResult
+        from brain.models.stt import TranscriptionResult
         self.s.brain.ingest_transcript(TranscriptionResult(
             text="alice moved the door", language="en", confidence=0.9,
             audio_path="", provider="web", model_id="web",
@@ -128,7 +128,7 @@ class NoviWebServerTests(unittest.TestCase):
         self.assertGreater(st["active_goal"]["distance_to_goal"], 0)
 
     def test_learns_user_name_from_conversation(self) -> None:
-        from MAC_BRAIN.models.stt import TranscriptionResult
+        from brain.models.stt import TranscriptionResult
         self.s.brain.ingest_transcript(TranscriptionResult(
             text="Hi novi, its me Vano", language="en", confidence=0.9,
             audio_path="", provider="web", model_id="web",
@@ -260,7 +260,7 @@ class NoviWebServerTests(unittest.TestCase):
             s.stop()
 
     def test_reasoning_router_built(self) -> None:
-        from MAC_BRAIN.models.router import ReasoningRouter
+        from brain.models.router import ReasoningRouter
         s = self._server(reasoning="router")
         s.start()
         try:

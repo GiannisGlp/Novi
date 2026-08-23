@@ -1,6 +1,6 @@
-"""Stage-0 simulation scaffold — LEGACY (not imported by MAC_BRAIN; retained only for the brain/tests suite).
+"""Stage-0 simulation scaffold — LEGACY (not imported by brain; retained only for the brain/tests suite).
 
-Do not extend these types for the brain phase — new work targets MAC_BRAIN/.
+Do not extend these types for the brain phase — new work targets brain/.
 """
 from __future__ import annotations
 

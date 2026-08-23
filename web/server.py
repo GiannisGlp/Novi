@@ -1,7 +1,7 @@
-"""Live web server for the Novi Mac Brain.
+"""Live web server for the Novi Brain.
 
 A dependency-free (Python stdlib only) local HTTP server that owns a running
-MacBrain and serves a browser UI for live interaction: chat/"hear this" input,
+Brain (MacBrain) and serves a browser UI for live interaction: chat/"hear this" input,
 a live state dashboard, action buttons, and a live event log.
 
 The brain runs on a background thread (bounded auto-step loop). All brain
@@ -26,12 +26,12 @@ from pathlib import Path
 from typing import Any
 
 from brain.contracts import utc_now
-from MAC_BRAIN.audio import AudioFrame
-from MAC_BRAIN.autonomy import Goal
-from MAC_BRAIN.io import CameraFrame
-from MAC_BRAIN.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
-from MAC_BRAIN.models.stt import TranscriptionResult
-from MAC_BRAIN.runtime import MacBrain, MacBrainConfig
+from brain.audio import AudioFrame
+from brain.autonomy import Goal
+from brain.io import CameraFrame
+from brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
+from brain.models.stt import TranscriptionResult
+from brain.engine import MacBrain, MacBrainConfig
 
 _ROUTED = Path(__file__).resolve().parent
 
@@ -133,7 +133,7 @@ class NoviWebServer:
 
     def _build_conversation_summarizer(self) -> Any:
         """LLM conversation summarizer when Ollama is available."""
-        from MAC_BRAIN.models.conversation_summarizer import ConversationSummarizer
+        from brain.models.conversation_summarizer import ConversationSummarizer
 
         inner = ConversationSummarizer(model=self.llm_model)
 
@@ -162,7 +162,7 @@ class NoviWebServer:
     # ---- brain construction (real sensing / reasoning router) ----
     def _build_brain(self) -> MacBrain:
         if self.camera_mode == "real":
-            from MAC_BRAIN.io import MacCamera
+            from brain.io import MacCamera
 
             cam: Any = MacCamera()
         else:
@@ -175,7 +175,7 @@ class NoviWebServer:
 
     def _build_narrator(self) -> Any:
         """LLM narrator for episodic "what happened" recaps when Ollama is available."""
-        from MAC_BRAIN.models.narrator import LLMNarrator
+        from brain.models.narrator import LLMNarrator
 
         inner = LLMNarrator(model=self.llm_model)
 
@@ -192,8 +192,8 @@ class NoviWebServer:
 
     def _build_summary_consolidator(self) -> Any:
         """SummaryConsolidator with an LLM summarizer when Ollama is available."""
-        from MAC_BRAIN.consolidation import SummaryConsolidator
-        from MAC_BRAIN.models.summarizer import LLMSummarizer
+        from brain.consolidation import SummaryConsolidator
+        from brain.models.summarizer import LLMSummarizer
 
         inner = LLMSummarizer(model=self.llm_model)
 
@@ -209,11 +209,11 @@ class NoviWebServer:
     def _build_reasoning(self) -> Any:
         mode = self.reasoning_mode
         if mode in ("ollama", "router"):
-            from MAC_BRAIN.models import DeliberativeLLMReasoningProvider
+            from brain.models import DeliberativeLLMReasoningProvider
 
             llm = DeliberativeLLMReasoningProvider(model=self.llm_model)
             if mode == "router":
-                from MAC_BRAIN.models.router import ReasoningRouter
+                from brain.models.router import ReasoningRouter
 
                 return ReasoningRouter(llm=llm, confidence_threshold=self.route_threshold)
             return llm
@@ -221,7 +221,7 @@ class NoviWebServer:
 
     def _build_stt(self) -> Any:
         try:
-            from MAC_BRAIN.models.stt import WhisperSTTProvider
+            from brain.models.stt import WhisperSTTProvider
 
             return WhisperSTTProvider(model_size=self.stt_model, device=self.stt_device)
         except Exception:  # noqa: BLE001 - STT optional; brain falls back to deterministic

@@ -1,13 +1,13 @@
-"""Novi Brain — portable cognitive library (contracts + deterministic test doubles).
+"""Novi Brain — unified implementation (foundational + executable).
 
-This package is NOT the running brain. It provides the foundational types,
-contracts and deterministic implementations that the canonical MAC_BRAIN runtime
-depends on. The executable brain lives in MAC_BRAIN/ and owns the live loop,
-world model, cognition, memory hardening, soul, attention and web bridging
-on top of these types.
+This package is the single brain implementation. It contains:
 
-Dependency direction: MAC_BRAIN → brain  (one-way, never reversed)
-Extension rule: do not extend brain/ for new brain features — target MAC_BRAIN/
+- **Foundational layer** (ported contracts + deterministic doubles): b1_*, b2_*, contracts, runtime (BrainSupervisor)
+- **Executable engine** (formerly MAC_BRAIN): engine (Brain/MacBrain), attention, cognition, memory, soul, world, etc.
+
+All code lives under ``brain`` — the ``MAC_BRAIN`` name is retired. Import
+via ``brain`` (e.g. ``from brain.engine import Brain``). ``MacBrain`` is kept
+as an alias for backward compatibility.
 """
 
 from .b1_cognition import DeterministicCognition, ReasoningResult, Situation
@@ -24,6 +24,8 @@ from .b2_perception import (
 )
 from .b2_real_inference import InferencePolicy, RealModelInvoker
 from .contracts import ContractError, ContractRegistry, ContractValidationError, registry, utc_now
+from .engine import Brain, BrainConfig, MacBrain, MacBrainConfig
+from .io import MacCamera, MacMicrophone, MacSpeaker, VirtualBody
 from .runtime import ActionProposal, BrainSupervisor, Lifecycle
 
 __version__ = "0.1.0"
@@ -64,8 +66,17 @@ __all__ = [
     "ModelResult",
     "ModelRuntime",
     "RealModelInvoker",
-    # Brain supervisor
+    # Brain supervisor (foundational)
     "ActionProposal",
     "BrainSupervisor",
     "Lifecycle",
+    # Executable engine (agnostic name + compat)
+    "Brain",
+    "BrainConfig",
+    "MacBrain",
+    "MacBrainConfig",
+    "MacCamera",
+    "MacMicrophone",
+    "MacSpeaker",
+    "VirtualBody",
 ]
