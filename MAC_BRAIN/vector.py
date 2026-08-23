@@ -14,12 +14,14 @@ Boundaries honored (docs/03-cognition 03, 04-memory-and-knowledge):
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 import re
 from typing import Protocol
 
 DEFAULT_DIM = 256
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
+_LOG = logging.getLogger(__name__)
 
 
 class EmbeddingProvider(Protocol):
@@ -48,6 +50,100 @@ class HashingEmbedding:
             sign = 1.0 if digest[4] & 1 else -1.0
             vec[idx] += sign
         return normalize(vec)
+
+
+class MiniLMEmbedding:
+    """Local semantic embedding via sentence-transformers/all-MiniLM-L6-v2 (384d, MPS).
+
+    Loads lazily and falls back to HashingEmbedding when the optional dependency
+    or the model weights are unavailable (offline/CI). The model runs on MPS when
+    available, otherwise CPU, and is 80 MB — fully local, no cloud.
+    """
+
+    MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+    DIM = 384
+
+    def __init__(self, model_name: str | None = None, device: str | None = None) -> None:
+        self.model_name = model_name or self.MODEL_NAME
+        self._device = device  # auto-detect if None
+        self._model: object | None = None
+        self._fallback = HashingEmbedding(dim=self.DIM)
+        self._load_error: str | None = None
+        self._tried_load = False
+
+    def dimension(self) -> int:
+        return self.DIM
+
+    def _load(self) -> object | None:
+        if self._tried_load:
+            return self._model
+        self._tried_load = True
+        try:
+            from sentence_transformers import SentenceTransformer  # type: ignore[import-not-found]
+
+            # Device: prefer MPS on Apple Silicon, fall back to CPU.
+            device = self._device
+            if device is None:
+                try:
+                    import torch  # type: ignore[import-not-found]
+
+                    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                        device = "mps"
+                    else:
+                        device = "cpu"
+                except Exception:
+                    device = "cpu"
+            self._model = SentenceTransformer(self.model_name, device=device)
+            _LOG.info("MiniLMEmbedding loaded %s on %s", self.model_name, device)
+        except Exception as exc:  # noqa: BLE001 - optional dep, fall back gracefully
+            self._load_error = str(exc)
+            _LOG.warning("MiniLMEmbedding unavailable (%s) — falling back to hashing", exc)
+            self._model = None
+        return self._model
+
+    def embed(self, text: str) -> list[float]:
+        model = self._load()
+        if model is None:
+            # Hashing fallback but at 384d so the index stays consistent.
+            return self._fallback.embed(text)
+        try:
+            # SentenceTransformer.encode returns np.ndarray; normalize_embeddings=True gives L2-normalized.
+            vec = model.encode(text, normalize_embeddings=True, show_progress_bar=False)  # type: ignore[union-attr]
+            # vec may be np.ndarray or list
+            if hasattr(vec, "tolist"):
+                vec = vec.tolist()
+            # Ensure list[float] and L2-normalized (encode already normalized, but be safe)
+            if isinstance(vec, list) and vec and isinstance(vec[0], list):
+                # Batched case — take first
+                vec = vec[0]
+            return [float(x) for x in vec]  # type: ignore[union-attr]
+        except Exception as exc:  # noqa: BLE001 - embedding failure falls back
+            _LOG.warning("MiniLM embed failed (%s) — using hashing fallback", exc)
+            return self._fallback.embed(text)
+
+    @property
+    def is_available(self) -> bool:
+        return self._load() is not None
+
+    @property
+    def load_error(self) -> str | None:
+        return self._load_error
+
+
+def auto_embedding_provider(prefer: str = "auto") -> EmbeddingProvider:
+    """Factory: 'auto' tries MiniLM then falls back to hashing; 'hash' forces hashing; 'minilm' forces MiniLM (falls back on failure)."""
+    prefer = (prefer or "auto").lower()
+    if prefer == "hash":
+        return HashingEmbedding()
+    if prefer in ("auto", "minilm"):
+        m = MiniLMEmbedding()
+        # Trigger load attempt now for 'minilm' so caller knows availability; for 'auto' we keep lazy.
+        if prefer == "minilm":
+            m._load()
+            if m._model is None:
+                _LOG.warning("MiniLM requested but unavailable (%s)", m.load_error)
+        return m
+    return HashingEmbedding()
 
 
 def normalize(vec: list[float]) -> list[float]:

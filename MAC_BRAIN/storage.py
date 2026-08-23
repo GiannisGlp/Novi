@@ -226,9 +226,15 @@ class DurableMemoryStore:
     def __init__(self, path: str | Path, embedder: Any | None = None, *, write_gate: WriteGate | None = None) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        from .vector import EmbeddingIndex, HashingEmbedding
+        from .vector import EmbeddingIndex, HashingEmbedding, auto_embedding_provider
 
-        self._embedder = embedder if embedder is not None else HashingEmbedding()
+        # embedder: None -> deterministic hashing (fast, test-friendly); "auto"/"minilm"/"hash" -> explicit choice (web uses "auto" -> MiniLM on MPS)
+        if embedder is None:
+            self._embedder = HashingEmbedding()
+        elif isinstance(embedder, str):
+            self._embedder = auto_embedding_provider(embedder)
+        else:
+            self._embedder = embedder
         self._embed_index = EmbeddingIndex(self._embedder)
         self._write_gate = write_gate
         self._independence = IndependenceTracker()
@@ -326,13 +332,15 @@ class DurableMemoryStore:
     # ---- chat (conversation persistence) ----
     def save_chat(self, entries: list[dict[str, Any]]) -> None:
         """Persist the chat thread (role/text turns) so it survives restart."""
-        self._conn.execute("DELETE FROM chat")
-        for entry in entries:
-            self._conn.execute(
-                "INSERT INTO chat (seq, role, text, created_at) VALUES (?, ?, ?, ?)",
-                (int(entry.get("seq", 0)), str(entry.get("role", "")), str(entry.get("text", "")), str(entry.get("created_at", ""))),
-            )
-        self._conn.commit()
+        # Atomic replace: wrap DELETE+INSERT in a transaction so concurrent
+        # web handlers cannot interleave and duplicate/lose rows.
+        with self._conn:
+            self._conn.execute("DELETE FROM chat")
+            for entry in entries:
+                self._conn.execute(
+                    "INSERT INTO chat (seq, role, text, created_at) VALUES (?, ?, ?, ?)",
+                    (int(entry.get("seq", 0)), str(entry.get("role", "")), str(entry.get("text", "")), str(entry.get("created_at", ""))),
+                )
 
     def load_chat(self) -> list[dict[str, Any]]:
         rows = self._conn.execute("SELECT seq, role, text, created_at FROM chat ORDER BY seq").fetchall()

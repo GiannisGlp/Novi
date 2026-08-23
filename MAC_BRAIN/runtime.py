@@ -145,6 +145,7 @@ class MacBrain(ChatMixin):
         config: MacBrainConfig | None = None,
         spatial_map: Any | None = None,
         telemetry: ResourceTelemetry | None = None,
+        embedder: Any | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -196,7 +197,7 @@ class MacBrain(ChatMixin):
         # (epistemic status, evidence class, source class, independence groups,
         # retrieval failure states) as the in-memory path.
         write_gate = WriteGate()
-        self.memory = DurableMemoryStore(store_path, write_gate=write_gate) if store_path else HardenedMemoryManager(write_gate=write_gate)
+        self.memory = DurableMemoryStore(store_path, embedder=embedder, write_gate=write_gate) if store_path else HardenedMemoryManager(write_gate=write_gate)
         self._using_hardened_memory = isinstance(self.memory, HardenedMemoryManager)
         if body is None and isinstance(self.memory, DurableMemoryStore):
             pose = self.memory.load_body()

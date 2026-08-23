@@ -50,6 +50,12 @@ llm = [
     # Listed here for documentation purposes
 ]
 
+# Semantic embeddings (local, offline)
+embeddings = [
+    "sentence-transformers>=2.2",
+    "torch>=2.0",  # for MPS acceleration on Apple Silicon
+]
+
 # Development and testing
 dev = [
     "pytest>=8",
@@ -76,7 +82,7 @@ simulation = [
 
 # Everything for a full Mac Brain setup
 mac = [
-    "novi[neural,audio,vision,llm,typed,metrology,simulation,dev]",
+    "novi[neural,audio,vision,llm,typed,metrology,simulation,embeddings,dev]",
 ]
 
 [project.scripts]

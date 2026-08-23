@@ -84,8 +84,11 @@ class LLMSummarizer:
             data=json.dumps(body).encode("utf-8"),
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(request, timeout=60) as response:
-            data = json.loads(response.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except Exception:
+            return None
         raw = data.get("response", "")
         if not (raw or "").strip():
             raw = data.get("thinking", "")

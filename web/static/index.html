@@ -194,6 +194,24 @@ canvas { max-width:100%; }
 .chips span { background:var(--panel-2); border:1px solid var(--border); border-radius:4px; padding:2px 7px;
   font-size:11px; text-transform:capitalize; color:var(--text-dim); }
 .chips span b { color:var(--warn); font-weight:600; font-variant-numeric:tabular-nums; }
+.entity-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.entity-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:4px; font-size:11px; border:1px solid var(--border); background:var(--panel-2); }
+.entity-chip.observed { border-color:color-mix(in srgb, var(--good) 40%, transparent); }
+.entity-chip.predicted { border-color:color-mix(in srgb, var(--warn) 40%, transparent); }
+.entity-chip.contradicted { border-color:color-mix(in srgb, var(--bad) 50%, transparent); background:color-mix(in srgb, var(--bad) 10%, var(--panel-2)); }
+.searchrow { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
+.searchrow input { flex:1 1 auto; min-width:0; background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:5px 8px; font:inherit; font-size:12px; }
+.searchrow input:focus { outline:none; border-color:var(--accent); }
+.searchrow button { padding:5px 10px; font-size:12px; }
+.attn-list { display:flex; flex-direction:column; gap:6px; }
+.attn-item { display:flex; flex-direction:column; gap:2px; padding:6px 8px; background:var(--panel-2); border:1px solid var(--border); border-radius:6px; }
+.attn-item .attn-head { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
+.attn-item .attn-head b { color:var(--text); }
+.attn-item .attn-meta { font-size:11px; color:var(--text-mute); }
+.attn-bar { height:4px; background:var(--panel-2); border:1px solid var(--border); border-radius:3px; overflow:hidden; }
+.attn-bar i { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); }
+.ctx-section { margin-top:8px; }
+.ctx-section .h { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-mute); margin-bottom:4px; }
 
 @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
 </style>
@@ -204,6 +222,7 @@ canvas { max-width:100%; }
   <span class="badge" id="runid">…</span>
   <span class="badge">cycle <b id="cycle">0</b></span>
   <span class="badge" id="health" class="health-PASS">—</span>
+  <span class="badge" id="identBadge" title="who Novi thinks you are">—</span>
   <div class="spacer"></div>
   <div class="hgrp">
     <div class="seg" id="themeSeg" role="group" aria-label="Theme">
@@ -261,12 +280,22 @@ canvas { max-width:100%; }
       <canvas id="map" width="340" height="150"></canvas>
     </div></div>
     <div class="panel"><div class="phbar"><h2>Memory</h2></div><div class="body">
+      <div class="searchrow"><input id="memQuery" placeholder="search memories, e.g. alice"><button id="memSearchBtn">Search</button></div>
+      <div id="memResults" class="muted" style="margin-bottom:8px"></div>
       <div class="muted" style="margin-bottom:4px">Consolidated</div>
       <div id="summaries"><span class="muted">no summaries yet</span></div>
       <div class="muted" style="margin:10px 0 4px">Recent narrative</div>
       <div id="narrative"><span class="muted">nothing yet</span></div>
+      <div id="embedder" class="muted" style="margin-top:10px; font-size:11px"></div>
     </div></div>
-    <div class="panel"><div class="phbar"><h2>Knowledge</h2></div><div class="body" id="khearing"><span class="muted">…</span></div></div>
+    <div class="panel"><div class="phbar"><h2>Knowledge</h2></div><div class="body">
+      <div class="searchrow"><input id="knowQuery" placeholder="entity, e.g. alice"><button id="knowSearchBtn">Lookup</button></div>
+      <div id="knowResults" class="muted" style="margin-bottom:8px"></div>
+      <div id="khearing"><span class="muted">…</span></div>
+    </div></div>
+    <div class="panel"><div class="phbar"><h2>Attention</h2></div><div class="body" id="attn"><span class="muted">awaiting cycle…</span></div></div>
+    <div class="panel"><div class="phbar"><h2>Context</h2></div><div class="body" id="ctxpkg"><span class="muted">awaiting cycle…</span></div></div>
+    <div class="panel"><div class="phbar"><h2>Identity</h2></div><div class="body" id="ident"><span class="muted">awaiting cycle…</span></div></div>
     <div class="panel"><div class="phbar"><h2>Actions</h2></div><div class="body">
       <div class="actions">
         <div class="group">Audio events</div>
@@ -414,6 +443,7 @@ function scrollChat(force){
 
 async function refreshChat() {
   if (chatRefreshing) return;         // skip if a previous poll is still in flight
+  if (isStreaming) return;            // pause polling while a stream owns the chat cursor
   chatRefreshing = true;
   const epoch = chatEpoch;
   try {
@@ -583,6 +613,15 @@ async function refreshState() {
       : '<span class="muted">no summaries yet</span>');
     const narr = (s.narrative || []).join(' ');
     setHTML($('narrative'), narr ? '<div class="kv"><span class="v">'+esc(narr)+'</span></div>' : '<span class="muted">nothing yet</span>');
+    const emb = s.memory && s.memory.embedder;
+    if (emb) {
+      let ehtml = '<span class="k">embeddings</span> <span class="v">'+esc(emb.provider)+' '+ (emb.dimension||'')+'d';
+      if (emb.mode) ehtml += ' · '+esc(emb.mode);
+      if (emb.available===false) ehtml += ' <span class="health-BAD">[offline: '+esc(emb.error||'')+']</span>';
+      else if (emb.provider==='MiniLMEmbedding') ehtml += ' <span class="health-GOOD">[MPS]</span>';
+      ehtml += '</span>';
+      setHTML($('embedder'), '<div class="kv">'+ehtml+'</div>');
+    }
     setHTML($('statCycle'), s.cycle);
     setHTML($('statHealth'), h(hth.status||'UNKNOWN'));
     const sh2 = $('statHealth'); if (sh2) sh2.className = 'health-'+ (hth.status||'UNKNOWN');
@@ -647,18 +686,141 @@ function typing(on){
   scrollChat(true);
 }
 
+// Streaming chat: POST /api/chat/stream — tokens arrive as SSE events
+let isStreaming = false;
+let lastSentText = '', lastSentAt = 0;
+async function streamChat(text){
+  const now = Date.now();
+  // Client-side dedup: ignore accidental double-send (double-click / Enter race) within 15s (matches server window)
+  if (text === lastSentText && (now - lastSentAt) < 15000) {
+    return;
+  }
+  lastSentText = text; lastSentAt = now;
+  isStreaming = true;
+  const conf = parseFloat($('conf').value) || 0.9;
+  // Create placeholder user turn immediately for perceived speed — we keep it and
+  // suppress the polling duplicate by registering the server's seq once streaming completes.
+  const chatEl = $('chat');
+  const hadEmpty = chatEl.firstChild && chatEl.firstChild.classList && chatEl.firstChild.classList.contains('empty');
+  if(hadEmpty){ const e=chatEl.querySelector('.empty'); if(e) e.remove(); }
+  const userTurn = turn('user', esc(text));
+  chatEl.appendChild(userTurn);
+  scrollChat(true);
+  // Create streaming Novi turn
+  const streamBox = document.createElement('div');
+  streamBox.className='turn start';
+  streamBox.id='streaming';
+  streamBox.innerHTML='<div class="avat">N</div><div class="box"><div class="who">novi</div><div class="bubble" id="streamBubble"></div></div>';
+  chatEl.appendChild(streamBox);
+  const bubble = streamBox.querySelector('#streamBubble');
+  let full=''; let gotToken=false; let doneEvt=null;
+  let abortTimer = null;
+  let controller = null;
+  // Disable controls — guaranteed to be re-enabled in finally below
+  try { $('sendBtn').disabled=true; $('say').disabled=true; $('sendBtn').innerHTML='<span class="spinner"></span> streaming'; } catch(_){}
+  try{
+    controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    // Hard timeout: if Ollama hangs, abort the fetch so the button never stays stuck.
+    // Server timeout is 120s; we abort at 125s.
+    if (controller) abortTimer = setTimeout(() => { try{ controller.abort(); }catch(_){} }, 125000);
+    const fetchOpts = {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text, confidence: conf})};
+    if (controller) fetchOpts.signal = controller.signal;
+    const resp = await fetch('/api/chat/stream', fetchOpts);
+    if(abortTimer) { clearTimeout(abortTimer); abortTimer=null; }
+    if(!resp.ok || !resp.body){ throw new Error('no stream'); }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf='';
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      // Parse SSE frames: each event is "data: {...}\n\n"
+      let idx;
+      while((idx=buf.indexOf('\n\n'))!==-1){
+        const frame = buf.slice(0, idx); buf = buf.slice(idx+2);
+        for(const line of frame.split('\n')){
+          if(!line.startsWith('data:')) continue;
+          const jsonStr = line.slice(5).trim();
+          if(!jsonStr) continue;
+          try{
+            const evt = JSON.parse(jsonStr);
+            if(evt.deduplicated){
+              // Server rejected as duplicate (double-click) — remove optimistic UI, keep original turn.
+              try{ userTurn.remove(); }catch(_){}
+              try{ streamBox.remove(); }catch(_){}
+              if(evt.after!=null) chatAfter = evt.after;
+              if(evt.novi && evt.novi.seq!=null) renderedChatSeq.add(evt.novi.seq);
+              if(evt.user && evt.user.seq!=null) renderedChatSeq.add(evt.user.seq);
+              doneEvt = evt;
+              gotToken = true; // suppress fallback
+            } else if(evt.token!=null){
+              gotToken=true; full+=evt.token; bubble.textContent=full; scrollChat(true); markConn(true);
+            } else if(evt.done){
+              doneEvt = evt;
+              // Replace streaming bubble with final trace rendering
+              const trace = evt.novi && evt.novi.trace;
+              try{ streamBox.remove(); }catch(_){}
+              const finalTurn = turn('novi', esc(evt.novi.text), traceHtml(trace));
+              chatEl.appendChild(finalTurn);
+              while(chatEl.children.length>90) chatEl.removeChild(chatEl.firstChild);
+              scrollChat(true);
+              full = evt.novi.text; // for completeness
+              // Register server seqs so polling won't re-append duplicates.
+              if(evt.user && evt.user.seq!=null){ renderedChatSeq.add(evt.user.seq); }
+              if(evt.novi && evt.novi.seq!=null){ renderedChatSeq.add(evt.novi.seq); }
+              if(evt.after!=null) chatAfter = evt.after;
+            } else if(evt.error){
+              bubble.textContent='(error: '+evt.error+')';
+              // Treat as done so we don't fallback to a second POST that would duplicate
+              doneEvt = evt;
+              gotToken = true;
+            }
+          }catch(e){}
+        }
+      }
+    }
+    if(!gotToken && !full){
+      // Fallback: no tokens (server fell back to polling) — remove optimistic; the
+      // canonical chat will be rendered by the final refreshChat in the outer finally.
+      try{ streamBox.remove(); }catch(_){}
+      try{ userTurn.remove(); }catch(_){}
+    } else if(doneEvt && doneEvt.after==null) {
+      // Streaming succeeded but server didn't send after (older server) — sync cursor
+      try { chatAfter = Math.max(chatAfter, ...[...renderedChatSeq]); } catch(_){}
+    }
+    // On success we already rendered both turns and updated chatAfter/renderedChatSeq, so skip the extra refreshChat.
+  }catch(e){
+    // Abort timeout is expected (AbortError) — don't spam error UI for it
+    const isAbort = e && (e.name==='AbortError' || /abort/i.test(String(e.message||'')));
+    if(abortTimer) { clearTimeout(abortTimer); abortTimer=null; }
+    try{ streamBox.remove(); }catch(_){}
+    try{ userTurn.remove(); }catch(_){}
+    if (isAbort) {
+      chatEl.appendChild(turn('novi', '(timed out — is Ollama/'+esc($('modelSelect')?.value||'model')+' reachable?)'));
+      markConn(false);
+    } else {
+      // Fallback to non-streaming POST if streaming failed (e.g. Ollama offline)
+      try{ await post('/api/chat', {text, confidence: conf}); markConn(true); }
+      catch(err){ chatEl.appendChild(turn('novi', '(reply failed — is the model reachable?)')); markConn(false); }
+    }
+  } finally {
+    if(abortTimer) { try{ clearTimeout(abortTimer); }catch(_){} }
+    isStreaming = false;
+    try{ $('sendBtn').disabled=false; $('say').disabled=false; $('sendBtn').textContent='Send'; $('say').focus(); }catch(_){}
+    try{ refreshState(); }catch(_){}
+    // Only poll for stragglers if streaming didn't already sync the cursor.
+    // This is after isStreaming=false so refreshChat is no longer paused.
+    try{ if(!doneEvt || doneEvt.after==null) await refreshChat(); }catch(_){}
+  }
+}
+
 $('sendBtn').onclick = async () => {
   const text = $('say').value.trim();
   if (!text) return;
   $('say').value=''; autoGrow($('say'));
-  $('sendBtn').disabled = true; $('say').disabled = true; $('sendBtn').innerHTML = '<span class="spinner"></span> sending';
-  typing(true);
-  try { await post('/api/chat', {text, confidence: parseFloat($('conf').value)}); markConn(true); }
-  catch(e) { $('chat').appendChild(turn('novi', '(reply failed &mdash; is the model reachable?)')); markConn(false); }
-  typing(false);
-  $('sendBtn').disabled = false; $('say').disabled = false; $('sendBtn').textContent = 'Send';
-  $('say').focus();
-  refreshState(); refreshChat();
+  // Prefer streaming; fallback handled inside streamChat
+  await streamChat(text);
 };
 $('say').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!$('sendBtn').disabled) $('sendBtn').click(); } });
 function autoGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,140)+'px'; }
@@ -702,9 +864,200 @@ document.querySelectorAll('[data-goal]').forEach(b => b.onclick = async () => {
 
 putLoading($('chat'));
 setInterval(refreshState, 1000);
-setInterval(refreshEvents, 1000);
+let eventES = null;
+let eventPollFallback = null;
+function handleEventChunk(chunk){
+  // chunk is {events:[...], after: n}
+  if(!chunk || !chunk.events) return;
+  const log = $('log');
+  if(log.firstChild && log.firstChild.textContent && log.firstChild.textContent.includes('waiting')) log.innerHTML = '';
+  let appended=false;
+  for(const it of chunk.events){
+    if(it.seq!=null && renderedEventSeq.has(it.seq)) continue;
+    if(it.seq!=null) renderedEventSeq.add(it.seq);
+    const ev=it.event;
+    const line=document.createElement('div'); line.className='ev';
+    line.innerHTML='<span class="t">'+esc(fmtTime(it.ts))+'</span><span class="e"><span class="ec">'+(ev.cycle!=null?('c'+ev.cycle):'')+'</span> '+esc(ev.event_type||'event')+' '+esc(JSON.stringify(stripJson(ev)).slice(0,180))+'</span>';
+    log.appendChild(line); appended=true;
+  }
+  if(appended){ while(log.children.length>500) log.removeChild(log.firstChild); log.scrollTop=log.scrollHeight; }
+  evHist.push(chunk.events.length); if(evHist.length>60) evHist.shift(); drawSparks(); after = chunk.after;
+}
+function startEventStream(){
+  if(eventES){ try{ eventES.close(); }catch(e){} eventES=null; }
+  if(eventPollFallback){ clearInterval(eventPollFallback); eventPollFallback=null; }
+  try{
+    const es = new EventSource('/api/events/stream?after='+after);
+    eventES = es;
+    es.onopen = ()=> markConn(true);
+    es.onmessage = (e)=>{
+      try{ const data = JSON.parse(e.data); handleEventChunk(data); markConn(true); }catch(err){}
+    };
+    es.onerror = ()=>{
+      markConn(false);
+      try{ es.close(); }catch(e){}
+      eventES=null;
+      // fallback to polling for 5s, then retry SSE
+      if(!eventPollFallback){
+        refreshEvents();
+        eventPollFallback = setInterval(refreshEvents, 1200);
+        setTimeout(()=>{ if(eventPollFallback){ clearInterval(eventPollFallback); eventPollFallback=null; } startEventStream(); }, 5000);
+      }
+    };
+  }catch(e){
+    // EventSource not available — fallback to polling
+    eventPollFallback = setInterval(refreshEvents, 1200);
+  }
+}
 setInterval(refreshChat, 1200);
-refreshState(); refreshEvents(); refreshChat(); loadModels();
+refreshState(); loadModels();
+startEventStream();
+setTimeout(refreshChat, 300);
+
+// ---- observability widgets ----
+async function fetchJSON(path){ try{ const r=await fetch(path); if(!r.ok) throw 0; markConn(true); return await r.json(); }catch(e){ markConn(false); return null; } }
+
+async function refreshAttention(){
+  const d = await fetchJSON('/api/attention');
+  if(!d) return;
+  const c = $('attn'); if(!c) return;
+  const cands = d.candidates || [];
+  const typed = d.typed_cognition;
+  let h='';
+  if(typed && typed.situation){
+    h += '<div class=\"kv\"><span class=\"k\">typed situation</span><span class=\"v\">'+esc(typed.situation.salience||typed.situation.kind||'')+'</span></div>';
+  }
+  if(!cands.length){ h += '<span class=\"muted\">no attention candidates yet</span>'; }
+  else {
+    h += '<div class=\"attn-list\">';
+    for(const a of cands.slice(0,6)){
+      const ent = a.entity_id || a.id || a.target || '?';
+      const score = a.attention_score!=null? Number(a.attention_score) : (a.score||0);
+      const pct = Math.max(0,Math.min(1,score))*100;
+      const reason = a.reason || a.suggested_action || a.kind || '';
+      h += '<div class=\"attn-item\"><div class=\"attn-head\"><b>'+esc(ent)+'</b><span>'+Number(score).toFixed(2)+'</span></div>'
+         + (reason?'<div class=\"attn-meta\">'+esc(reason)+'</div>':'')
+         + '<div class=\"attn-bar\"><i style=\"width:'+pct.toFixed(1)+'%\"></i></div></div>';
+    }
+    h += '</div>';
+  }
+  if(d.situations && d.situations.length){
+    h += '<div class=\"ctx-section\"><div class=\"h\">Situations</div>';
+    for(const s of d.situations.slice(0,3)){
+      h += '<div class=\"kv\"><span class=\"k\">'+esc(s.situation_id||s.kind||'sit')+'</span><span class=\"v\">'+esc((s.salience||s.kind||''))+'</span></div>';
+    }
+    h += '</div>';
+  }
+  setHTML(c, h);
+}
+async function refreshContext(){
+  const d = await fetchJSON('/api/context');
+  if(!d) return;
+  const c=$('ctxpkg'); if(!c) return;
+  const pkg = d.package || d;
+  let h='';
+  const vis = pkg.visible_entities || pkg.entities || [];
+  if(vis.length){
+    h += '<div class=\"ctx-section\"><div class=\"h\">Visible entities</div><div class=\"entity-chips\">';
+    for(const e of vis.slice(0,12)){
+      const ref=e.entity_ref||e.id||e.ref||e;
+      const st=(e.epistemic_status||e.status||'observed').toLowerCase();
+      const cls= st.includes('contradict')?'contradicted': st.includes('predict')?'predicted':'observed';
+      h += '<span class=\"entity-chip '+cls+'\" title=\"'+esc(st)+'\">'+esc(ref)+' · '+esc(st)+'</span>';
+    }
+    h += '</div></div>';
+  } else { h += '<div class=\"muted\">no visible entities</div>'; }
+  const rels = pkg.relations || pkg.relationships || [];
+  if(rels.length){
+    h += '<div class=\"ctx-section\"><div class=\"h\">Relations</div>';
+    for(const r of rels.slice(0,4)) h += '<div class=\"kv\"><span class=\"k\">'+esc(r.subject||r.a||'')+'</span><span class=\"v\">'+esc(r.predicate||r.relation||'')+' '+esc(r.object||r.b||'')+'</span></div>';
+    h += '</div>';
+  }
+  const unc = pkg.uncertainty || pkg.contradictions || [];
+  if(unc.length){
+    h += '<div class=\"ctx-section\"><div class=\"h\">Uncertainty</div>';
+    for(const u of unc.slice(0,3)) h += '<div class=\"kv\"><span class=\"k\">'+esc(u.entity||u.ref||'')+'</span><span class=\"v\">'+esc(u.reason||u.status||'')+'</span></div>';
+    h += '</div>';
+  }
+  const cyc = d.cycle!=null? '<div class=\"muted\" style=\"margin-top:6px\">cycle '+esc(d.cycle)+'</div>' : '';
+  setHTML(c, h+cyc);
+}
+async function refreshIdentity(){
+  const d = await fetchJSON('/api/identity');
+  if(!d) return;
+  const c=$('ident'); if(!c) return;
+  const cur = d.current;
+  const snap = d.snapshot||{};
+  let h='';
+  if(cur){
+    const tier = cur.tier||'?';
+    const conf = cur.confidence!=null? Number(cur.confidence).toFixed(2):'—';
+    h += '<div class=\"ident\"><span class=\"name\">'+esc(cur.name||cur.person||'person')+'</span><span class=\"tone\">'+esc(tier)+' · '+esc(conf)+'</span></div>';
+    h += '<div class=\"muted\" style=\"margin-top:4px\">modality: '+(cur.evidence? esc(Object.keys(cur.evidence).join(', ')) : esc(cur.modality||'—'))+'</div>';
+    // header badge
+    const badge=$('identBadge');
+    if(badge) badge.textContent = (cur.name||cur.person||'person')+' · '+tier+' '+conf;
+  } else {
+    h += '<span class=\"muted\">no person observed yet — say hello</span>';
+    const badge=$('identBadge'); if(badge) badge.textContent='no person';
+  }
+  // history
+  const hist = snap.history||snap.identities||[];
+  if(hist.length){
+    h += '<div class=\"ctx-section\"><div class=\"h\">Recent</div>';
+    for(const it of hist.slice(-4).reverse()){
+      h += '<div class=\"kv\"><span class=\"k\">'+esc(it.name||it.person||'person')+'</span><span class=\"v\">'+esc(it.tier||'')+' '+ (it.confidence!=null?Number(it.confidence).toFixed(2):'')+'</span></div>';
+    }
+    h += '</div>';
+  }
+  setHTML(c,h);
+}
+async function searchMemory(){
+  const q=$('memQuery')?$('memQuery').value.trim():'';
+  const out=$('memResults'); if(!out) return;
+  if(!q){ out.innerHTML='<span class=\"muted\">type a query and press Search</span>'; return; }
+  out.innerHTML='<span class=\"muted\">searching…</span>';
+  const d=await fetchJSON('/api/memory?query='+encodeURIComponent(q)+'&limit=8');
+  if(!d||!d.results){ out.innerHTML='<span class=\"muted\">no results</span>'; return; }
+  if(!d.results.length) out.innerHTML='<span class=\"muted\">no matches for '+esc(q)+'</span>';
+  else {
+    let h='<div style=\"display:flex;flex-direction:column;gap:6px\">';
+    for(const r of d.results){
+      h += '<div style=\"padding:6px 8px;background:var(--panel-2);border:1px solid var(--border);border-radius:6px\">'
+         + '<div style=\"font-size:11px;color:var(--text-mute)\">'+esc(r.memory_type)+' · '+esc((r.entity_refs||[]).join(', '))+' · '+esc(Number(r.confidence).toFixed(2))+'</div>'
+         + '<div style=\"font-size:12px;color:var(--text);white-space:pre-wrap\">'+esc(r.content).slice(0,220)+'</div></div>';
+    }
+    if(d.retrieval_state) h += '<div class=\"muted\" style=\"margin-top:4px\">retrieval: '+esc(d.retrieval_state)+'</div>';
+    h += '</div>';
+    out.innerHTML=h;
+  }
+}
+async function searchKnowledge(){
+  const q=$('knowQuery')?$('knowQuery').value.trim():'';
+  const out=$('knowResults'); if(!out) return;
+  if(!q){ out.innerHTML='<span class=\"muted\">type an entity and press Lookup</span>'; return; }
+  out.innerHTML='<span class=\"muted\">looking up…</span>';
+  const d=await fetchJSON('/api/knowledge?entity='+encodeURIComponent(q)+'&limit=10');
+  if(!d){ out.innerHTML='<span class=\"muted\">lookup failed</span>'; return; }
+  if(!d.triples.length) out.innerHTML='<span class=\"muted\">no triples for '+esc(q)+' ('+(d.counts.triples||0)+' total)</span>';
+  else {
+    let h='<div style=\"display:flex;flex-direction:column;gap:4px\">';
+    for(const t of d.triples){
+      const s=t.subject||t.s||'', p=t.predicate||t.pred||t.relation||'', o=t.object||t.o||'';
+      h += '<div class=\"kv\"><span class=\"k\">'+esc(s)+' — '+esc(p)+'</span><span class=\"v\">'+esc(o)+'</span></div>';
+    }
+    h += '</div>';
+    out.innerHTML=h;
+  }
+}
+if($('memSearchBtn')) $('memSearchBtn').onclick=searchMemory;
+if($('memQuery')) $('memQuery').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); searchMemory(); }});
+if($('knowSearchBtn')) $('knowSearchBtn').onclick=searchKnowledge;
+if($('knowQuery')) $('knowQuery').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); searchKnowledge(); }});
+setInterval(refreshAttention, 1100);
+setInterval(refreshContext, 1100);
+setInterval(refreshIdentity, 1500);
+refreshAttention(); refreshContext(); refreshIdentity();
 </script>
 </body>
 </html>
