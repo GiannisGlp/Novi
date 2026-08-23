@@ -19,7 +19,7 @@ export OBJC_DEBUG_DUPLICATE_CLASSES=0
 
 HOST="${NOVI_HOST:-127.0.0.1}"
 PORT="${NOVI_PORT:-8080}"
-STORE="${NOVI_STORE:-$ROOT/novi_web.db}"
+STORE="${NOVI_STORE:-$ROOT/novi/db/novi_web.db}"
 TICK="${NOVI_TICK:-0.8}"
 
 echo "Starting Novi web app -> http://$HOST:$PORT"

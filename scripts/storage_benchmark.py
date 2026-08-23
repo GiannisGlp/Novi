@@ -131,7 +131,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--iterations", type=int, default=10_000)
     parser.add_argument("--readers", type=int, default=4)
-    parser.add_argument("--output", type=Path, default=Path("storage-benchmark-result.json"))
+    parser.add_argument("--output", type=Path, default=Path("novi/storage-benchmark-result.json"))
     args = parser.parse_args()
 
     if args.iterations <= 0:

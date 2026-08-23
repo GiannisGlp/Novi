@@ -15,7 +15,7 @@ bash scripts/mac/neural-doctor.sh
 echo
 
 echo "[2/4] Known-image neural inference"
-bash scripts/mac/m1-image-test.sh "${1:-test-image.png}"
+bash scripts/mac/m1-image-test.sh "${1:-novi/assets/test-image.png}"
 echo
 
 echo "[3/4] Mac Brain deterministic integration"

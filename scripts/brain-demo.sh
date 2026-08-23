@@ -38,7 +38,7 @@ LIVE_STEPS="${NOVI_LIVE_STEPS:-8}"
 LISTEN_SECONDS="${NOVI_LISTEN_SECONDS:-2}"
 STT_MODEL="${NOVI_STT_MODEL:-base}"
 VOICE="${NOVI_VOICE:-Samantha}"
-STORE="${NOVI_STORE:-$ROOT/novi_demo.db}"
+STORE="${NOVI_STORE:-$ROOT/novi/db/novi_demo.db}"
 CAMERA_FLAG="--live-camera"
 if [[ "${NOVI_NO_CAMERA:-0}" == "1" ]]; then
   CAMERA_FLAG=""
@@ -62,14 +62,14 @@ case "$MODE" in
       --say --say-voice "$VOICE" --store "$STORE" "$@"
     ;;
   neural)
-    note "real neural (MPS) object detection on test-image.png (no camera)"
+    note "real neural (MPS) object detection on novi/assets/test-image.png (no camera)"
     exec "$PYTHON" -m novi.brain.cli --cycles "${NOVI_CYCLES:-5}" --neural \
-      --neural-image test-image.png --store "$STORE" "$@"
+      --neural-image novi/assets/test-image.png --store "$STORE" "$@"
     ;;
   image)
-    note "real neural (MPS) object detection on test-image.png (alias of 'neural')"
+    note "real neural (MPS) object detection on novi/assets/test-image.png (alias of 'neural')"
     exec "$PYTHON" -m novi.brain.cli --cycles "${NOVI_CYCLES:-5}" --neural \
-      --neural-image test-image.png --store "$STORE" "$@"
+      --neural-image novi/assets/test-image.png --store "$STORE" "$@"
     ;;
   hear)
     note "offline demo-hear session (deterministic speech, no microphone)"

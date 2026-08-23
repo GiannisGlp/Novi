@@ -125,7 +125,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     image = sub.add_parser("image")
-    image.add_argument("path", nargs="?", default="test-image.png")
+    image.add_argument("path", nargs="?", default="novi/assets/test-image.png")
     camera = sub.add_parser("camera")
     camera.add_argument("--device", type=int, default=0)
     camera.add_argument("--frames", type=int, default=5)

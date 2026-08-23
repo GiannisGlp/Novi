@@ -85,7 +85,7 @@ def asdict_flat(obj) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the Novi Mac Brain runtime")
     parser.add_argument("--live-camera", action="store_true", help="use the Mac camera instead of the deterministic camera")
-    parser.add_argument("--neural-image", type=Path, default=None, metavar="PATH", help="serve a static image as the camera input (defaults to test-image.png) so real neural perception runs without hardware")
+    parser.add_argument("--neural-image", type=Path, default=None, metavar="PATH", help="serve a static image as the camera input (defaults to novi/assets/test-image.png) so real neural perception runs without hardware")
     parser.add_argument("--neural", action="store_true", help="run the real Mac neural object-detection backend instead of the deterministic perception backend")
     parser.add_argument("--device", type=str, default=None, help="torch device for neural inference (default: mps if available, else cpu)")
     parser.add_argument("--cycles", type=int, default=1)

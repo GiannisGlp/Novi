@@ -48,7 +48,7 @@ def check(name: str, ok: bool, detail: str = "") -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default="sqlite-recovery-validation-result.json")
+    parser.add_argument("--output", default="novi/sqlite-recovery-validation-result.json")
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory(prefix="novi-sqlite-recovery-") as tmp:

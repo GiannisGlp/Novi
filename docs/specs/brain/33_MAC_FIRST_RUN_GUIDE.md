@@ -15,7 +15,7 @@ Novi/
 ├── README.md
 ├── MAC_BRAIN/
 ├── scripts/
-└── test-image.png
+└── novi/assets/test-image.png
 ```
 
 Do not run the scripts from inside `MAC_BRAIN/`.
@@ -30,7 +30,7 @@ Do not run the scripts from inside `MAC_BRAIN/`.
 | `bash scripts/mac/neural-doctor.sh` | Verify PyTorch/torchvision/MPS/OpenCV/Pillow | Mac only |
 | `bash scripts/mac-brain-test.sh` | Run deterministic Mac Brain integration tests | No camera/model required |
 | `bash scripts/mac-brain.sh` | Start the Mac Brain runtime | No camera/model required |
-| `bash scripts/mac/m1-image-test.sh` | Run real SSDLite inference on `test-image.png` | No camera required |
+| `bash scripts/mac/m1-image-test.sh` | Run real SSDLite inference on `novi/assets/test-image.png` | No camera required |
 | `bash scripts/mac/m1-camera-test.sh` | Run real SSDLite inference on live camera frames | Camera required |
 | `bash scripts/mac/m1-run.sh` | Run the M1 environment + image stage + deterministic Brain tests | Camera not required |
 | `bash scripts/mac/collect-evidence.sh` | Snapshot collected Mac evidence into the implementation evidence area | No additional hardware |
@@ -214,7 +214,7 @@ bash scripts/mac/m1-image-test.sh path/to/image.png
 The command performs:
 
 ```text
- test-image.png
+ novi/assets/test-image.png
       ↓
 SSDLite MobileNetV3
       ↓

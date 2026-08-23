@@ -21,8 +21,8 @@ fi
 if [[ -f mac_test_results/M1/latest.json ]]; then
   cp mac_test_results/M1/latest.json "$DEST/M1-latest.json"
 fi
-if [[ -f test-image.png ]]; then
-  cp test-image.png "$DEST/"
+if [[ -f novi/assets/test-image.png ]]; then
+  cp novi/assets/test-image.png "$DEST/"
 fi
 
 git rev-parse HEAD > "$DEST/commit_sha.txt"

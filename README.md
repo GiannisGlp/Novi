@@ -68,7 +68,7 @@ MPS verification
         ↓
 SSDLite MobileNetV3
         ↓
-test-image.png
+novi/assets/test-image.png
         ↓
 real detections
         ↓

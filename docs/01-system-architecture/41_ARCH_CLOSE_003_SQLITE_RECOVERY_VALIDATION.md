@@ -19,7 +19,7 @@ The benchmark itself records that fault injection, migration, backup/restore and
 Run:
 
 ```bash
-python3 scripts/sqlite_recovery_validation.py --output sqlite-recovery-validation-result.json
+python3 scripts/sqlite_recovery_validation.py --output novi/sqlite-recovery-validation-result.json
 ```
 
 The harness validates:
