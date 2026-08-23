@@ -33,6 +33,7 @@ def _clamp01(v: float) -> float:
 class Belief:
     entity: str
     value: Any
+    property: str = "presence"
     confidence: float = 0.2
     evidence_count: int = 1
     contradictions: int = 0
@@ -43,6 +44,7 @@ class Belief:
         return {
             "entity": self.entity,
             "value": self.value,
+            "property": self.property,
             "confidence": self.confidence,
             "evidence_count": self.evidence_count,
             "contradictions": self.contradictions,
@@ -60,7 +62,7 @@ class BeliefSystem:
         key = (entity, property)
         belief = self._beliefs.get(key)
         if belief is None:
-            belief = Belief(entity=entity, value=value, confidence=_clamp01(confidence), evidence_count=1, first_observed=now, last_observed=now)
+            belief = Belief(entity=entity, value=value, property=property, confidence=_clamp01(confidence), evidence_count=1, first_observed=now, last_observed=now)
             self._beliefs[key] = belief
             return belief
 
@@ -95,8 +97,15 @@ class BeliefSystem:
     def from_snapshot(cls, rows: list[dict[str, Any]]) -> "BeliefSystem":
         sys = cls()
         for row in rows:
-            b = Belief(entity=row["entity"], value=row["value"], confidence=row["confidence"], evidence_count=row["evidence_count"], contradictions=row["contradictions"])
-            sys._beliefs[(b.entity, "presence")] = b
+            b = Belief(
+                entity=row["entity"],
+                value=row["value"],
+                property=row.get("property", "presence"),
+                confidence=row["confidence"],
+                evidence_count=row["evidence_count"],
+                contradictions=row["contradictions"],
+            )
+            sys._beliefs[(b.entity, b.property)] = b
         return sys
 
 

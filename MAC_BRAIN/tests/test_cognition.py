@@ -43,6 +43,18 @@ class BeliefTests(unittest.TestCase):
         bs.observe("a", False, confidence=0.9)
         self.assertEqual(bs.contradicts(), 1)
 
+    def test_property_preserved_through_snapshot_restore(self):
+        # Regression: from_snapshot used to hardcode the "presence" property,
+        # so a belief observed under a different property (e.g. "color") was
+        # restored under the wrong key and became unreachable.
+        bs = BeliefSystem()
+        bs.observe("cup", "red", property="color", confidence=0.9)
+        bs.observe("cup", True, property="presence", confidence=0.8)
+        restored = BeliefSystem.from_snapshot(bs.snapshot())
+        self.assertEqual(restored.belief_for("cup", "color").value, "red")
+        self.assertEqual(restored.belief_for("cup", "presence").value, True)
+        self.assertIsNone(restored.belief_for("cup", "location"))
+
 
 class ExpectationTests(unittest.TestCase):
     def test_steady_presence_then_absence_is_violation(self):
