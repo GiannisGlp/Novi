@@ -9,7 +9,7 @@
 
 ## 1. Executive Verdict
 
-**Novi's Mac brain is far along — and the `PERFECTING_PLAN` implementation wave (Steps 1–6) is largely built and wired into the runtime — but it is not yet a "fully functional brain."** The dominant problems are no longer missing subsystems; they are (a) **stale documentation that under-reports what is actually implemented**, (b) a **missing typed-contract layer** for cognition, (c) **real neural models that are thin adapters only**, and (d) **deferred spatial / multi-person / governance-review capabilities**.
+**Novi's Mac brain is far along, and the `PERFECTING_PLAN` implementation wave (Steps 1–6) is largely built and wired into the runtime, but it is not yet a "fully functional brain."** The problems are no longer missing subsystems. They are stale documentation that under-reports what is actually implemented, a missing typed-contract layer for cognition, real neural models that are only thin adapters, and deferred spatial, multi-person, and governance-review capabilities.
 
 The project's own `MAC_BRAIN/PERFECTING_PLAN/` (13 files) is the canonical gap analysis and 6-step roadmap. This document reconciles it with the current code, corrects stale claims, and consolidates the 8 domain findings into one prioritized next-step plan.
 
@@ -17,7 +17,7 @@ The project's own `MAC_BRAIN/PERFECTING_PLAN/` (13 files) is the canonical gap a
 
 ## 2. What Is Actually Implemented (verified against code + tests)
 
-The `MAC_BRAIN/runtime.py` orchestrator (~1460 lines) genuinely wires ~30 subsystems into a continuous loop:
+The `MAC_BRAIN/runtime.py` orchestrator (~1460 lines) wires ~30 subsystems into a continuous loop:
 perception → cognition → attention → situation → reasoning → governance → skill → closed-loop VERIFY → reflection → soul → social.
 
 **Measured test baseline (this analysis):**
