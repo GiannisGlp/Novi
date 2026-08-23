@@ -128,7 +128,7 @@ the brain phase.
 | `web/tests/` | 41 | Web server integration | ⚠️ Slow (~70s), not in fast suite |
 | `contracts/tests/` | 13 | Contract validation (via pytest shim) | ✅ All green |
 | `cognition/tests/` | 34 | Typed cognition contracts + replay | ✅ All green |
-| **Fast suite total** | **1193** | MAC_BRAIN + brain + contracts + cognition | ✅ All green |
+| **Fast suite total** | **1201** | MAC_BRAIN + brain + contracts + cognition | ✅ All green |
 
 ## Key architecture rules
 

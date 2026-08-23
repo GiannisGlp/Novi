@@ -131,7 +131,7 @@ flowchart LR
 
 41. **Hardware selection OPEN** — Jetson AGX Orin 64GB vs Thor undecided; no benchmarks.
 42. **No ROS2/Isaac/Jetson/CUDA/TensorRT integration** — deferred (correct per plan).
-43. **No simulation parity (Isaac Sim) or fault injection for real sensors.**
+43. **No simulation parity (Isaac Sim) or fault injection for real sensors.** — **Partially FIXED**: a bounded SimPy discrete-event model of the closed-loop runtime (`MAC_BRAIN/simulation.py`) now estimates cycle throughput/latency under load for closed-loop parity analysis (Step 6); Isaac Sim / hardware-in-loop parity remains deferred to the hardware phase.
 44. **No Jetson/NVIDIA runtime profile** — only no-hardware adapters.
 45. **No hardware-in-loop or physical Novi.**
 

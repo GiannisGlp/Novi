@@ -69,9 +69,14 @@ metrology = [
     "uncertainties>=3.2",
 ]
 
+# Discrete-event simulation of the closed-loop runtime (closed-loop parity)
+simulation = [
+    "simpy>=4.1",
+]
+
 # Everything for a full Mac Brain setup
 mac = [
-    "novi[neural,audio,vision,llm,typed,metrology,dev]",
+    "novi[neural,audio,vision,llm,typed,metrology,simulation,dev]",
 ]
 
 [project.scripts]

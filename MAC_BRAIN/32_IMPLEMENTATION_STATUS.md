@@ -1311,12 +1311,12 @@ The `MAC_BRAIN/PERFECTING_PLAN/` roadmap (13 files) is implemented and wired int
 
 ### Regression status (this analysis)
 
-- MAC_BRAIN: **1041 passing** (804 + 50 new dedicated governance-guard / multi-speed-runtime tests + 159 Step 2/3/4 tests: durable independence wiring, simulated-episode recall, skill timeout enforcement, resource-aware adaptation, runtime confirmation flow, event-bus contract, goal lifecycle + conflict resolution, audit trail, scenario/adversarial/endurance, affect→communication mapping, P1–P3 acceptance catalog + gates + runners, spatial model 14, typed cognition emission 9, learning pipeline 17, memory-class decision + schema-evolution hooks 10, real resource telemetry 15, units + uncertainty propagation 13)
+- MAC_BRAIN: **1049 passing** (804 + 50 new dedicated governance-guard / multi-speed-runtime tests + 159 Step 2/3/4 tests: durable independence wiring, simulated-episode recall, skill timeout enforcement, resource-aware adaptation, runtime confirmation flow, event-bus contract, goal lifecycle + conflict resolution, audit trail, scenario/adversarial/endurance, affect→communication mapping, P1–P3 acceptance catalog + gates + runners, spatial model 14, typed cognition emission 9, learning pipeline 17, memory-class decision + schema-evolution hooks 10, real resource telemetry 15, units + uncertainty propagation 13, closed-loop simulation 8)
 - brain: **105 passing**
 - web: **41 passing** (slow, ~70s)
 - contracts: **13 passing** (executable suite via pytest shim, requires `jsonschema` — now declared in `pyproject.toml` dev deps)
 - cognition typed contracts: **34 passing** (`cognition/tests/test_contracts.py`, Pydantic v2 models + validators + replay harness)
-- **Total: 1234** (fast suites = 1041 MAC_BRAIN + 105 brain + 13 contracts + 34 cognition = 1193, + web 41)
+- **Total: 1242** (fast suites = 1049 MAC_BRAIN + 105 brain + 13 contracts + 34 cognition = 1201, + web 41)
 
 ### Known limitations (noted, not blocking)
 
