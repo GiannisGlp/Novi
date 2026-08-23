@@ -450,6 +450,41 @@ class ChatMixin:
             "active_goal": self._goal_context(),
         }
 
+    def _parse_skill_directive(self, text: str | None, runnable_names: list[str]) -> tuple[str, list[str]] | None:
+        """Parse a strict '@skill <name> <args...>' line against known skills.
+
+        Returns (name, args) only when the line is a single well-formed
+        directive naming a runnable skill; anything else is None.
+        """
+        if not text:
+            return None
+        stripped = text.strip()
+        if not stripped.startswith("@skill"):
+            return None
+        parts = stripped.split(None, 2)
+        if len(parts) < 3 or parts[0] != "@skill":
+            return None
+        name = parts[1].strip().lower()
+        if name not in runnable_names:
+            return None
+        rest = parts[2].strip()
+        tokens = rest.split()
+        # Single-token args stay whole ("7*6"); multi-token args are treated
+        # as separate arguments for ops like 'diff x**2 x'.
+        return name, (tokens if len(tokens) > 1 else [rest])
+
+    def _skill_answer_text(self, data: dict[str, Any]) -> str:
+        """Render a skill result as a short natural answer, no internals."""
+        expr = str(data.get("expression") or "").strip()
+        result = data.get("result")
+        if isinstance(result, list):
+            result = " or ".join(str(r) for r in result)
+        if expr and result is not None:
+            return f"{expr} = {result}"
+        if result is not None:
+            return f"That comes out to {result}."
+        return json.dumps(data, sort_keys=True)[:200]
+
     def natural_reply_fallback(self, *, text: str = "", cycle: int | None = None) -> dict[str, Any]:
         """Deterministic, natural spoken reply when no LLM transport is configured.
 
@@ -741,6 +776,22 @@ class ChatMixin:
         deterministic fallback, e.g. CI). When a transport is configured but the
         reply is silent/rejected/unreachable, a natural fallback is returned.
         """
+        # Dynamic skill activation (plan 16 P2): if the message confidently
+        # matches a script skill and an argument can be extracted without a
+        # model, run it through governed invocation and answer from the exact
+        # result. Deterministic correctness beats style; works with or without
+        # a transport.
+        planned = self.skills.plan_auto(text) if getattr(self, "skills", None) else None
+        if planned is not None:
+            manifest, sargs = planned
+            run = self.brain_use_skill(manifest.name, sargs)
+            if run.ok:
+                return {
+                    "text": self._skill_answer_text(run.data),
+                    "fallback": False,
+                    "reason": f"You asked something my {manifest.name} skill computes exactly.",
+                    "grounding": {"route": "skill", "skill": manifest.name, "result": run.data},
+                }
         if llm_chat is None:
             return {"text": None, "fallback": False, "grounding": {}}
         # CommunicationDecision: decide whether, when, and how to communicate.
@@ -838,6 +889,18 @@ class ChatMixin:
         experience = self._chat_experience(person or addressee_name)
         facts.extend(experience)
         system = self._dialogue_system_prompt(self_state, relationship, capabilities=self_model.get("capabilities"))
+        # Skill awareness (plan 16 P2): the model is told which runnable
+        # skills exist so it can request one with a strict '@skill' directive
+        # line, which the engine parses and executes deterministically.
+        runnable_skills = [c for c in self.skills.catalog() if c["kind"] in ("script", "hybrid")] if getattr(self, "skills", None) else []
+        if runnable_skills:
+            listing = "; ".join(f"{c['name']} — {c['description'][:70]}" for c in runnable_skills)
+            system += (
+                " Exact-computation skills you can run: " + listing + ". "
+                "If running one would answer the user precisely (math, unit conversion, symbolic work), "
+                "reply with ONLY a single line in this exact format and nothing else: "
+                "@skill <name> <space-separated arguments>. Otherwise ignore them and reply normally."
+            )
         is_clarification = _is_clarification(text)
         is_physical_action = _is_physical_action_request(text)
         is_realtime = _is_realtime_data_question(text)
@@ -979,6 +1042,26 @@ class ChatMixin:
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")
         out = self.dialogue.reply(system=system, user=user_json, last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi, llm_chat=llm_chat)
+        # @skill convention (plan 16 P2): the model may request one exact
+        # computation. Parse strictly against the known runnable catalog,
+        # execute through governed invocation, then compose the final natural
+        # answer from the real result in one bounded second pass.
+        directive = self._parse_skill_directive(out.get("text"), [c["name"] for c in runnable_skills]) if runnable_skills else None
+        if directive is not None:
+            name, sargs = directive
+            run = self.brain_use_skill(name, sargs)
+            if run.ok:
+                result_payload = json.dumps(run.data, sort_keys=True)[:600]
+                system2 = (
+                    system
+                    + f" You used your {name} skill, which returned this exact result: {result_payload}. "
+                    "Answer the user naturally and briefly using it. Do not mention skills, tools, "
+                    "directives, or any internals — just answer like yourself."
+                )
+                out2 = self.dialogue.reply(system=system2, user=user_json, last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi, llm_chat=llm_chat)
+                out = out2 if out2.get("text") else {"text": self._skill_answer_text(run.data), "rejected": False}
+            else:
+                out = {"text": None, "rejected": False}  # directive unusable → fall through honestly
         if out["text"] is None and out["rejected"]:
             # One bounded regeneration nudge: the first reply was robotic or
             # repeated the last turn. Ask for something new rather than emitting

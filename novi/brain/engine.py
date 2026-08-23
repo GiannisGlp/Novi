@@ -98,6 +98,7 @@ class MacBrainConfig:
     curiosity_enabled: bool = True
     curiosity_investigate_steps: int = 5
     llm_triples_enabled: bool = False
+    skill_dirs: tuple[str, ...] = ()  # extra user skill directories (~/.novi/skills)
     consolidation_enabled: bool = True
     consolidation_every: int = 1
     consolidation_config: ConsolidationConfig = field(default_factory=ConsolidationConfig)
@@ -352,6 +353,11 @@ class MacBrain(ChatMixin):
         self.metrics = metrics or MetricRegistry()
         self.diagnostics = diagnostics or Diagnostics()
         self.health = health or HealthMonitor(default_health_checks())
+        # Skill system (docs/plans/01_BRAIN/16): portable SKILL.md packages;
+        # shipped skills + user dirs. Manifests only until a skill is used.
+        from .skills import SkillRegistry
+        shipped_dir = Path(__file__).resolve().parents[1] / "skills"  # novi/skills/
+        self.skills = SkillRegistry([shipped_dir, *[Path(d) for d in self.config.skill_dirs]])
         self._last_health: dict[str, Any] | None = None
         self._cycle = 0
         self.events: list[dict[str, Any]] = []
@@ -1659,6 +1665,49 @@ class MacBrain(ChatMixin):
 
     def metrics_snapshot(self) -> list[dict[str, Any]]:
         return self.metrics.snapshot()
+
+    def brain_use_skill(self, name: str, args: list[str] | None = None) -> Any:
+        """Run a skill through the registry with full governance (plan 16, P1).
+
+        Script skills execute offline through the allowlisted interpreter.
+        Every invocation is audited and emitted; successful results are
+        admitted to memory with provenance ``skill:<name>`` so recall shows
+        where the fact came from. Returns the SkillRunResult.
+        """
+        import json as _json
+
+        result = self.skills.run(name, args)
+        payload = {"cycle": self._cycle, "skill": result.skill, "outcome": result.outcome, "ok": result.ok}
+        self._emit("skill.invoked", payload)
+        self.audit_trail.record(
+            correlation_id=self._cycle_correlation_id,
+            action=f"skill:{result.skill}",
+            decision_reason="user_or_trigger_request",
+            policy_result="ALLOW:script_skill" if result.ok else f"DENY_OR_FAIL:{result.outcome}",
+            safety_result="executed" if result.ok else "failed",
+            outcome=result.outcome,
+            actor="runtime",
+            version="mac-brain",
+            details={"args": [str(a) for a in (args or [])]},
+        )
+        if result.ok and result.data:
+            content_blob = _json.dumps(result.data, sort_keys=True)[:500]
+            allowed, mem_class = self._gate_memory("skill_result")
+            if allowed:
+                classification = self.governance.classify(
+                    memory_type="skill_result", content={"text": content_blob}, entity_refs=(), modality="tool"
+                )
+                self.memory.admit(
+                    memory_type="skill_result",
+                    content={"skill": result.skill, "data": content_blob},
+                    confidence=0.9,
+                    verification_status="verified",
+                    privacy_class=classification.privacy_class,
+                    provenance={"source": f"skill:{result.skill}", "capability": "skill.script", "memory_class": mem_class},
+                    entity_refs=(),
+                    temporal_context=self._temporal_context(),
+                )
+        return result
 
     def add_diagnostic(self, severity: str, message: str, context: dict[str, Any] | None = None) -> None:
         self.diagnostics.add(severity, message, context)

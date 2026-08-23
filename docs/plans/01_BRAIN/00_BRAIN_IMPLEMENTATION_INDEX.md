@@ -39,8 +39,10 @@ B2 acceptance                     LATER
 - `11_FAILURE_DEGRADED_MODE_TESTING.md`
 - `12_BRAIN_INTEGRATION_GATE.md`
 - `13_GAP_AUDIT_IMPLEMENTATION_PLAN_2026-08-23.md`
+- `17_SKILL_SYSTEM_DESIGN.md` — portable SKILL.md packages for Novi (maths/pdf/humanizer): analysis, loader/runner design, governance perimeter; dynamic activation (plan_auto + @skill convention) and novi/skills/README implemented
 - `14_BRAIN_EXIT_CONTRACT.md`
 - `15_VOICE_CONTINUOUS_DIALOG.md`
+- `16_MULTIMODAL_INTEGRATION.md` — voice+perception+recognition wired into the engine via MultimodalRuntime; web handlers, /preview, durable RecognitionStore
 
 ## Hardware candidates
 

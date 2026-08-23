@@ -28,6 +28,7 @@ from typing import Any
 from novi.brain.audio import AudioFrame
 from novi.brain.autonomy import Goal
 from novi.brain.contracts import utc_now
+from novi.web.integration_api import IntegrationMixin
 from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
@@ -57,7 +58,7 @@ class DemoCamera:
         return None
 
 
-class NoviWebServer:
+class NoviWebServer(IntegrationMixin):
     """Owns a MacBrain and drives it from HTTP requests."""
 
     def __init__(
@@ -130,6 +131,15 @@ class NoviWebServer:
         self.conversation_summarizer = self._build_conversation_summarizer()
         self._load_chat_history()
         self._last_step: dict[str, Any] | None = None
+        # Multimodal + recognition integration (doc 16) — lazy so tests and
+        # minimal deployments can run without it.
+        try:
+            self._integration_init()
+        except Exception:  # noqa: BLE001 - integration is additive, never fatal
+            self.mm_runtime = None  # type: ignore[assignment]
+            self.mm_store = None  # type: ignore[assignment]
+            self.mm_camera_feed = None
+            self.mm_last_frame_b64 = None
 
     def _build_conversation_summarizer(self) -> Any:
         """LLM conversation summarizer when Ollama is available."""
@@ -1154,6 +1164,27 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/healthz":
             self._json({"ok": True})
             return
+        # ---- multimodal integration (doc 16) ----
+        novi = self.server.novi
+        if path == "/preview":
+            html = (_ROUTED / "static" / "preview.html").read_text(encoding="utf-8")
+            self._send(200, html.encode("utf-8"), "text/html")
+            return
+        if path == "/api/perception/state":
+            self._json(novi.perception_state() if novi.mm_runtime else {"error": "integration unavailable"})
+            return
+        if path == "/api/recognition":
+            kind = None
+            if "?" in self.path:
+                from urllib.parse import parse_qs, urlparse
+
+                qs = parse_qs(urlparse(self.path).query)
+                kind = qs.get("kind", [None])[0]
+            self._json(novi.recognition_list(kind) if novi.mm_runtime else {"error": "integration unavailable"})
+            return
+        if path == "/api/preview":
+            self._json(novi.preview_frame() if novi.mm_runtime else {"error": "integration unavailable"})
+            return
         if path == "/api/p0-gate":
             with self.server.novi._lock:
                 result = self.server.novi.brain.p0_gate()
@@ -1269,6 +1300,16 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/episode/status":
                 with novi._lock:
                     self._json({"result": {"recording": novi.brain.is_recording, "step_count": novi.brain.recording_step_count}})
+            elif path == "/api/perception/frame":
+                self._json({"result": novi.perception_frame(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/voice/turn":
+                self._json({"result": novi.voice_turn(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/recognition/person":
+                self._json({"result": novi.recognize_person(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/recognition/enroll":
+                self._json({"result": novi.enroll_place_or_noise(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/recognition/privacy":
+                self._json({"result": novi.recognition_privacy(data)} if novi.mm_runtime else {"error": "integration unavailable"})
             else:
                 self._json({"error": "unknown endpoint"}, 404)
         except Exception as exc:  # noqa: BLE001
