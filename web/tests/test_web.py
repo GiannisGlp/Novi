@@ -81,7 +81,14 @@ class NoviWebServerTests(unittest.TestCase):
         json.dumps(r)
         self.assertTrue(r["accepted"])
         self.assertEqual(r["novi"]["role"], "novi")
-        self.assertEqual(r["novi"]["trace"]["conclusion"], r["novi"]["text"])
+        # No LLM transport: Novi distinguishes the communication type in the
+        # trace (real cognition conclusion) but never replies with the internal
+        # label — the spoken text must be a natural fallback.
+        self.assertNotEqual(r["novi"]["text"], "human_speech_observed")
+        self.assertNotEqual(r["novi"]["text"], r["novi"]["trace"]["conclusion"])
+        self.assertTrue(r["novi"]["text"])
+        self.assertEqual(r["novi"]["llm"], False)
+        self.assertEqual(r["novi"]["trace"]["route_reason"], "no_llm_transport")
         chat = self.s.chat(0)
         roles = [e["role"] for e in chat["entries"]]
         self.assertIn("user", roles)
@@ -187,6 +194,27 @@ class NoviWebServerTests(unittest.TestCase):
         try:
             r = s.chat_send("alice moved the door")
             json.dumps(r)
+            self.assertFalse(r["llm"])
+        finally:
+            s.stop()
+
+    def test_no_transport_reply_never_leaks_cognition_label(self) -> None:
+        """Novi always distinguishes the communication type internally, but the
+        spoken reply must never be the internal cognition label (e.g.
+        human_speech_observed). When no LLM transport is available the web layer
+        supplies a natural deterministic fallback instead of leaking the label."""
+        s = self._server(chat_llm=True)
+        s._llm_available = False
+        s.start()
+        try:
+            r = s.chat_send("alice moved the door")
+            text = r["novi"]["text"]
+            self.assertTrue(text)
+            self.assertNotEqual(text, "human_speech_observed")
+            # The trace still records the real conclusion; only the spoken text is
+            # rendered naturally.
+            self.assertEqual(r["novi"]["trace"]["conclusion"], "human_speech_observed")
+            self.assertEqual(r["novi"]["trace"]["route_reason"], "no_llm_transport")
             self.assertFalse(r["llm"])
         finally:
             s.stop()

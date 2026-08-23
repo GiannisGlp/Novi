@@ -77,6 +77,26 @@ class ReasoningAcceptanceTests(unittest.TestCase):
             line = natural_fallback({"tone": tone}, {}, cycle=0)
             self.assertTrue(line and not _is_forbidden(line))
 
+    def test_no_transport_reply_never_leaks_cognition_label(self):
+        """Novi always distinguishes the communication type internally, but the
+        spoken reply must never be the internal cognition label. compose_reply
+        returns text=None when no LLM transport is configured; the brain exposes
+        a natural deterministic fallback for callers, so no layer replies with
+        'human_speech_observed'."""
+        brain = _brain()
+        brain.start()
+        try:
+            r = brain.compose_reply("alice moved the door", llm_chat=None)
+            self.assertIsNone(r["text"])  # design contract: caller supplies fallback
+            fb = brain.natural_reply_fallback(text="alice moved the door")
+            self.assertTrue(fb["text"])
+            self.assertNotEqual(fb["text"], "human_speech_observed")
+            self.assertTrue(fb["fallback"])
+            self.assertFalse(_is_forbidden(fb["text"]))
+        finally:
+            brain.stop()
+
+
     """Rule 9: no repetitive name-dropping."""
 
     def test_reply_does_not_overuse_addressee_name(self):

@@ -438,6 +438,23 @@ class ChatMixin:
             "active_goal": self._goal_context(),
         }
 
+    def natural_reply_fallback(self, *, text: str = "", cycle: int | None = None) -> dict[str, Any]:
+        """Deterministic, natural spoken reply when no LLM transport is configured.
+
+        ``compose_reply`` returns ``text: None`` when no transport is available
+        (per its contract), so callers must supply a natural fallback rather than
+        leaking an internal cognition label (e.g. ``human_speech_observed``) into
+        the reply. Novi always *distinguishes* the communication type internally
+        (the trace keeps the real conclusion), but the spoken reply must never be
+        that internal label.
+        """
+        self_state = self._chat_self_state()
+        surroundings = self._chat_surroundings()
+        cycle = cycle if cycle is not None else self._cycle
+        fb = natural_fallback(self_state, surroundings, cycle=cycle)
+        reason = "No LLM reply available; used a natural, tone-aware acknowledgement so the user is not left dry."
+        return {"text": fb, "fallback": True, "reason": reason, "grounding": {"route": "fallback", "cycle": cycle, "source": "deterministic"}}
+
     def _chat_relationship(self, person: str) -> dict[str, Any]:
         """Relationship tier + expression profile + identity for the addressee."""
         if not person:

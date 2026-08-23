@@ -335,9 +335,18 @@ class NoviWebServer:
                 trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
                 novi_text = reply
             else:
-                trace["conclusion"] = conclusion  # deterministic conclusion
+                # No LLM transport: compose_reply's contract returns text=None and
+                # the caller supplies a natural fallback. Novi still distinguishes
+                # the communication type internally (trace.conclusion carries the
+                # real cognition label) but never replies with that internal label.
+                fb = self.brain.natural_reply_fallback(text=text, cycle=step.get("cycle"))
+                trace["conclusion"] = conclusion  # real conclusion kept for the trace
+                trace["action"] = "respond"
+                trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
+                trace["route"] = "deterministic"
+                trace["route_reason"] = "no_llm_transport"
                 trace["confidence"] = heard_conf
-                novi_text = conclusion
+                novi_text = fb["text"]
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": bool(reply is not None)}
             self._append_chat(novi)
             return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": bool(reply is not None)}
@@ -386,7 +395,17 @@ class NoviWebServer:
                 trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
                 novi_text, llm = reply, True
             else:
-                novi_text, llm = result["reasoning"], False
+                # No LLM transport: the caller supplies a natural fallback. Novi
+                # still distinguishes the communication type in the trace but never
+                # replies with the internal cognition label.
+                fb = self.brain.natural_reply_fallback(text=text, cycle=step.get("cycle"))
+                trace["conclusion"] = result["reasoning"]  # real conclusion kept for the trace
+                trace["action"] = "respond"
+                trace["route"] = "deterministic"
+                trace["route_reason"] = "no_llm_transport"
+                trace["confidence"] = result.get("confidence", 0.8)
+                trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
+                novi_text, llm = fb["text"], False
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
             self._append_chat(novi)
             return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
