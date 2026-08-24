@@ -131,12 +131,14 @@ POST (JSON body):
 - Live smoke over real HTTP: `/preview` serves HTML; `/api/preview`, `/api/perception/state`, `/api/recognition` return JSON; POST frame returns detections/tracks/identities/place/proposal; POST voice turn gets a genuine brain reply.
 - Full suite at implementation time: **1,532 passed**, zero regressions.
 
-## Integration boundaries (deliberately not done)
+## Integration boundaries — real devices now live (doc 17)
 
-- **No real camera backend yet** — when AVFoundation/OpenCV lands, it feeds both the pipeline and `mm_last_frame_b64` for the preview image; CI keeps scripted providers regardless.
-- **No browser microphone capture yet** — `/preview` shows state; audio capture → STT → `/api/voice/turn` is the next seam.
-- **No world-state entity admits yet** — feeding `WorldObservation`s into the brain's world model is the G7 spatial-binding seam, deferred until the parallel brain workstream settles.
-- **No diarization binding yet** — `speaker_person_id` is accepted everywhere; wiring it to enrolled voiceprints happens once voiceprints are captured.
+Real camera, microphone, and speakers are implemented and live-verified: see [`17_REAL_IO.md`](../../docs/plans/01_BRAIN/17_REAL_IO.md) and `novi/integration/real_io.py`. `real_enable(camera/mic/speaker)` attaches hardware; `/api/voice/listen` records → local Whisper → brain → spoken reply; `/preview` shows the live image. Remaining seams:
+
+- Continuous VAD streaming mic (the voice package's TurnSegmenter is ready for it)
+- Real SSDLite320 detector + ArcFace-class face embeddings (evidence-run gated)
+- World-state entity admits from `WorldObservation` (G7 spatial binding), deferred until the parallel brain workstream settles
+- Speaker identity: enroll voiceprints to light up the `verified` tier cross-modally
 
 ## Resource parity (exit-contract rule)
 

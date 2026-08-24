@@ -3,7 +3,7 @@ name: symbolic-math
 description: Use this skill when working with symbolic mathematics in Python. This skill should be used for symbolic computation tasks including solving equations algebraically, performing calculus operations (derivatives, integrals, limits), manipulating algebraic expressions, working with matrices symbolically, physics calculations, number theory problems, geometry computations, and generating executable code from mathematical expressions. Apply this skill when the user needs exact symbolic results rather than numerical approximations, or when working with mathematical formulas that contain variables and parameters.
 license: MIT
 kind: hybrid
-triggers: algebra, derivative, differentiate, integral, integrate, simplify, factorize, calculus
+triggers: calculate, compute, solve, math, percent, algebra, derivative, differentiate, integral, integrate, simplify, factorize, calculus
 script: solve.py
 metadata:
   origin: davila7/claude-code-templates (MIT)
@@ -11,6 +11,9 @@ metadata:
 ---
 
 # Novi usage
+
+Covers everyday arithmetic too (absorbed the former `maths` skill):
+`"15% of 240"`, `12*(3+4)`, word ops (`plus/minus/times`), powers.
 
 Ported from the MIT-licensed agent-skills catalog and adapted for Novi:
 frontmatter extended with Novi's `kind`/`triggers` contract. Apply this as an

@@ -43,6 +43,7 @@ B2 acceptance                     LATER
 - `14_BRAIN_EXIT_CONTRACT.md`
 - `15_VOICE_CONTINUOUS_DIALOG.md`
 - `16_MULTIMODAL_INTEGRATION.md` — voice+perception+recognition wired into the engine via MultimodalRuntime; web handlers, /preview, durable RecognitionStore
+- `17_REAL_IO.md` — real camera/mic/speakers live on Mac; listen→Whisper→brain→spoken replies; /preview v2
 
 ## Hardware candidates
 

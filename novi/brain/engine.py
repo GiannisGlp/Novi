@@ -358,6 +358,12 @@ class MacBrain(ChatMixin):
         from .skills import SkillRegistry
         shipped_dir = Path(__file__).resolve().parents[1] / "skills"  # novi/skills/
         self.skills = SkillRegistry([shipped_dir, *[Path(d) for d in self.config.skill_dirs]])
+        # Centralized skill activation (plan 16 P4): one engine-owned place
+        # decides which skills apply to anything Novi produces — chat is just
+        # one consumer. Cycle observation primes skills from perception and
+        # memory; the humanizer style pass lives here too.
+        from .skill_activation import SkillActivator
+        self.skill_activator = SkillActivator(self.skills, emit=self._emit)
         self._last_health: dict[str, Any] | None = None
         self._cycle = 0
         self.events: list[dict[str, Any]] = []
@@ -465,6 +471,15 @@ class MacBrain(ChatMixin):
             "hypotheses": list(cognitive.reasoning.hypotheses),
             "relations": list(cognitive.situation.relations),
         })
+        # Skill priming (plan 16 P4): every cycle, whatever Novi saw, heard,
+        # or recalled can activate relevant skills — not only chat utterances.
+        self.skill_activator.expire(self._cycle)
+        self.skill_activator.observe_cycle(
+            cycle=self._cycle,
+            detections=[d.label for d in evidence.detections],
+            memories=[str(getattr(m, "content", m))[:200] for m in recall["memories"][:4]],
+            narrative=str(getattr(cognitive.situation, "summary", "") or "")[:400],
+        )
         # Typed cognition is canonical: emit SituationState / PersonContext /
         # IntentHypothesis / Prediction for this cycle, grounded in the same
         # knowledge + goal + recall context as the legacy cycle above
@@ -1127,6 +1142,14 @@ class MacBrain(ChatMixin):
         )
         cognitive = self.cognition.cycle(self.unified_world.to_world_state(), (speech,), cycle=self._cycle)
         self._emit("cognition.completed", {"cycle": self._cycle, "conclusion": cognitive.reasoning.conclusion, "confidence": cognitive.reasoning.confidence, "source": "audio.stt"})
+        # Skill priming for the audio path (plan 16 P4 symmetry): heard speech
+        # activates relevant skills just like vision cycles do.
+        self.skill_activator.expire(self._cycle)
+        self.skill_activator.observe_cycle(
+            cycle=self._cycle,
+            heard=transcription.text[:400],
+            narrative=str(cognitive.reasoning.conclusion or "")[:300],
+        )
         now = datetime.now(timezone.utc).isoformat()
         self._pending_speech.append(
             ModalityObservation(modality="speech", entity=DeterministicCognition.SPEECH_ENTITY, value="heard", confidence=transcription.confidence, captured_at=now, received_at=now, source="audio.stt")

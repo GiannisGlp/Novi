@@ -4,7 +4,7 @@ Pins:
   - discovery of shipped SKILL.md packages with manifest validation;
   - malformed manifests rejected gracefully (never raise);
   - deterministic trigger matching with ranking;
-  - maths skill: exact offline evaluation including percent-of phrasing;
+  - symbolic-math: exact offline arithmetic (absorbed maths) + symbolic ops;
   - pdf-reader: honest dependency_missing outcome when pypdf is absent;
   - script path escape attempts rejected at load time;
   - runaway scripts killed by timeout;
@@ -30,7 +30,7 @@ class DiscoveryTests(unittest.TestCase):
     def test_shipped_skills_discovered(self):
         r = SkillRegistry([SKILLS_DIR])
         names = {m.name for m in r.discover()}
-        self.assertTrue({"maths", "pdf-reader", "pdf-creator", "humanizer"} <= names)
+        self.assertTrue({"symbolic-math", "pdf-reader", "pdf-creator", "humanizer"} <= names)
 
     def test_catalog_has_no_bodies(self):
         r = SkillRegistry([SKILLS_DIR])
@@ -150,7 +150,7 @@ class DiscoveryTests(unittest.TestCase):
         # everything else in novi/skills is original Novi authorship.
         licensed = SKILLS_DIR / "humanizer" / "LICENSE"
         self.assertTrue(licensed.is_file())
-        for name in ("maths", "pdf-reader", "pdf-creator"):
+        for name in ("pdf-reader", "pdf-creator"):
             self.assertTrue((SKILLS_DIR / name).is_dir(), name)
 
 
@@ -159,7 +159,7 @@ class MatchTests(unittest.TestCase):
         r = SkillRegistry([SKILLS_DIR])
         r.discover()
         hits = r.match("please calculate 15% of 240")
-        self.assertEqual(hits[0].name, "maths")
+        self.assertEqual(hits[0].name, "symbolic-math")
         self.assertEqual(r.match("tell me about your day"), [])
 
     def test_whole_word_matching_no_substring_false_hits(self):
@@ -167,20 +167,21 @@ class MatchTests(unittest.TestCase):
         r.discover()
         # "mathematics" contains "math" but is a different word.
         hits = r.match("I study mathematics")
-        self.assertEqual([h.name for h in hits if h.name == "maths"], [])
+        self.assertEqual([h.name for h in hits if h.name == "symbolic-math"], [])
 
 
 class ScriptRunTests(unittest.TestCase):
     def test_maths_deterministic_results(self):
         r = SkillRegistry([SKILLS_DIR])
         cases = [
-            (["12*(3+4)"], 84),
-            (["15% of 240"], 36),
-            (["2^10"], 1024),
+            (["solve", "12*(3+4)"], 84),
+            (["solve", "15% of 240"], 36),
+            (["solve", "2^10"], 1024),
+            (["diff", "x**3", "x"], "3*x**2"),
             (["ten plus two"], None),
         ]
         for args, expected in cases:
-            res = r.run("maths", args)
+            res = r.run("symbolic-math", args)
             if expected is None:
                 self.assertFalse(res.ok)
             else:
@@ -241,8 +242,8 @@ class DynamicActivationTests(unittest.TestCase):
             if expected is None:
                 continue
             self.assertIsNotNone(planned, text)
-            self.assertEqual(planned[0].name, "maths")
-            self.assertEqual(planned[1], expected)
+            self.assertEqual(planned[0].name, "symbolic-math")
+            self.assertEqual(planned[1], ["solve"] + expected if len(expected) == 1 and not expected[0][0].isalpha() else expected)
 
     def test_plan_auto_symbolic_op(self):
         r = SkillRegistry([SKILLS_DIR])
@@ -270,7 +271,7 @@ class DynamicActivationTests(unittest.TestCase):
             self.assertEqual(out["grounding"]["route"], "skill")
             events = [e for e in brain.events if e.get("event_type") == "skill.invoked"]
             self.assertTrue(events)
-            audits = [a for a in brain.audit_trail.snapshots(limit=20) if "skill:maths" in str(a.get("action", ""))]
+            audits = [a for a in brain.audit_trail.snapshots(limit=20) if "skill:symbolic-math" in str(a.get("action", ""))]
             self.assertTrue(audits)
         finally:
             brain.stop()
@@ -295,7 +296,7 @@ class DynamicActivationTests(unittest.TestCase):
             out = brain.respond("how was your day?", llm_chat=stub)
             self.assertTrue(out["text"])
             self.assertIn("@skill", seen["system"])
-            self.assertIn("maths", seen["system"])
+            self.assertIn("symbolic-math", seen["system"])
         finally:
             brain.stop()
 
@@ -305,7 +306,7 @@ class DynamicActivationTests(unittest.TestCase):
         def stub(system, user, **kw):
             calls.append(system)
             if len(calls) == 1:
-                return "@skill maths 7*6"
+                return "@skill symbolic-math solve 7*6"
             return "that would be forty two!"
 
         brain = self._brain()
@@ -326,13 +327,368 @@ class DynamicActivationTests(unittest.TestCase):
         brain = self._brain()
         try:
             names = [c["name"] for c in brain.skills.catalog() if c["kind"] in ("script", "hybrid")]
-            ok = brain._parse_skill_directive("@skill maths 7*6", names)
-            self.assertEqual(ok, ("maths", ["7*6"]))
+            ok = brain._parse_skill_directive("@skill symbolic-math solve 7*6", names)
+            self.assertEqual(ok, ("symbolic-math", ["solve", "7*6"]))
             multi = brain._parse_skill_directive("@skill symbolic-math diff x**2", names)
             self.assertEqual(multi, ("symbolic-math", ["diff", "x**2"]))
             self.assertIsNone(brain._parse_skill_directive("@skill unknown-skill 1", names))
             self.assertIsNone(brain._parse_skill_directive("just talking about @skill things", names))
             self.assertIsNone(brain._parse_skill_directive(None, names))
+        finally:
+            brain.stop()
+
+
+class AdvancedDomainSkillsTests(unittest.TestCase):
+    """Math/algebra, CS/data-science, business, sales & marketing skills."""
+
+    def test_all_new_skills_discovered(self):
+        r = SkillRegistry([SKILLS_DIR])
+        names = {m.name for m in r.discover()}
+        for expected in (
+            "linear-algebra", "data-profile", "statistical-analysis",
+            "sql-pro", "ceo-advisor", "marketing-strategy", "copywriting",
+            "exploratory-data-analysis", "scikit-learn", "matplotlib",
+            "version-ml-data", "algorithms-complexity", "diagram-design",
+        ):
+            self.assertIn(expected, names)
+
+    def test_category_triggers_match(self):
+        r = SkillRegistry([SKILLS_DIR])
+        self.assertEqual(r.match("help me plan our go-to-market strategy")[0].name, "marketing-strategy")
+        self.assertEqual(r.match("write sales copy for our landing page")[0].name, "copywriting")
+        self.assertEqual(r.match("run a t-test hypothesis on these results")[0].name, "statistical-analysis")
+        self.assertEqual(r.match("advise me on board and investor strategy")[0].name, "ceo-advisor")
+        self.assertEqual(r.match("what is the big-o of quicksort?")[0].name, "algorithms-complexity")
+        self.assertEqual(r.match("train a classifier on this dataset")[0].name, "scikit-learn")
+        self.assertEqual(r.match("draw a sequence diagram for checkout")[0].name, "diagram-design")
+
+    def test_linear_algebra_script_ops(self):
+        r = SkillRegistry([SKILLS_DIR])
+        solve = r.run("linear-algebra", ["solve", "[[2,1],[1,3]]", "[5,10]"])
+        self.assertTrue(solve.ok)
+        self.assertEqual(solve.data["result"], [1, 3])
+        det = r.run("linear-algebra", ["det", "[[1,2],[3,4]]"])
+        self.assertEqual(det.data["result"], -2.0)
+        eig = r.run("linear-algebra", ["eig", "[[4,1],[2,3]]"])
+        self.assertEqual(eig.data["eigenvalues"], [5.0, 2.0])
+        singular = r.run("linear-algebra", ["inverse", "[[1,2],[2,4]]"])
+        self.assertFalse(singular.ok)  # singular matrix reported honestly
+
+    def test_data_profile_reports_columns_and_missing(self):
+        import tempfile
+        r = SkillRegistry([SKILLS_DIR])
+        with tempfile.TemporaryDirectory() as td:
+            csv_path = Path(td) / "people.csv"
+            csv_path.write_text("name,age\nana,34\nrui,28\nsam,\n")
+            res = r.run("data-profile", [str(csv_path)])
+            self.assertTrue(res.ok, res.data)
+            self.assertEqual(res.data["rows"], 3)
+            self.assertEqual(res.data["columns"]["age"]["type"], "numeric")
+            self.assertEqual(res.data["columns"]["age"]["missing"], 1)
+            self.assertEqual(res.data["columns"]["name"]["type"], "categorical")
+            self.assertEqual(res.data["missing_total"], 1)
+
+    def test_data_profile_missing_file_is_honest_error(self):
+        r = SkillRegistry([SKILLS_DIR])
+        res = r.run("data-profile", ["/tmp/does-not-exist-xyz.csv"])
+        self.assertFalse(res.ok)
+        self.assertEqual(res.data["error"], "file_not_found")
+
+
+class InstructionActivationTests(unittest.TestCase):
+    """Instruction skills activate dynamically from discussion context."""
+
+    def _brain(self):
+        from novi.brain.engine import MacBrain, MacBrainConfig
+        brain = MacBrain(camera=FakeCamera(), config=MacBrainConfig(curiosity_enabled=False))
+        brain.start()
+        return brain
+
+    def test_diagram_request_injects_skill_guidance(self):
+        seen = {}
+
+        def stub(system, user, **kw):
+            seen["system"] = system
+            return "here is a sequence diagram in a mermaid block"
+
+        brain = self._brain()
+        try:
+            out = brain.respond("help me design a sequence diagram for our checkout flow", llm_chat=stub)
+            self.assertTrue(out["text"])
+            applied = out["grounding"]["skills_applied"]
+            self.assertIn("diagram-design", applied)
+            self.assertIn("humanizer", applied)  # style pass combines with matched skills
+            self.assertIn("sequenceDiagram", seen["system"])
+            applied_events = [e for e in brain.events if e.get("event_type") == "skill.applied"]
+            self.assertTrue(applied_events)
+        finally:
+            brain.stop()
+
+    def test_casual_message_injects_no_guidance(self):
+        seen = {}
+
+        def stub(system, user, **kw):
+            seen["system"] = system
+            return "pretty good, you?"
+
+        brain = self._brain()
+        try:
+            out = brain.respond("how was your day?", llm_chat=stub)
+            # Only the unconditional humanizer style pass applies.
+            self.assertEqual(out["grounding"].get("skills_applied"), ["humanizer"])
+            self.assertNotIn("Skill guidance:", seen["system"])
+            self.assertIn("ALWAYS apply this rewriting guidance", seen["system"])
+            self.assertFalse([e for e in brain.events if e.get("event_type") == "skill.applied"])
+        finally:
+            brain.stop()
+
+    def test_two_matches_cap_and_instruction_only(self):
+        block, applied = None, None
+
+        class _BrainHolder:
+            pass
+
+        brain = self._brain()
+        try:
+            block, applied = brain._matched_instruction_guidance(
+                "design an er diagram, write sales copy, differentiate x**2, draw a flowchart"
+            )
+            # Only instruction-kind skills appear; script/hybrid act elsewhere.
+            self.assertLessEqual(len(applied), 2)
+            for name in applied:
+                m = brain.skills.get(name)
+                self.assertEqual(m.kind, "instruction")
+            # The hybrid symbolic-math body must NOT be injected here.
+            self.assertNotIn("symbolic-math", applied)
+        finally:
+            brain.stop()
+
+    def test_guidance_respects_char_budget(self):
+        long_body = "---\nname: x\n---\n" + "\n".join(f"line {i} padding content" for i in range(400))
+        brain = self._brain()
+        try:
+            original = brain.skills.body
+            brain.skills.body = lambda name: long_body if name == "diagram-design" else original(name)
+            block, applied = brain._matched_instruction_guidance("design a sequence diagram", char_budget=300)
+            self.assertIn("diagram-design", applied)
+            section = block.split("### Skill guidance: diagram-design", 1)[1]
+            self.assertLessEqual(len(section), 300 + 200)  # budget + directive tail
+        finally:
+            brain.stop()
+
+
+class MemoryContextActivationTests(unittest.TestCase):
+    """Skills also fire from recalled knowledge/memory and chat history."""
+
+    def _brain(self):
+        from novi.brain.engine import MacBrain, MacBrainConfig
+        brain = MacBrain(camera=FakeCamera(), config=MacBrainConfig(curiosity_enabled=False))
+        brain.start()
+        return brain
+
+    def test_history_mention_activates_skill(self):
+        seen = {}
+
+        def stub(system, user, **kw):
+            seen["system"] = system
+            return "continuing"
+
+        brain = self._brain()
+        try:
+            out = brain.respond(
+                "ok go on",
+                llm_chat=stub,
+                history=[{"role": "user", "content": "let's sketch a sequence diagram for checkout"}],
+            )
+            applied = out["grounding"].get("skills_applied", [])
+            self.assertIn("diagram-design", applied)
+            self.assertIn("sequenceDiagram", seen["system"])
+        finally:
+            brain.stop()
+
+    def test_memory_fact_activates_skill(self):
+        brain = self._brain()
+        try:
+            block, applied = brain._matched_instruction_guidance(
+                "anything interesting lately?",
+                "; Recent events: the whiteboard showed a big flowchart of the pipeline",
+            )
+            self.assertIn("diagram-design", applied)
+        finally:
+            brain.stop()
+
+    def test_humanizer_block_is_cached_and_condensed(self):
+        brain = self._brain()
+        try:
+            first = brain._humanizer_system_block()
+            second = brain._humanizer_system_block()
+            self.assertTrue(first)
+            self.assertIs(first, second)  # cached per process
+            self.assertLess(len(first), 4000)  # condensed, not the full body
+            self.assertIn("rewrite", first.lower())
+        finally:
+            brain.stop()
+
+
+class SkillActivatorCentralTests(unittest.TestCase):
+    """The centralized activator wraps every response surface, not just chat."""
+
+    def _activator(self):
+        from novi.brain.skill_activation import SkillActivator
+        r = SkillRegistry([SKILLS_DIR])
+        events: list[tuple[str, dict]] = []
+        return SkillActivator(r, emit=lambda e, pl: events.append((e, pl))), events
+
+    def test_priming_from_cycle_context_fires_without_utterance_match(self):
+        act, events = self._activator()
+        newly = act.observe_cycle(
+            cycle=3,
+            detections=["whiteboard", "marker"],
+            memories=["user drew a flowchart of onboarding"],
+        )
+        self.assertIn("diagram-design", newly)
+        self.assertIn("skill.primed", [e for e, _ in events])
+        # A reply whose own text matches nothing still gets the primed skill.
+        block, applied = act.guidance_for("what do you think about all this?")
+        self.assertIn("diagram-design", applied)
+        self.assertTrue("sequenceDiagram" in block or "flowchart TD" in block)
+
+    def test_primed_skills_expire_after_ttl(self):
+        act, _ = self._activator()
+        act.prime_ttl_cycles = 5
+        act.observe_cycle(cycle=2, memories=["a big flowchart on the wall"])
+        self.assertIn("diagram-design", act.primed_names())
+        act.expire(cycle=6)  # within TTL
+        self.assertIn("diagram-design", act.primed_names())
+        act.expire(cycle=9)  # beyond TTL
+        self.assertNotIn("diagram-design", act.primed_names())
+
+    def test_priming_cap_and_humanizer_never_primed(self):
+        act, _ = self._activator()
+        act.max_primed = 2
+        act.observe_cycle(
+            cycle=1,
+            memories=[
+                "design an er diagram for orders",
+                "write sales copy for launch",
+                "differentiate polynomials",
+                "draw a flowchart of login",
+            ],
+        )
+        self.assertLessEqual(len(act.primed_names()), 2)
+        self.assertNotIn("humanizer", act.primed_names())
+
+    def test_style_pass_shared_across_consumers(self):
+        act1, _ = self._activator()
+        act2, _ = self._activator()
+        b1 = act1.style_pass_block()
+        self.assertTrue(b1)
+        self.assertIs(act1.style_pass_block(), b1)
+        # Same registry content => same block; consumers share one policy.
+        self.assertEqual(act2.style_pass_block(), b1)
+
+
+class ActivatorEngineIntegrationTests(unittest.TestCase):
+    """Engine owns the activator; chat replies consume its primed state."""
+
+    def _brain(self):
+        from novi.brain.engine import MacBrain, MacBrainConfig
+        brain = MacBrain(camera=FakeCamera(), config=MacBrainConfig(curiosity_enabled=False))
+        brain.start()
+        return brain
+
+    def test_engine_constructs_shared_activator(self):
+        brain = self._brain()
+        try:
+            self.assertIs(brain.skill_activator._registry, brain.skills)
+        finally:
+            brain.stop()
+
+    def test_cycle_primed_skill_shapes_later_reply(self):
+        seen = {}
+
+        def stub(system, user, **kw):
+            seen["system"] = system
+            return "tell me more"
+
+        brain = self._brain()
+        try:
+            # Simulates what the cycle hook does when perception/memory
+            # mentions diagram work — primed at engine level, no chat involved.
+            brain.skill_activator.observe_cycle(cycle=brain._cycle + 1, memories=["whiteboard showed a flowchart of checkout"])
+            out = brain.respond("hmm interesting", llm_chat=stub)
+            applied = out["grounding"].get("skills_applied", [])
+            self.assertIn("diagram-design", applied)
+            self.assertIn("flowchart TD", seen["system"])
+        finally:
+            brain.stop()
+
+
+class SttSkillPrimingTests(unittest.TestCase):
+    """Heard speech (audio-STT path) activates skills, symmetric with vision."""
+
+    def _brain(self):
+        from novi.brain.engine import MacBrain, MacBrainConfig
+        brain = MacBrain(camera=FakeCamera(), config=MacBrainConfig(curiosity_enabled=False))
+        brain.start()
+        return brain
+
+    def test_heard_speech_primes_skill(self):
+        from novi.brain.models.stt import TranscriptionResult
+        brain = self._brain()
+        try:
+            before = len([e for e in brain.events if e.get("event_type") == "skill.primed"])
+            out = brain.ingest_transcript(
+                TranscriptionResult(
+                    text="we should draw a sequence diagram of the checkout flow",
+                    language="en", confidence=0.95, audio_path="", provider="test", model_id="test",
+                )
+            )
+            self.assertTrue(out["reasoning"])
+            primed_events = [e for e in brain.events if e.get("event_type") == "skill.primed"]
+            self.assertEqual(len(primed_events), before + 1)
+            self.assertIn("diagram-design", primed_events[-1]["payload"]["skills"])
+            self.assertIn("diagram-design", brain.skill_activator.primed_names())
+        finally:
+            brain.stop()
+
+    def test_stt_primed_skill_shapes_next_reply_without_triggers(self):
+        from novi.brain.models.stt import TranscriptionResult
+
+        seen = {}
+
+        def stub(system, user, **kw):
+            seen["system"] = system
+            return "sure"
+
+        brain = self._brain()
+        try:
+            brain.ingest_transcript(
+                TranscriptionResult(
+                    text="let's make an er diagram for the orders database",
+                    language="en", confidence=0.9, audio_path="", provider="test", model_id="test",
+                )
+            )
+            out = brain.respond("go ahead please", llm_chat=stub)
+            applied = out["grounding"].get("skills_applied", [])
+            self.assertIn("diagram-design", applied)
+            self.assertIn("erDiagram", seen["system"])
+        finally:
+            brain.stop()
+
+    def test_plain_speech_primes_nothing(self):
+        from novi.brain.models.stt import TranscriptionResult
+        brain = self._brain()
+        try:
+            before = len([e for e in brain.events if e.get("event_type") == "skill.primed"])
+            brain.ingest_transcript(
+                TranscriptionResult(
+                    text="the weather is nice today",
+                    language="en", confidence=0.9, audio_path="", provider="test", model_id="test",
+                )
+            )
+            after = [e for e in brain.events if e.get("event_type") == "skill.primed"]
+            self.assertEqual(len(after), before)
         finally:
             brain.stop()
 
@@ -356,12 +712,12 @@ class EngineIntegrationTests(unittest.TestCase):
         brain.start()
         return brain
 
-    def test_brain_discovers_skills_and_runs_maths(self):
+    def test_brain_discovers_skills_and_runs_symbolic_math(self):
         brain = self._brain()
         try:
             names = {m.name for m in brain.skills.discover()}
-            self.assertIn("maths", names)
-            res = brain.brain_use_skill("maths", ["7*6"])
+            self.assertIn("symbolic-math", names)
+            res = brain.brain_use_skill("symbolic-math", ["solve", "7*6"])
             self.assertTrue(res.ok)
             self.assertEqual(res.data["result"], 42)
         finally:
@@ -371,7 +727,7 @@ class EngineIntegrationTests(unittest.TestCase):
         brain = self._brain()
         try:
             brain._cycle_correlation_id = str(brain._cycle_correlation_id)
-            res = brain.brain_use_skill("maths", ["9+1"])
+            res = brain.brain_use_skill("symbolic-math", ["solve", "9+1"])
             self.assertTrue(res.ok)
             events = [e for e in brain.events if e.get("event_type") == "skill.invoked"]
             self.assertTrue(events)
@@ -379,7 +735,7 @@ class EngineIntegrationTests(unittest.TestCase):
             hit = [rec for rec in records if getattr(rec, "memory_type", "") == "skill_result"]
             self.assertTrue(hit)
             prov = hit[0].provenance if isinstance(hit[0].provenance, dict) else {}
-            self.assertEqual(prov.get("source"), "skill:maths")
+            self.assertEqual(prov.get("source"), "skill:symbolic-math")
 
             audits = [a for a in brain.audit_trail.snapshots(limit=50) if "skill:" in str(a.get("action", ""))]
             self.assertTrue(audits)

@@ -147,12 +147,20 @@ Not validatable on the Mac, deferred to body integration: multi-camera bandwidth
 
 ## Gate status
 
-| Gate | Status |
-|---|---|
-| B1 Autonomy | **OPEN** |
-| B2 Self-learning | **OPEN** |
-| B3 Cognition and reasoning | **OPEN** |
-| B4 Soul | **OPEN** |
-| B5 Soak | **OPEN** |
+Derived from `benchmarks/gate_runner.py` (evidence JSON under `mac_test_results/gates/`). Status is computed, never hand-written.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| B1 Autonomy | **OPEN** | requires ≥24 h session archive (`mac_test_results/gates/B1/uptime.json`) |
+| B2 Self-learning | **CLOSED** (2026-08-23) | spatial-context-recall 0.0 → 1.0 after experience; restart-survival ✓; regression wall pass |
+| B3 Cognition and reasoning | **CLOSED** (2026-08-23) | context scenarios 3/3 — anaphora ✓, addressee ✓, spatial_recall ✓ (closes G2/G3/G7 evidence) |
+| B4 Soul | **CLOSED** (2026-08-23) | identity persistence across rebuilds ✓; bounded drift (`decay_toward_baseline`) ✓; value/veto mechanism present (P0 gate) ✓ |
+| B5 Soak | **OPEN** | requires ≥168 h continuous-operation archive |
 
 The exit condition is: all five CLOSED with reproducible evidence, parity table complete, regression wall green.
+
+### Remaining path to exit
+
+1. **B1**: run a ≥24 h unattended autonomy session with preemption/resume + multitask tracking writing `uptime.json`.
+2. **B5**: run the ≥168 h soak with daily reports (can subsume B1's window if instrumented for both).
+3. Keep `gate_runner.py` green on B2–B4 as code evolves.

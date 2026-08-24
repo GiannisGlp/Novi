@@ -12,6 +12,7 @@ Examples:
 from __future__ import annotations
 
 import json
+import re
 import sys
 
 try:
@@ -19,6 +20,23 @@ try:
 except ImportError:  # pragma: no cover - exercised only without sympy
     print(json.dumps({"ok": False, "outcome": "dependency_missing", "dependency": "sympy"}))
     raise SystemExit(0) from None
+
+
+def _normalize_arithmetic(text: str) -> str:
+    """Fold everyday arithmetic phrasing into sympy-parseable expressions.
+
+    Absorbed from the former maths skill so plain calculations keep working:
+    '15% of 240' -> (15/100)*240, word ops, '^' power, thousand commas.
+    """
+    t = text.strip().lower()
+    pct = re.fullmatch(r"([0-9.]+)\s*%\s*of\s*([0-9.]+)", t)
+    if pct:
+        return f"({pct.group(1)}/100)*{pct.group(2)}"
+    t = t.replace("^", "**").replace(",", "").replace("×", "*").replace("÷", "/")
+    t = re.sub(r"\bplus\b", "+", t)
+    t = re.sub(r"\bminus\b", "-", t)
+    t = re.sub(r"\btimes\b", "*", t)
+    return t
 
 
 def _to_equation(expr: str):
@@ -36,9 +54,19 @@ def main() -> int:
     op, expression = sys.argv[1], sys.argv[2]
     var_name = sys.argv[3] if len(sys.argv) > 3 else "x"
     try:
+        if "=" not in expression:
+            expression = _normalize_arithmetic(expression)
         var = sp.Symbol(var_name)
         if op == "solve":
-            result = sp.solve(_to_equation(expression), var)
+            expr = _to_equation(expression)
+            if not expr.free_symbols:
+                # Pure arithmetic ("12*(3+4)", "15% of 240"): evaluate it.
+                value = sp.nsimplify(expr, rational=True)
+                val_float = float(value)
+                pretty = int(val_float) if val_float.is_integer() else round(val_float, 6)
+                print(json.dumps({"ok": True, "op": "eval", "expression": sys.argv[2], "result": pretty}))
+                return 0
+            result = sp.solve(expr, var)
             pretty = [sp.sstr(r) for r in result]
         elif op == "diff":
             result = sp.diff(sp.sympify(expression), var)

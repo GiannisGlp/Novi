@@ -93,8 +93,8 @@ rule checks still run **after** the rewrite. No transport ⇒ skill skipped, hon
 ## 3. Implemented now vs roadmap
 
 **P1 — implemented & tested**: loader/registry/matcher/runner; shipped
-skills in **`novi/skills/`** (moved into the package): `maths`,
-`pdf-reader`, `pdf-creator` (original Novi authorship) and `humanizer`
+skills in **`novi/skills/`** (moved into the package): `pdf-reader`,
+`pdf-creator` (original Novi authorship) and `humanizer`
 (ported from the agent-skills catalog); engine `brain.skills` +
 `brain_use_skill`; 19 tests (`novi/brain/tests/test_skills.py`).
 
@@ -137,6 +137,22 @@ operations offline through the installed sympy 1.14.0 (solve / diff /
 integrate / simplify / expand / factor / limit), JSON-on-stdout, honest
 `dependency_missing` if sympy is ever absent.
 
+### Domain expansion (2026-08-23, second sourcing round)
+
+Covering advanced math/algebra, computer & data science, business
+management, sales & marketing — same license discipline:
+
+| Novi skill | Kind | Source |
+|---|---|---|
+| `linear-algebra` | hybrid (numpy `linalg.py`: solve/det/eig/rank/inverse/mul) | original |
+| `data-profile` | script (stdlib CSV profiler: types, missing, numeric stats, top values) | original |
+| `statistical-analysis`, `sql-pro`, `ceo-advisor`, `marketing-strategy`, `copywriting` | instruction | ported from [davila7/claude-code-templates](https://github.com/davila7/claude-code-templates) (MIT; business skills © Alireza Rezvani) |
+
+Matcher upgraded for multi-word triggers: hyphenated triggers like
+`go-to-market` match their contiguous word sequence after tokenization.
+Runner upgrade: a script's structured `{"ok": false}` JSON is honored even
+when it exits nonzero, so honest errors survive end-to-end.
+
 **P2 — dialogue wiring for instruction skills** (~half day): apply matched
 instruction bodies as a rewrite pass in chat; add `skill.applied` event.
 
@@ -156,3 +172,85 @@ existing relationships/preferences layer before first use; audit shows grant.
   instruction-kind refuses `run()`, unknown-skill structured error, engine
   event + audit + provenance-stamped memory admit, failed runs admit nothing.
 - Engine smoke unchanged; full suite re-run green after wiring.
+
+### CS & data-science expansion (2026-08-23)
+
+| Novi skill | Kind | Source |
+|---|---|---|
+| `algorithms-complexity` | instruction (sorting/graphs/Big-O/paradigms — original text) | original |
+| `exploratory-data-analysis`, `scikit-learn`, `matplotlib` | instruction | [davila7/claude-code-templates](https://github.com/davila7/claude-code-templates) (MIT) |
+| `version-ml-data` (DVC dataset versioning) | instruction | [pjt222/agent-almanac](https://github.com/pjt222/agent-almanac) (MIT) |
+
+A candidate algorithms skill from Tibsfox/gsd-skill-creator was rejected
+(NOASSERTION license) and written originally instead. Matcher ranking now
+prefers longer (more specific) trigger matches over alphabetical ties.
+
+### maths skill removed (2026-08-23)
+
+The standalone `maths` skill was removed by product decision; its exact
+arithmetic (percent-of phrasing, word ops, pure-expression evaluation) was
+absorbed into `symbolic-math` (hybrid script), which also inherits its
+triggers (calculate/compute/solve/math/percent). No capability lost; one
+fewer overlapping skill.
+
+### diagram-design (2026-08-23)
+
+`diagram-design` (instruction, original Novi authorship): choosing the right
+Mermaid diagram type by question, syntax essentials, and readability rules
+(shape/label-first colorblind-safe emphasis, node-count budgets, labeled
+decision edges). Dedicated mermaid repos found via web search were skipped —
+none carried a license.
+
+### P3 implemented — dynamic instruction-skill activation (2026-08-23)
+
+`_matched_instruction_guidance(grounding_text)` runs on every reply:
+instruction-kind skills whose triggers match the utterance plus the discourse
+topic hint get their bodies loaded on demand, clipped to a per-skill char
+budget at a line boundary (max 2 skills), and injected into that reply's
+system prompt. Every activation emits `skill.applied` and is surfaced in the
+reply grounding (`skills_applied`). Script/hybrid skills keep their own paths;
+their bodies are never prompt-injected.
+
+### Context-sourced activation + always-on humanizer (2026-08-23)
+
+`_matched_instruction_guidance` now takes a second source: ``memory_text`` —
+recent knowledge/recall/perception facts plus the last two history turns — so
+skills fire from what Novi saw, heard, or remembers, not only from the current
+utterance. Sources merge with per-name dedupe; the 2-skill cap and 1600-char
+budget are unchanged.
+
+Humanizer is special-cased as an **unconditional style pass**: its principle
+sections (up to the example-heavy pattern catalog) are extracted once per
+process (`_humanizer_core_cache`, ~2.5 KB) and appended to every composed
+reply's system prompt, silently and never consuming a matched-guidance slot.
+It appears in `skills_applied` on every LLM reply; `skill.applied` events
+still fire only for context-matched skills to avoid spam.
+
+### P4 implemented — centralized SkillActivator (2026-08-23)
+
+Skill activation moved out of chat into `novi/brain/skill_activation.py`
+(`SkillActivator`, engine-owned at `brain.skill_activator`). One place now
+decides relevance for every response surface:
+
+- **guidance_for(utterance, memory_context)** — instruction-skill prompt
+  guidance (budgeted, capped), considering utterance + memory + primed set.
+- **style_pass_block()** — the always-on humanizer pass, process-cached.
+- **observe_cycle(...)** — each engine cycle primes instruction skills from
+  perception detections, recalled memories, and the situation narrative
+  (`skill.primed` events); primes decay after 10 cycles, capped at 4,
+  humanizer never primed.
+
+Chat (`chat.py`) is now a thin consumer: its two helpers delegate to the
+activator; auto-execution (`plan_auto`) and `@skill` parsing remain reply-time
+entry points into the same governed engine executor. New tests cover priming
+without utterance matches, TTL expiry, cap/humanizer exclusion, cross-consumer
+sharing, and cycle-primed → later-reply shaping.
+
+### Audio-STT priming symmetry (2026-08-23)
+
+`ingest_transcript` now primes the same `SkillActivator` with the heard
+transcript (`heard=` parameter on `observe_cycle`), so speech mentioning
+diagram, marketing, statistics, etc. activates those skills for subsequent
+replies even when the user's next message matches nothing. Tests cover
+priming from heard speech, shaping the next reply, and no-false-prime on
+plain conversation.

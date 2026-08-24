@@ -13,86 +13,144 @@
   }
   h1 { font-size: 20px; margin: 0 0 4px; }
   .sub { color: #8b93a7; font-size: 13px; margin-bottom: 20px; }
-  .grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; max-width: 1100px; }
+  .grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; max-width: 1100px; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-  .card {
-    background: #12161f; border: 1px solid #232a38; border-radius: 12px; padding: 16px;
-  }
+  .card { background: #12161f; border: 1px solid #232a38; border-radius: 12px; padding: 16px; }
   .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8b93a7; margin: 0 0 10px; }
   #stage {
     width: 100%; aspect-ratio: 4/3; background: #090b10; border-radius: 8px;
     display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
   }
   #stage img { max-width: 100%; max-height: 100%; }
-  #placeholder { color: #3d4557; font-size: 14px; }
-  .badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
-  .badge {
-    font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(18,22,31,.85);
-    border: 1px solid #2c3547;
-  }
+  #placeholder { color: #3d4557; font-size: 14px; text-align: center; line-height: 1.6; }
+  .badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(18,22,31,.85); border: 1px solid #2c3547; }
   .badge.ok { color: #7ee787; border-color: #2ea04340; }
   .badge.warn { color: #f0b429; border-color: #f0b42940; }
   .badge.err { color: #ff7b72; border-color: #ff7b7240; }
   .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1a2130; font-size: 13px; }
   .row:last-child { border-bottom: none; }
-  .k { color: #8b93a7; }
-  .v { font-weight: 600; }
-  ul.det { margin: 0; padding-left: 18px; font-size: 13px; }
-  .det li { padding: 2px 0; }
+  .k { color: #8b93a7; } .v { font-weight: 600; }
+  ul.det { margin: 0; padding-left: 18px; font-size: 13px; min-height: 20px; }
   .muted { color: #3d4557; font-size: 12px; }
   a.back { color: #58a6ff; text-decoration: none; font-size: 13px; }
+  button {
+    background: #21262d; color: #e6e6e6; border: 1px solid #30363d; border-radius: 8px;
+    padding: 9px 14px; font-size: 14px; cursor: pointer; width: 100%; margin-top: 8px;
+  }
+  button:hover { background: #2a313a; }
+  button.primary { background: #1f6feb33; border-color: #1f6feb80; }
+  button.listening { background: #da363333; border-color: #da363380; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .6; } }
+  #reply { margin-top: 10px; padding: 10px; background: #161b22; border-radius: 8px; font-size: 14px; min-height: 40px; white-space: pre-wrap; }
+  .toggles { display: flex; gap: 8px; margin-top: 4px; }
+  label.tog { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #8b93a7; cursor: pointer; }
 </style>
 </head>
 <body>
   <h1>Perception Preview</h1>
-  <div class="sub">Live camera + recognition state · auto-refreshes every second · <a class="back" href="/">← back to Novi</a></div>
+  <div class="sub">Live camera · talk to Novi · it answers out loud · <a class="back" href="/">← back to Novi</a></div>
   <div class="grid">
     <div class="card">
       <h2>Camera</h2>
       <div id="stage">
         <div class="badges" id="badges"></div>
         <img id="cam" alt="" style="display:none">
-        <span id="placeholder">no camera stream yet</span>
+        <span id="placeholder">camera off<br><span style="font-size:12px">Enable real I/O below to start the stream</span></span>
       </div>
+      <button id="enableBtn" onclick="enableIO()">🎥 Enable camera + mic + speaker</button>
     </div>
     <div class="card">
-      <h2>Recognition state</h2>
+      <h2>Talk to Novi</h2>
+      <button id="micBtn" class="primary" onclick="toggleListen()">🎙 Start listening (hold a thought for ~3s)</button>
+      <div class="toggles">
+        <label class="tog"><input type="checkbox" id="speakBack" checked onchange="setSpeakBack(this.checked)"> Novi speaks replies aloud</label>
+      </div>
+      <div id="reply"><span class="muted">Replies appear here and are spoken when enabled.</span></div>
+      <h2 style="margin-top:16px">Recognition state</h2>
       <div class="row"><span class="k">Person</span><span class="v" id="person">—</span></div>
       <div class="row"><span class="k">Identity tier</span><span class="v" id="tier">—</span></div>
       <div class="row"><span class="k">Place</span><span class="v" id="place">—</span></div>
       <div class="row"><span class="k">Camera health</span><span class="v" id="health">—</span></div>
-      <div class="row"><span class="k">Stale</span><span class="v" id="stale">—</span></div>
-      <h2 style="margin-top:16px">Detections (last frame)</h2>
+      <h2 style="margin-top:16px">Detections (live)</h2>
       <ul class="det" id="dets"><li class="muted">none yet</li></ul>
-      <p class="muted" style="margin-top:14px">POST frames to /api/perception/frame · enroll via /api/recognition/person and /api/recognition/enroll</p>
     </div>
   </div>
 <script>
+let listening = false;
+
+async function jfetch(url, body) {
+  const opts = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {};
+  const r = await fetch(url, opts);
+  return r.json();
+}
+
+async function enableIO() {
+  const btn = document.getElementById('enableBtn');
+  btn.disabled = true; btn.textContent = 'Enabling…';
+  try {
+    const res = await jfetch('/api/real/enable', {camera:true, mic:true, speaker:true});
+    const r = res.result || {};
+    let msg = [];
+    if (r.camera) msg.push('camera ✓'); else msg.push('camera ✗ ' + (r.camera_error||''));
+    if (r.mic) msg.push('mic ✓');
+    if (r.speaker) msg.push('speaker ✓');
+    btn.textContent = msg.join(' · ');
+  } catch(e) { btn.textContent = 'enable failed'; }
+  btn.disabled = false;
+}
+
+async function toggleListen() {
+  if (listening) return;
+  const btn = document.getElementById('micBtn');
+  listening = true;
+  btn.classList.add('listening'); btn.textContent = '🎙 Listening…';
+  try {
+    const res = await jfetch('/api/voice/listen', {seconds: 3});
+    const r = res.result || res;
+    const replyEl = document.getElementById('reply');
+    const heard = (r.text || '').trim();
+    const reply = (r.reply || '').trim();
+    replyEl.innerHTML =
+      `<div class="muted">You said:</div>${heard ? escapeHtml(heard) : '<span class="muted">(silence)</span>'}` +
+      (reply ? `<div class="muted" style="margin-top:6px">Novi:</div>${escapeHtml(reply)}` : '');
+    document.getElementById('person').textContent = r.person || '—';
+  } catch(e) {
+    document.getElementById('reply').textContent = 'error: ' + e.message;
+  }
+  listening = false;
+  btn.classList.remove('listening'); btn.textContent = '🎙 Start listening (hold a thought for ~3s)';
+}
+
+function setSpeakBack(v) {
+  jfetch('/api/real/speakback', {enabled: v}).then(()=>{});
+}
+
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
 async function refresh() {
   try {
-    const r = await fetch('/api/preview');
-    const d = await r.json();
-    document.getElementById('person').textContent = d.person || '—';
-    document.getElementById('tier').textContent = d.tier || '—';
-    document.getElementById('place').textContent = d.place || '—';
-    document.getElementById('health').textContent = d.camera_health || '—';
-    document.getElementById('stale').textContent = d.stale ? 'yes' : 'no';
+    const [prev, st] = await Promise.all([jfetch('/api/preview'), jfetch('/api/real/status')]);
+    document.getElementById('person').textContent = prev.person || '—';
+    document.getElementById('tier').textContent = prev.tier || '—';
+    document.getElementById('place').textContent = prev.place || '—';
+    document.getElementById('health').textContent = prev.camera_health || '—';
     const badges = [];
-    badges.push(`<span class="badge ${d.camera_health === 'available' ? 'ok' : (d.camera_health === 'failed' ? 'err' : 'warn')}">${d.camera_health}</span>`);
-    if (d.person) badges.push(`<span class="badge ok">${d.person} (${d.tier})</span>`);
-    if (d.place) badges.push(`<span class="badge ok">${d.place}</span>`);
-    if (d.stale) badges.push('<span class="badge warn">stale</span>');
+    badges.push(`<span class="badge ${prev.camera_health==='available'?'ok':(prev.camera_health==='failed'?'err':'warn')}">${prev.camera_health}</span>`);
+    if (prev.person) badges.push(`<span class="badge ok">${prev.person} (${prev.tier})</span>`);
+    if (prev.place) badges.push(`<span class="badge ok">${prev.place}</span>`);
+    if (st.devices && st.devices.camera) badges.push('<span class="badge ok">live</span>');
     document.getElementById('badges').innerHTML = badges.join('');
-    if (d.image_data_url) {
+    if (prev.image_data_url) {
       const img = document.getElementById('cam');
-      img.src = d.image_data_url; img.style.display = 'block';
+      img.src = prev.image_data_url; img.style.display = 'block';
       document.getElementById('placeholder').style.display = 'none';
     }
     const ul = document.getElementById('dets');
-    ul.innerHTML = (d.detections && d.detections.length)
-      ? d.detections.map(x => `<li>${typeof x === 'string' ? x : x.label} <span class="muted">${typeof x === 'object' && x.confidence ? Math.round(x.confidence*100)+'%' : ''}</span></li>`).join('')
+    ul.innerHTML = (prev.detections && prev.detections.length)
+      ? prev.detections.map(x => typeof x === 'string' ? `<li>${x}</li>` : `<li>${x.label} <span class="muted">${Math.round((x.confidence||0)*100)}%</span></li>`).join('')
       : '<li class="muted">none yet</li>';
-  } catch (e) { /* server restarting */ }
+  } catch (e) {}
 }
 refresh();
 setInterval(refresh, 1000);

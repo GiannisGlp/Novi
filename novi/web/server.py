@@ -1185,6 +1185,16 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/preview":
             self._json(novi.preview_frame() if novi.mm_runtime else {"error": "integration unavailable"})
             return
+        # ---- real I/O (doc 17) ----
+        if path == "/api/real/status":
+            self._json({
+                "enabled": novi.real_io_enabled,
+                "devices": dict(novi.real_io),
+                "speak_back": novi.speak_back_enabled,
+            })
+            return
+        if path == "/api/real/speakback":
+            pass  # handled in POST below; GET returns current state only
         if path == "/api/p0-gate":
             with self.server.novi._lock:
                 result = self.server.novi.brain.p0_gate()
@@ -1310,6 +1320,28 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"result": novi.enroll_place_or_noise(data)} if novi.mm_runtime else {"error": "integration unavailable"})
             elif path == "/api/recognition/privacy":
                 self._json({"result": novi.recognition_privacy(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/real/enable":
+                res = novi.real_enable(
+                    camera=bool(data.get("camera", False)),
+                    mic=bool(data.get("mic", False)),
+                    speaker=bool(data.get("speaker", False)),
+                )
+                self._json({"result": res})
+            elif path == "/api/voice/listen":
+                try:
+                    self._json({"result": novi.voice_listen(float(data.get("seconds", 3.0)))})
+                except RuntimeError as exc:
+                    self._json({"error": str(exc)}, status=400)
+            elif path == "/api/voice/tts":
+                self._json({"result": novi.tts_speak(data)})
+            elif path == "/api/real/speakback":
+                novi.speak_back_enabled = bool(data.get("enabled", True))
+                self._json({"result": {"speak_back": novi.speak_back_enabled}})
+            elif path == "/api/recognition/voice":
+                try:
+                    self._json({"result": novi.enroll_voice(data)})
+                except RuntimeError as exc:
+                    self._json({"error": str(exc)}, status=400)
             else:
                 self._json({"error": "unknown endpoint"}, 404)
         except Exception as exc:  # noqa: BLE001

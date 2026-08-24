@@ -473,6 +473,38 @@ class ChatMixin:
         # as separate arguments for ops like 'diff x**2 x'.
         return name, (tokens if len(tokens) > 1 else [rest])
 
+    def _matched_instruction_guidance(
+        self,
+        grounding_text: str,
+        memory_text: str = "",
+        *,
+        max_skills: int = 2,
+        char_budget: int = 1600,
+        exclude: tuple[str, ...] = (),
+    ) -> tuple[str, list[str]]:
+        """Delegate to the engine-owned SkillActivator (plan 16 P4).
+
+        Matching, budgeting, and priming live in
+        ``novi/brain/skill_activation.py`` so every response surface — not
+        only chat — shares one activation policy. Chat passes the humanizer
+        exclusion because its style pass is handled separately below.
+        """
+        activator = getattr(self, "skill_activator", None)
+        if activator is None:
+            return "", []
+        return activator.guidance_for(
+            grounding_text,
+            memory_text,
+            max_skills=max_skills,
+            char_budget=char_budget,
+            exclude=exclude or ("humanizer",),
+        )
+
+    def _humanizer_system_block(self) -> str:
+        """Delegate the always-on style pass to the SkillActivator."""
+        activator = getattr(self, "skill_activator", None)
+        return activator.style_pass_block() if activator else ""
+
     def _skill_answer_text(self, data: dict[str, Any]) -> str:
         """Render a skill result as a short natural answer, no internals."""
         expr = str(data.get("expression") or "").strip()
@@ -889,6 +921,24 @@ class ChatMixin:
         experience = self._chat_experience(person or addressee_name)
         facts.extend(experience)
         system = self._dialogue_system_prompt(self_state, relationship, capabilities=self_model.get("capabilities"))
+        # Instruction-skill activation (plan 16 P3): context beyond the raw
+        # utterance activates skills too — recalled knowledge/memory facts and
+        # recent chat history (what was said, seen, heard, remembered).
+        history_tail = " ".join(
+            str(h.get("content", ""))[:300] for h in (history or [])[-2:] if isinstance(h, dict)
+        )
+        memory_text = "; ".join(str(f) for f in facts[-6:]) + " " + history_tail
+        skill_guidance, skills_applied = self._matched_instruction_guidance(grounding_text, memory_text, exclude=("humanizer",))
+        # Humanizer is an unconditional style pass on every composed reply,
+        # kept separate so it never consumes a matched-guidance slot.
+        humanizer_block = self._humanizer_system_block()
+        if humanizer_block:
+            skills_applied = ["humanizer", *skills_applied]
+        if skill_guidance:
+            system += "\n\n" + skill_guidance
+            self._emit("skill.applied", {"cycle": self._cycle, "skills": [s for s in skills_applied if s != "humanizer"], "source": "instruction_match"})
+        if humanizer_block:
+            system += "\n\n" + humanizer_block
         # Skill awareness (plan 16 P2): the model is told which runnable
         # skills exist so it can request one with a strict '@skill' directive
         # line, which the engine parses and executes deterministically.
@@ -1086,6 +1136,7 @@ class ChatMixin:
                 "context_knowledge_items": len(knowledge_items),
                 "context_memory_items": len(memory_items),
                 "discourse_topic_hint": topic_hint,
+                "skills_applied": skills_applied,
                 **out,
             }
             return {"text": out["text"], "fallback": False, "reason": reason, "grounding": grounding}

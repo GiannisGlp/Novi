@@ -46,6 +46,176 @@ class IntegrationMixin:
         self.mm_camera_feed = None
         self.mm_last_frame_b64: str | None = None
         self.mm_lock = threading.RLock()
+        # Real I/O state (doc 17) — off until real_enable() is called.
+        self.real_io = {"camera": False, "mic": False, "speaker": False}
+        self.real_io_enabled = False
+        self._real_speaker = None
+        self._real_stt = None
+        self._voice_recognizer: Any | None = None
+        self._camera_thread: threading.Thread | None = None
+        self.speak_back_enabled = True
+
+    # ---- real I/O (doc 17) -------------------------------------------------
+
+    def real_enable(self, *, camera: bool = False, mic: bool = False, speaker: bool = False) -> dict[str, Any]:
+        """Attach real devices. Each degrades honestly when hardware is absent."""
+        results: dict[str, Any] = {}
+        if camera and not self.real_io["camera"]:
+            try:
+                from novi.brain.io import MacCamera
+                from novi.perception.camera import CameraFeed
+                from novi.integration.real_io import MacCameraAdapter
+
+                adapter = MacCameraAdapter(MacCamera())
+                feed = CameraFeed(adapter, queue_size=4)
+                feed.start()
+                self.mm_camera_feed = feed
+                self._start_camera_loop()
+                self.real_io["camera"] = True
+                results["camera"] = True
+            except Exception as exc:  # noqa: BLE001 - honest degradation
+                self.real_io["camera"] = False
+                results["camera"] = False
+                results["camera_error"] = str(exc)
+        elif camera:
+            results["camera"] = True
+
+        if mic and not self.real_io["mic"]:
+            from novi.brain.io import MacMicrophone
+            from novi.brain.models.stt import WhisperSTTProvider
+            from novi.integration.real_io import RealMicrophone, RealSTT
+
+            stt_provider = None
+            existing = getattr(self.brain, "stt", None)
+            if existing is not None and type(existing).__name__ == "WhisperSTTProvider":
+                stt_provider = existing  # reuse the brain's warm model
+            else:
+                stt_provider = WhisperSTTProvider(model_size="base", device="cpu")
+            self._real_stt = RealSTT(stt_provider, mac_microphone=RealMicrophone(MacMicrophone()))
+            self.real_io["mic"] = True
+            results["mic"] = True
+
+        if speaker and not self.real_io["speaker"]:
+            import shutil
+
+            from novi.voice.tts import SayTTSProvider
+
+            from novi.integration.real_io import RealSpeaker
+
+            say_bin = "/usr/bin/say" if shutil.which("say") else "/nonexistent/say"
+            self._real_speaker = RealSpeaker(SayTTSProvider(say_bin=say_bin))
+            self.real_io["speaker"] = True
+            results["speaker"] = True
+
+        self.real_io_enabled = any(self.real_io.values())
+        return results
+
+    def _start_camera_loop(self) -> None:
+        """Background loop: poll frames → perception → preview b64."""
+
+        def _loop() -> None:
+            while getattr(self, "mm_camera_feed", None) is not None and not getattr(self, "_stop").is_set():
+                feed = self.mm_camera_feed
+                if feed is None:
+                    break
+                rec = feed.poll(timeout_s=0.5)
+                if rec is None:
+                    continue
+                try:
+                    from novi.integration.real_io import encode_frame_jpeg_b64
+
+                    data_url = encode_frame_jpeg_b64(rec.frame)
+                    with self.mm_lock:
+                        self.mm_last_frame_b64 = data_url
+                    self.mm_runtime.process_camera_frame(rec.frame)
+                except Exception:  # noqa: BLE001 - preview loop must survive anything
+                    continue
+
+        t = threading.Thread(target=_loop, daemon=True, name="novi-real-camera")
+        t.start()
+        self._camera_thread = t
+
+    def voice_listen(self, seconds: float = 3.0) -> dict[str, Any]:
+        """Record from the real mic → STT → brain → reply (+ optional speak-back).
+
+        When a RealSpeakerRecognizer is wired, the same recording is also
+        voice-matched: the recognized speaker becomes the addressee.
+        """
+        if not self.real_io.get("mic"):
+            raise RuntimeError("microphone not enabled — call real_enable(mic=True)")
+        assert self._real_stt is not None
+        tr = self._real_stt.listen_and_transcribe(seconds)
+        if not tr.get("text"):
+            return {**tr, "reply": "", "spoken": False}
+
+        # speaker recognition on the same audio (doc 17 §8)
+        speaker_label = None
+        speaker_sim = None
+        audio_path = tr.get("audio_path")
+        if self._voice_recognizer is not None and audio_path:
+            try:
+                m = self._voice_recognizer.match(audio_path)
+                if m is not None:
+                    speaker_label = m.label
+                    speaker_sim = round(m.similarity, 3)
+            except Exception:  # noqa: BLE001 - identification is best-effort
+                pass
+
+        turn = self.mm_runtime.voice_turn(tr["text"], speaker_label=speaker_label)
+        reply_text = str(turn.get("reply", ""))
+        spoken = {"spoken": False}
+        if self.speak_back_enabled and self._real_speaker is not None and reply_text:
+            spoken = self._real_speaker.speak(reply_text)
+        out = {
+            **tr,
+            "reply": reply_text,
+            "person": turn.get("person", ""),
+            "spoken": spoken,
+        }
+        if speaker_label is not None:
+            out["speaker"] = speaker_label
+            out["speaker_similarity"] = speaker_sim
+        return out
+
+    def enroll_voice(self, body_or_name: Any, wav_path: str | None = None) -> dict[str, Any]:
+        """Enroll a voiceprint for a person (from body dict or direct call)."""
+        if isinstance(body_or_name, dict):
+            name = str(body_or_name.get("name", "")).strip()
+            wav_path = str(body_or_name.get("wav_path", "")).strip() or None
+        else:
+            name = str(body_or_name or "").strip()
+        if not name:
+            return {"error": "name required"}
+        if not wav_path:
+            # convenience: record a fresh sample right now
+            if not self.real_io.get("mic"):
+                raise RuntimeError("microphone not enabled — call real_enable(mic=True)")
+            assert self._real_stt is not None
+            rec = self._real_stt._mic.record(4.0) if hasattr(self._real_stt, "_mic") else None
+            wav_path = rec["path"] if isinstance(rec, dict) else str(getattr(rec, "path", ""))
+        if self._voice_recognizer is None:
+            from novi.integration.real_io_voice import RealSpeakerRecognizer
+
+            self._voice_recognizer = RealSpeakerRecognizer(store=self.mm_store)
+        pid = self._voice_recognizer.enroll(name, wav_path)
+        self._emit_enrollment(name)
+        return {"ok": True, "person_id": pid}
+
+    def _emit_enrollment(self, name: str) -> None:
+        try:
+            self.mm_runtime._emit("person.voice-enrolled", person=name)
+        except Exception:  # noqa: BLE001
+            pass
+
+    def tts_speak(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Speak arbitrary text through the real speaker."""
+        if self._real_speaker is None:
+            self.real_enable(speaker=True)
+        text = str(body.get("text", "")).strip()
+        if not text:
+            return {"error": "empty text"}
+        assert self._real_speaker is not None
+        return {**self._real_speaker.speak(text)}
 
     # ---- perception -------------------------------------------------------
 

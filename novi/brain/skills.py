@@ -141,6 +141,13 @@ class SkillRunResult:
     data: dict[str, Any] = field(default_factory=dict)
 
 
+def _trigger_in_words(trigger: str, words: list[str]) -> bool:
+    """True when the trigger's word sequence appears contiguously."""
+    seq = trigger.split("-") if "-" in trigger else [trigger]
+    n = len(seq)
+    return any(words[i:i + n] == seq for i in range(len(words) - n + 1))
+
+
 class SkillRegistry:
     """Discovers SKILL.md packages and executes script skills safely."""
 
@@ -193,16 +200,24 @@ class SkillRegistry:
     # ---- deterministic matching ----
 
     def match(self, text: str) -> list[SkillManifest]:
-        """Rank skills whose triggers appear as whole words in ``text``."""
+        """Rank skills whose triggers appear as whole words in ``text``.
+
+        Multi-word/hyphenated triggers ("go-to-market") match their word
+        sequence contiguously, so they work despite tokenization.
+        """
         self._ensure_discovered()
-        words = set(re.findall(r"[a-z0-9_]+", text.lower()))
-        scored: list[tuple[int, str, SkillManifest]] = []
+        words = re.findall(r"[a-z0-9]+", text.lower())
+        scored: list[tuple[int, int, str, SkillManifest]] = []
         for m in self._skills.values():
-            hits = sum(1 for t in m.triggers if t in words)
-            if hits:
-                scored.append((-hits, m.name, m))
-        scored.sort(key=lambda s: (s[0], s[1]))
-        return [m for _, _, m in scored]
+            matched = [t for t in m.triggers if _trigger_in_words(t, words)]
+            if not matched:
+                continue
+            # Longer triggers are more specific intents; they outrank shorter
+            # ones, then more hits, then alphabetical name for determinism.
+            best_len = max(len(t) for t in matched)
+            scored.append((-best_len, -len(matched), m.name, m))
+        scored.sort(key=lambda s: (s[0], s[1], s[2]))
+        return [m for _, _, _, m in scored]
 
     # ---- script execution ----
 
@@ -224,6 +239,16 @@ class SkillRegistry:
         except OSError as exc:
             return SkillRunResult(skill=m.name, ok=False, outcome="error", data={"reason": str(exc)})
         stdout = (proc.stdout or "").strip()
+        # Structured errors first: a script may print {"ok": false, ...} and
+        # exit nonzero; honor its JSON over the raw stderr blob.
+        if stdout:
+            try:
+                payload = json.loads(stdout)
+                if isinstance(payload, dict) and payload.get("ok") is False:
+                    outcome = "dependency_missing" if payload.get("outcome") == "dependency_missing" else "error"
+                    return SkillRunResult(skill=m.name, ok=False, outcome=outcome, data=payload)
+            except ValueError:
+                pass
         if proc.returncode != 0:
             return SkillRunResult(
                 skill=m.name, ok=False, outcome="error",
@@ -262,14 +287,14 @@ class SkillRegistry:
             args = extractor(stripped)
             if args:
                 return m, args
-        # No trigger word hit: still probe maths when the message is clearly
-        # question-shaped ("what is 12*(3+4)?") so plain arithmetic works
-        # without keyword scaffolding.
-        maths = self.get("maths")
-        if maths is not None and _MATH_QUESTION_SHAPE.match(stripped):
+        # No trigger word hit: still probe symbolic-math when the message is
+        # clearly question-shaped ("what is 12*(3+4)?") so plain arithmetic
+        # works without keyword scaffolding.
+        sym = self.get("symbolic-math")
+        if sym is not None and _MATH_QUESTION_SHAPE.match(stripped):
             args = _extract_maths_args(stripped)
             if args:
-                return maths, args
+                return sym, ["solve", *args]
         return None
 
 
@@ -350,7 +375,17 @@ def _extract_symbolic_args(text: str) -> list[str] | None:
 
 
 # Per-skill argument extractors for plan_auto (skill name → extractor).
+def _extract_symbolic_math_args(text: str) -> list[str] | None:
+    """Symbolic-math handles both op-keyword requests and plain arithmetic."""
+    symbolic = _extract_symbolic_args(text)
+    if symbolic is not None:
+        return symbolic
+    arithmetic = _extract_maths_args(text)
+    if arithmetic is not None:
+        return ["solve", *arithmetic]
+    return None
+
+
 _ARG_EXTRACTORS: dict[str, Any] = {
-    "maths": _extract_maths_args,
-    "symbolic-math": _extract_symbolic_args,
+    "symbolic-math": _extract_symbolic_math_args,
 }
