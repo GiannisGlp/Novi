@@ -30,6 +30,7 @@ from novi.brain.autonomy import Goal
 from novi.brain.contracts import utc_now
 from novi.web.integration_api import IntegrationMixin
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.b2_perception import SpecialistPerception
 from novi.brain.io import CameraFrame
 from novi.brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
 from novi.brain.models.stt import TranscriptionResult
@@ -140,6 +141,14 @@ class NoviWebServer(IntegrationMixin):
             self.mm_store = None  # type: ignore[assignment]
             self.mm_camera_feed = None
             self.mm_last_frame_b64 = None
+        # Auto-enable real I/O when --camera real so preview + Listen + speak-back
+        # just work without a manual POST /api/real/enable. Honest degradation
+        # if hardware/deps are absent (never fatal for demo/CI).
+        if getattr(self, "camera_mode", "demo") == "real" and getattr(self, "mm_runtime", None) is not None:
+            try:
+                self.real_enable(camera=True, mic=True, speaker=True)
+            except Exception:  # noqa: BLE001 - hardware optional
+                pass
 
     def _build_conversation_summarizer(self) -> Any:
         """LLM conversation summarizer when Ollama is available."""
@@ -181,7 +190,78 @@ class NoviWebServer(IntegrationMixin):
         reasoning = self._build_reasoning()
         summary_consolidator = self._build_summary_consolidator()
         narrator = self._build_narrator()
-        return MacBrain(camera=cam, stt=stt, reasoning=reasoning, store_path=self.store_path, embedder=self.embedder_mode, summary_consolidator=summary_consolidator, narrator=narrator, config=MacBrainConfig(initiative_enabled=True))
+        perception = self._build_perception() if self.camera_mode == "real" else None
+        speaker_id = self._build_speaker_id() if self.camera_mode == "real" else None
+        return MacBrain(
+            camera=cam,
+            stt=stt,
+            reasoning=reasoning,
+            store_path=self.store_path,
+            embedder=self.embedder_mode,
+            summary_consolidator=summary_consolidator,
+            narrator=narrator,
+            perception=perception,
+            speaker_id=speaker_id,
+            config=MacBrainConfig(initiative_enabled=True),
+        )
+
+    def _build_perception(self) -> Any:
+        """Real neural perception backend for the ENGINE's own step() vision.
+
+        Without this the engine's SpecialistPerception defaults to the
+        deterministic contract backend (detects nothing), so the brain never
+        'sees' the person even with a live webcam. NeuralPerceptionBackend
+        bridges SSDLite-on-MPS into the canonical PerceptionBackend boundary.
+        """
+        try:
+            from novi.brain.models.neural_backend import NeuralPerceptionBackend
+
+            backend = NeuralPerceptionBackend(confidence_threshold=0.45)
+            self.perception_backend = f"ssdlite:{backend.detector.device}"
+            return SpecialistPerception(backend=backend)
+        except Exception:  # noqa: BLE001 - neural deps optional, honest degrade
+            self.perception_backend = "deterministic"
+            return None
+
+    def _build_speaker_id(self) -> Any:
+        """Voiceprint speaker identification wired into the engine (rule 6).
+
+        Adapts RealSpeakerRecognizer to the engine's speaker_id contract
+        (identify(audio_features={"audio_path": ...}) -> {name, confidence}).
+        On each brain.listen() the engine calls _identify_speaker, so an
+        enrolled voice becomes dialogue-grade identity evidence automatically.
+        """
+        try:
+            from novi.integration.real_io_voice import RealSpeakerRecognizer
+            from novi.integration.recognition_store import RecognitionStore
+
+            store = RecognitionStore(Path(self.store_path)) if self.store_path else RecognitionStore(":memory:")
+            recognizer = RealSpeakerRecognizer(store=store)
+
+            class _EngineSpeakerID:
+                """Contract adapter: engine calls identify(audio_features); we match the wav."""
+
+                @staticmethod
+                def identify(audio_features: dict):
+                    wav = str((audio_features or {}).get("audio_path", ""))
+                    if not wav:
+                        return None
+                    m = recognizer.match(wav)
+                    if m is None:
+                        return None
+
+                    class _R:
+                        name: str = ""
+                        confidence: float = 0.0
+
+                    r = _R()
+                    r.name = m.label
+                    r.confidence = float(m.similarity)
+                    return r
+
+            return _EngineSpeakerID()
+        except Exception:  # noqa: BLE001 - voice id optional
+            return None
 
     def _build_narrator(self) -> Any:
         """LLM narrator for episodic "what happened" recaps when Ollama is available."""
@@ -303,6 +383,11 @@ class NoviWebServer(IntegrationMixin):
                 self._seen = len(self.brain.events)
 
     def hear(self, text: str, confidence: float = 0.9) -> dict[str, Any]:
+        # Unified input path (north star §4.2): submit through the brain's bus;
+        # the next cognition cycle ingests it like any other source. The reply
+        # composition still happens here (synchronous HTTP contract) via
+        # respond() with the LLM outside the lock (§4.4).
+        self.brain.submit("web", "chat", {"text": self._clean_chat_text(text)})
         with self._lock:
             r = self.brain.ingest_transcript(TranscriptionResult(text=self._clean_chat_text(text), language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
         adm = r["admission"]
@@ -343,6 +428,11 @@ class NoviWebServer(IntegrationMixin):
             self._last_sent_text = text
             self._last_sent_time = now
 
+        # Unified input path (north star §4.2/4.4): submit through the bus so
+        # this message is one input among many (a home-voice turn may arrive in
+        # the same cycle), then ingest + step under a short lock, and compose
+        # the reply with the LLM OUTSIDE the lock.
+        self.brain.submit("web", "chat", {"text": text})
         # Set chat-busy flag to prevent the background loop from stepping
         # while compose_reply is running (the LLM call is slow).
         with self._lock:
@@ -400,6 +490,11 @@ class NoviWebServer(IntegrationMixin):
 
         Requires real sensing (the server must be started with the real camera/
         STT so the brain has a non-deterministic STT provider).
+
+        The mic recording + STT run OUTSIDE the shared brain lock: audio capture
+        can take seconds (and PortAudio init can stall on device changes), and
+        holding the lock here would freeze the auto-step loop and every HTTP
+        endpoint. Only transcript ingestion takes the lock.
         """
         seconds = seconds or self.listen_seconds
         if self.camera_mode != "real":
@@ -407,14 +502,14 @@ class NoviWebServer(IntegrationMixin):
         stt = getattr(self.brain, "stt", None)
         if stt is None or not hasattr(stt, "transcribe"):
             raise RuntimeError("real speech-to-text is not enabled (start with --camera real)")
-        with self._lock:
-            result = self.brain.listen(seconds)
-            text = result["transcription"].text
-            if text.strip():
-                step = self.brain.step()
-                trace = dict(self.brain._last_reasoning_trace)
+        # Record + transcribe with NO lock held (audio hardware is its own resource).
+        result = self.brain.listen(seconds)
+        text = result["transcription"].text
         if not text.strip():
             return {"heard": "", "accepted": True, "novi": None, "llm": False}
+        with self._lock:
+            step = self.brain.step()
+            trace = dict(self.brain._last_reasoning_trace)
         # Set chat-busy flag to prevent the background loop from stepping.
         with self._lock:
             self._chat_busy = True
@@ -1101,6 +1196,10 @@ class Handler(BaseHTTPRequestHandler):
             html = (_ROUTED / "static" / "index.html").read_text(encoding="utf-8")
             self._send(200, html.encode("utf-8"), "text/html")
             return
+        if path in ("/camera", "/camera.html", "/live"):
+            html = (_ROUTED / "static" / "camera.html").read_text(encoding="utf-8")
+            self._send(200, html.encode("utf-8"), "text/html")
+            return
         if path == "/api/state":
             self._json(self.server.novi.state())
             return
@@ -1340,6 +1439,16 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/recognition/voice":
                 try:
                     self._json({"result": novi.enroll_voice(data)})
+                except RuntimeError as exc:
+                    self._json({"error": str(exc)}, status=400)
+            elif path == "/api/recognition/enroll-face":
+                # Enroll a face from the CURRENT live camera frame: server grabs
+                # the newest JPEG, embeds it with SFace, stores under `name`.
+                self._json({"result": novi.enroll_face_from_camera(str(data.get("name", "")))})
+            elif path == "/api/recognition/enroll-voice":
+                # Record ~4s from the real mic now and save the voiceprint.
+                try:
+                    self._json({"result": novi.enroll_voice_live(str(data.get("name", "")))})
                 except RuntimeError as exc:
                     self._json({"error": str(exc)}, status=400)
             else:

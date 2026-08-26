@@ -27,10 +27,11 @@ class Camera(Protocol):
 class MacCamera:
     """macOS camera adapter using OpenCV when installed."""
 
-    def __init__(self, device: int = 0, width: int = 640, height: int = 480) -> None:
+    def __init__(self, device: int = 0, width: int = 640, height: int = 480, fps: int = 30) -> None:
         self.device = device
         self.width = width
         self.height = height
+        self.fps = fps
         self._capture: Any = None
         self._sequence = 0
 
@@ -43,8 +44,13 @@ class MacCamera:
         if not capture.isOpened():
             capture.release()
             raise RuntimeError(f"camera device {self.device} could not be opened")
+        # MJPG codec + explicit FPS: uncompressed YUY2 caps most webcams at
+        # 640x480@15; MJPG sustains 30fps at this resolution (doc 01 acquisition).
+        capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc("M", "J", "P", "G"))
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        capture.set(cv2.CAP_PROP_FPS, self.fps)
+        capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # always grab the freshest frame
         self._capture = capture
 
     def read(self) -> CameraFrame:

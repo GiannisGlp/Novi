@@ -24,9 +24,10 @@ web framework, and no network access beyond your local Ollama instance, is requi
   recording, switch the active chat model, and listen (real microphone STT).
 - **Live event log** — a running feed of the brain's emitted events (sensor frames,
   cognition, reasoning, failure, resource telemetry, speech, etc.).
-- **Durable memory (optional)** — pass `--store PATH` to persist memory and goal
-  history to SQLite across restarts. Default store (via the launcher) is
-  `novi/db/novi_web.db` in the repository root.
+- **One database for everything** — all state (memory, chat, identity,
+  face/voice enrollments, goals, soul) lives in the single canonical store
+  `novi/data/novi.db` (SQLite, WAL). The web app, CLI, and the future body all
+  resolve this same file; pass `--store PATH` to override if you must.
 
 ### API endpoints (all under `/api/...`)
 
@@ -64,11 +65,11 @@ root (`/Users/vanonatobaidze/projects/Novi`). Prefer the launcher script; it set
 bash scripts/mac-web.sh
 ```
 
-Launches at **http://127.0.0.1:8080** with a durable store of `novi/db/novi_web.db` and an
+Launches at **http://127.0.0.1:8080** with a durable store of `novi/data/novi.db` and an
 auto-step every 0.8s. Override with env vars:
 
 ```bash
-NOVI_HOST=127.0.0.1 NOVI_PORT=8080 NOVI_STORE=~/novi/db/novi_web.db NOVI_TICK=0.8 ./scripts/mac-web.sh
+NOVI_HOST=127.0.0.1 NOVI_PORT=8080 NOVI_STORE=~/novi/data/novi.db NOVI_TICK=0.8 ./scripts/mac-web.sh
 ```
 
 Pass through extra server flags after the script name, e.g.
@@ -77,7 +78,7 @@ Pass through extra server flags after the script name, e.g.
 ### 2. Direct Python invocation
 
 ```bash
-.venv/bin/python -m novi.web.server --host 127.0.0.1 --port 8080 --store novi/db/novi_web.db --tick 0.8
+.venv/bin/python -m novi.web.server --host 127.0.0.1 --port 8080 --store novi/data/novi.db --tick 0.8
 ```
 
 Same flags as the launcher (they are forwarded verbatim).

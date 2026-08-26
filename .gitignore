@@ -32,3 +32,8 @@ novi/contracts/tests/fixtures/negative/
 .dsh/
 skills-lock.json
 brain_evidence.json
+
+# Novi canonical DB: runtime state stays unversioned, but keep the dir tracked
+!novi/data/
+novi/data/*
+!novi/data/README.md

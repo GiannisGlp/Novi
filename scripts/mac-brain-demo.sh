@@ -13,7 +13,7 @@
 #
 # Tune with env vars (overrides the defaults):
 #   NOVI_ROUNDS=3 NOVI_LIVE_STEPS=1 NOVI_LISTEN_SECONDS=3 NOVI_STT_MODEL=base
-#   NOVI_VOICE=Samantha NOVI_STORE=~/novi_demo.db NOVI_GOAL_TARGET=1,2
+#   NOVI_VOICE=Samantha NOVI_STORE=~/novi/data/novi.db NOVI_GOAL_TARGET=1,2
 #   NOVI_NO_CAMERA=1   (use the deterministic camera instead of the webcam)
 set -euo pipefail
 
@@ -38,7 +38,7 @@ LIVE_STEPS="${NOVI_LIVE_STEPS:-8}"
 LISTEN_SECONDS="${NOVI_LISTEN_SECONDS:-2}"
 STT_MODEL="${NOVI_STT_MODEL:-base}"
 VOICE="${NOVI_VOICE:-Samantha}"
-STORE="${NOVI_STORE:-$ROOT/novi/db/novi_demo.db}"
+STORE="${NOVI_STORE:-$ROOT/novi/data/novi.db}"
 CAMERA_FLAG="--live-camera"
 if [[ "${NOVI_NO_CAMERA:-0}" == "1" ]]; then
   CAMERA_FLAG=""

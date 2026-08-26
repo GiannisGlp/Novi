@@ -15,6 +15,7 @@ step emits an event for the web UI / audit trail.
 from __future__ import annotations
 
 import threading
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -36,8 +37,26 @@ class RuntimeEvent:
         return {"kind": self.kind, **self.payload}
 
 
+_ANONYMOUS_PERSON = "someone"  # label for a genuinely-observed but unresolved face
+
+
+@dataclass
+class _PresenceTrack:
+    """Per-label presence bookkeeping (recently-seen table row)."""
+
+    last_seen_seq: int = -1  # frame seq when this label was last identified
+    present: bool = False  # currently considered in the room
+
+
 class MultimodalRuntime:
-    """One bridge instance per brain; thread-safe via the driver's lock."""
+    """One bridge instance per brain; thread-safe via the driver's lock.
+
+    Besides routing modalities, the runtime distills camera frames into
+    brain-ready salience events: ``presence.entered`` / ``presence.left``
+    (who is in the room, with `absent_frames` hysteresis) and
+    ``scene.changed`` (object-label set shifts). Downstream consumers poll
+    :meth:`pop_pending_events`; the full trail stays in ``.events``.
+    """
 
     def __init__(
         self,
@@ -46,7 +65,11 @@ class MultimodalRuntime:
         detector: ObjectDetector,
         face_identifier: FaceIdentifier | None = None,
         recognition: RecognitionStore | None = None,
+        absent_frames: int = 8,
+        scene_change_enabled: bool = True,
     ) -> None:
+        if absent_frames < 1:
+            raise ValueError("absent_frames must be >= 1")
         self.driver = driver
         self.perception = PerceptionPipeline(detector=detector, face_identifier=face_identifier)
         self.faces = face_identifier
@@ -59,6 +82,13 @@ class MultimodalRuntime:
         self.current_person_tier: str = ""
         self.current_place: str = ""
         self.pending_enrollment_proposal: bool = False
+        # salience: presence transitions + scene-change detection
+        self._absent_frames = absent_frames
+        self._scene_change_enabled = scene_change_enabled
+        self._frame_seq = 0  # monotonically increasing per processed frame
+        self._presence_tracks: dict[str, _PresenceTrack] = {}
+        self._last_scene_labels: set[str] | None = None
+        self._pending_events: deque[dict[str, Any]] = deque()
 
     # -- events -----------------------------------------------------------
 
@@ -78,6 +108,7 @@ class MultimodalRuntime:
         face_embedding: list[float] | None = None,
         speaker_person_id: str | None = None,
     ):
+        self._frame_seq += 1
         obs = self.perception.process_frame(
             frame,
             face_embedding=face_embedding,
@@ -91,6 +122,7 @@ class MultimodalRuntime:
             tracks=len(obs.tracks),
             place=self.current_place or None,
         )
+        self._update_scene({d.label for d in obs.detections})
 
         # identity -> conversation context (+ durable enrollment linkage)
         if face_embedding is not None and self.faces is not None:
@@ -108,7 +140,94 @@ class MultimodalRuntime:
                     self.pending_enrollment_proposal = True
                     self._emit("identity.proposal", frame_id=frame.frame_id)
 
+        # presence salience: who did the face stage actually resolve this
+        # frame? Only identity decisions count — raw object detections never
+        # fabricate presence, and frames without a face stage count as
+        # absence frames for everyone.
+        presence_now: dict[str, str] = {}
+        for dec in obs.identities:
+            if dec.tier in (IdentityTier.RECOGNIZED, IdentityTier.VERIFIED):
+                label = self._label_for_person(dec.person_id) or (dec.person_id or "")
+                if label:
+                    presence_now[label] = dec.tier.value
+            else:
+                # unknown tier: a face was genuinely observed but unresolved
+                presence_now[_ANONYMOUS_PERSON] = IdentityTier.UNKNOWN.value
+        self._update_presence(presence_now)
+
         return obs
+
+    # -- presence & scene salience ---------------------------------------------
+
+    def _update_scene(self, labels: set[str]) -> None:
+        """Fire scene.changed when the object-label set shifts between frames."""
+        if not self._scene_change_enabled:
+            return
+        previous = self._last_scene_labels
+        if previous is not None and labels != previous:
+            self._stage_event(
+                "scene.changed",
+                appeared=sorted(labels - previous),
+                disappeared=sorted(previous - labels),
+            )
+        self._last_scene_labels = labels
+
+    def _update_presence(self, seen: dict[str, str]) -> None:
+        """Advance presence bookkeeping by one processed frame.
+
+        `seen` maps labels identified this frame to their identity tier.
+        A label enters when it is identified after >= absent_frames
+        consecutive prior frames without identification; it leaves after
+        >= absent_frames consecutive frames without identification.
+        """
+        if self.faces is None:
+            return  # honest degradation: no identifier -> no presence claims
+        n = self._frame_seq
+        for label, track in self._presence_tracks.items():
+            if (
+                track.present
+                and label not in seen
+                and n - track.last_seen_seq >= self._absent_frames
+            ):
+                track.present = False
+                self._stage_event("presence.left", person=label)
+        for label in sorted(seen):  # sorted for deterministic emission order
+            track = self._presence_tracks.get(label)
+            if track is None:
+                track = _PresenceTrack()
+                self._presence_tracks[label] = track
+                arrived = True  # first-ever sighting counts as an arrival
+            else:
+                # arrival only after >= absent_frames consecutive unseen frames
+                arrived = (n - track.last_seen_seq - 1) >= self._absent_frames
+            track.last_seen_seq = n
+            if arrived and not track.present:
+                track.present = True
+                self._stage_event("presence.entered", person=label, tier=seen[label])
+        # bound the recently-seen table; a departed label past retention is
+        # indistinguishable from a first-ever arrival on re-entry (entered
+        # fires either way), so pruning cannot change observable behavior
+        retention = max(64, 8 * self._absent_frames)
+        expired = [
+            label
+            for label, track in self._presence_tracks.items()
+            if not track.present and n - track.last_seen_seq > retention
+        ]
+        for label in expired:
+            del self._presence_tracks[label]
+
+    def _stage_event(self, kind: str, **payload: Any) -> None:
+        """Emit into the shared trail AND stage for pop_pending_events()."""
+        with self._lock:
+            self._pending_events.append({"kind": kind, **payload})
+        self._emit(kind, **payload)
+
+    def pop_pending_events(self) -> list[dict[str, Any]]:
+        """Atomically drain staged presence/scene events (camera-loop safe)."""
+        with self._lock:
+            staged = list(self._pending_events)
+            self._pending_events.clear()
+            return staged
 
     # -- enrollment -----------------------------------------------------------
 

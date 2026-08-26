@@ -17,7 +17,6 @@ from novi.brain.agent import BrainDriver
 from novi.integration.multimodal import MultimodalRuntime
 from novi.integration.recognition_store import RecognitionKind, RecognitionStore
 from novi.perception.camera import CameraFeed
-from novi.perception.detection import DeterministicObjectDetector
 
 
 class IntegrationMixin:
@@ -32,11 +31,45 @@ class IntegrationMixin:
     def _integration_init(self) -> None:
         db = Path(self.store_path) if getattr(self, "store_path", None) else None
         self.mm_store = RecognitionStore(db or ":memory:")
-        driver = BrainDriver(brain=self.brain, lock=self._lock)
-        detector = DeterministicObjectDetector(scripted={})
-        from novi.perception.faces import FaceIdentifier
+        # Voice turns get the same LLM transport as chat so spoken dialogue is
+        # real dialogue (router-grade), not just the deterministic fallback.
+        llm_transport = self._llm_chat if getattr(self, "chat_llm", False) else None
+        driver = BrainDriver(brain=self.brain, lock=self._lock, llm_chat=llm_transport)
+        # Real object detection when torch/torchvision are installed (MPS on
+        # Apple Silicon); honest fallback to the scripted detector otherwise.
+        detector: Any = None
+        self.detector_backend = "deterministic"
+        try:
+            from novi.perception.real_backends import TorchvisionPerceptionDetector
 
-        faces = FaceIdentifier()  # deterministic embeddings; privacy-gated
+            detector = TorchvisionPerceptionDetector()
+            self.detector_backend = f"torchvision:ssdlite ({detector.device})"
+        except Exception:  # noqa: BLE001 - neural deps optional
+            detector = None
+        if detector is None:
+            from novi.perception.detection import DeterministicObjectDetector
+
+            detector = DeterministicObjectDetector(scripted={})
+        from novi.perception.detection import DeterministicObjectDetector as _DD  # type check only
+
+        assert not isinstance(detector, _DD) or self.detector_backend == "deterministic"
+        # Real face identity when OpenCV YuNet/SFace models can be loaded;
+        # falls back to the deterministic identifier (POST-supplied embeddings).
+        self.face_embedder = None
+        faces = None
+        try:
+            from novi.perception.real_backends import build_face_identifier
+
+            faces, self.face_embedder = build_face_identifier()
+        except Exception:  # noqa: BLE001 - biometrics optional
+            faces = None
+        if faces is None:
+            from novi.perception.faces import FaceIdentifier
+
+            faces = FaceIdentifier()  # deterministic embeddings; privacy-gated
+        from novi.perception.faces import FaceIdentifier  # noqa: F401 - re-import for typing
+
+        self._faces_real = self.face_embedder is not None
         self.mm_runtime = MultimodalRuntime(
             driver=driver,
             detector=detector,
@@ -45,6 +78,10 @@ class IntegrationMixin:
         )
         self.mm_camera_feed = None
         self.mm_last_frame_b64: str | None = None
+        # last face identity seen by the camera loop (tier/person/similarity)
+        self.mm_last_face: dict[str, Any] | None = None
+        # stable tracked objects/people for the camera overlay (named boxes)
+        self.mm_last_tracks: list[dict[str, Any]] = []
         self.mm_lock = threading.RLock()
         # Real I/O state (doc 17) — off until real_enable() is called.
         self.real_io = {"camera": False, "mic": False, "speaker": False}
@@ -127,7 +164,75 @@ class IntegrationMixin:
                     data_url = encode_frame_jpeg_b64(rec.frame)
                     with self.mm_lock:
                         self.mm_last_frame_b64 = data_url
-                    self.mm_runtime.process_camera_frame(rec.frame)
+                    # Real face identity: embed the largest face in this frame
+                    # when the SFace backend is available; None = skip stage.
+                    embedding: list[float] | None = None
+                    face_bbox = None
+                    embedder = getattr(self, "face_embedder", None)
+                    if embedder is not None:
+                        payload = rec.frame.payload
+                        if isinstance(payload, (bytes, bytearray)):
+                            embedding, face_bbox = embedder.embed(payload)
+                    obs = self.mm_runtime.process_camera_frame(
+                        rec.frame,
+                        face_embedding=embedding,
+                    )
+                    if embedding is not None and obs.identities:
+                        dec = obs.identities[-1]
+                        self.mm_last_face = {
+                            "bbox": face_bbox,
+                            "tier": dec.tier.value,
+                            "person": dec.person_id,
+                            "similarity": round(dec.similarity, 3),
+                            "proposal": bool(dec.new_person_proposal),
+                        }
+                    # Stable track labels for the overlay: person tracks get
+                    # identity names (Vano / someone), objects keep their class
+                    # label + track id. Stored under mm_lock for /api/preview.
+                    overlay: list[dict[str, Any]] = []
+                    for t in getattr(obs, "tracks", []) or []:
+                        entry: dict[str, Any] = {
+                            "track_id": t.track_id,
+                            "label": t.label,
+                            "bbox": list(t.bbox),
+                            "confirmed": bool(t.confirmed),
+                        }
+                        if t.label in ("person", "human", "face"):
+                            name = self.mm_runtime.current_person or (
+                                "someone" if self.mm_last_face else None
+                            )
+                            if name:
+                                entry["name"] = f"{name} ({self.mm_runtime.current_person_tier or 'seen'})"
+                                entry["is_person"] = True
+                        overlay.append(entry)
+                    if self.mm_last_face and face_bbox:
+                        # the identified face box itself, named by tier
+                        overlay.append({
+                            "track_id": -1,
+                            "label": "face",
+                            "bbox": list(face_bbox),
+                            "confirmed": True,
+                            "is_person": True,
+                            "name": (
+                                self.mm_last_face.get("person")
+                                or ("new person — enroll" if self.mm_last_face.get("proposal") else "person?")
+                            ),
+                        })
+                    with self.mm_lock:
+                        self.mm_last_tracks = overlay
+                    # Presence/scene salience -> the brain's input bus (north
+                    # star §4.2): room transitions become real cognition inputs.
+                    try:
+                        for ev in self.mm_runtime.pop_pending_events():
+                            kind = str(ev.get("kind", ""))
+                            if kind.startswith("presence.") or kind == "scene.changed":
+                                self.brain.submit(
+                                    "camera", kind,
+                                    {k: v for k, v in ev.items() if k != "kind"},
+                                    coalesce_key=f"{kind}:{ev.get('person', 'scene')}",
+                                )
+                    except Exception:  # noqa: BLE001 - event feed is best-effort
+                        pass
                 except Exception:  # noqa: BLE001 - preview loop must survive anything
                     continue
 
@@ -200,6 +305,59 @@ class IntegrationMixin:
         pid = self._voice_recognizer.enroll(name, wav_path)
         self._emit_enrollment(name)
         return {"ok": True, "person_id": pid}
+
+    def enroll_face_from_camera(self, name: str) -> dict[str, Any]:
+        """Embed the newest live camera frame and store it as `name`'s face.
+
+        Uses the same SFace embedder as recognition so enrollment and later
+        matching share one embedding space. Durable via RecognitionStore.
+        """
+        name = (name or "").strip()
+        if not name:
+            return {"error": "name required"}
+        embedder = getattr(self, "face_embedder", None)
+        if embedder is None:
+            return {"error": "face embedding backend unavailable (opencv models failed to load)"}
+        with self.mm_lock:
+            data_url = self.mm_last_frame_b64
+        if not data_url:
+            return {"error": "no camera frame yet — enable the camera and try again"}
+        import base64
+
+        try:
+            jpeg = base64.b64decode(data_url.split(",", 1)[1])
+        except Exception:  # noqa: BLE001 - malformed frame payload
+            return {"error": "could not decode latest frame"}
+        vec, bbox = embedder.embed(jpeg)
+        if vec is None:
+            return {"error": "no face visible — sit facing the camera and retry"}
+        # store under the canonical person id + durable recognition entry
+        person_id = f"person-{name.lower().replace(' ', '-')}"
+        if self.mm_runtime.faces is not None:
+            internal_pid = self.mm_runtime.faces.enroll(name, vec, frame_id="enroll-webcam")
+            self.mm_runtime._id_to_label[internal_pid] = name
+        if self.mm_store is not None:
+            from novi.integration.recognition_store import RecognitionKind
+
+            self.mm_store.enroll(
+                kind=RecognitionKind.FACE,
+                label=name,
+                embedding=vec,
+                person_id=person_id,
+                frame_id="enroll-webcam",
+                provenance={"source": "web-enroll"},
+            )
+        self.mm_runtime._emit("person.face-enrolled", person=name)
+        return {"ok": True, "person_id": person_id, "bbox": list(bbox or ())}
+
+    def enroll_voice_live(self, name: str) -> dict[str, Any]:
+        """Record ~4s from the real mic now and enroll the voiceprint."""
+        name = (name or "").strip()
+        if not name:
+            return {"error": "name required"}
+        if not self.real_io.get("mic"):
+            raise RuntimeError("microphone not enabled")
+        return self.enroll_voice({"name": name})
 
     def _emit_enrollment(self, name: str) -> None:
         try:
@@ -340,5 +498,9 @@ class IntegrationMixin:
                 "tier": snap["tier"],
                 "place": snap["place"],
                 "detections": last_evt.get("detections", []),
+                "face": self.mm_last_face,
+                "tracks": self.mm_last_tracks,
+                "detector_backend": getattr(self, "detector_backend", "deterministic"),
+                "faces_backend": ("opencv:sface" if getattr(self, "_faces_real", False) else "deterministic"),
                 "image_data_url": self.mm_last_frame_b64,
             }

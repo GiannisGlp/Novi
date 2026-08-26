@@ -152,6 +152,11 @@ class MacBrain(ChatMixin):
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
+        # Unified input architecture (north star §4.2): one prioritized bus in
+        # front of the cognition loop. Producers never block; step() drains.
+        from .input_bus import InputBus
+
+        self.input_bus = InputBus()
         self.camera = camera
         self.speaker = speaker or MacSpeaker()
         self.body = body or VirtualBody()
@@ -392,12 +397,97 @@ class MacBrain(ChatMixin):
         self._emit("autonomy.transition", {"cycle": 0, **t2.snapshot()})
         self._emit("brain.started", {"run_id": self.run_id})
 
+    # ---- unified input architecture (north star §4.2/§4.3) -----------------
+
+    def submit(
+        self,
+        source: str,
+        kind: str,
+        payload: Any = None,
+        *,
+        priority: int | None = None,
+        coalesce_key: str | None = None,
+    ) -> int:
+        """Enqueue one input from ANY source without blocking.
+
+        This is the single front door: web chat, CLI, voice turns, presence
+        transitions, audio events — all call submit(). The bus never touches
+        the brain lock, so a slow producer (mic, remote HTTP) can never stall
+        cognition. Returns the envelope sequence number as a receipt.
+        """
+        env = self.input_bus.put(
+            source=source,
+            kind=kind,
+            payload=payload,
+            priority=priority,
+            coalesce_key=coalesce_key,
+        )
+        self._emit("input.submitted", {
+            "seq": env.seq, "source": source, "kind": kind, "priority": env.priority,
+        })
+        return env.seq
+
+    def drain_inputs(self, max_items: int = 8) -> list[dict[str, Any]]:
+        """Drain queued inputs at cycle start; ingest speech into memory/world.
+
+        Priority order comes from the bus. Speech/interrupt payloads flow
+        through ingest_transcript exactly like a heard utterance (admission,
+        learning, triples) so every source gets identical treatment; event/
+        ambient records update world context and are reported in the step.
+        Reply composition is NOT done here — callers compose via respond()
+        outside all locks (north star §4.4).
+        """
+        try:
+            batch = self.input_bus.drain(max_items=max_items)
+        except Exception:  # noqa: BLE001 - bus failure must not kill the loop
+            return []
+        consumed: list[dict[str, Any]] = []
+        for env in batch:
+            record = {
+                "seq": env.seq, "source": env.source, "kind": env.kind,
+                "priority": env.priority, "submitted_at": env.submitted_at,
+                "drop_count": env.drop_count,
+            }
+            if env.drop_count:
+                record["coalesced_drops"] = env.drop_count
+            text = ""
+            payload = env.payload
+            if isinstance(payload, dict):
+                text = str(payload.get("text", "") or "")
+            elif isinstance(payload, str):
+                text = payload
+            if text.strip():
+                try:
+                    from .models.stt import TranscriptionResult
+
+                    result = self.ingest_transcript(TranscriptionResult(
+                        text=text, language="en", confidence=0.9,
+                        audio_path="", provider=env.source, model_id=f"bus:{env.kind}",
+                    ))
+                    record["admitted"] = bool(result["admission"].accepted)
+                    record["memory_id"] = getattr(result["admission"], "memory_id", None)
+                except Exception as exc:  # noqa: BLE001 - admission is best-effort
+                    record["admit_error"] = str(exc)
+            else:
+                # Non-text input: keep it in the audit trail + world context.
+                self._emit("input.consumed", {"cycle": self._cycle, **record})
+            consumed.append(record)
+        if consumed:
+            self._emit("inputs.drained", {"cycle": self._cycle, "count": len(consumed)})
+        return consumed
+
     def step(self, *, resource_constrained: bool = False) -> dict[str, Any]:
         if self.brain.lifecycle is not Lifecycle.ACTIVE:
             raise RuntimeError(f"Mac Brain must be ACTIVE, got {self.brain.lifecycle.value}")
         if self.camera is None:
             raise RuntimeError("camera provider is not configured")
         self._cycle += 1
+        # Unified input architecture (north star §4.3): drain queued inputs
+        # FIRST so every source — chat, voice, presence events, CLI — flows
+        # through this one cognition loop. Speech/interrupt inputs are ingested
+        # here (admission + learning); their replies are composed by callers
+        # via respond() outside all locks (§4.4).
+        consumed_inputs = self.drain_inputs(max_items=8)
         # Resource-constrained cycles pause lower-priority goals (doc 00 §Resources).
         self._resource_constrained = bool(resource_constrained) or self.failure_handler.is_degraded
         # Each cycle is one correlation domain on the event bus: all events
@@ -893,6 +983,7 @@ class MacBrain(ChatMixin):
             "cycle": self._cycle,
             "frame_id": frame.frame_id,
             "detections": [d.label for d in evidence.detections],
+            "consumed_inputs": consumed_inputs,
             "reasoning": cognitive.reasoning.conclusion,
             "reasoning_confidence": cognitive.reasoning.confidence,
             "reasoning_route": route_info,

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novi — Camera &amp; Voice</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: #0b0e14; color: #e6e6e6;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #8b93a7; font-size: 13px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: 1.2fr 380px; gap: 16px; max-width: 1200px; }
+  @media (max-width: 940px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #12161f; border: 1px solid #232a38; border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8b93a7; margin: 0 0 10px; }
+  #stage {
+    width: 100%; aspect-ratio: 4/3; background: #090b10; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
+  }
+  #stage img { max-width: 100%; max-height: 100%; }
+  #placeholder { color: #3d4557; font-size: 14px; text-align: center; line-height: 1.6; }
+  .badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(18,22,31,.85); border: 1px solid #2c3547; }
+  .badge.ok { color: #7ee787; border-color: #2ea04340; }
+  .badge.warn { color: #f0b429; border-color: #f0b42940; }
+  .badge.err { color: #ff7b72; border-color: #ff7b7240; }
+  /* detection boxes overlay */
+  #overlay { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .dbox { position: absolute; border: 2px solid rgba(88,166,255,.85); border-radius: 4px; }
+  .dbox.face { border-color: rgba(126,231,135,.9); }
+  .dlabel {
+    position: absolute; transform: translateY(-100%); font-size: 10.5px; padding: 1px 6px;
+    border-radius: 4px 4px 4px 0; background: rgba(31,111,235,.85); color: #fff; white-space: nowrap;
+  }
+  .dbox.face .dlabel { background: rgba(46,160,67,.9); }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1a2130; font-size: 13px; }
+  .row:last-child { border-bottom: none; }
+  .k { color: #8b93a7; } .v { font-weight: 600; text-align: right; }
+  ul.det { margin: 0; padding-left: 18px; font-size: 13px; min-height: 20px; columns: 2; column-gap: 18px; }
+  .muted { color: #3d4557; font-size: 12px; }
+  a.back { color: #58a6ff; text-decoration: none; font-size: 13px; }
+  button {
+    background: #21262d; color: #e6e6e6; border: 1px solid #30363d; border-radius: 8px;
+    padding: 11px 14px; font-size: 15px; cursor: pointer; width: 100%; margin-top: 8px;
+  }
+  button:hover { background: #2a313a; }
+  button.primary { background: #1f6feb33; border-color: #1f6feb80; }
+  button.listening { background: #da363333; border-color: #da363380; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  button:disabled { opacity: .5; cursor: default; }
+  #reply { margin-top: 10px; padding: 10px; background: #161b22; border-radius: 8px; font-size: 14px; min-height: 56px; white-space: pre-wrap; }
+  #transcript { margin-top: 12px; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .t-turn { padding: 7px 10px; border-radius: 8px; font-size: 13px; max-width: 90%; }
+  .t-you { align-self: flex-end; background: #1c2f4a; }
+  .t-novi { align-self: flex-start; background: #1a2130; }
+  .t-sys { align-self: center; color: #8b93a7; font-size: 11.5px; background: none; }
+  .t-turn .who { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .55; margin-bottom: 2px; }
+  .toggles { display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+  label.tog { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #8b93a7; cursor: pointer; }
+  .enrollrow { display: flex; gap: 6px; margin-top: 8px; }
+  input[type=text] {
+    flex: 1; background: #0d1017; color: #e6e6e6; border: 1px solid #30363d;
+    border-radius: 6px; padding: 7px 9px; font: inherit; font-size: 13px;
+  }
+  .enrollrow button { width: auto; margin-top: 0; padding: 7px 12px; font-size: 13px; }
+  .hintline { font-size: 11.5px; color: #8b93a7; margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <h1>Camera &amp; Voice</h1>
+  <div class="sub">Novi sees you, hears you, talks back — <a class="back" href="/">← dashboard</a></div>
+  <div class="grid">
+
+    <!-- ============ LEFT: camera + live perception ============ -->
+    <div class="card">
+      <h2>Camera · what Novi sees</h2>
+      <div id="stage">
+        <div class="badges" id="badges"></div>
+        <canvas id="overlay"></canvas>
+        <img id="cam" alt="" style="display:none">
+        <span id="placeholder">camera off<br><span style="font-size:12px">press enable below — Novi starts watching for people and objects</span></span>
+      </div>
+      <button id="enableBtn" onclick="enableIO()">🎥 Enable camera + mic + speaker</button>
+
+      <div class="card" style="margin-top:14px; padding:0; border:none">
+        <h2>Detections · objects &amp; faces (live)</h2>
+        <ul class="det" id="dets"><li class="muted">none yet</li></ul>
+        <div class="row"><span class="k">Person present</span><span class="v" id="person">—</span></div>
+        <div class="row"><span class="k">Identity tier</span><span class="v" id="tier">—</span></div>
+        <div class="row"><span class="k">Place</span><span class="v" id="place">—</span></div>
+        <div class="row"><span class="k">Vision backend</span><span class="v" id="backend">—</span></div>
+        <div class="row"><span class="k">Camera health</span><span class="v" id="health">—</span></div>
+
+        <h2 style="margin-top:14px">Introduce yourself</h2>
+        <div class="enrollrow">
+          <input type="text" id="nameInput" placeholder="your name, e.g. Vano" maxlength="40">
+          <button onclick="enrollFace()">👋 Enroll my face</button>
+          <button onclick="enrollVoice()" title="records ~4s of your voice">🎙 +voice</button>
+        </div>
+        <div class="hintline" id="enrollHint">Sit facing the camera, then enroll. After that Novi greets you by name and recognizes your voice.</div>
+      </div>
+    </div>
+
+    <!-- ============ RIGHT: talk & listen dialog ============ -->
+    <div class="card">
+      <h2>Talk with Novi</h2>
+      <button id="micBtn" class="primary" onclick="toggleListen()">🎙 Hold to talk — press once, speak ~3s</button>
+      <div class="toggles">
+        <label class="tog"><input type="checkbox" id="speakBack" checked onchange="setSpeakBack(this.checked)"> Novi speaks replies aloud</label>
+        <label class="tog"><input type="checkbox" id="autoListen" onchange="toggleAuto()"> continuous conversation</label>
+      </div>
+      <div id="reply"><span class="muted">Press the mic and say hello — Novi answers out loud and here.</span></div>
+      <div id="transcript"></div>
+
+      <h2 style="margin-top:16px">Type instead</h2>
+      <div class="enrollrow">
+        <input type="text" id="typeInput" placeholder="type to Novi…" onkeydown="if(event.key==='Enter')sendTyped()">
+        <button onclick="sendTyped()">Send</button>
+      </div>
+
+      <h2 style="margin-top:16px">Voice status</h2>
+      <div class="row"><span class="k">Mic enabled</span><span class="v" id="micState">—</span></div>
+      <div class="row"><span class="k">Speaker enabled</span><span class="v" id="spkState">—</span></div>
+      <div class="row"><span class="k">Last heard</span><span class="v" id="lastHeard">—</span></div>
+    </div>
+  </div>
+
+<script>
+let listening = false, autoTimer = null;
+
+async function jfetch(url, body) {
+  const opts = body !== undefined
+    ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}
+    : {};
+  const r = await fetch(url, opts);
+  return r.json();
+}
+function escapeHtml(s){const d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML;}
+
+/* ---------- device enable ---------- */
+async function enableIO() {
+  const btn = document.getElementById('enableBtn');
+  btn.disabled = true; btn.textContent = 'Enabling…';
+  try {
+    const res = await jfetch('/api/real/enable', {camera:true, mic:true, speaker:true});
+    const r = res.result || {};
+    const msg = [
+      r.camera ? 'camera ✓' : 'camera ✗ ' + (r.camera_error||''),
+      r.mic ? 'mic ✓' : 'mic ✗',
+      r.speaker ? 'speaker ✓' : 'speaker ✗',
+    ];
+    btn.textContent = msg.join(' · ');
+    refreshVoiceState();
+  } catch(e) { btn.textContent = 'enable failed'; }
+  btn.disabled = false;
+}
+
+/* ---------- talk / listen ---------- */
+async function toggleListen() {
+  if (listening) return;
+  listening = true;
+  const btn = document.getElementById('micBtn');
+  btn.classList.add('listening');
+  btn.textContent = '🎙 Listening… (speak now)';
+  try {
+    const res = await jfetch('/api/voice/listen', {seconds: 3});
+    const r = res.result || res;
+    const heard = (r.text || '').trim();
+    const reply = (r.reply || '').trim();
+    document.getElementById('lastHeard').textContent = heard || '(silence)';
+    if (!heard && !reply) {
+      addTurn('sys', 'didn\'t catch that — try again a bit closer');
+    } else {
+      if (heard) addTurn('you', heard);
+      if (reply) addTurn('novi', reply);
+      document.getElementById('reply').innerHTML =
+        `<div class="muted">You said:</div>${escapeHtml(heard || '(silence)')}` +
+        (reply ? `<div class="muted" style="margin-top:6px">Novi replied${r.spoken&&r.spoken.spoken?' (spoken aloud)':''}:</div>${escapeHtml(reply)}` : '');
+      if (r.person) document.getElementById('person').textContent = r.person;
+    }
+  } catch(e) {
+    addTurn('sys', 'error: ' + e.message);
+  }
+  listening = false;
+  btn.classList.remove('listening');
+  btn.textContent = '🎙 Hold to talk — press once, speak ~3s';
+  if (document.getElementById('autoListen').checked) autoTimer = setTimeout(toggleListen, 400);
+}
+
+function toggleAuto() {
+  const on = document.getElementById('autoListen').checked;
+  clearTimeout(autoTimer);
+  if (on && !listening) toggleListen();
+}
+
+function setSpeakBack(v){ jfetch('/api/real/speakback', {enabled: v}).then(()=>{}); }
+
+/* ---------- typed fallback ---------- */
+async function sendTyped() {
+  const inp = document.getElementById('typeInput');
+  const text = inp.value.trim(); if (!text || listening) return;
+  inp.value = '';
+  addTurn('you', text);
+  try {
+    const res = await jfetch('/api/voice/turn', {text});
+    const r = res.result || res;
+    if (r.reply) { addTurn('novi', r.reply); speak(r.reply); }
+  } catch(e) { addTurn('sys', 'error: ' + e.message); }
+}
+
+/* browser speech synthesis as an extra output channel (server `say` also runs) */
+function speak(text){
+  if (!document.getElementById('speakBack').checked || !window.speechSynthesis) return;
+  try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch(e){}
+}
+
+/* ---------- transcript ---------- */
+function addTurn(role, text) {
+  const t = document.getElementById('transcript');
+  const el = document.createElement('div');
+  el.className = 't-turn t-' + role;
+  if (role === 'sys') { el.textContent = text; }
+  else {
+    const who = document.createElement('div'); who.className='who';
+    who.textContent = role==='you' ? 'you' : 'novi';
+    el.appendChild(who);
+    el.appendChild(document.createTextNode(text));
+  }
+  t.appendChild(el);
+  while (t.children.length > 60) t.removeChild(t.firstChild);
+  t.scrollTop = t.scrollHeight;
+  if (role === 'novi') speak(text);
+}
+
+/* ---------- enrollment ---------- */
+async function enrollFace() {
+  const nameEl = document.getElementById('nameInput');
+  const name = nameEl.value.trim();
+  const hint = document.getElementById('enrollHint');
+  if (!name) { hint.textContent = 'Type your name first, then press enroll.'; return; }
+  hint.textContent = 'Enrolling face… look at the camera.';
+  try {
+    // grab latest preview frame -> server-side embed via perception_frame path is
+    // not exposed for enrollment; use the dedicated endpoint which embeds server-side.
+    const res = await jfetch('/api/recognition/enroll-face', {name});
+    const r = res.result || res;
+    hint.textContent = r.ok ? (`✓ ${name} enrolled — Novi will recognize you now`)
+                            : ('enroll failed: ' + (r.error || 'unknown'));
+    if (r.ok) nameEl.value = '';
+  } catch(e) { hint.textContent = 'enroll error: ' + e.message; }
+}
+
+async function enrollVoice() {
+  const nameEl = document.getElementById('nameInput');
+  const name = nameEl.value.trim();
+  const hint = document.getElementById('enrollHint');
+  if (!name) { hint.textContent = 'Type your name first, then record your voice.'; return; }
+  hint.textContent = 'Recording ~4s of voice… speak normally.';
+  try {
+    const res = await jfetch('/api/recognition/enroll-voice', {name});
+    const r = res.result || res;
+    hint.textContent = r.ok ? `✓ voiceprint saved for ${name}` : ('voice enroll failed: ' + (r.error || 'unknown'));
+  } catch(e) { hint.textContent = 'voice enroll error: ' + e.message; }
+}
+
+/* ---------- live perception loop ---------- */
+let lastBoxesKey = '';
+function drawOverlay(dets, faceInfo, tracks, img) {
+  const cv = document.getElementById('overlay');
+  const stage = document.getElementById('stage');
+  if (!cv || !stage) return;
+  cv.width = stage.clientWidth; cv.height = stage.clientHeight;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const iw = img ? (img.naturalWidth || img.videoWidth) : 0;
+  const ih = img ? (img.naturalHeight || img.videoHeight) : 0;
+  if (!iw || !ih) return;
+  // Overlay draws STABLE TRACKS from the perception tracker (novi/perception/
+  // tracking.py): each box keeps its track_id across frames, persons carry
+  // identity names from the FaceIdentifier (north star: named world model).
+  const scale = Math.min(cv.width/iw, cv.height/ih);
+  const ox = (cv.width - iw*scale)/2, oy = (cv.height - ih*scale)/2;
+  function box(x,y,w,h,cls,label){
+    const r = document.createElement('div');
+    r.className = 'dbox ' + (cls||'');
+    r.style.left=(ox+x*scale)+'px'; r.style.top=(oy+y*scale)+'px';
+    r.style.width=(w*scale)+'px'; r.style.height=(h*scale)+'px';
+    const l=document.createElement('span'); l.className='dlabel'; l.textContent=label||cls||'';
+    r.appendChild(l); cv.appendChild(r);
+  }
+  // 1. tracked objects + people (stable ids, names when recognized)
+  for (const t of (tracks||[])) {
+    if (!Array.isArray(t.bbox)) continue;
+    if (t.is_person) {
+      box(t.bbox[0],t.bbox[1],t.bbox[2],t.bbox[3],'face', t.name || 'person');
+    } else {
+      box(t.bbox[0],t.bbox[1],t.bbox[2],t.bbox[3],'obj',
+          `${t.label} #${t.track_id}`);
+    }
+  }
+  // 2. the SFace-identified face box (authoritative name/tier)
+  if (faceInfo && Array.isArray(faceInfo.bbox)) {
+    const nm = faceInfo.person ? `${faceInfo.person} (${faceInfo.tier})`
+             : (faceInfo.proposal ? 'new person — enroll below' : 'person?');
+    box(faceInfo.bbox[0],faceInfo.bbox[1],faceInfo.bbox[2],faceInfo.bbox[3],'face', nm);
+  }
+  // 3. raw detections that have pixel bboxes but no track yet (unconfirmed)
+  for (const d of (dets||[])) {
+    if (Array.isArray(d.bbox) && !(tracks||[]).some(t => Array.isArray(t.bbox) &&
+        t.bbox[0]===d.bbox[0] && t.bbox[1]===d.bbox[1])) {
+      box(d.bbox[0],d.bbox[1],d.bbox[2],d.bbox[3],'obj',
+          `${d.label} ${Math.round((d.confidence||0)*100)}%`);
+    }
+  }
+}
+
+async function refreshVoiceState(){
+  try{
+    const st = (await jfetch('/api/real/status')) || {};
+    const dv = st.devices || {};
+    document.getElementById('micState').textContent = dv.mic ? 'on' : 'off';
+    document.getElementById('spkState').textContent = dv.speaker ? 'on' : 'off';
+  }catch(e){}
+}
+
+async function refresh() {
+  try {
+    const [prev, st] = await Promise.all([jfetch('/api/preview'), jfetch('/api/real/status')]);
+    const health = prev.camera_health || 'offline';
+    document.getElementById('person').textContent =
+      (prev.face && prev.face.person) || prev.person || ((prev.face && prev.face.proposal) ? 'someone new!' : '—');
+    document.getElementById('tier').textContent = (prev.face && prev.face.tier) || prev.tier || '—';
+    document.getElementById('place').textContent = prev.place || '—';
+    document.getElementById('health').textContent = health + (prev.stale ? ' · stale' : '');
+    document.getElementById('backend').textContent =
+      `${prev.detector_backend || '?'} · ${prev.faces_backend || '?'}`;
+    const badges = [];
+    badges.push(`<span class="badge ${health==='available'?'ok':(health==='failed'?'err':'warn')}">${health}</span>`);
+    if (prev.face && (prev.face.person || prev.face.proposal))
+      badges.push(`<span class="badge ok">${prev.face.person ? prev.face.person+' ('+prev.face.tier+')' : 'new person — say hi!'}</span>`);
+    if (st.devices && st.devices.camera) badges.push('<span class="badge ok">live</span>');
+    document.getElementById('badges').innerHTML = badges.join('');
+    if (prev.image_data_url) {
+      const img = document.getElementById('cam');
+      img.src = prev.image_data_url; img.style.display = 'block';
+      document.getElementById('placeholder').style.display = 'none';
+    }
+    // detections list + overlay
+    const dets = prev.detections || [];
+    const ul = document.getElementById('dets');
+    ul.innerHTML = dets.length
+      ? dets.map(x => typeof x === 'string'
+          ? `<li>${escapeHtml(x)}</li>`
+          : `<li>${escapeHtml(x.label)} <span class="muted">${Math.round((x.confidence||0)*100)}%</span></li>`).join('')
+      : '<li class="muted">none yet</li>';
+    drawOverlay(dets, prev.face, prev.tracks, document.getElementById('cam'));
+  } catch (e) {}
+}
+refresh(); refreshVoiceState();
+setInterval(refresh, 800);
+</script>
+</body>
+</html>

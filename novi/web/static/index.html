@@ -274,6 +274,12 @@ canvas { max-width:100%; }
         <div class="spark"><label>Knowledge (triples)</label><canvas id="memSpark" width="560" height="34"></canvas></div>
       </div>
     </div></div>
+    <div class="panel"><div class="phbar"><h2>Camera</h2><span id="camHealth" class="muted" style="font-size:11px;padding-right:10px">—</span></div><div class="body" style="display:flex;flex-direction:column;gap:8px;align-items:center">
+      <img id="previewImg" alt="camera preview" style="width:100%;max-height:180px;object-fit:contain;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;display:none">
+      <div id="previewMeta" class="muted" style="font-size:11px;text-align:center"></div>
+      <div id="previewDet" class="chips" style="justify-content:center"></div>
+      <div class="muted" style="font-size:10px">live from MacCamera · <a href="/api/preview" target="_blank" style="color:var(--accent)">api</a></div>
+    </div></div>
     <div class="panel"><div class="phbar"><h2>Reasoning</h2></div><div class="body" id="reasoning"><span class="muted">awaiting cycle…</span></div></div>
     <div class="panel"><div class="phbar"><h2>Goals &amp; Plan</h2></div><div class="body">
       <div id="goals"><span class="muted">…</span></div>
@@ -1054,6 +1060,48 @@ if($('memSearchBtn')) $('memSearchBtn').onclick=searchMemory;
 if($('memQuery')) $('memQuery').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); searchMemory(); }});
 if($('knowSearchBtn')) $('knowSearchBtn').onclick=searchKnowledge;
 if($('knowQuery')) $('knowQuery').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); searchKnowledge(); }});
+
+// ---- camera preview (real I/O) ----
+let previewRefreshing = false, previewOfflineCount = 0;
+async function refreshPreview(){
+  if(previewRefreshing) return;
+  const img = $('previewImg'); if(!img) return;
+  previewRefreshing = true;
+  try {
+    const r = await fetch('/api/preview');
+    if(!r.ok) throw new Error('http '+r.status);
+    const d = await r.json();
+    markConn(true);
+    const health = d.camera_health || 'offline';
+    $('camHealth').textContent = 'camera: '+health+(d.stale?' · stale':'');
+    $('camHealth').style.color = (health==='healthy' && !d.stale) ? 'var(--good)' : (health==='offline' ? 'var(--text-mute)' : 'var(--warn)');
+    if(d.image_data_url){
+      img.src = d.image_data_url;           // browser dedupes identical data URLs
+      img.style.display = 'block';
+      previewOfflineCount = 0;
+    } else {
+      previewOfflineCount++;
+      if(previewOfflineCount > 3){          // only blank out after a few misses
+        img.style.display = 'none'; img.removeAttribute('src');
+      }
+    }
+    // who/where context from the multimodal runtime
+    const bits = [];
+    if(d.person) bits.push('person: '+esc(d.person)+(d.tier?' ('+esc(d.tier)+')':''));
+    if(d.place)  bits.push('place: '+esc(d.place));
+    $('previewMeta').innerHTML = bits.join(' · ') || (health==='offline'
+      ? 'preview off — start with <b>--camera real</b>'
+      : 'waiting for first frame…');
+    // detections from the last processed frame
+    const det = Array.isArray(d.detections) ? d.detections : [];
+    $('previewDet').innerHTML = det.map(x =>
+      '<span class="entity-chip observed">'+esc(x.label)+' <b>'+(Number(x.confidence)||0).toFixed(2)+'</b></span>').join('');
+  } catch(e){ /* server busy or offline — keep last frame */ }
+  finally { previewRefreshing = false; }
+}
+setInterval(refreshPreview, 700);
+refreshPreview();
+
 setInterval(refreshAttention, 1100);
 setInterval(refreshContext, 1100);
 setInterval(refreshIdentity, 1500);

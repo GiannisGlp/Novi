@@ -99,7 +99,7 @@ def main() -> int:
     parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model name for --reasoning ollama/router (default: qwen3.8)")
     parser.add_argument("--goal-target", type=str, default=None, metavar="X,Y", help="adopt a bounded reach goal to (X, Y) in meters before running cycles")
     parser.add_argument("--goal-steps", type=int, default=100, help="max step budget for the reach goal (bounds movement)")
-    parser.add_argument("--store", type=str, default=None, metavar="PATH", help="enable durable storage: persist memory and goal history to a SQLite DB at PATH")
+    parser.add_argument("--store", type=str, default=None, metavar="PATH", help="durable storage SQLite DB (default: novi/data/novi.db — the single canonical store; pass ':memory:' for ephemeral)")
     parser.add_argument("--evidence", type=Path, default=Path("brain_evidence.json"), help="write JSON evidence to this path")
     parser.add_argument("--live", action="store_true", help="run the interactive live demo loop (camera + STT + decide + soul + TTS)")
     parser.add_argument("--rounds", type=int, default=1, help="number of live rounds (default 1; use a large value for a sustained session)")
@@ -130,6 +130,11 @@ def main() -> int:
         backend = NeuralPerceptionBackend(device=args.device)
         perception = SpecialistPerception(backend=backend)
 
+    # Canonical single DB (north star: one store for every interface). The
+    # default persists to novi/data/novi.db relative to the repo root so CLI,
+    # web app, and the future body all share one state; ':memory:' opts out.
+    if args.store is None:
+        args.store = str(Path(__file__).resolve().parents[2] / "novi" / "data" / "novi.db")
     brain = MacBrain(camera=camera, perception=perception, stt=stt, reasoning=_build_reasoning(args), store_path=args.store)
     brain.start()
     if args.live:
