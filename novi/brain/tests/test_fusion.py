@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from novi.brain.fusion import ModalityObservation, MultimodalFusion
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.fusion import ModalityObservation, MultimodalFusion
 from novi.brain.storage import DurableMemoryStore
 from novi.brain.tests.test_mac_brain import FakeCamera
 
@@ -51,7 +51,8 @@ class FusionTests(unittest.TestCase):
 
     def test_deterministic_replay(self):
         inputs = [obs("vision", "a", "present", 0.6), obs("speech", "a", "present", 0.8)]
-        f1 = MultimodalFusion(); f2 = MultimodalFusion()
+        f1 = MultimodalFusion()
+        f2 = MultimodalFusion()
         r1 = [e.snapshot() for e in f1.ingest(inputs)]
         r2 = [e.snapshot() for e in f2.ingest(inputs)]
         self.assertEqual(r1, r2)

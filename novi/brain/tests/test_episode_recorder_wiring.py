@@ -12,8 +12,8 @@ Verifies:
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-from novi.brain.nvidia_experiments import OBSERVED, NoviEpisode
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.nvidia_experiments import OBSERVED, NoviEpisode
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 
@@ -101,7 +101,7 @@ class EpisodeRecorderWiringTests(unittest.TestCase):
         try:
             brain.start_recording(task_name="stop_test")
             brain.step()
-            episode = brain.stop_recording()
+            brain.stop_recording()
             events = [e for e in brain.events if e["event_type"] == "episode.recording_stopped"]
             self.assertGreater(len(events), 0)
             self.assertEqual(events[-1]["payload"]["step_count"], 1)

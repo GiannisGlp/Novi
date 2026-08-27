@@ -97,7 +97,6 @@ class DeliberativeLLMReasoningProvider:
 
     def decide(self, *, conclusion: str, confidence: float, situation: Any, recall: Any = ()) -> ActionIntent:
         situation = situation if isinstance(situation, dict) else {}
-        payload = {"conclusion": conclusion, "confidence": confidence, "situation": situation}
         raw = self._invoke(_deliberation_prompt(situation, recall, self.allowed_actions))
         deliberation = _extract_json(raw)
         decision = deliberation.get("decision") or {}

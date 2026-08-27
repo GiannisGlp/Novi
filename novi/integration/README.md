@@ -131,7 +131,7 @@ POST (JSON body):
 - Live smoke over real HTTP: `/preview` serves HTML; `/api/preview`, `/api/perception/state`, `/api/recognition` return JSON; POST frame returns detections/tracks/identities/place/proposal; POST voice turn gets a genuine brain reply.
 - Full suite at implementation time: **1,532 passed**, zero regressions.
 
-## Integration boundaries — real devices now live (doc 17)
+## Integration boundaries — real devices now live (`docs/plans/01_BRAIN/17_REAL_IO.md`)
 
 Real camera, microphone, and speakers are implemented and live-verified: see [`17_REAL_IO.md`](../../docs/plans/01_BRAIN/17_REAL_IO.md) and `novi/integration/real_io.py`. `real_enable(camera/mic/speaker)` attaches hardware; `/api/voice/listen` records → local Whisper → brain → spoken reply; `/preview` shows the live image. Remaining seams:
 

@@ -7,6 +7,7 @@ from novi.brain.runtime import (
     DeterministicScheduler,
     InvalidLifecycleTransition,
     Lifecycle,
+    RuntimeErrorBase,
     SafetyViolation,
     SchedulerError,
 )
@@ -45,7 +46,7 @@ class BrainRuntimeTests(unittest.TestCase):
         brain.start()
         brain.safe_stop()
         self.assertEqual(brain.lifecycle, Lifecycle.SAFE_STOP)
-        with self.assertRaises(Exception):
+        with self.assertRaises(RuntimeErrorBase):
             brain.cycle()
         brain.shutdown()
         self.assertEqual(brain.lifecycle, Lifecycle.SHUTTING_DOWN)
@@ -97,7 +98,7 @@ class BrainRuntimeTests(unittest.TestCase):
 
     def test_cycle_requires_active_state(self) -> None:
         brain = BrainSupervisor()
-        with self.assertRaises(Exception):
+        with self.assertRaises(RuntimeErrorBase):
             brain.cycle()
 
     def test_safety_denies_unknown_action(self) -> None:

@@ -3,6 +3,7 @@
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.nvidia_experiments import (
     OBSERVED,
     SIMULATED,
@@ -11,7 +12,6 @@ from novi.brain.nvidia_experiments import (
     NoviEpisode,
     NoviNativeAdapter,
 )
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 
@@ -106,7 +106,7 @@ class EpisodeRecorderTests(unittest.TestCase):
         recorder.record_runtime_step(brain, cycle=1)
         brain.stop()
         episode = recorder.build_episode()
-        for adapter_name, adapter in [("novi_native", NoviNativeAdapter()), ("lerobot", LeRobotAdapter())]:
+        for _, adapter in [("novi_native", NoviNativeAdapter()), ("lerobot", LeRobotAdapter())]:
             formatted = adapter.to_format(episode)
             restored = adapter.from_format(formatted)
             self.assertEqual(len(restored.steps), len(episode.steps))

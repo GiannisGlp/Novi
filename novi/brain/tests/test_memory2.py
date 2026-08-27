@@ -10,8 +10,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from novi.brain.b1_memory import MemoryRecord
-from novi.brain.models.stt import TranscriptionResult
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.models.stt import TranscriptionResult
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

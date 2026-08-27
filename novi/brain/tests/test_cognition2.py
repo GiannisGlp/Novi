@@ -7,13 +7,13 @@ plus temporal/causal inferences.
 
 import unittest
 
+from novi.brain.autonomy import Goal
 from novi.brain.b1_cognition import ReasoningResult, SensorObservation, Situation
 from novi.brain.b1_world import WorldEntityState, WorldModelState
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-from novi.brain.autonomy import Goal
 from novi.brain.cognition2 import MacCognition
-from novi.brain.models.stt import TranscriptionResult
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.models.stt import TranscriptionResult
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

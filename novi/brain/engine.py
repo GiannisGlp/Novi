@@ -60,10 +60,10 @@ from .privacy import _PERSON_LABELS, COMMON_ENTITY_LABELS, PrivacyGovernance
 from .reflection import ReflectionEngine
 from .resource_telemetry import ResourceTelemetry, combine_resource_modes
 from .self_model import build_self_model
-from .sleep_cycle import SleepCycle
 from .situation_model import SituationModel
 from .skill_contract import SUCCESS as SKILL_SUCCESS
 from .skill_contract import SkillExecutor, SkillInvocation
+from .sleep_cycle import SleepCycle
 from .social import InitiativeConfig, Relationships, SocialInitiative, SocialIntelligence
 from .soul import Soul
 from .soul_acceptance import CommunicationDecision
@@ -658,7 +658,7 @@ class MacBrain(ChatMixin):
         # against this cycle's observations. Accuracy is measurable (audit
         # lever 4) and violations feed the expectation system as prediction
         # errors. Predictions never write to the unified world model.
-        from .prediction import PredictionEngine
+        from .prediction import PredictionEngine, SequencePredictor
         predictor = getattr(self, "_predictor", None)
         if predictor is None:
             predictor = PredictionEngine()
@@ -673,6 +673,24 @@ class MacBrain(ChatMixin):
         acc = predictor.accuracy.accuracy()
         if acc is not None:
             self.metrics.set("prediction_accuracy", acc, unit="ratio")
+
+        # Plan P4: causal/sequence prediction — after A appears, B tends to
+        # appear within k cycles. Violations are surprise signals that feed
+        # curiosity/initiative; predictions never write world state.
+        seq_predictor = getattr(self, "_sequence_predictor", None)
+        if seq_predictor is None:
+            seq_predictor = SequencePredictor()
+            self._sequence_predictor = seq_predictor
+        seq_new, seq_confirmed, seq_violated = seq_predictor.observe(set(present), self._cycle)
+        for p in seq_confirmed:
+            self._emit("prediction.sequence_confirmed", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
+        for p in seq_violated:
+            self._emit("prediction.sequence_violated", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
+        for p in seq_new:
+            self._emit("prediction.sequence_made", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
+        seq_acc = seq_predictor.accuracy.accuracy()
+        if seq_acc is not None:
+            self.metrics.set("sequence_prediction_accuracy", seq_acc, unit="ratio")
 
         self.expectations.update(present)
         violations = self.expectations.drain_violations()
@@ -749,6 +767,12 @@ class MacBrain(ChatMixin):
         deliberation = getattr(self.reasoning, "last_deliberation", None)
         if deliberation is not None:
             self._emit("reasoning.deliberation", {"cycle": self._cycle, "action": intent.action, "deliberation": deliberation})
+            # Plan P5: persist the winning rationale as a decision memory and
+            # recall prior decisions so the trace can cite "last time I chose X".
+            self._persist_decision_memory(deliberation, situation, intent, cognitive.reasoning.confidence)
+        prior_decisions = self._recall_prior_decisions(situation)
+        if prior_decisions:
+            self._emit("reasoning.prior_decisions", {"cycle": self._cycle, "decisions": prior_decisions})
 
         self._last_reasoning_trace = {
             "cycle": self._cycle,
@@ -764,6 +788,7 @@ class MacBrain(ChatMixin):
             "inferences": list(cognitive.reasoning.inferences),
             "hypotheses": list(cognitive.reasoning.hypotheses),
             "deliberation": deliberation,
+            "prior_decisions": prior_decisions,
         }
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)
@@ -2043,6 +2068,63 @@ class MacBrain(ChatMixin):
         identity hash and break duplicate-admission idempotency.
         """
         return {"cycle": self._cycle}
+
+    def _persist_decision_memory(self, deliberation: dict[str, Any], situation: Any, intent: Any, confidence: float) -> None:
+        """Persist a deliberation's winning rationale as a first-class decision
+        memory (plan P5): situation, chosen action, rejected alternatives, reason.
+
+        Decisions survive restart in the single canonical DB and are recalled on
+        similar situations so Novi can explain "last time I chose X because Y".
+        """
+        decision = deliberation.get("decision") or {}
+        options = list(deliberation.get("options", []) or [])
+        chosen = str(getattr(intent, "action", decision.get("action", "")))
+        rejected = [o for o in options if str(o) != chosen]
+        content = {
+            "situation": situation if isinstance(situation, dict) else str(situation),
+            "chosen_action": chosen,
+            "rejected_alternatives": rejected,
+            "reason": str(decision.get("rationale", "") or getattr(intent, "rationale", "")),
+            "analysis": str(deliberation.get("analysis", "")),
+        }
+        try:
+            admission = self.memory.admit(
+                memory_type="decision",
+                content=content,
+                confidence=float(confidence),
+                verification_status="verified" if confidence >= 0.7 else "unverified",
+                privacy_class="internal",
+                provenance={"source": "reasoning", "memory_class": "procedural"},
+                temporal_context=self._temporal_context(),
+                spatial_context=self._spatial_context(),
+            )
+            if admission is not None and admission.accepted:
+                self._emit("memory.decision_admitted", {"cycle": self._cycle, "memory_id": admission.memory_id, "action": chosen})
+        except Exception:  # noqa: BLE001 - decision memory is best-effort, never blocks the loop
+            self._emit("memory.decision_failed", {"cycle": self._cycle, "action": chosen})
+
+    def _recall_prior_decisions(self, situation: Any, limit: int = 3) -> list[dict[str, Any]]:
+        """Recall prior decision memories relevant to the current situation."""
+        query = ""
+        if isinstance(situation, dict):
+            query = " ".join(str(v) for v in situation.values() if isinstance(v, (str, int, float)))
+        else:
+            query = str(situation or "")
+        if not query.strip():
+            return []
+        try:
+            records = self.memory.retrieve(query, memory_type="decision", limit=limit)
+        except Exception:  # noqa: BLE001 - recall is best-effort
+            return []
+        out: list[dict[str, Any]] = []
+        for r in records:
+            content = r.content if isinstance(r.content, dict) else {}
+            out.append({
+                "chosen_action": content.get("chosen_action", ""),
+                "reason": content.get("reason", ""),
+                "situation": content.get("situation", ""),
+            })
+        return out
 
     def _gate_memory(self, memory_type: str) -> tuple[bool, str]:
         """Route an admission through MemoryClassDecisionRegistry (Phase C2).

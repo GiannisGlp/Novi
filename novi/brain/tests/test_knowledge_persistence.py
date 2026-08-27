@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from novi.brain.models.stt import TranscriptionResult
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.models.stt import TranscriptionResult
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

@@ -1,9 +1,9 @@
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-from novi.brain.runtime import Lifecycle
-from novi.brain.io import CameraFrame, VirtualBody
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.io import CameraFrame, VirtualBody
+from novi.brain.runtime import Lifecycle
 
 
 class FakeCamera:

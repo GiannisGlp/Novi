@@ -10,8 +10,8 @@ from __future__ import annotations
 import unittest
 
 from novi.brain.b2_perception import Detection, SpecialistPerception
-from novi.brain.io import CameraFrame
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.io import CameraFrame
 from novi.brain.self_model import SelfModel, build_self_model
 
 

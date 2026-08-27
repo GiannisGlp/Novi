@@ -18,6 +18,8 @@ from .torchvision_detector import TorchvisionSSDLiteDetector
 __all__ = [
     "ActionIntent",
     "CallableMacBackend",
+    "DeliberativeLLMReasoningProvider",
+    "DeliberativeReasoningProvider",
     "Detection",
     "DeterministicObjectDetector",
     "DeterministicReasoningProvider",

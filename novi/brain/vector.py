@@ -87,10 +87,7 @@ class MiniLMEmbedding:
                 try:
                     import torch  # type: ignore[import-not-found]
 
-                    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                        device = "mps"
-                    else:
-                        device = "cpu"
+                    device = "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu"
                 except Exception:
                     device = "cpu"
             self._model = SentenceTransformer(self.model_name, device=device)
@@ -156,7 +153,7 @@ def normalize(vec: list[float]) -> list[float]:
 def cosine(a: list[float], b: list[float]) -> float:
     if not a or not b:
         return 0.0
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 class EmbeddingIndex:

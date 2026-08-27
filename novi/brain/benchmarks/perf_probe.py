@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import platform
 import statistics
@@ -132,7 +133,7 @@ def build_scene() -> tuple[Any, str]:
         try:
             import numpy as np
         except Exception:
-            raise RuntimeError(f"SKIP scene: neither cv2 nor numpy usable ({exc})")
+            raise RuntimeError(f"SKIP scene: neither cv2 nor numpy usable ({exc})") from None
         img = np.zeros((SCENE_H, SCENE_W, 3), dtype=np.uint8)
         img[:240, :, 0] = 120          # crude blocks so detectors see *something*
         img[240:, :, 1] = 90
@@ -178,8 +179,8 @@ def build_deterministic_perception():
 
 
 def build_neural_perception():
-    from novi.brain.models.neural_backend import NeuralPerceptionBackend
     from novi.brain.b2_perception import SpecialistPerception
+    from novi.brain.models.neural_backend import NeuralPerceptionBackend
 
     backend = NeuralPerceptionBackend(confidence_threshold=0.45)
     device = getattr(getattr(backend, "detector", None), "device", None)
@@ -308,10 +309,8 @@ def embed_minilm_profile() -> dict[str, Any]:
                 result["reason"] = (
                     f"MiniLM load took {load_s:.1f}s (> {MINILM_LOAD_TIMEOUT_S:.0f}s budget)"
                 )
-                try:
+                with contextlib.suppress(Exception):
                     store.close()
-                except Exception:
-                    pass
                 return
             admit_s = _admit_memories(store, MEMORIES_ADMIT)
             recall_ms = _recall_queries(store, RECALL_QUERIES)

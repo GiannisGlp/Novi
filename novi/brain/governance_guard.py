@@ -169,8 +169,11 @@ class GovernanceGuard:
             return grant
 
         # Stage 4: R3+ actions require confirmation.
-        if self._risk_order.get(proposal.risk_class, 0) >= self._risk_order.get(self.require_confirmation_above, 3):
-            if proposal.action in _REQUIRES_CONFIRMATION_ACTIONS and proposal.source != "user":
+        if (
+            self._risk_order.get(proposal.risk_class, 0) >= self._risk_order.get(self.require_confirmation_above, 3)
+            and proposal.action in _REQUIRES_CONFIRMATION_ACTIONS
+            and proposal.source != "user"
+        ):
                 grant = GovernanceGrant(
                     grant_id=grant_id, proposal_id=proposal.proposal_id,
                     decision=REQUIRE_CONFIRMATION,

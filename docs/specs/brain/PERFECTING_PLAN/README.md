@@ -5,6 +5,13 @@
 brain-phase implementation, derived from a full audit of `docs/` (including the
 NVIDIA robot-learning research) against the current codebase.
 
+> **Note (2026-08-26):** any reference here to a `MAC_BRAIN/` vs `brain/` split is
+> **SUPERSEDED** — the code is a single unified `novi/brain/` package. The gap findings
+> remain valid; see
+> [`docs/00-strategy/STATUS_2026-08-26.md`](../../00-strategy/STATUS_2026-08-26.md) and
+> [`docs/audits/NOVI_CONSOLIDATED_GAP_ANALYSIS_2026-08-26.md`](../../audits/NOVI_CONSOLIDATED_GAP_ANALYSIS_2026-08-26.md)
+> for the reconciled, current state.
+
 ## Why this directory exists
 
 You asked for a full analysis of `docs/` (including

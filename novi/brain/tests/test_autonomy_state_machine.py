@@ -11,7 +11,6 @@ Verifies:
 
 import unittest
 
-from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.autonomy_state_machine import (
     AWARE,
     BOOTING,
@@ -31,6 +30,7 @@ from novi.brain.autonomy_state_machine import (
 from novi.brain.autonomy_state_machine import (
     AutonomyStateMachineState as ASMState,
 )
+from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 

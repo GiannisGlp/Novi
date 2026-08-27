@@ -10,9 +10,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.models.narrator import LLMNarrator, _extract_narrative
 from novi.brain.models.stt import TranscriptionResult
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

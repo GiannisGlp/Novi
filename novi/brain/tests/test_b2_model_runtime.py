@@ -5,6 +5,7 @@ from novi.brain.b2_model_runtime import (
     ModelArtifact,
     ModelCapabilities,
     ModelDescriptor,
+    ModelInvocationError,
     ModelInvocationRequest,
     ModelRuntime,
 )
@@ -79,17 +80,17 @@ class B2ModelRuntimeTests(unittest.TestCase):
 
     def test_digest_mismatch_is_rejected(self) -> None:
         runtime = self.runtime()
-        with self.assertRaises(Exception):
+        with self.assertRaises(ModelInvocationError):
             runtime.invoke(self.request(artifact_digest="sha256:wrong"))
 
     def test_version_mismatch_is_rejected(self) -> None:
         runtime = self.runtime()
-        with self.assertRaises(Exception):
+        with self.assertRaises(ModelInvocationError):
             runtime.invoke(self.request(model_version="2.0.0"))
 
     def test_schema_mismatch_is_rejected(self) -> None:
         runtime = self.runtime()
-        with self.assertRaises(Exception):
+        with self.assertRaises(ModelInvocationError):
             runtime.invoke(self.request(input_schema_version="2.0.0"))
 
     def test_unloaded_model_isolated_as_runtime_failure(self) -> None:

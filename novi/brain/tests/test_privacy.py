@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-from novi.brain.privacy import PrivacyGovernance
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.privacy import PrivacyGovernance
 from novi.brain.storage import DurableMemoryStore
 from novi.brain.tests.test_mac_brain import FakeCamera
 

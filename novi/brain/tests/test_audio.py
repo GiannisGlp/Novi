@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.audio import AudioFrame, Hearing
+from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 

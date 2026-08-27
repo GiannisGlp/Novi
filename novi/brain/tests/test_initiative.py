@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import unittest
 
-from novi.brain.b2_perception import Detection, SpecialistPerception
 from novi.brain.autonomy import Goal
+from novi.brain.b2_perception import Detection, SpecialistPerception
 from novi.brain.dialogue import _is_forbidden
-from novi.brain.io import CameraFrame
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.io import CameraFrame
 
 
 class FakeCamera:

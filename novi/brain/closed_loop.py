@@ -351,7 +351,7 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
     from novi.brain.multi_speed_runtime import SYSTEM_0, MultiSpeedRuntime
     rt = MultiSpeedRuntime()
     rt.register(SYSTEM_0, "safety", lambda ctx: {"safe": True})
-    rt_results = rt.step()
+    rt.step()
     results.append(CrossSystemTestResult(
         test_id="cross_5", name="safety_to_brain",
         systems_tested=("safety", "brain"),

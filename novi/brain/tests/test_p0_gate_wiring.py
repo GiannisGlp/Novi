@@ -13,8 +13,8 @@ import sys
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-from novi.brain.p0_gate_runner import _SCENARIO_RUNNERS, run_p0_gate
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.p0_gate_runner import _SCENARIO_RUNNERS, run_p0_gate
 from novi.brain.soul_acceptance import ALL_P0_SCENARIOS, P0GateResult
 from novi.brain.tests.test_mac_brain import FakeCamera
 

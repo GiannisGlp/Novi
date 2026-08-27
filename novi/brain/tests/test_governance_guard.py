@@ -167,7 +167,7 @@ class GovernanceGuardTrackingTests(unittest.TestCase):
     def test_get_grant_and_all_grants(self):
         guard = GovernanceGuard()
         g1 = guard.evaluate(proposal(pid="t4", action="wait", risk_class="R0"))
-        g2 = guard.evaluate(proposal(pid="t5", action="wait", risk_class="R0"))
+        guard.evaluate(proposal(pid="t5", action="wait", risk_class="R0"))
         self.assertIs(guard.get_grant(g1.grant_id), g1)
         self.assertEqual(len(guard.all_grants()), 2)
         # Confirm updates the stored grant for the same id.

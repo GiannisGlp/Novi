@@ -102,6 +102,25 @@ This does not relax the completion requirement: the Brain domain itself remains
 IN PROGRESS (see gap analysis `docs/00-strategy/NOVI_BRAIN_GAP_ANALYSIS_AND_NEXT_STEPS.md`),
 and every §10 readiness box must still be checked before the gate opens.
 
+### 5.2 Reconciliation with the unified `novi/brain/` implementation (2026-08-26)
+
+The 2026-08-22 reconciliation referenced `MAC_BRAIN/PERFECTING_PLAN/`; that split no
+longer exists — the code is a single unified `novi/brain/` package (see
+`docs/00-strategy/STATUS_2026-08-26.md`). The honest per-domain state is now:
+
+- **Implemented (software):** Brain, Cognition, Memory, Autonomy — working, tested
+  (1,529 tests), not "IN PROGRESS — implementation pending".
+- **Deferred to hardware:** Hardware, Simulation — no physical robot exists; these
+  **re-open** when hardware-in-loop arrives (reopen trigger = first physical sensor/actuator
+  integration), not before.
+- **Partially implemented:** Technology, Validation, Security, Deployment — the
+  stdlib-first core, CI gates, governance guard, and reproducible `.venv` exist; the
+  physical-AI threat model, SIL/HIL, and edge/robot manifests remain deferred.
+
+The gate rule is unchanged: the **GLOBAL GATE remains CLOSED** until every §10 box is
+checked. This note only corrects the *labels* so the gate state is accurate rather than
+permanently "IN PROGRESS" for domains that are either implemented or explicitly deferred.
+
 ## 6. Completion campaign
 
 We now work through the program status itself. We do **not** start another implementation workstream simply because one domain has reached a sufficient level for implementation.

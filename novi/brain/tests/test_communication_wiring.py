@@ -10,6 +10,7 @@ Verifies:
   - The step result includes communication decision info.
 """
 
+import contextlib
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
@@ -137,13 +138,10 @@ class CommunicationDecisionWiringTests(unittest.TestCase):
         """The speak() method sets speaking state and records interaction."""
         brain = self._brain()
         try:
-            count_before = brain.communication_decision.interaction_count
             # speak() calls speaker.speak() which will fail in test (no 'say'),
             # but the speaking state tracking happens before the actual speak call.
-            try:
+            with contextlib.suppress(Exception):  # 'say' command may not be available in test env
                 brain.speak("hello", person="Alice")
-            except Exception:
-                pass  # 'say' command may not be available in test env
             # The interaction should have been recorded (set_speaking + record_interaction
             # happen before speaker.speak() raises).
             # Actually, record_interaction is AFTER speaker.speak(), so if speak()

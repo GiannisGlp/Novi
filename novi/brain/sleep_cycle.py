@@ -21,6 +21,7 @@ the engine loop. Deterministic and CI-safe: no network, no LLM required.
 
 from __future__ import annotations
 
+import contextlib
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -188,7 +189,5 @@ class SleepCycle:
     def _emit_event(self, event_type: str, payload: dict[str, Any]) -> None:
         if self._emit is None:
             return
-        try:
+        with contextlib.suppress(Exception):  # auditing must never crash sleep
             self._emit(event_type, payload)
-        except Exception:  # noqa: BLE001 - auditing must never crash sleep
-            pass

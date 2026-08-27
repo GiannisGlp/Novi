@@ -470,7 +470,7 @@ def run_nvidia_experiments() -> tuple[ExperimentResult, ...]:
     pick_episode = build_pick_cup_episode(simulated=False)
     # Test round-trip through all adapters.
     all_roundtrips_ok = True
-    for adapter_name, adapter in ALL_ADAPTERS.items():
+    for _, adapter in ALL_ADAPTERS.items():
         for episode in (nav_episode, pick_episode):
             formatted = adapter.to_format(episode)
             restored = adapter.from_format(formatted)

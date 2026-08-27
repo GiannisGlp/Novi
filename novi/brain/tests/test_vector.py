@@ -1,3 +1,4 @@
+import contextlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -41,10 +42,8 @@ class SemanticRetrievalTests(unittest.TestCase):
         self.store = DurableMemoryStore(Path(self._tmp.name) / "mem.db")
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(Exception):
             self.store.close()
-        except Exception:
-            pass
 
     def test_retrieve_semantic_returns_relevant(self):
         admit(self.store, "alice watered the green plants")

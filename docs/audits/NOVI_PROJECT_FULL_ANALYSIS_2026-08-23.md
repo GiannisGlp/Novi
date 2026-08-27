@@ -45,12 +45,16 @@ This is the same gate used by the `brain-runtime-validation.yml` CI workflow.
 ```text
 ARCHITECTURE INTEGRITY: FAIL
 - docs/01-system-architecture/50_ARCH_CLOSE_009_FINAL_TRACEABILITY_MATRIX_2026-08-19.md:
-    unresolved document path: contracts/tests/README.md            (×5)
+    unresolved document path: novi/contracts/tests/README.md            (×5)
 - docs/audits/NOVI_BRAIN_GAP_AND_IMPROVEMENT_AUDIT_2026-08-23.md:
     unresolved document path: docs/ARCHITECTURE_CLARITY.md         (×1)
 ```
 
 Root cause: contracts moved from root `contracts/` → `novi/contracts/` (commits `8dd80ef`, `bae36f3`) but the traceability matrix still cites the old paths. The referenced audit promised a `docs/ARCHITECTURE_CLARITY.md` that was never created. This script is itself a CI gate (`architecture-integrity.yml`), so **pushes to main currently fail CI**.
+
+> **Since fixed (2026-08-26):** the traceability matrix now cites `novi/contracts/tests/README.md`
+> (the `contracts/` → `novi/contracts/` move was applied), and `docs/ARCHITECTURE_CLARITY.md` was
+> authored. The FAIL output above is the historical 2026-08-23 state, retained for traceability.
 
 Fix options: update the matrix links to `novi/contracts/tests/README.md` (and compatibility README), and either author `docs/ARCHITECTURE_CLARITY.md` or reword the audit reference.
 

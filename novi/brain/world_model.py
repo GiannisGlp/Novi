@@ -428,9 +428,15 @@ class WorldModel:
                 return False  # keep the old, preserve the contradiction
 
         # Stale check: don't let an older timestamp regress a newer one.
-        if existing is not None and timestamp and entity.last_updated_at and timestamp < entity.last_updated_at:
-            if _is_real(epistemic_status) and _is_real(existing[1]):
-                return False
+        if (
+            existing is not None
+            and timestamp
+            and entity.last_updated_at
+            and timestamp < entity.last_updated_at
+            and _is_real(epistemic_status)
+            and _is_real(existing[1])
+        ):
+            return False
 
         entity.set_state(field_name, value, status=epistemic_status, confidence=confidence, provenance=prov)
         entity.confidence = max(entity.confidence, confidence)

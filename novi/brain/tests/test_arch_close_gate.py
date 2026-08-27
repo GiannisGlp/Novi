@@ -10,7 +10,7 @@ class ArchClose003GateTests(unittest.TestCase):
     def test_gate_passes_correctness_and_produces_adopt(self):
         with tempfile.TemporaryDirectory() as td:
             out = Path(td) / "gate.json"
-            result = run(out)
+            run(out)
             self.assertTrue(out.exists())
             data = json.loads(out.read_text())
             self.assertEqual(data["decision"], "ADOPT")

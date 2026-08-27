@@ -13,6 +13,7 @@ Verifies:
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.failure_modes import (
     IDENTITY_AMBIGUITY,
     MODEL_UNAVAILABLE,
@@ -23,7 +24,6 @@ from novi.brain.failure_modes import (
     FailureHandler,
 )
 from novi.brain.resource_telemetry import ResourceSample, ResourceTelemetry
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

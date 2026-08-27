@@ -96,7 +96,7 @@ class ClosedLoopRuntimeTests(unittest.TestCase):
         rt.plan({"goal": "pick"})
         rt.act({"skill": "pick", "outcome": OUTCOME_FAILURE})
         # After max recovery, should ASK.
-        verify = rt.verify(["object_grasped"], {"object_grasped": False})
+        rt.verify(["object_grasped"], {"object_grasped": False})
         self.assertEqual(rt.current_phase, ASK)
 
     def test_stop(self):

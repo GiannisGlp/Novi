@@ -1,3 +1,17 @@
+"""Foundational world-state data model + deterministic world model (Stage B1).
+
+This module is **not** the canonical world model. It provides:
+
+- the foundational **data types** — ``SensorObservation``, ``WorldEntityState``,
+  ``WorldModelState``, ``GroundTruthEntity``/``GroundTruthEvent``; and
+- ``DeterministicWorld`` / ``TemporalWorldModel``, the deterministic **fast-path**
+  world model, plus ``run_world_scenario`` (Stage-0 test scaffolding).
+
+The canonical world model is ``WorldModel`` in ``world_model.py`` (epistemic status,
+provenance, contradiction handling). The deterministic model here is the fast path,
+not the authority; new world-model work targets ``world_model.py``.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

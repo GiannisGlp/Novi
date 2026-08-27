@@ -11,8 +11,8 @@ Verifies:
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
-from novi.brain.memory_hardening import OBSERVED, SIMULATED, VERIFIED, HardenedMemoryManager
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.memory_hardening import OBSERVED, SIMULATED, VERIFIED, HardenedMemoryManager
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

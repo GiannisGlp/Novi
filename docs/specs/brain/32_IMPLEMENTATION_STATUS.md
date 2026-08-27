@@ -1,5 +1,11 @@
 # Mac Brain Implementation Status
 
+> **SUPERSEDED on structure (2026-08-26).** This document describes a `MAC_BRAIN` package
+> separate from `brain/`. That split no longer exists — the code is a single unified
+> `novi/brain/` package. The implementation *capabilities* described here are still accurate;
+> only the package layout references are stale. See
+> [`docs/00-strategy/STATUS_2026-08-26.md`](../../00-strategy/STATUS_2026-08-26.md).
+
 ## First executable slice
 
 **Status: IMPLEMENTED — pending Mac execution.**

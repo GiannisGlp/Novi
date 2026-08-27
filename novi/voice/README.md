@@ -106,7 +106,7 @@ Empty transcripts never reach `reply_fn`; empty replies never reach TTS.
 
 ## SCENARIO-V1 — the executable acceptance test
 
-From doc 15, now green in CI (`tests/test_scenario_v1.py`):
+From `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md`, now green in CI (`tests/test_scenario_v1.py`):
 
 > Owner at work, Novi at home. Novi navigates, observes, hears ambient events, mid-conversation with Anna (recognized via face-ID). Owner messages from work. Novi finishes Anna's sentence first, handles the message, resumes Anna's turn — and navigation ticks between every single frame.
 

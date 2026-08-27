@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Canonical contract payload factories used by the Stage-0 Brain runtime."""
+
+from __future__ import annotations
 
 from typing import Any
 from uuid import uuid4

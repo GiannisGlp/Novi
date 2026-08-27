@@ -5,6 +5,15 @@
 **Owner:** Novi architecture and implementation program  
 **Updated:** 2026-08-19  
 
+> **SUPERSEDED for implementation-state claims (2026-08-26).** This tracker remains the
+> authority for the *documentation/architecture closure* program, but its implementation-state
+> claims (Brain/Cognition/Memory/Autonomy "IN PROGRESS — implementation pending", the
+> `MAC_BRAIN`/`brain` split, "MAC BRAIN STAGE 0") are out of date. The code is now a single
+> unified `novi/brain/` package with 1,529 passing tests. See
+> [`STATUS_2026-08-26.md`](STATUS_2026-08-26.md) for the current source of truth and
+> [`../audits/NOVI_CONSOLIDATED_GAP_ANALYSIS_2026-08-26.md`](../audits/NOVI_CONSOLIDATED_GAP_ANALYSIS_2026-08-26.md)
+> for the reconciled gap list.
+
 ---
 
 ## 1. Purpose

@@ -8,13 +8,13 @@ with telemetry (most conservative wins), and the MacBrain wiring that emits a
 
 import unittest
 
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.multi_speed_runtime import AutonomyState, ResourceMode
 from novi.brain.resource_telemetry import (
     ResourceSample,
     ResourceTelemetry,
     combine_resource_modes,
 )
-from novi.brain.engine import MacBrain, MacBrainConfig
 
 
 class FakeTelemetry(ResourceTelemetry):

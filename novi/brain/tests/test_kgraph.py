@@ -3,9 +3,9 @@ import unittest
 from pathlib import Path
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.kgraph import EntityKnowledgeGraph, infer_entity_type
 from novi.brain.models.stt import TranscriptionResult
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.storage import DurableMemoryStore
 from novi.brain.tests.test_mac_brain import FakeCamera
 

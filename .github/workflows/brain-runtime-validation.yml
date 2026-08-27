@@ -29,6 +29,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Lint (ruff)
+        run: |
+          pip install ruff
+          ruff check novi/brain
+
       - name: Verify Python test discovery
         run: |
           python --version

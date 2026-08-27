@@ -7,12 +7,12 @@ and runtime wiring (brain.spatial, WorldState.spatial_state).
 
 import unittest
 
-from novi.cognition.contracts.common import SpatialReference
 from novi.brain.spatial_map import (
     SpatialFrame,
     SpatialMap,
     default_home_map,
 )
+from novi.cognition.contracts.common import SpatialReference
 
 
 class SpatialFrameTests(unittest.TestCase):

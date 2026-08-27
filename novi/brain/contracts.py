@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Runtime bindings for Novi's canonical contract registry.
 
 This module intentionally does not redefine contract semantics. The registry and
 versioned JSON Schemas under ``contracts/`` remain the semantic authority.
 """
+
+from __future__ import annotations
 
 import json
 from dataclasses import dataclass

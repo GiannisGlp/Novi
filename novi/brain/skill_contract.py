@@ -282,7 +282,7 @@ class SkillExecutor:
             return invocation
 
         # Validate parameters.
-        for param_name, param_type in contract.parameter_schema.items():
+        for param_name, _ in contract.parameter_schema.items():
             if param_name not in parameters:
                 invocation.status = FAILURE
                 invocation.error = f"missing_parameter:{param_name}"

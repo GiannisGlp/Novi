@@ -106,7 +106,7 @@ def _benchmark(db: Path) -> dict[str, Any]:
     ingest_wall = time.perf_counter() - t0
 
     read_times: list[float] = []
-    for i in range(0, N, 20):
+    for _ in range(0, N, 20):
         t = time.perf_counter()
         store.retrieve("observation", limit=5)
         read_times.append((time.perf_counter() - t) * 1000.0)

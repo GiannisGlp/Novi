@@ -10,9 +10,9 @@ import math
 import unittest
 
 from novi.brain.autonomy import BoundedGoalController, Goal, GoalStatus
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import VirtualBody
 from novi.brain.planner import Plan, PlanStep, PlanValidator
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

@@ -10,9 +10,9 @@ import unittest
 from unittest import mock
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.models.deliberation import DeliberativeLLMReasoningProvider, _deliberation_prompt, _extract_json
 from novi.brain.models.reasoning import ActionIntent
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

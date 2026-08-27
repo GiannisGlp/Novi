@@ -10,8 +10,8 @@ import unittest
 from pathlib import Path
 
 from novi.brain.consolidation import SummaryConsolidator
-from novi.brain.models.stt import TranscriptionResult
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.models.stt import TranscriptionResult
 from novi.brain.storage import DurableMemoryStore
 from novi.brain.tests.test_mac_brain import FakeCamera
 

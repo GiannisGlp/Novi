@@ -200,12 +200,9 @@ class Lexicon:
         if entry.status not in (LexiconStatus.ADOPTED, LexiconStatus.SCOPED, LexiconStatus.VALIDATED):
             return False
         # privacy: relationship-scoped/person-scoped expression is not spoken to a stranger audience
-        if entry.scope in (Scope.RELATIONSHIP,) or entry.person:
-            if stranger_present:
-                return False
-        if entry.scope == Scope.CONTEXT and entry.context and entry.context != in_context:
+        if (entry.scope in (Scope.RELATIONSHIP,) or entry.person) and stranger_present:
             return False
-        return True
+        return not (entry.scope == Scope.CONTEXT and entry.context and entry.context != in_context)
 
     def vocabulary_for(self, person: str) -> list[str]:
         """Adopted global + relationship-scoped vocabulary available to a person."""

@@ -65,7 +65,7 @@ class TorchvisionSSDLiteDetector:
         boxes = output["boxes"].detach().cpu().tolist()
         scores = output["scores"].detach().cpu().tolist()
         labels = output["labels"].detach().cpu().tolist()
-        for box, score, label in zip(boxes, scores, labels):
+        for box, score, label in zip(boxes, scores, labels, strict=False):
             if score < self._threshold:
                 continue
             results.append({

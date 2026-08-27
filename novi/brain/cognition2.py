@@ -11,6 +11,13 @@ It produces a richer ``ReasoningResult`` carrying multiple candidate
 **hypotheses** with confidence and **temporal/causal inferences**, and refines
 the headline conclusion/confidence accordingly.
 
+**Fast path vs deliberative path (2026-08-26):** ``DeterministicCognition``
+(``b1_cognition.py``) is the deterministic *fast path* — a salience classifier
+with no knowledge/goal/memory grounding. ``MacCognition`` here is the canonical
+*deliberative path* that subclasses it and adds that grounding. The engine
+instantiates ``MacCognition``; ``DeterministicCognition`` remains only as the
+base class and the ``SPEECH_ENTITY`` constant.
+
 Boundaries (unchanged from docs/03-cognition):
   - Predictions are always marked as predicted and never overwrite observed state.
   - Inferences are hypotheses, not asserted facts; they never bypass Policy/Safety.

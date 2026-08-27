@@ -147,7 +147,7 @@ class Relationships:
         return self.get(person).category
 
     def _category_for(self, rel: Relationship) -> RelationshipCategory:
-        f, t, q = rel.familiarity, rel.trust, rel.interaction_quality
+        f = rel.familiarity
         n = rel.interaction_count
         if n == 0:
             return RelationshipCategory.UNKNOWN

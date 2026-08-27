@@ -94,7 +94,7 @@ class ContextAssemblerTests(unittest.TestCase):
         entity_items = [item for item in immediate if item.kind == "entity"]
         # cup_001 is an object in the kitchen
         labels = [item.data.get("labels", []) for item in entity_items]
-        flat = [l for sublist in labels for l in sublist]
+        flat = [item for sublist in labels for item in sublist]
         self.assertIn("cup", flat)
 
     def test_situational_layer_includes_active_people(self):
@@ -211,7 +211,6 @@ class ReferenceResolutionTests(unittest.TestCase):
     """NVIDIA Experiment 1: 'Bring me that cup' reference resolution."""
 
     def test_resolve_single_cup(self):
-        wm = _kitchen_world()
         # Remove the mug so there's only one cup.
         # Actually keep both: cup has label "cup", mug has alias "cup" — that's ambiguous.
         # Let's test with just one cup.
@@ -265,7 +264,6 @@ class ReferenceResolutionTests(unittest.TestCase):
         self.assertIsNone(result["entity_id"])
 
     def test_reference_resolution_returns_context(self):
-        wm = _kitchen_world()
         wm2 = WorldModel()
         wm2.add_entity("alice_001", PERSON, labels=["Alice"], epistemic_status=OBSERVED, confidence=0.95)
         wm2.add_entity("cup_001", OBJECT, labels=["cup"], epistemic_status=OBSERVED, confidence=0.85)

@@ -9,10 +9,10 @@ just controller internals.
 
 import unittest
 
-from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.autonomy import Goal, GoalStatus
-from novi.brain.io import VirtualBody
+from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.io import VirtualBody
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

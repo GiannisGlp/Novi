@@ -1,3 +1,18 @@
+"""Foundational cognition data model + deterministic fast-path (Stage B1).
+
+This module is **not** the canonical cognition. It provides:
+
+- the foundational **data types** the richer cognition builds on — ``Situation``,
+  ``ReasoningResult``, ``CognitiveState``, ``EvidenceRef``; and
+- ``DeterministicCognition``, the deterministic **fast-path** salience classifier
+  (and its ``SPEECH_ENTITY`` constant).
+
+The canonical, deliberative cognition is ``MacCognition`` in ``cognition2.py``,
+which subclasses ``DeterministicCognition`` and adds knowledge/goal/memory-grounded
+reasoning. The deterministic classifier here is the fast path, not the authority;
+new cognition work targets ``cognition2.py`` / ``cognition_typed.py``, not this module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

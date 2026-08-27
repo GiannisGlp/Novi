@@ -1,3 +1,16 @@
+"""Foundational memory data model + deterministic in-memory store (Stage B1).
+
+This module is **not** the canonical durable memory. It provides:
+
+- the foundational **data types** — ``MemoryRecord`` and ``MemoryAdmission``; and
+- ``DeterministicMemoryManager``, a deterministic **in-memory** store used by the
+  Stage-0/B1 test suite and as a fallback when no durable store path is configured.
+
+The canonical durable memory is ``DurableMemoryStore`` in ``storage.py`` (single
+canonical DB, FTS5 + semantic retrieval, consolidation). ``DeterministicMemoryManager``
+is the fast-path/fallback, not the authority; new memory work targets ``storage.py``.
+"""
+
 from __future__ import annotations
 
 import json

@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from novi.brain.consolidation import ConsolidationConfig, MemoryConsolidator
-from novi.brain.models import DeterministicSTTProvider
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.models import DeterministicSTTProvider
 from novi.brain.storage import DurableMemoryStore
 from novi.brain.tests.test_mac_brain import FakeCamera
 

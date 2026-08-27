@@ -73,7 +73,7 @@ class SocialRelationshipTests(unittest.TestCase):
         # stranger needs higher confidence than familiar
         for i in range(12):
             reg.note_interaction("friend", quality=0.9, now=f"t{i}")
-        d_stranger = social.participation_decision("stranger", reg, direct_confidence=0.5, cycle=20)
+        social.participation_decision("stranger", reg, direct_confidence=0.5, cycle=20)
         d_friend = social.participation_decision("friend", reg, direct_confidence=0.5, cycle=21)
         self.assertEqual(d_friend["action"], "participate")
 

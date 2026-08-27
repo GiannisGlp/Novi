@@ -11,10 +11,10 @@ from __future__ import annotations
 import unittest
 
 from novi.brain.b2_perception import Detection, SpecialistPerception
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.kgraph import infer_entity_type
 from novi.brain.models.recognition import DeterministicFaceId, DeterministicSpeakerId
-from novi.brain.engine import MacBrain, MacBrainConfig
 
 
 class FakeCamera:

@@ -11,9 +11,9 @@ import unittest
 
 from novi.brain.b2_perception import Detection, SpecialistPerception
 from novi.brain.dialogue import _is_forbidden, natural_fallback
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.models.recognition import DeterministicFaceId, DeterministicSpeakerId
-from novi.brain.engine import MacBrain, MacBrainConfig
 
 
 class FakeCamera:

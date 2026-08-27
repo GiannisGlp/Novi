@@ -9,8 +9,8 @@ responsive and deterministic across thousands of cycles.
 import unittest
 
 from novi.brain.autonomy import Goal, GoalStatus
-from novi.brain.io import VirtualBody
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.io import VirtualBody
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

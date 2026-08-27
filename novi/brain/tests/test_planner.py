@@ -2,10 +2,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.autonomy import Goal
-from novi.brain.planner import Plan, PlanValidator, Planner
+from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
 from novi.brain.engine import MacBrain, MacBrainConfig
+from novi.brain.planner import Plan, Planner, PlanValidator
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

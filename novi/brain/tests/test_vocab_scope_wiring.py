@@ -13,9 +13,9 @@ Verifies:
 import unittest
 
 from novi.brain.b2_perception import Detection, DeterministicPerceptionBackend, SpecialistPerception
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.lexicon import Lexicon, LexiconStatus
 from novi.brain.lexicon import Scope as LexScope
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.tests.test_mac_brain import FakeCamera
 
 

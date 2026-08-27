@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Unified observability for Novi Brain.
 
 Merges the Stage-0 portable registry (``brain.observability``) with the
@@ -23,6 +21,8 @@ path working.
 
 For new code prefer the engine layer (``HealthMonitor``/``MetricRegistry``/``Diagnostics``).
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone

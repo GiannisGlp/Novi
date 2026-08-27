@@ -13,10 +13,10 @@ Novi is one mind, not a set of modality handlers. The repo already states this: 
 
 This document extends that principle to its conclusion:
 
-1. **One front door.** Whatever produces an input — an HTTP handler, a CLI command, the STT loop, the camera pipeline, a door sensor — hands the same normalized object to the same bus, and the brain's cognitive step consumes them the same way every time. Doc 16 §1 calls this "one mind": modalities attach context to inputs the brain already accepts; they never bypass `BrainDriver`.
+1. **One front door.** Whatever produces an input — an HTTP handler, a CLI command, the STT loop, the camera pipeline, a door sensor — hands the same normalized object to the same bus, and the brain's cognitive step consumes them the same way every time. `docs/plans/01_BRAIN/16_MULTIMODAL_INTEGRATION.md` §1 calls this "one mind": modalities attach context to inputs the brain already accepts; they never bypass `BrainDriver`.
 2. **Simultaneity is the normal case, not an edge case.** SCENARIO-V1 in `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md` ("absentee owner") is the reference: Novi is mid-conversation at home while the owner messages remotely, and nothing drops, stalls, or duplicates. Today that works only by accident of coarse locking (see §3). It should work by construction: producers enqueue without blocking, the cognitive loop drains continuously, and arbitration decides what gets said when.
-3. **Everything gets processed; answering is a decision.** Every input is admitted into memory/cognition — a camera frame updates world state even when Novi says nothing. A reply is produced through exactly one path — the brain's own `respond()` (`novi/brain/chat.py`, "source-agnostic, brain-owned reply orchestration") — honoring `docs/06-soul/07_COMMUNICATION_AND_LIVING_LEXICON.md` §2: speech renders an approved communicative act; web/TTS layers never decide intentions. Silence remains valid output (soul doc 07 §4, "Silence is not failure").
-4. **Autonomy owns timing.** Per doc 15's decided authority boundary: dialogue decides *what* to say, turn-taking decides *when*. The input architecture must leave that boundary intact — the bus delivers facts and demands to cognition; the policy layer arbitrates outbound utterances.
+3. **Everything gets processed; answering is a decision.** Every input is admitted into memory/cognition — a camera frame updates world state even when Novi says nothing. A reply is produced through exactly one path — the brain's own `respond()` (`novi/brain/chat.py`, "source-agnostic, brain-owned reply orchestration") — honoring `docs/06-soul/07_COMMUNICATION_AND_LIVING_LEXICON.md` §2: speech renders an approved communicative act; web/TTS layers never decide intentions. Silence remains valid output (`docs/06-soul/07_COMMUNICATION_AND_LIVING_LEXICON.md` §4, "Silence is not failure").
+4. **Autonomy owns timing.** Per `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md`'s decided authority boundary: dialogue decides *what* to say, turn-taking decides *when*. The input architecture must leave that boundary intact — the bus delivers facts and demands to cognition; the policy layer arbitrates outbound utterances.
 
 ## 2. Requirements
 
@@ -29,7 +29,7 @@ Owner intent, restated as testable requirements:
 | R3 | Same engine behavior wherever input comes from — terminal, web app, camera, voice | True only inside `BrainDriver`; web routes partially bypass it (`listen` calls `compose_reply`, not `respond`) | Source-dependent orchestration leaked into server code | All sources converge on bus → `drive()`; server keeps only transport concerns |
 | R4 | Input can be anything: movement, voice, text, somebody entering the room | Vision/audio frames ingestible; identity events emitted in `novi/integration/multimodal.py` | Room/presence events have no route into cognition; no event-class priority exists | Event-priority class on the bus fed by perception/identity changes (P2) |
 | R5 | Multiple inputs AT THE SAME TIME (owner messages remotely while Novi interacts at home) | Serialized by coarse locks: `BrainDriver.lock` held across the whole drive including the LLM call; `_chat_busy` freezes the auto-step loop | Concurrent sources block each other for seconds; a second input waits behind one slow reply | Lock-free enqueue; drain applies inputs under a briefly-held lock; LLM composition outside any shared lock |
-| R6 | Reasonable decisions | Reasoning trace + governance exist per step (`engine.py step()`) | No cross-source arbitration at input time (who wins when two people speak at once?) | Priority classes (interrupt > speech > event > ambient) + coalescing; utterance-level arbitration stays in turn-taking (doc 15) |
+| R6 | Reasonable decisions | Reasoning trace + governance exist per step (`engine.py step()`) | No cross-source arbitration at input time (who wins when two people speak at once?) | Priority classes (interrupt > speech > event > ambient) + coalescing; utterance-level arbitration stays in turn-taking (`docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md`) |
 | R7 | Cognition improvements | One `step()` per driven input; idle ticks between requests | Steps are triggered by request instead of being a steady heartbeat that absorbs inputs | Step becomes the fixed consumption point; initiative machinery feeds off the same loop |
 | R8 | Implementation against the defined docs and north star | Gate-doc family, evidence lineage, deterministic-CI conventions | This architecture existed only implicitly across docs 15/16/17 | This document is the binding reference; phases below name files, tests, and gates |
 
@@ -42,7 +42,7 @@ Ground truth in code, August 2026:
 - `novi/web/server.py` `_loop()` (~L336) — the background auto-step thread skips `brain.step()` whenever `_chat_busy` is set. The whole cognitive loop goes dark for the duration of an LLM call (the code comment cites 10+ s). Perception freshness, initiatives, and event handling all stall behind a single chat reply. The flag exists to suppress duplicate initiative messages — a symptom treated at the wrong layer.
 - `novi/integration/multimodal.py` — correctly routes voice turns through `driver.hear()` and attaches person/place context, but its camera loop runs on its own cadence and emits into a private `_events` list that nothing in cognition consumes deterministically.
 
-None of this contradicts the governing docs — doc 16 deliberately kept the engine untouched ("additive integration"). But the seams accumulated in the wrong place: orchestration moved into the web server instead of staying in the brain. The fix moves the seam inward; it does not invent a second mind.
+None of this contradicts the governing docs — `docs/plans/01_BRAIN/16_MULTIMODAL_INTEGRATION.md` deliberately kept the engine untouched ("additive integration"). But the seams accumulated in the wrong place: orchestration moved into the web server instead of staying in the brain. The fix moves the seam inward; it does not invent a second mind.
 
 ## 4. Target architecture
 
@@ -66,7 +66,7 @@ presence / room events   ─┘   drop-oldest per class            4. ONE respon
 
 ### 4.2 InputBus (new module, `novi/brain/input_bus.py`)
 
-- Four priority classes, matching the escalation order implied by doc 15's channel-priority table:
+- Four priority classes, matching the escalation order implied by `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md`'s channel-priority table:
   - **interrupt** — barge-in, safety-relevant signals;
   - **speech** — addressed text/voice from any person (web chat and in-room voice are the same class);
   - **event** — identity change, somebody entering the room, object moved, place changed;
@@ -100,7 +100,7 @@ Remote owner sends a chat message while Novi talks with someone at home:
 
 - Both producers call `bus.submit()` concurrently — no shared lock with the brain, so neither blocks the other, the step loop, or any HTTP endpoint.
 - The next step drains both. Processing order is priority-then-FIFO: owner message and in-person utterance are both `speech` class, so both are reasoned over in arrival order within the same or adjacent cycles. Nothing lost, nothing waiting on an LLM.
-- Outbound arbitration stays where doc 15 put it: at most one spoken utterance at a time (speaking lease). If both demand speech, turn-taking acknowledges one socially ("one moment" — doc 15 rule 3, relationship-preserving), answers per the channel table, and resumes the paused track explicitly.
+- Outbound arbitration stays where `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md` put it: at most one spoken utterance at a time (speaking lease). If both demand speech, turn-taking acknowledges one socially ("one moment" — `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md` rule 3, relationship-preserving), answers per the channel table, and resumes the paused track explicitly.
 - Deadlock freedom argument: there is no moment where a thread holding the brain/driver lock waits on an LLM or network, and no moment where the bus needs a lock the brain holds. Lock hold times are bounded by state-mutation cost and asserted in tests (§6).
 
 ### 4.6 Outputs
@@ -152,7 +152,7 @@ Falsifiable checks; deterministic unless marked evidence-run:
 - [ ] **R7:** p95 `step()` wall time excluding LLM composition ≤ 250 ms on the Mac prototype; max driver/engine lock hold ≤ 50 ms (asserted directly); an initiative-triggering condition fires exactly once (duplicate-initiative regression test).
 - [ ] **R8:** Mac evidence run captures the above numbers into the EVIDENCE lineage (`docs/plans/EVIDENCE/` schema); CI covers every criterion not requiring hardware, using repo-standard fakes.
 
-Felt-responsiveness budgets remain doc 15 §Latency budgets (VAD endpoint ≤ 300 ms, short-utterance STT ≤ 1.5 s, TTS first audio ≤ 800 ms, barge-in reaction ≤ 500 ms) — measured in evidence runs, never CI gates.
+Felt-responsiveness budgets remain `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md` §Latency budgets (VAD endpoint ≤ 300 ms, short-utterance STT ≤ 1.5 s, TTS first audio ≤ 800 ms, barge-in reaction ≤ 500 ms) — measured in evidence runs, never CI gates.
 
 ## 7. Phased implementation plan
 
@@ -180,7 +180,7 @@ Each phase lands independently reviewable, fake-tested, and reaches INTEGRATED b
 - Touch points:
   - `novi/integration/multimodal.py`: identity changes, place changes, and `pending_enrollment_proposal` submit event-class inputs; private `_events` list becomes a projection of published outcomes;
   - `novi/perception/`: movement/room-event providers emit through the same API;
-  - `turn_taking.py` (doc 15): arbitrates outbound side; speaking lease enforced at publish;
+  - `turn_taking.py` (`docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md`): arbitrates outbound side; speaking lease enforced at publish;
   - SCENARIO-V1 simulation test (multi-track, deterministic fakes).
 - Acceptance landed here: R4 presence check, R6 priority check, SCENARIO-V1 criterion.
 
@@ -195,7 +195,7 @@ Each phase lands independently reviewable, fake-tested, and reaches INTEGRATED b
 
 - **LLM latency vs the step tick.** Composition outside locks means a step can finish while its reply is still composing; late publishes need attribution. Mitigation: correlation ids; UI shows pending state instead of freezing the whole brain. Accepted tradeoff: a fresh world model during long replies is worth the bookkeeping.
 - **Priority inversion.** A stream of speech-class inputs can starve events; an interrupt storm can starve everything. Mitigation: per-class bounds, aging (event/ambient items escalate after a deadline), per-class drain limits per step. Tested, not hoped for.
-- **Dedup of echoed TTS / self-hearing.** Concurrent speaking and listening means Novi will hear its own `say` output. Doc 15 names self-voice suppression; until acoustic echo cancellation exists, mark TTS-rendered texts and suppress matching transcripts within a window. Imperfect — residual self-hearing stays a logged known issue, not a silent one.
+- **Dedup of echoed TTS / self-hearing.** Concurrent speaking and listening means Novi will hear its own `say` output. `docs/plans/01_BRAIN/15_VOICE_CONTINUOUS_DIALOG.md` names self-voice suppression; until acoustic echo cancellation exists, mark TTS-rendered texts and suppress matching transcripts within a window. Imperfect — residual self-hearing stays a logged known issue, not a silent one.
 - **Ordering vs fusion.** Draining a batch means several inputs share one reasoning pass; per-input attribution gets fuzzier. Mitigation: outcomes list consumed inputs individually; admissions stay per-input even when the reply is joint.
 - **Migration regressions in P1.** The web server carries subtle behaviors (dedup window, `[heard]` marker cleaning, chat persistence, summarization gating). Each is ported with a characterization test before its old home is deleted; double-send and duplicated-initiative regressions have dedicated tests.
 - **Two buses problem.** `novi/brain/event_bus.py` (outbound, doc-10 envelopes) and the inbound InputBus stay deliberately separate: one carries observations outward for audit/UI, the other carries demands inward for cognition. Conflating them would make backpressure policy incoherent; keeping them distinct preserves the audited event trail.
@@ -203,4 +203,4 @@ Each phase lands independently reviewable, fake-tested, and reaches INTEGRATED b
 
 ## 9. Non-goals
 
-No cloud transports anywhere in this path (local/offline-first, README Core Principle 3). No provider-contract changes — STT/TTS/camera swaps stay provider-level per doc 17. No rewrite of dialogue content rules — the soul docs remain authoritative for what Novi says. No hardware prerequisites: every phase must close on deterministic fakes before real devices are involved.
+No cloud transports anywhere in this path (local/offline-first, README Core Principle 3). No provider-contract changes — STT/TTS/camera swaps stay provider-level per `docs/plans/01_BRAIN/17_REAL_IO.md`. No rewrite of dialogue content rules — the soul docs remain authoritative for what Novi says. No hardware prerequisites: every phase must close on deterministic fakes before real devices are involved.

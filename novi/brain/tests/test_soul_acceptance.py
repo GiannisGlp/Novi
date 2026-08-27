@@ -6,6 +6,7 @@ Lexicon), prefer-silence, social-fatigue, addressee discrimination.
 """
 
 import unittest
+from dataclasses import FrozenInstanceError
 
 from novi.brain.lexicon import Lexicon, LexiconStatus
 from novi.brain.lexicon import Scope as LexScope
@@ -540,7 +541,7 @@ class AdversarialScenarioTests(unittest.TestCase):
         try:
             original_name = brain.soul.identity.name
             # Soul identity is a frozen dataclass — immutable.
-            with self.assertRaises(Exception):
+            with self.assertRaises(FrozenInstanceError):
                 brain.soul.identity.__setattr__("name", "adversary")
             self.assertEqual(brain.soul.identity.name, original_name)
             self.assertIn("curious", brain.soul.identity.persona)

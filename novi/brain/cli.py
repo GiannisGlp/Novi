@@ -6,9 +6,9 @@ from pathlib import Path
 
 from novi.brain.b2_perception import SpecialistPerception
 
+from .engine import MacBrain
 from .io import CameraFrame, MacCamera
 from .models import NeuralPerceptionBackend, WhisperSTTProvider
-from .engine import MacBrain
 
 
 class DemoCamera:

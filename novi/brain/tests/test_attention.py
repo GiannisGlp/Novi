@@ -64,7 +64,7 @@ class AttentionRankerTests(unittest.TestCase):
         wm = WorldModel()
         wm.add_entity("new_001", OBJECT, labels=["new thing"], epistemic_status=UNKNOWN, confidence=0.2)
         ranker = AttentionRanker()
-        candidates = ranker.rank(wm, known_entities={"new_001"})  # already known -> not novel
+        ranker.rank(wm, known_entities={"new_001"})  # already known -> not novel
         # Now test with empty known set -> novel
         candidates2 = ranker.rank(wm, known_entities=set())
         novel_cand = next(c for c in candidates2 if c.target_id == "new_001")
