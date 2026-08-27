@@ -150,12 +150,19 @@ class NoviWebServerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.s.switch_model("does-not-exist")
 
-    def test_qwen3_27b_is_available_and_switchable(self) -> None:
-        """qwen3.8:27b is a registered switchable model (plan 19 follow-up)."""
-        self.assertIn("qwen3.8:27b", self.s.available_models)
-        r = self.s.switch_model("qwen3.8:27b")
-        self.assertEqual(r["current"], "qwen3.8:27b")
-        self.assertIn("qwen3.8:27b", r["available"])
+    def test_qwen3_32b_is_available_and_switchable(self) -> None:
+        """qwen3:32b is the default qwen model and switchable (plan 19 follow-up)."""
+        self.assertIn("qwen3:32b", self.s.available_models)
+        r = self.s.switch_model("qwen3:32b")
+        self.assertEqual(r["current"], "qwen3:32b")
+        self.assertIn("qwen3:32b", r["available"])
+
+    def test_qwen3_4b_is_available_and_switchable(self) -> None:
+        """qwen3:4b is a registered switchable model (plan 19 follow-up)."""
+        self.assertIn("qwen3:4b", self.s.available_models)
+        r = self.s.switch_model("qwen3:4b")
+        self.assertEqual(r["current"], "qwen3:4b")
+        self.assertIn("qwen3:4b", r["available"])
 
     # ── tests that need their own server ──────────────────────────
 
