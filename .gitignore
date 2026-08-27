@@ -5,6 +5,10 @@
 # Novi Mac test outputs
 mac_test_results/
 
+# Claude Code personal files (keep out of git)
+.claude/settings.local.json
+CLAUDE.local.md
+
 # Python caches
 __pycache__/
 *.py[cod]
