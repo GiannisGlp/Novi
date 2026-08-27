@@ -44,6 +44,7 @@ B2 acceptance                     LATER
 - `15_VOICE_CONTINUOUS_DIALOG.md`
 - `16_MULTIMODAL_INTEGRATION.md` — voice+perception+recognition wired into the engine via MultimodalRuntime; web handlers, /preview, durable RecognitionStore
 - `17_REAL_IO.md` — real camera/mic/speakers live on Mac; listen→Whisper→brain→spoken replies; /preview v2
+- `19_COGNITION_MATURATION_PLAN.md` — reasoning/cognition/knowledge/memory maturation: web thin-client (delete `_chat_busy`, `listen()`→`respond()`), initiative×speaking-lease fusion, prediction-error→curiosity, cross-modal verified-tier, perception cadence (`perception_every_n_cycles`). Implemented 2026-08-27.
 
 ## Hardware candidates
 
