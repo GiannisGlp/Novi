@@ -1210,6 +1210,24 @@ class ChatMixin:
         reason = "No LLM reply available; used a brief tone-aware acknowledgement so the user is not left dry"
         return {"text": fb, "fallback": True, "reason": reason, "grounding": {"route": "fallback", **out}}
 
+    def acquire_speaking_lease(self) -> None:
+        """Hold the speaking lease while a reply is being composed (plan 19, P2).
+
+        While held, spontaneous initiative stays silent so a concurrent step
+        cannot fire a duplicate remark. Replaces the web server's `_chat_busy`
+        loop-freeze: the cognitive loop keeps ticking (SCENARIO-V1).
+        """
+        self._speaking_lease = True
+
+    def release_speaking_lease(self) -> None:
+        """Release the speaking lease, re-enabling spontaneous initiative."""
+        self._speaking_lease = False
+
+    @property
+    def speaking_lease(self) -> bool:
+        """True while a reply is being composed (initiative suppressed)."""
+        return self._speaking_lease
+
     def _initiation_utterance(self, kind: str, person: str, cycle: int) -> str:
         """Deterministic, natural spontaneous remark (no LLM in the perception loop).
 
@@ -1231,8 +1249,17 @@ class ChatMixin:
         speak unprompted, or None to stay silent. Bounded by the social
         initiative budget; never interrupts goal pursuit; never authorizes an
         action — it only proposes a communicative act.
+
+        Speaking lease (plan 19, Phase 2): while a reply is being composed the
+        lease is held, so no spontaneous remark fires — the cognitive loop keeps
+        ticking (SCENARIO-V1) and the lease alone gates outbound spontaneity.
         """
         if not self.config.initiative_enabled:
+            return None
+        if self._speaking_lease:
+            self._emit("speech.initiative_suppressed", {
+                "cycle": self._cycle, "reason": "speaking_lease_held",
+            })
             return None
         # Social overload reduces proactive behavior (docs/06-soul/05 §14):
         # when social-comfort and engagement are both low, don't initiate.

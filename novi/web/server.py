@@ -110,11 +110,6 @@ class NoviWebServer(IntegrationMixin):
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
-        # chat-busy flag: prevents the background auto-step loop from running
-        # brain.step() while a chat reply is being composed (the LLM call can
-        # take 10+ seconds, and a concurrent step can trigger initiative
-        # messages that appear as duplicate Novi responses in the chat).
-        self._chat_busy = False
         # deduplication: track the last sent text + timestamp to reject
         # duplicate sends (double-click, Enter key race) within a short window.
         self._last_sent_text: str = ""
@@ -338,13 +333,10 @@ class NoviWebServer(IntegrationMixin):
     def _loop(self) -> None:
         while not self._stop.wait(self.tick):
             if self.auto_step:
-                # Skip the background brain step while a chat reply is being
-                # composed — the LLM call is slow and a concurrent step can
-                # trigger initiative messages that appear as duplicate responses.
-                with self._lock:
-                    if self._chat_busy:
-                        self._drain()
-                        continue
+                # The loop keeps ticking continuously (SCENARIO-V1). A slow LLM
+                # reply no longer freezes it: the brain's speaking lease gates
+                # spontaneous initiative, so a concurrent step cannot fire a
+                # duplicate remark while a reply is being composed.
                 try:
                     with self._lock:
                         self._last_step = self.brain.step()
@@ -435,10 +427,10 @@ class NoviWebServer(IntegrationMixin):
         # the same cycle), then ingest + step under a short lock, and compose
         # the reply with the LLM OUTSIDE the lock.
         self.brain.submit("web", "chat", {"text": text})
-        # Set chat-busy flag to prevent the background loop from stepping
-        # while compose_reply is running (the LLM call is slow).
-        with self._lock:
-            self._chat_busy = True
+        # Hold the brain's speaking lease while composing so a concurrent step
+        # cannot fire a duplicate initiative (replaces the old _chat_busy
+        # loop-freeze; the loop keeps ticking — SCENARIO-V1).
+        self.brain.acquire_speaking_lease()
         try:
             with self._lock:
                 r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
@@ -484,8 +476,7 @@ class NoviWebServer(IntegrationMixin):
             self._append_chat(novi)
             return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": llm}
         finally:
-            with self._lock:
-                self._chat_busy = False
+            self.brain.release_speaking_lease()
 
     def listen(self, seconds: float | None = None) -> dict[str, Any]:
         """Record from the microphone, transcribe locally, and respond in chat.
@@ -512,57 +503,43 @@ class NoviWebServer(IntegrationMixin):
         with self._lock:
             step = self.brain.step()
             trace = dict(self.brain._last_reasoning_trace)
-        # Set chat-busy flag to prevent the background loop from stepping.
-        with self._lock:
-            self._chat_busy = True
+        # Hold the speaking lease while composing (replaces _chat_busy loop-freeze).
+        self.brain.acquire_speaking_lease()
         try:
-            addressee = self.brain.resolve_addressee(text)
-            discourse_hint = self.brain.note_user_message(text)["resolved_topic"]
-            self.brain._learn_from_chat(text, addressee)
+            # Brain-owned reply orchestration (north-star R1/R3): the brain
+            # resolves the addressee, learns from the message, and composes the
+            # natural reply (or the deterministic fallback) in one call. The web
+            # layer only supplies conversation history and the LLM transport.
+            history = self._build_history(12)
             recent_novi = self._recent_novi(4)
             last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
-            llm_available = self.chat_llm and self._llm_up()
-            if not llm_available:
-                fb = self.brain.natural_reply_fallback(text=text, cycle=step.get("cycle"))
-                trace["conclusion"] = result["reasoning"]
-                trace["action"] = "respond"
-                trace["route"] = "deterministic"
-                trace["route_reason"] = "no_llm_transport"
-                trace["confidence"] = result.get("confidence", 0.8)
-                trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
-                novi_text, llm = fb["text"], False
-                novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
-                self._append_chat({"role": "user", "text": f"[heard] {text}"})
-                self._append_chat(novi)
-                return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
-            transport = self._llm_chat
-            reply_obj = self.brain.compose_reply(text, person=addressee, history=self._build_history(12), llm_chat=transport, last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi, topic_hint=discourse_hint)
-            reply = reply_obj["text"]
-            self._append_chat({"role": "user", "text": f"[heard] {text}"})
-            if reply is not None:
-                trace["conclusion"] = reply
-                trace["action"] = "respond"
+            transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+            resp = self.brain.respond(
+                text, history=history, llm_chat=transport,
+                last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
+            )
+            novi_text = resp.get("text")
+            reply_source = resp.get("reply_source", "dialogue")
+            llm = reply_source == "dialogue"
+            # The trace always records the real cognition conclusion; only the
+            # spoken text is rendered naturally.
+            trace["conclusion"] = novi_text if llm else result["reasoning"]
+            trace["action"] = "respond"
+            trace["rationale"] = resp.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            if llm:
                 trace["route"] = f"ollama:{self.llm_model}"
-                trace["route_reason"] = "fallback" if reply_obj.get("fallback") else "local LLM"
-                trace["confidence"] = 0.8 if reply_obj.get("fallback") else 0.85
-                trace["rationale"] = reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
-                novi_text, llm = reply, True
+                trace["route_reason"] = "local LLM"
+                trace["confidence"] = 0.85
             else:
-                # LLM transport returned no usable reply (e.g. rejected) — fallback.
-                fb = self.brain.natural_reply_fallback(text=text, cycle=step.get("cycle"))
-                trace["conclusion"] = result["reasoning"]  # real conclusion kept for the trace
-                trace["action"] = "respond"
                 trace["route"] = "deterministic"
                 trace["route_reason"] = "no_llm_transport"
                 trace["confidence"] = result.get("confidence", 0.8)
-                trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
-                novi_text, llm = fb["text"], False
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
+            self._append_chat({"role": "user", "text": f"[heard] {text}"})
             self._append_chat(novi)
             return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
         finally:
-            with self._lock:
-                self._chat_busy = False
+            self.brain.release_speaking_lease()
 
     def _llm_up(self) -> bool:
         # Re-probe when the cached result is stale so a server that started
@@ -688,8 +665,8 @@ class NoviWebServer(IntegrationMixin):
                 return
             self._last_sent_text = text
             self._last_sent_time = now
-        with self._lock:
-            self._chat_busy = True
+        # Hold the speaking lease while composing (replaces _chat_busy loop-freeze).
+        self.brain.acquire_speaking_lease()
         try:
             with self._lock:
                 r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
@@ -803,8 +780,7 @@ class NoviWebServer(IntegrationMixin):
             novi_stored = self._append_chat(novi)
             yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": True, "after": self._chat_seq}
         finally:
-            with self._lock:
-                self._chat_busy = False
+            self.brain.release_speaking_lease()
 
     def _knowledge_context(self, text: str, limit: int = 6) -> str:
         # Brain-owned grounding (docs/06-soul/07 §2); the web layer is a caller
@@ -1372,11 +1348,11 @@ class Handler(BaseHTTPRequestHandler):
                         gen.close()
                     except Exception:
                         pass
-                    # Ensure _chat_busy is cleared even if the client disconnected
-                    # mid-stream before the generator's own finally ran.
+                    # Ensure the speaking lease is released even if the client
+                    # disconnected mid-stream before the generator's own finally ran.
                     try:
                         with self.server.novi._lock:
-                            self.server.novi._chat_busy = False
+                            self.server.novi.brain.release_speaking_lease()
                     except Exception:
                         pass
                 # Ensure the connection closes so the client's fetch stream sees EOF.

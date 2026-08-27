@@ -98,6 +98,28 @@ class RecognitionTests(unittest.TestCase):
         finally:
             brain.stop()
 
+    def test_speech_self_intro_plus_face_verifies(self):
+        """Plan 19, Phase 4 acceptance: 'I am Maya' (speech) + matching face
+        promotes the identity to the verified tier."""
+        from novi.brain.models.stt import TranscriptionResult
+
+        brain = _brain(face_id=DeterministicFaceId({"person": "maya"}))
+        brain.start()
+        try:
+            brain.ingest_transcript(TranscriptionResult(
+                text="I am Maya", language="en", confidence=0.9,
+                audio_path="", provider="test", model_id="test",
+            ))  # speech self-introduction binds the name
+            brain.step()  # face evidence for the same person
+            belief = brain.identity.identity_for("person")
+            self.assertIsNotNone(belief)
+            self.assertEqual((belief.name or "").lower(), "maya")
+            self.assertIn("speech", belief.modalities)
+            self.assertIn("face", belief.modalities)
+            self.assertEqual(belief.tier, "verified")
+        finally:
+            brain.stop()
+
     def test_place_and_building_typing(self):
         self.assertEqual(infer_entity_type("door"), "place")
         self.assertEqual(infer_entity_type("kitchen"), "place")

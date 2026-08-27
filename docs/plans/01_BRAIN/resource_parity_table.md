@@ -12,6 +12,7 @@ arrives.
 |---|---|---|---|
 | Perception (deterministic) | `SpecialistPerception` (fixture backend) | same deterministic backend | implemented |
 | Perception (neural) | torchvision SSDLite320-MobileNetV3 (MPS) | TensorRT-optimized detector | Mac implemented; Jetson to validate |
+| Perception cadence (plan 19 P5) | `perception_every_n_cycles` throttles neural backend | same cadence knob on Jetson (power-aware) | implemented |
 | STT | local Whisper (`base`) | Whisper/ONNX on Jetson | Mac implemented; Jetson to validate |
 | TTS | macOS `say` | Piper/edge TTS | Mac implemented; Jetson to validate |
 | Reasoning (fast path) | `DeliberativeReasoningProvider` (deterministic) | same deterministic path | implemented |

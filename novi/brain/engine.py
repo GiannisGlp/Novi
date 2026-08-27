@@ -108,6 +108,11 @@ class MacBrainConfig:
     initiative_cooldown: int = 60
     # Phase P1 (sleep cycle): memory-maturation cadence in cycles (0 disables).
     sleep_every_n_cycles: int = 500
+    # Phase 5 (plan 19): neural perception cadence — run the (expensive)
+    # perception backend every N cycles instead of every cycle, for Jetson
+    # power budgets. 1 = every cycle (default, unchanged). The loop still steps
+    # every cycle; only the perception backend is throttled.
+    perception_every_n_cycles: int = 1
 
 
 class MacBrain(ChatMixin):
@@ -272,6 +277,12 @@ class MacBrain(ChatMixin):
             self.relationships = Relationships()
         self.social = social or SocialIntelligence()
         self.social_initiative = SocialInitiative(InitiativeConfig(neglect_threshold=self.config.initiative_neglect_threshold, cooldown=self.config.initiative_cooldown))
+        # Speaking lease (plan 19, Phase 2): while a reply is being composed
+        # (the lease is held), spontaneous initiative stays silent. This
+        # replaces the web server's `_chat_busy` loop-freeze: the cognitive loop
+        # keeps ticking (SCENARIO-V1) and the lease alone gates outbound
+        # spontaneity, so a concurrent step can never fire a duplicate remark.
+        self._speaking_lease = False
         if lexicon is not None:
             self.lexicon = lexicon
         elif isinstance(self.memory, DurableMemoryStore):
@@ -538,7 +549,19 @@ class MacBrain(ChatMixin):
         self._emit("sensor.camera.frame", {"frame_id": frame.frame_id, "width": frame.width, "height": frame.height, "captured_at": frame.captured_at, "metadata": frame.metadata})
         # Closed-loop OBSERVE: record the start of a new cycle.
         self.closed_loop.observe({"cycle": self._cycle, "frame_id": frame.frame_id})
-        evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
+        # Phase 5 (plan 19): neural perception cadence — run the expensive
+        # perception backend every N cycles (power-aware for Jetson). On skipped
+        # cycles reuse the last evidence so downstream logic (world model,
+        # cognition) still has a consistent view; the loop keeps stepping.
+        cadence = max(1, int(self.config.perception_every_n_cycles))
+        if cadence == 1 or self._cycle % cadence == 0:
+            evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
+            self._last_evidence = evidence
+        else:
+            evidence = getattr(self, "_last_evidence", None)
+            if evidence is None:
+                evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
+                self._last_evidence = evidence
         self._emit("perception.completed", {"frame_id": evidence.frame_id, "detection_count": len(evidence.detections), "provenance": dict(evidence.provenance)})
         observations = tuple(SensorObservation(cycle=self._cycle, source=f"{self.config.sensor_id}.perception", entity=detection.label, location=None, state="present", confidence=detection.confidence, captured_cycle=self._cycle) for detection in evidence.detections)
         self._admit_detections(evidence.detections)
@@ -686,6 +709,16 @@ class MacBrain(ChatMixin):
             self._emit("prediction.sequence_confirmed", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
         for p in seq_violated:
             self._emit("prediction.sequence_violated", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
+            # Plan 19, Phase 3: a sequence violation is a *surprise* signal —
+            # Novi expected B after A but it never appeared. Surface it as
+            # curiosity so the brain can act on the unexpected (e.g. investigate
+            # the missing target). Predictions never write world state.
+            self._emit("curiosity.surprise", {
+                "cycle": self._cycle, "source": p.source, "target": p.target,
+                "kind": "sequence_violation", "confidence": round(p.confidence, 3),
+            })
+            # Investigate the missing target when idle (surprise-driven curiosity).
+            self._spawn_surprise_goal(p.target)
         for p in seq_new:
             self._emit("prediction.sequence_made", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
         seq_acc = seq_predictor.accuracy.accuracy()
@@ -1241,6 +1274,21 @@ class MacBrain(ChatMixin):
         self.set_goal(goal)
         self._emit("curiosity.triggered", {"entity": label, "goal_id": goal.goal_id, "max_steps": goal.max_steps})
         return label
+
+    def _spawn_surprise_goal(self, target: str) -> None:
+        """Plan 19, Phase 3: investigate a *missing* entity after a sequence
+        violation.
+
+        When Novi expected B after A but B never appeared, the surprise signal
+        drives a bounded investigate goal for the missing target — "I expected
+        the cup near the book — did someone move it?". Only fires when idle and
+        curiosity is enabled; never interrupts an active goal.
+        """
+        if not self.config.curiosity_enabled or self.goals.has_active:
+            return
+        goal = Goal.investigate(target, max_steps=self.config.curiosity_investigate_steps, created_cycle=self._cycle)
+        self.set_goal(goal)
+        self._emit("curiosity.surprise_goal", {"entity": target, "goal_id": goal.goal_id, "max_steps": goal.max_steps})
 
     def listen(self, seconds: float = 3.0, *, output_dir: Path | None = None) -> dict[str, Any]:
         """Record from the microphone, transcribe locally, and ingest into cognition/memory."""

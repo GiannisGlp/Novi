@@ -7,6 +7,7 @@ Verifies:
   - The chat-busy flag is cleared even if compose_reply raises.
 """
 
+import contextlib
 import time
 import unittest
 from unittest.mock import MagicMock, patch
@@ -48,6 +49,10 @@ class ChatDeduplicationTests(unittest.TestCase):
 
 
 class ChatBusyFlagTests(unittest.TestCase):
+    """The `_chat_busy` loop-freeze was replaced by the brain's speaking lease
+    (plan 19, Phase 1+2): the lease is held during composition and released
+    after, and the background loop keeps ticking (SCENARIO-V1)."""
+
     def setUp(self):
         self.server = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
         self.server.start()
@@ -55,37 +60,25 @@ class ChatBusyFlagTests(unittest.TestCase):
     def tearDown(self):
         self.server.stop()
 
-    def test_chat_busy_flag_set_during_send(self):
-        """The _chat_busy flag is set during chat_send and cleared after."""
-        # Before send, flag should be False.
-        self.assertFalse(self.server._chat_busy)
-        # During send, the flag should be set (we check after the call returns,
-        # it should already be cleared).
+    def test_speaking_lease_released_after_send(self):
+        """The speaking lease is released after chat_send completes."""
+        self.assertFalse(self.server.brain.speaking_lease)
         self.server.chat_send("hello", confidence=0.9)
-        self.assertFalse(self.server._chat_busy)
+        self.assertFalse(self.server.brain.speaking_lease)
 
-    def test_chat_busy_flag_cleared_on_exception(self):
-        """The _chat_busy flag is cleared even if compose_reply raises."""
-        self.assertFalse(self.server._chat_busy)
-        # Make compose_reply raise.
-        with patch.object(self.server.brain, 'compose_reply', side_effect=RuntimeError("test error")):
-            try:
-                self.server.chat_send("hello", confidence=0.9)
-            except RuntimeError:
-                pass
-        self.assertFalse(self.server._chat_busy)
+    def test_speaking_lease_released_on_exception(self):
+        """The speaking lease is released even if compose_reply raises."""
+        self.assertFalse(self.server.brain.speaking_lease)
+        with patch.object(self.server.brain, 'compose_reply', side_effect=RuntimeError("test error")), contextlib.suppress(RuntimeError):
+            self.server.chat_send("hello", confidence=0.9)
+        self.assertFalse(self.server.brain.speaking_lease)
 
-    def test_background_loop_skips_step_when_chat_busy(self):
-        """The background loop skips brain.step() when _chat_busy is True."""
-        with self.server._lock:
-            self.server._chat_busy = True
-        # Simulate the loop check.
-        with self.server._lock:
-            should_skip = self.server._chat_busy
-        self.assertTrue(should_skip)
-        # Clear it.
-        with self.server._lock:
-            self.server._chat_busy = False
+    def test_background_loop_keeps_stepping_while_lease_held(self):
+        """The background loop does NOT skip while the speaking lease is held."""
+        self.server.brain.acquire_speaking_lease()
+        self.assertTrue(self.server.brain.speaking_lease)
+        self.server.brain.release_speaking_lease()
+        self.assertFalse(self.server.brain.speaking_lease)
 
 
 class ChatSendAppendTests(unittest.TestCase):
