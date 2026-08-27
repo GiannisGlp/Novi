@@ -21,8 +21,10 @@ HOST="${NOVI_HOST:-127.0.0.1}"
 PORT="${NOVI_PORT:-8080}"
 STORE="${NOVI_STORE:-$ROOT/novi/data/novi.db}"
 TICK="${NOVI_TICK:-0.8}"
+# Phase P1 (sleep cycle): memory-maturation cadence in cycles (0 disables).
+SLEEP_EVERY="${NOVI_SLEEP_EVERY:-500}"
 
 echo "Starting Novi web app -> http://$HOST:$PORT"
 echo "  durable store : $STORE"
 echo "  auto-step every ${TICK}s (Ctrl-C to stop)"
-exec "$PYTHON" -m novi.web.server --host "$HOST" --port "$PORT" --store "$STORE" --tick "$TICK" "$@"
+exec "$PYTHON" -m novi.web.server --host "$HOST" --port "$PORT" --store "$STORE" --tick "$TICK" --sleep-every "$SLEEP_EVERY" "$@"

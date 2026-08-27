@@ -79,6 +79,7 @@ class NoviWebServer(IntegrationMixin):
         stt_model: str = "base",
         stt_device: str = "cpu",
         listen_seconds: float = 3.0,
+        sleep_every_n_cycles: int = 500,
         available_models: tuple[str, ...] = ("qwen3.8:latest", "nemotron-3.5-lightning"),
         embedder: str = "auto",
     ) -> None:
@@ -87,6 +88,7 @@ class NoviWebServer(IntegrationMixin):
         self.store_path = store_path
         self.tick = tick
         self.auto_step = auto_step
+        self.sleep_every_n_cycles = max(0, int(sleep_every_n_cycles))
         self.chat_llm = chat_llm
         self.llm_url = llm_url
         self.available_models = list(available_models)
@@ -202,7 +204,7 @@ class NoviWebServer(IntegrationMixin):
             narrator=narrator,
             perception=perception,
             speaker_id=speaker_id,
-            config=MacBrainConfig(initiative_enabled=True),
+            config=MacBrainConfig(initiative_enabled=True, sleep_every_n_cycles=self.sleep_every_n_cycles),
         )
 
     def _build_perception(self) -> Any:
@@ -965,6 +967,9 @@ class NoviWebServer(IntegrationMixin):
                 "hearing": self.brain._last_audio_events,
                 "memory": {"active": getattr(self.brain.memory, "active_count", None), "summaries": self._memory_summaries(), "embedder": self._embedding_info()},
                 "narrative": self.brain._episodic_narrative(),
+                # Phase P1/P2 observability: sleep-cycle health + per-class routing.
+                "sleep_cycle": self._sleep_cycle_info(),
+                "router": self._router_info(),
                 "health": self.brain.health.run(self.brain).snapshot(),
                 "identity": self.brain.identity.snapshot() if hasattr(self.brain, "identity") else None,
                 "self_model": self.brain.self_model(),
@@ -993,6 +998,29 @@ class NoviWebServer(IntegrationMixin):
         except Exception:
             return {"provider": "unknown", "dimension": None}
 
+    def _sleep_cycle_info(self) -> dict[str, Any]:
+        """Phase P1 observability: last sleep-phase report + cadence."""
+        sc = getattr(self.brain, "_sleep_cycle", None)
+        if sc is None:
+            return {"enabled": False}
+        return {
+            "enabled": True,
+            "every_n_cycles": getattr(sc, "every_n_cycles", None),
+            "last_phase": getattr(sc, "last_report", None),
+            "phases_run": getattr(sc, "phases_run", 0),
+        }
+
+    def _router_info(self) -> dict[str, Any]:
+        """Phase P2 observability: per-input-class route counts."""
+        router = getattr(self.brain, "reasoning", None)
+        snap = router.snapshot() if hasattr(router, "snapshot") else {}
+        return {
+            "last_route": snap.get("last_route"),
+            "last_reason": snap.get("last_reason"),
+            "route_counts": snap.get("route_counts"),
+            "route_counts_by_class": snap.get("route_counts_by_class"),
+            "cache_size": len(getattr(router, "_route_cache", {}) or {}),
+        }
 
     def _memory_summaries(self, limit: int = 5) -> list[dict[str, Any]]:
         """Recent consolidated summary memories for the web UI."""
@@ -1490,6 +1518,7 @@ def main() -> None:
     parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for real microphone STT (tiny/base/small)")
     parser.add_argument("--stt-device", type=str, default="cpu", help="STT device (cpu or mps)")
     parser.add_argument("--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button")
+    parser.add_argument("--sleep-every", type=int, default=500, help="run the memory sleep-cycle (consolidate/decay/strengthen) every N brain cycles (0 disables)")
     parser.add_argument("--embedder", choices=["auto", "hash", "minilm"], default="auto", help="embedding provider for memory recall: 'auto' tries MiniLM (MPS, 384d) then falls back to hashing; 'hash' forces deterministic hashing (256d)")
     args = parser.parse_args()
 
@@ -1506,6 +1535,7 @@ def main() -> None:
         stt_model=args.stt_model,
         stt_device=args.stt_device,
         listen_seconds=args.listen_seconds,
+        sleep_every_n_cycles=args.sleep_every,
         embedder=args.embedder,
     )
     httpd = NoviWebHTTPServer((args.host, args.port), novi)

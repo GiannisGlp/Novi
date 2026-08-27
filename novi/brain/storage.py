@@ -750,6 +750,17 @@ class DurableMemoryStore:
         self._conn.commit()
         return cur.rowcount > 0
 
+    def touch_accessed(self, memory_id: str, when: str | None = None) -> bool:
+        """Record a recall access (last_accessed_at) — the replay signal the
+        sleep cycle strengthens on. ``when`` defaults to now (UTC ISO)."""
+        timestamp = when or utc_now()
+        cur = self._conn.execute(
+            "UPDATE memory_records SET last_accessed_at=? WHERE memory_id=? AND deleted=0",
+            (str(timestamp), memory_id),
+        )
+        self._conn.commit()
+        return cur.rowcount > 0
+
     # ---- goals ----
     def save_goal(self, *, goal_id: str, kind: str, target: Any, priority: float, max_steps: int, created_cycle: int, status: str, steps_taken: int) -> None:
         self._conn.execute(

@@ -1,78 +1,133 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Novi — Camera &amp; Voice</title>
+<script>(function(){try{var t=localStorage.getItem('novi-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
+  /* ================= TOKENS (shared with brain console) ================= */
+  :root{
+    --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono: ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --radius:12px; --radius-sm:8px;
+  }
+  [data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#0b0e14; --bg-elev:#0e121a; --panel:#10141d; --panel-2:#151b26; --inset:#0d1119;
+    --border:#1e2735; --border-strong:#2c3950;
+    --text:#dee6f0; --text-dim:#96a4b8; --text-mute:#68798f;
+    --accent:#38c9d6; --accent-2:#7adfe8; --accent-ink:#05262b;
+    --accent-soft:rgba(56,201,214,.13);
+    --good:#46c285; --warn:#e0b34a; --bad:#e5646c;
+    --user-bg:#1b2740;
+  }
+  [data-theme="light"]{
+    color-scheme: light;
+    --bg:#f2f5f9; --bg-elev:#ffffff; --panel:#ffffff; --panel-2:#f5f8fb; --inset:#edf1f7;
+    --border:#dde4ee; --border-strong:#bccadb;
+    --text:#182130; --text-dim:#4d5c70; --text-mute:#77879c;
+    --accent:#0d8f9c; --accent-2:#12aab8; --accent-ink:#ffffff;
+    --accent-soft:rgba(13,143,156,.10);
+    --good:#188a58; --warn:#a06a10; --bad:#cc4444;
+    --user-bg:#e3ecfa;
+  }
+  [data-theme="nord"]{
+    color-scheme: dark;
+    --bg:#2e3440; --bg-elev:#353c4a; --panel:#3b4252; --panel-2:#333a48; --inset:#2b3140;
+    --border:#434c5e; --border-strong:#4c566a;
+    --text:#eceff4; --text-dim:#b8c2cf; --text-mute:#7b8597;
+    --accent:#88c0d0; --accent-2:#8fbcbb; --accent-ink:#212b36;
+    --accent-soft:rgba(136,192,208,.15);
+    --good:#a3be8c; --warn:#ebcb8b; --bad:#bf616a;
+    --user-bg:#434c5e;
+  }
+  * { box-sizing:border-box; }
+  ::selection { background:var(--accent-soft); }
+  *::-webkit-scrollbar { width:9px; height:9px; }
+  *::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:8px; border:2px solid transparent; background-clip:content-box; }
+  *::-webkit-scrollbar-track { background:transparent; }
+  * { scrollbar-width:thin; scrollbar-color:var(--border-strong) transparent; }
   body {
-    margin: 0; padding: 24px; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-    background: #0b0e14; color: #e6e6e6;
+    margin:0; padding:24px; font:14px/1.5 var(--sans);
+    background:var(--bg); color:var(--text); min-height:100vh;
   }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .sub { color: #8b93a7; font-size: 13px; margin-bottom: 20px; }
-  .grid { display: grid; grid-template-columns: 1.2fr 380px; gap: 16px; max-width: 1200px; }
-  @media (max-width: 940px) { .grid { grid-template-columns: 1fr; } }
-  .card { background: #12161f; border: 1px solid #232a38; border-radius: 12px; padding: 16px; }
-  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8b93a7; margin: 0 0 10px; }
+  .pagehead { display:flex; align-items:center; gap:12px; max-width:1240px; margin:0 auto; }
+  .coremark { width:11px; height:11px; border-radius:50%; flex:0 0 auto;
+    background:radial-gradient(circle at 34% 30%, var(--accent-2), var(--accent) 62%);
+    box-shadow:0 0 8px var(--accent-soft); }
+  h1 { font:700 17px/1 var(--mono); letter-spacing:3px; margin:0; }
+  .sub { font:500 12px/1.5 var(--mono); color:var(--text-mute); margin:6px 0 20px; letter-spacing:.4px; max-width:1240px; }
+  .sub a, a.back { color:var(--accent); text-decoration:none; font-family:var(--sans); font-size:13px; }
+  .sub a:hover, a.back:hover { text-decoration:underline; }
+  .grid { display:grid; grid-template-columns:1.25fr 400px; gap:16px; max-width:1240px; margin:0 auto; }
+  @media (max-width: 980px) { .grid { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+  .card h2 { font:600 10px var(--mono); text-transform:uppercase; letter-spacing:1.6px; color:var(--text-dim); margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+  .card h2::before { content:""; width:3px; height:10px; background:var(--accent); border-radius:2px; opacity:.9; }
   #stage {
-    width: 100%; aspect-ratio: 4/3; background: #090b10; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
+    width:100%; aspect-ratio:4/3; background:var(--inset); border:1px solid var(--border); border-radius:var(--radius-sm);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;
   }
-  #stage img { max-width: 100%; max-height: 100%; }
-  #placeholder { color: #3d4557; font-size: 14px; text-align: center; line-height: 1.6; }
-  .badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; }
-  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(18,22,31,.85); border: 1px solid #2c3547; }
-  .badge.ok { color: #7ee787; border-color: #2ea04340; }
-  .badge.warn { color: #f0b429; border-color: #f0b42940; }
-  .badge.err { color: #ff7b72; border-color: #ff7b7240; }
+  #stage img { max-width:100%; max-height:100%; }
+  #placeholder { color:var(--text-mute); font-size:14px; text-align:center; line-height:1.6; }
+  .badges { position:absolute; top:8px; left:8px; display:flex; gap:6px; flex-wrap:wrap; z-index:2; }
+  .badge { font:500 11px var(--mono); padding:2px 9px; border-radius:999px;
+    background:color-mix(in srgb, var(--bg-elev) 85%, transparent); border:1px solid var(--border-strong); color:var(--text-dim); }
+  .badge.ok { color:var(--good); border-color:color-mix(in srgb, var(--good) 40%, transparent); }
+  .badge.warn { color:var(--warn); border-color:color-mix(in srgb, var(--warn) 40%, transparent); }
+  .badge.err { color:var(--bad); border-color:color-mix(in srgb, var(--bad) 45%, transparent); }
   /* detection boxes overlay */
-  #overlay { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-  .dbox { position: absolute; border: 2px solid rgba(88,166,255,.85); border-radius: 4px; }
-  .dbox.face { border-color: rgba(126,231,135,.9); }
+  #overlay { position:absolute; inset:0; pointer-events:none; z-index:1; }
+  .dbox { position:absolute; border:2px solid color-mix(in srgb, var(--accent) 85%, transparent); border-radius:4px; }
+  .dbox.face { border-color:color-mix(in srgb, var(--good) 90%, transparent); }
   .dlabel {
-    position: absolute; transform: translateY(-100%); font-size: 10.5px; padding: 1px 6px;
-    border-radius: 4px 4px 4px 0; background: rgba(31,111,235,.85); color: #fff; white-space: nowrap;
+    position:absolute; transform:translateY(-100%); font:500 10.5px var(--mono); padding:1px 7px;
+    border-radius:4px 4px 4px 0; background:color-mix(in srgb, var(--accent) 88%, black); color:var(--accent-ink); white-space:nowrap;
   }
-  .dbox.face .dlabel { background: rgba(46,160,67,.9); }
-  .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1a2130; font-size: 13px; }
-  .row:last-child { border-bottom: none; }
-  .k { color: #8b93a7; } .v { font-weight: 600; text-align: right; }
-  ul.det { margin: 0; padding-left: 18px; font-size: 13px; min-height: 20px; columns: 2; column-gap: 18px; }
-  .muted { color: #3d4557; font-size: 12px; }
-  a.back { color: #58a6ff; text-decoration: none; font-size: 13px; }
+  .dbox.face .dlabel { background:color-mix(in srgb, var(--good) 88%, black); color:#06130b; }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px dashed var(--border); font-size:13px; }
+  .row:last-child { border-bottom:none; }
+  .k { color:var(--text-mute); font:500 11px/1.8 var(--mono); letter-spacing:.3px; } .v { font-weight:600; text-align:right; }
+  ul.det { margin:0 0 10px; padding-left:18px; font-size:13px; min-height:20px; columns:2; column-gap:18px; }
+  .muted { color:var(--text-mute); font-size:12px; }
   button {
-    background: #21262d; color: #e6e6e6; border: 1px solid #30363d; border-radius: 8px;
-    padding: 11px 14px; font-size: 15px; cursor: pointer; width: 100%; margin-top: 8px;
+    background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:8px;
+    padding:11px 14px; font:500 14px var(--sans); cursor:pointer; width:100%; margin-top:8px;
+    transition:border-color .15s, background .15s, transform .05s;
   }
-  button:hover { background: #2a313a; }
-  button.primary { background: #1f6feb33; border-color: #1f6feb80; }
-  button.listening { background: #da363333; border-color: #da363380; animation: pulse 1s infinite; }
-  @keyframes pulse { 50% { opacity: .55; } }
-  button:disabled { opacity: .5; cursor: default; }
-  #reply { margin-top: 10px; padding: 10px; background: #161b22; border-radius: 8px; font-size: 14px; min-height: 56px; white-space: pre-wrap; }
-  #transcript { margin-top: 12px; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-  .t-turn { padding: 7px 10px; border-radius: 8px; font-size: 13px; max-width: 90%; }
-  .t-you { align-self: flex-end; background: #1c2f4a; }
-  .t-novi { align-self: flex-start; background: #1a2130; }
-  .t-sys { align-self: center; color: #8b93a7; font-size: 11.5px; background: none; }
-  .t-turn .who { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .55; margin-bottom: 2px; }
-  .toggles { display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
-  label.tog { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #8b93a7; cursor: pointer; }
-  .enrollrow { display: flex; gap: 6px; margin-top: 8px; }
+  button:hover:not(:disabled) { border-color:var(--border-strong); background:var(--bg-elev); }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button:active:not(:disabled) { transform:translateY(1px); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:650; }
+  button.primary:hover:not(:disabled) { background:var(--accent-2); border-color:var(--accent-2); }
+  button.listening { background:color-mix(in srgb, var(--bad) 22%, var(--panel)); border-color:var(--bad); color:var(--bad); animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:.55; } }
+  button:disabled { opacity:.5; cursor:default; }
+  #reply { margin-top:10px; padding:11px 12px; background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:14px; min-height:56px; white-space:pre-wrap; }
+  #transcript { margin-top:12px; max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+  .t-turn { padding:8px 11px; border-radius:10px; font-size:13px; max-width:90%; }
+  .t-you { align-self:flex-end; background:var(--user-bg); border:1px solid color-mix(in srgb, var(--border-strong) 60%, transparent); }
+  .t-novi { align-self:flex-start; background:var(--panel-2); border:1px solid var(--border); border-left:2px solid var(--accent); }
+  .t-sys { align-self:center; color:var(--text-mute); font-size:11.5px; background:none; }
+  .t-turn .who { font:600 9.5px var(--mono); letter-spacing:1.2px; text-transform:uppercase; opacity:.65; margin-bottom:2px; }
+  .toggles { display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  label.tog { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); cursor:pointer; }
+  label.tog input { accent-color:var(--accent); }
+  .enrollrow { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
   input[type=text] {
-    flex: 1; background: #0d1017; color: #e6e6e6; border: 1px solid #30363d;
-    border-radius: 6px; padding: 7px 9px; font: inherit; font-size: 13px;
+    flex:1; min-width:140px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);
+    border-radius:7px; padding:8px 10px; font:inherit; font-size:13px;
   }
-  .enrollrow button { width: auto; margin-top: 0; padding: 7px 12px; font-size: 13px; }
-  .hintline { font-size: 11.5px; color: #8b93a7; margin-top: 6px; line-height: 1.5; }
+  input[type=text]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .enrollrow button { width:auto; margin-top:0; padding:8px 12px; font-size:13px; }
+  .hintline { font-size:11.5px; color:var(--text-mute); margin-top:8px; line-height:1.55; }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
-  <h1>Camera &amp; Voice</h1>
-  <div class="sub">Novi sees you, hears you, talks back — <a class="back" href="/">← dashboard</a></div>
+  <div class="pagehead"><span class="coremark"></span><h1>NOVI</h1></div>
+  <div class="sub">Camera &amp; voice — Novi sees you, hears you, talks back · <a href="/">← brain console</a></div>
   <div class="grid">
 
     <!-- ============ LEFT: camera + live perception ============ -->
@@ -86,7 +141,7 @@
       </div>
       <button id="enableBtn" onclick="enableIO()">🎥 Enable camera + mic + speaker</button>
 
-      <div class="card" style="margin-top:14px; padding:0; border:none">
+      <div style="margin-top:16px">
         <h2>Detections · objects &amp; faces (live)</h2>
         <ul class="det" id="dets"><li class="muted">none yet</li></ul>
         <div class="row"><span class="k">Person present</span><span class="v" id="person">—</span></div>
@@ -94,10 +149,12 @@
         <div class="row"><span class="k">Place</span><span class="v" id="place">—</span></div>
         <div class="row"><span class="k">Vision backend</span><span class="v" id="backend">—</span></div>
         <div class="row"><span class="k">Camera health</span><span class="v" id="health">—</span></div>
+      </div>
 
-        <h2 style="margin-top:14px">Introduce yourself</h2>
+      <div style="margin-top:16px">
+        <h2>Introduce yourself</h2>
         <div class="enrollrow">
-          <input type="text" id="nameInput" placeholder="your name, e.g. Vano" maxlength="40">
+          <input type="text" id="nameInput" placeholder="your name, e.g. Vano" maxlength="40" aria-label="Your name">
           <button onclick="enrollFace()">👋 Enroll my face</button>
           <button onclick="enrollVoice()" title="records ~4s of your voice">🎙 +voice</button>
         </div>
@@ -118,7 +175,7 @@
 
       <h2 style="margin-top:16px">Type instead</h2>
       <div class="enrollrow">
-        <input type="text" id="typeInput" placeholder="type to Novi…" onkeydown="if(event.key==='Enter')sendTyped()">
+        <input type="text" id="typeInput" placeholder="type to Novi…" onkeydown="if(event.key==='Enter')sendTyped()" aria-label="Message Novi">
         <button onclick="sendTyped()">Send</button>
       </div>
 
@@ -276,6 +333,7 @@ function drawOverlay(dets, faceInfo, tracks, img) {
   cv.width = stage.clientWidth; cv.height = stage.clientHeight;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
+  while (cv.firstChild) cv.removeChild(cv.firstChild);
   const iw = img ? (img.naturalWidth || img.videoWidth) : 0;
   const ih = img ? (img.naturalHeight || img.videoHeight) : 0;
   if (!iw || !ih) return;

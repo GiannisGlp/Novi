@@ -98,7 +98,9 @@ class UserCorrectionTests(unittest.TestCase):
         self.assertEqual(len(triples), 2)
         statuses = {t.object: t.status for t in triples}
         self.assertEqual(statuses["detailed_replies"], "active")
-        self.assertEqual(statuses["concise_replies"], "contradicted")
+        # Phase P3: the overridden preference is SUPERSEDED (window closed,
+        # successor linked) rather than 'contradicted' — still preserved.
+        self.assertEqual(statuses["concise_replies"], "superseded")
 
     def test_unchanged_correction_reports_false(self):
         log = UserCorrectionLog()

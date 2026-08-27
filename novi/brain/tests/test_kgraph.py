@@ -24,13 +24,19 @@ class KnowledgeGraphTests(unittest.TestCase):
         g.add("alice", "located_near", "kitchen", confidence=0.9, source="s1", cycle=1)
         g.add("alice", "located_near", "garden", confidence=0.8, source="s2", cycle=2)
         self.assertTrue(g.has_conflict("alice", "located_near"))
-        self.assertEqual(len(g.contradicted()), 1)
+        # Phase P3: rivals are now SUPERSEDED (window closed, successor linked),
+        # not merely 'contradicted' — evidence is still preserved and queryable.
+        history = g.history(subject="alice", predicate="located_near")
+        self.assertEqual(len(history), 1)
         lead = g.leading("alice", "located_near")
-        self.assertEqual(lead.object, "kitchen")  # highest-confidence object stays active
+        self.assertEqual(lead.object, "kitchen")  # highest-weighted object stays active
         self.assertEqual(lead.status, "active")
-        contradicted = g.contradicted()[0]
-        self.assertEqual(contradicted.object, "garden")
-        self.assertEqual(contradicted.status, "contradicted")
+        superseded = history[0]
+        self.assertEqual(superseded.object, "garden")
+        self.assertEqual(superseded.status, "superseded")
+        # temporal window closed at the cycle the rival lost + succession link
+        self.assertEqual(superseded.valid_until_cycle, 2)
+        self.assertEqual(superseded.superseded_by, ("alice", "located_near", "kitchen"))
 
     def test_extraction_from_text(self):
         g = EntityKnowledgeGraph()

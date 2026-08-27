@@ -60,6 +60,7 @@ from .privacy import _PERSON_LABELS, COMMON_ENTITY_LABELS, PrivacyGovernance
 from .reflection import ReflectionEngine
 from .resource_telemetry import ResourceTelemetry, combine_resource_modes
 from .self_model import build_self_model
+from .sleep_cycle import SleepCycle
 from .situation_model import SituationModel
 from .skill_contract import SUCCESS as SKILL_SUCCESS
 from .skill_contract import SkillExecutor, SkillInvocation
@@ -105,6 +106,8 @@ class MacBrainConfig:
     initiative_enabled: bool = False
     initiative_neglect_threshold: int = 30
     initiative_cooldown: int = 60
+    # Phase P1 (sleep cycle): memory-maturation cadence in cycles (0 disables).
+    sleep_every_n_cycles: int = 500
 
 
 class MacBrain(ChatMixin):
@@ -235,6 +238,19 @@ class MacBrain(ChatMixin):
         if self.summary_consolidator is not None and getattr(self.summary_consolidator, "store", None) is None and isinstance(self.memory, DurableMemoryStore):
             self.summary_consolidator.store = self.memory
         self.narrator = narrator
+        # Phase P1 (sleep cycle): scheduled memory-maturation pass over the
+        # durable store; inert when memory is the in-memory hardened manager.
+        self._sleep_cycle = (
+            SleepCycle(
+                self.memory,
+                consolidator=self.summary_consolidator,
+                narrator=self.narrator,
+                emit=self._emit,
+                every_n_cycles=self.config.sleep_every_n_cycles,
+            )
+            if isinstance(self.memory, DurableMemoryStore) and self.config.sleep_every_n_cycles > 0
+            else None
+        )
         self.dialogue = dialogue or DialogueEngine()
         self.speaker_id = speaker_id
         self.face_id = face_id
@@ -422,6 +438,12 @@ class MacBrain(ChatMixin):
             priority=priority,
             coalesce_key=coalesce_key,
         )
+        # Phase P2: remember the most recent speech text so the cycle's router
+        # can classify intent (social fast-path vs question vs substantive).
+        if isinstance(payload, dict) and str(payload.get("text", "") or "").strip():
+            self._last_submitted_text = str(payload["text"])
+        elif isinstance(payload, str) and payload.strip():
+            self._last_submitted_text = payload
         self._emit("input.submitted", {
             "seq": env.seq, "source": source, "kind": kind, "priority": env.priority,
         })
@@ -693,12 +715,31 @@ class MacBrain(ChatMixin):
         last_reflection = self.reflection.last()
         if last_reflection is not None:
             situation["reflection"] = last_reflection.snapshot()
-        intent = self.reasoning.decide(
-            conclusion=cognitive.reasoning.conclusion,
-            confidence=cognitive.reasoning.confidence,
-            situation=situation,
-            recall=recall["memories"],
-        )
+        # Phase P2: when this cycle consumed speech inputs, route with the
+        # input-aware classifier (social fast-path / questions→LLM); otherwise
+        # the legacy confidence-threshold decide() applies.
+        speech_texts = [
+            c for c in (consumed_inputs or [])
+            if c.get("kind") in ("chat", "message", "text", "voice")
+        ]
+        if hasattr(self.reasoning, "decide_for_text") and speech_texts:
+            first_text = ""
+            payload_text = getattr(self, "_last_submitted_text", "")
+            first_text = str(payload_text)
+            intent = self.reasoning.decide_for_text(
+                first_text,
+                conclusion=cognitive.reasoning.conclusion,
+                confidence=cognitive.reasoning.confidence,
+                situation=situation,
+                recall=recall["memories"],
+            )
+        else:
+            intent = self.reasoning.decide(
+                conclusion=cognitive.reasoning.conclusion,
+                confidence=cognitive.reasoning.confidence,
+                situation=situation,
+                recall=recall["memories"],
+            )
         if hasattr(self.reasoning, "last_route"):
             self._emit("reasoning.route", {"cycle": self._cycle, "route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")})
             route_info = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
@@ -978,6 +1019,11 @@ class MacBrain(ChatMixin):
         # Episode recording: if recording is enabled, record this step.
         if self._recording_enabled and self.episode_recorder is not None:
             self.episode_recorder.record_runtime_step(self, cycle=self._cycle)
+        # Phase P1 (sleep cycle): periodic memory-maturation pass on cadence.
+        if self._sleep_cycle is not None:
+            sleep_report = self._sleep_cycle.maybe_sleep(self._cycle)
+            if sleep_report:
+                self._emit("sleep.phase", sleep_report)
         return {
             "run_id": self.run_id,
             "cycle": self._cycle,

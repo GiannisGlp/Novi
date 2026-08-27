@@ -42,6 +42,32 @@ def _clamp01(v: float) -> float:
     return max(0.0, min(1.0, v))
 
 
+# Phase P3 (source-confidence weighting): evidence provenance ranks trust.
+# Direct perception of the world outweighs second-hand speech; the default
+# weight 1.0 keeps unknown sources at parity with plain speech.
+_SOURCE_WEIGHTS: dict[str, float] = {
+    "perception": 1.0,
+    "camera": 1.0,
+    "vision": 1.0,
+    "audio.stt": 0.9,
+    "speech": 0.8,
+    "web": 0.8,
+    "cli": 0.9,
+    "voice": 0.85,
+    "hearsay": 0.5,
+}
+
+
+def _source_weight(source: str) -> float:
+    s = (source or "").strip().lower()
+    if not s:
+        return 1.0
+    for prefix, w in _SOURCE_WEIGHTS.items():
+        if s == prefix or s.startswith(prefix + ".") or s.startswith(prefix + ":"):
+            return w
+    return 0.8
+
+
 @dataclass
 class KnowledgeTriple:
     subject: str
@@ -49,10 +75,14 @@ class KnowledgeTriple:
     object: str
     confidence: float
     evidence_count: int
-    status: str  # active | contradicted
+    status: str  # active | contradicted | superseded
     source: str = ""
     first_seen_cycle: int = 0
     last_seen_cycle: int = 0
+    # Phase P3 (temporal knowledge): validity window + succession chain.
+    valid_from_cycle: int = 0          # cycle at which the fact became true
+    valid_until_cycle: int | None = None  # None = still current
+    superseded_by: tuple[str, str, str] | None = None  # (s, p, o) successor key
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -65,6 +95,9 @@ class KnowledgeTriple:
             "source": self.source,
             "first_seen_cycle": self.first_seen_cycle,
             "last_seen_cycle": self.last_seen_cycle,
+            "valid_from_cycle": self.valid_from_cycle,
+            "valid_until_cycle": self.valid_until_cycle,
+            "superseded_by": list(self.superseded_by) if self.superseded_by else None,
         }
 
 
@@ -101,33 +134,63 @@ class EntityKnowledgeGraph:
         self._entities.setdefault(subject, infer_entity_type(subject))
         self._entities.setdefault(object, infer_entity_type(object))
         key = (subject, predicate, object)
+        source_weight = _source_weight(source)
         if key in self._triples:
             t = self._triples[key]
             t.evidence_count += 1
-            t.confidence = 1.0 - (1.0 - t.confidence) * (1.0 - _clamp01(confidence))
+            # Phase P3: evidence from trusted sources (perception/camera) counts
+            # more than hearsay (speech) when accumulating confidence.
+            t.confidence = 1.0 - (1.0 - t.confidence) * (1.0 - _clamp01(confidence) * source_weight)
             t.last_seen_cycle = max(t.last_seen_cycle, cycle)
         else:
-            t = self._triples[key] = KnowledgeTriple(subject, predicate, object, _clamp01(confidence), 1, "active", source, cycle, cycle)
-        self._reconcile_conflicts(subject, predicate)
+            t = self._triples[key] = KnowledgeTriple(
+                subject, predicate, object, _clamp01(confidence), 1, "active",
+                source, cycle, cycle,
+                valid_from_cycle=cycle,
+            )
+        self._reconcile_conflicts(subject, predicate, current_cycle=cycle)
         self._notify_change()
         return t
 
-    def _reconcile_conflicts(self, subject: str, predicate: str) -> None:
-        """Among (subject,predicate,*) triples, the highest-confidence object stays
-        active; all others are marked contradicted (evidence is preserved)."""
+    def _reconcile_conflicts(self, subject: str, predicate: str, *, current_cycle: int = 0) -> None:
+        """Among (subject,predicate,*) triples the highest-weighted object stays
+        active; rivals are superseded — their validity window closes and they
+        link to the successor. Evidence is preserved and queryable as history."""
         group = [t for (s, p, o), t in self._triples.items() if s == subject and p == predicate]
         if not group:
             return
-        lead = max(group, key=lambda t: (t.confidence, t.evidence_count))
+        lead = max(
+            group,
+            key=lambda t: (
+                t.confidence * _source_weight(t.source),
+                t.evidence_count,
+                t.last_seen_cycle,
+            ),
+        )
         for t in group:
-            t.status = "active" if t is lead else "contradicted"
+            if t is lead:
+                t.status = "active"
+                continue
+            if t.status != "superseded":
+                # Close the window instead of just flagging a conflict.
+                t.valid_until_cycle = current_cycle or t.last_seen_cycle
+                t.superseded_by = (lead.subject, lead.predicate, lead.object)
+            t.status = "superseded"
 
     # ---- extraction from episodic text ----
     def extract_from_text(self, text: str, entity_refs: tuple[str, ...]) -> list[tuple[str, str, str]]:
         if len(entity_refs) < 2:
             return []
         lowered = text.lower()
-        predicate = next((pred for word, pred in _PREDICATES.items() if word in lowered), "related_to")
+        # Phase P3 (taxonomy): only known relations are learned; unknown
+        # co-mentions stay out of the graph instead of piling into a vague
+        # 'related_to' bucket that duplicates real facts.
+        predicate = next(
+            (pred for word, pred in _PREDICATES.items() if word in lowered),
+            None,
+        )
+        if predicate is None:
+            return []
         subject = entity_refs[0]
         return [(subject, predicate, obj) for obj in entity_refs[1:]]
 
@@ -146,7 +209,9 @@ class EntityKnowledgeGraph:
         return tuple(out)
 
     def leading(self, subject: str, predicate: str) -> KnowledgeTriple | None:
-        group = self.triples(subject=subject, predicate=predicate)
+        # Phase P3: the leading fact must be CURRENT — a superseded triple can
+        # carry high raw confidence from its heyday but it no longer holds.
+        group = self.current_triples(subject=subject, predicate=predicate)
         return group[0] if group else None
 
     def has_conflict(self, subject: str, predicate: str) -> bool:
@@ -155,8 +220,57 @@ class EntityKnowledgeGraph:
     def contradicted(self) -> tuple[KnowledgeTriple, ...]:
         return tuple(t for t in self._triples.values() if t.status == "contradicted")
 
-    def context(self, entity: str, *, limit: int = 10) -> tuple[KnowledgeTriple, ...]:
+    # ---- temporal queries (Phase P3) ---------------------------------------
+
+    def _is_current(self, t: KnowledgeTriple, *, at_cycle: int | None) -> bool:
+        """A triple is 'current' when its validity window contains at_cycle
+        (default: now = the highest cycle seen). A superseded fact is current
+        only *before* its window closes — at the boundary cycle and after,
+        the successor holds."""
+        now = at_cycle if at_cycle is not None else max(
+            (x.last_seen_cycle for x in self._triples.values()), default=0
+        )
+        if t.valid_from_cycle > now:
+            return False
+        if t.valid_until_cycle is None:
+            return True
+        return now < t.valid_until_cycle
+
+    def current_triples(
+        self,
+        *,
+        subject: str | None = None,
+        predicate: str | None = None,
+        object: str | None = None,
+        at_cycle: int | None = None,
+    ) -> tuple[KnowledgeTriple, ...]:
+        """Only facts valid at ``at_cycle`` (default: latest). History excluded."""
+        out = [
+            t for t in self.triples(subject=subject, predicate=predicate, object=object)
+            if self._is_current(t, at_cycle=at_cycle)
+        ]
+        return tuple(out)
+
+    def history(
+        self,
+        *,
+        subject: str | None = None,
+        predicate: str | None = None,
+        object: str | None = None,
+    ) -> tuple[KnowledgeTriple, ...]:
+        """Closed-window facts (superseded), newest-first. The past stays queryable."""
+        rows = [
+            t for t in self.triples(subject=subject, predicate=predicate, object=object)
+            if t.valid_until_cycle is not None or t.status in ("superseded", "contradicted")
+        ]
+        rows.sort(key=lambda t: -(t.valid_until_cycle or 0))
+        return tuple(rows)
+
+    def context(self, entity: str, *, limit: int = 10, include_history: bool = False) -> tuple[KnowledgeTriple, ...]:
+        """Neighbourhood of ``entity``; currently-valid facts by default."""
         out = [t for t in self._triples.values() if entity in (t.subject, t.object)]
+        if not include_history:
+            out = [t for t in out if self._is_current(t, at_cycle=None)]
         out.sort(key=lambda t: (-t.confidence, -t.evidence_count))
         return tuple(out[:limit])
 
@@ -269,6 +383,9 @@ class EntityKnowledgeGraph:
                 source=row.get("source", ""),
                 first_seen_cycle=row.get("first_seen_cycle", 0),
                 last_seen_cycle=row.get("last_seen_cycle", 0),
+                valid_from_cycle=row.get("valid_from_cycle", 0),
+                valid_until_cycle=row.get("valid_until_cycle"),
+                superseded_by=tuple(row["superseded_by"]) if row.get("superseded_by") else None,
             )
             graph._triples[(t.subject, t.predicate, t.object)] = t
         return graph
