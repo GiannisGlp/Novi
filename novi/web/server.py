@@ -80,7 +80,7 @@ class NoviWebServer(IntegrationMixin):
         stt_device: str = "cpu",
         listen_seconds: float = 3.0,
         sleep_every_n_cycles: int = 500,
-        available_models: tuple[str, ...] = ("qwen3.8:latest", "qwen3.8:8b", "nemotron-3.5-lightning"),
+        available_models: tuple[str, ...] = ("qwen3.8:27b", "nemotron-3.5-lightning"),
         embedder: str = "auto",
     ) -> None:
         self.host = host
