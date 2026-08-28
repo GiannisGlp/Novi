@@ -45,6 +45,7 @@ B2 acceptance                     LATER
 - `16_MULTIMODAL_INTEGRATION.md` — voice+perception+recognition wired into the engine via MultimodalRuntime; web handlers, /preview, durable RecognitionStore
 - `17_REAL_IO.md` — real camera/mic/speakers live on Mac; listen→Whisper→brain→spoken replies; /preview v2
 - `19_COGNITION_MATURATION_PLAN.md` — reasoning/cognition/knowledge/memory maturation: web thin-client (delete `_chat_busy`, `listen()`→`respond()`), initiative×speaking-lease fusion, prediction-error→curiosity, cross-modal verified-tier, perception cadence (`perception_every_n_cycles`). Implemented 2026-08-27.
+- `20_DIALOGUE_AND_EVENT_DRIVEN_AUTONOMY_PLAN.md` — dialogue + event-driven autonomy: unified `respond()` for every modality (shipped), proactive autonomous speech from non-text events (SalienceToUtterance / `SurgeSalienceEvaluator`), naturalization guardrails for proactive remarks, multitask concurrency regression, and default model → `qwen3:4b`. PLANNED/OPEN 2026-08-28.
 
 ## Hardware candidates
 
