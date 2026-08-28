@@ -19,7 +19,9 @@ import argparse
 import contextlib
 import json
 import mimetypes
+import os
 import re
+import tempfile
 import threading
 import time
 import urllib.request
@@ -75,11 +77,22 @@ def _load_model_choice(store_path: str | None) -> str | None:
 
 
 def _save_model_choice(store_path: str | None, name: str) -> None:
-    """Persist the runtime-selected model so it survives restarts."""
+    """Persist the runtime-selected model so it survives restarts.
+
+    Writes atomically (temp file + os.replace) so a crash mid-write never
+    leaves a corrupt model.json that silently resets the model (L4).
+    """
     try:
         path = _model_choice_path(store_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"model": name}), encoding="utf-8")
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".model-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump({"model": name}, fh)
+            os.replace(tmp, path)
+        finally:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
     except Exception:  # noqa: BLE001 - persistence is best-effort
         pass
 
@@ -164,10 +177,18 @@ class NoviWebServer(IntegrationMixin):
         self._narrator_inner: Any | None = None
         self._summarizer_inner: Any | None = None
         self._conversation_summarizer_inner: Any | None = None
+        # fast_* wrappers expose .model/.base_url for introspection; they are
+        # refreshed by _apply_model_to_components so switch_model stays honest (L3).
+        self._fast_narrator: Any | None = None
+        self._fast_summarizer: Any | None = None
+        self._fast_conv_summarizer: Any | None = None
         # Episodic narrative cache: regenerated only when new episodic memories
-        # arrive, so the 1s /api/state poll never triggers an LLM narrator call.
+        # arrive, so the 2s /api/state poll never triggers an LLM narrator call.
         self._narrative_cache: list[str] | None = None
         self._narrative_sig: tuple[Any, ...] | None = None
+        # Latch so a cache miss regenerates on a background thread (M3): the
+        # engine step + the next state poll never double-run the narrator.
+        self._narrative_regenerating = False
         self._llm_available: bool | None = None
         self._llm_probed_at: float = 0.0
         # How often to re-probe Ollama availability so a server that started
@@ -208,16 +229,14 @@ class NoviWebServer(IntegrationMixin):
         # just work without a manual POST /api/real/enable. Honest degradation
         # if hardware/deps are absent (never fatal for demo/CI).
         if getattr(self, "camera_mode", "demo") == "real" and getattr(self, "mm_runtime", None) is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.real_enable(camera=True, mic=True, speaker=True)
-            except Exception:  # noqa: BLE001 - hardware optional
-                pass
 
     def _build_conversation_summarizer(self) -> Any:
         """LLM conversation summarizer when Ollama is available."""
         from novi.brain.models.conversation_summarizer import ConversationSummarizer
 
-        inner = ConversationSummarizer(model=self.llm_model)
+        inner = ConversationSummarizer(model=self.llm_model, base_url=self.llm_url)
         self._conversation_summarizer_inner = inner
 
         def fast_conv_summarizer(turns):  # type: ignore[no-untyped-def]
@@ -227,6 +246,7 @@ class NoviWebServer(IntegrationMixin):
 
         fast_conv_summarizer.model = inner.model  # type: ignore[attr-defined]
         fast_conv_summarizer.base_url = inner.base_url  # type: ignore[attr-defined]
+        self._fast_conv_summarizer = fast_conv_summarizer
         return fast_conv_summarizer
 
     def _load_chat_history(self) -> None:
@@ -335,7 +355,7 @@ class NoviWebServer(IntegrationMixin):
         """LLM narrator for episodic "what happened" recaps when Ollama is available."""
         from novi.brain.models.narrator import LLMNarrator
 
-        inner = LLMNarrator(model=self.llm_model)
+        inner = LLMNarrator(model=self.llm_model, base_url=self.llm_url)
         self._narrator_inner = inner
 
         def fast_narrator(episodes):  # type: ignore[no-untyped-def]
@@ -347,6 +367,7 @@ class NoviWebServer(IntegrationMixin):
         # Attach inner for introspection, but expose fast wrapper as callable
         fast_narrator.model = inner.model  # type: ignore[attr-defined]
         fast_narrator.base_url = inner.base_url  # type: ignore[attr-defined]
+        self._fast_narrator = fast_narrator
         return fast_narrator
 
     def _build_summary_consolidator(self) -> Any:
@@ -354,7 +375,7 @@ class NoviWebServer(IntegrationMixin):
         from novi.brain.consolidation import SummaryConsolidator
         from novi.brain.models.summarizer import LLMSummarizer
 
-        inner = LLMSummarizer(model=self.llm_model)
+        inner = LLMSummarizer(model=self.llm_model, base_url=self.llm_url)
         self._summarizer_inner = inner
 
         def fast_summarizer(entity, records):  # type: ignore[no-untyped-def]
@@ -364,6 +385,7 @@ class NoviWebServer(IntegrationMixin):
 
         fast_summarizer.model = inner.model  # type: ignore[attr-defined]
         fast_summarizer.base_url = inner.base_url  # type: ignore[attr-defined]
+        self._fast_summarizer = fast_summarizer
         return SummaryConsolidator(None, summarizer=fast_summarizer)
 
     def _build_reasoning(self) -> Any:
@@ -372,12 +394,15 @@ class NoviWebServer(IntegrationMixin):
             from novi.brain.models import DeliberativeLLMReasoningProvider
 
             # Single-round deliberation for the web path: one /api/generate call
-            # (~300 tokens, 30s cap) instead of the multi-round critique loop, so
-            # a chat turn never blocks the server for minutes.
+            # (30s cap) instead of the multi-round critique loop, so a chat turn
+            # never blocks the server for minutes. max_tokens=600 (the provider
+            # default) so the analysis/options/decision JSON is not truncated —
+            # a truncated response silently degrades to the default `observe` (M4).
             llm = DeliberativeLLMReasoningProvider(
                 model=self.llm_model,
+                base_url=self.llm_url,
                 max_rounds=self.deliberation_rounds,
-                max_tokens=300,
+                max_tokens=600,
                 timeout=30,
             )
             if mode == "router":
@@ -407,11 +432,8 @@ class NoviWebServer(IntegrationMixin):
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
-        with self._lock:
-            try:
-                self.brain.stop()
-            except Exception:  # noqa: BLE001 - shutdown best-effort
-                pass
+        with self._lock, contextlib.suppress(Exception):
+            self.brain.stop()
 
     def _loop(self) -> None:
         while not self._stop.wait(self.tick):
@@ -656,7 +678,12 @@ class NoviWebServer(IntegrationMixin):
             try:
                 req = urllib.request.Request(f"{self.llm_url}/api/tags", method="GET")
                 with urllib.request.urlopen(req, timeout=2) as response:
-                    self._llm_available = response.status == 200
+                    data = json.loads(response.read().decode("utf-8"))
+                    # Only claim availability when the CURRENT model is actually
+                    # pulled — a 200 with an unpulled model would otherwise let
+                    # _llm_chat raise a 404 mid-reply (M2).
+                    models = {str(m.get("name", "")) for m in data.get("models", [])}
+                    self._llm_available = self.llm_model in models
             except Exception:  # noqa: BLE001 - offline fallback
                 self._llm_available = False
             self._llm_probed_at = now
@@ -675,11 +702,14 @@ class NoviWebServer(IntegrationMixin):
         name = name.strip()
         if name not in self.available_models:
             raise ValueError(f"unknown model '{name}'; available: {self.available_models}")
-        self.llm_model = name
-        self._llm_available = None  # re-probe availability for the new model
-        self._apply_model_to_components()
-        if self._persist_model:
-            _save_model_choice(self.store_path, name)
+        # Mutate shared state under the lock: _llm_chat/_llm_chat_stream/state
+        # read self.llm_model from the HTTP and brain-loop threads (M1).
+        with self._lock:
+            self.llm_model = name
+            self._llm_available = None  # re-probe availability for the new model
+            self._apply_model_to_components()
+            if self._persist_model:
+                _save_model_choice(self.store_path, name)
         return {"current": self.llm_model, "available": list(self.available_models)}
 
     def _apply_model_to_components(self) -> None:
@@ -687,13 +717,20 @@ class NoviWebServer(IntegrationMixin):
         reasoning = self._reasoning_provider
         if reasoning is not None:
             llm = getattr(reasoning, "llm", reasoning)
-            if hasattr(llm, "model"):
-                llm.model = self.llm_model
-            elif hasattr(llm, "set_model"):
+            if hasattr(llm, "set_model"):
+                # set_model rebuilds the provider's backend closure; a bare .model
+                # assignment would leave the captured model name stale (H3).
                 llm.set_model(self.llm_model)
+            elif hasattr(llm, "model"):
+                llm.model = self.llm_model
         for inner in (self._narrator_inner, self._summarizer_inner, self._conversation_summarizer_inner):
             if inner is not None:
                 inner.model = self.llm_model
+        # The fast_* wrappers carry a copied .model for introspection; keep it
+        # in sync so anything reading brain.narrator.model sees the live model (L3).
+        for fast in (self._fast_narrator, self._fast_summarizer, self._fast_conv_summarizer):
+            if fast is not None:
+                fast.model = self.llm_model  # type: ignore[attr-defined]
 
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
         options: dict[str, Any] = {"temperature": temperature, "num_predict": 512}
@@ -826,47 +863,8 @@ class NoviWebServer(IntegrationMixin):
                 novi_stored = self._append_chat(novi)
                 yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False, "after": self._chat_seq}
                 return
-            # Streaming path: we need to capture the system/user that compose_reply would build
-            # to call _llm_chat_stream ourselves, then feed the assembled reply back.
-            # Instead of re-implementing compose_reply internals, we monkey-patch a
-            # streaming transport that yields tokens while capturing the full reply.
-            # Simplest: call compose_reply with a wrapper that streams via _llm_chat_stream.
-            streamed_tokens: list[str] = []
-            token_yielded = False
-
-            def streaming_transport(*, system: str, user: str, temperature: float = 0.5, timeout: int = 120):
-                nonlocal token_yielded
-                full = ""
-                try:
-                    for delta in self._llm_chat_stream(system=system, user=user, temperature=temperature, timeout=timeout):
-                        full += delta
-                        streamed_tokens.append(delta)
-                        token_yielded = True
-                        yield delta  # not used directly — we yield from outer
-                except Exception:
-                    # Fall back to non-streaming
-                    result = self._llm_chat(system=system, user=user, temperature=temperature, timeout=timeout)
-                    if result:
-                        full = result
-                        streamed_tokens.append(result)
-                        token_yielded = True
-                        yield result
-                # The wrapper must return the full text for compose_reply's contract.
-                # Since Python generators can't return via yield, we store on the function.
-                streaming_transport.full = full  # type: ignore[attr-defined]
-                return full
-
-            # We need to actually drive compose_reply in a way that streams.
-            # Workaround: manually reproduce compose_reply's prompt assembly but call
-            # _llm_chat_stream directly, streaming tokens as they arrive.
-            # For now, call brain.compose_reply with a transport that internally
-            # captures tokens and yields them via closure — we do this by calling
-            # compose_reply in a thread and forwarding tokens? Simpler: directly
-            # call brain's internal helpers if available, else just stream the final reply.
-            # Fallback simple: call compose_reply non-streaming to get the full reply,
-            # then stream it token-chunked (still feels streaming without NDJSON complexity).
-            # This preserves correctness while delivering the UX improvement.
-            # We attempt true streaming when the brain exposes _compose_system_prompt.
+            # Streaming path: compose_reply non-streaming, then stream the full reply
+            # token-chunked (feels streaming without NDJSON complexity).
             full_reply_obj = self.brain.compose_reply(
                 text, person=addressee, history=history, llm_chat=self._llm_chat,
                 last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi,
@@ -938,10 +936,8 @@ class NoviWebServer(IntegrationMixin):
         store = getattr(self.brain, "memory", None)
         if store is None or not hasattr(store, "save_chat"):
             return
-        try:
+        with contextlib.suppress(Exception):
             store.save_chat(snapshot)
-        except Exception:
-            pass
 
 
     def _maybe_summarize_chat(self, threshold: int = 30, keep_recent: int = 8) -> None:
@@ -966,7 +962,7 @@ class NoviWebServer(IntegrationMixin):
                 summary = None
         if not summary:
             summary = "Conversation: " + "; ".join(f"{c['role']}: {c['text']}" for c in older[-6:])
-        try:
+        with contextlib.suppress(Exception):
             self.brain.memory.admit(
                 memory_type="conversation_summary",
                 content=summary,
@@ -975,8 +971,6 @@ class NoviWebServer(IntegrationMixin):
                 privacy_class="public",
                 provenance={"source": "conversation_summarization", "kind": "thread_summary"},
             )
-        except Exception:  # noqa: BLE001 - summary admission is best-effort
-            pass
         self._chat = recent
         self._last_summarized_len = len(self._chat)
         self._persist_chat()
@@ -1000,6 +994,7 @@ class NoviWebServer(IntegrationMixin):
         with self._lock:
             self._chat = []
             self._chat_seq = 0
+            self._last_summarized_len = None
             self._persist_chat()
         return {"cleared": True}
 
@@ -1132,6 +1127,11 @@ class NoviWebServer(IntegrationMixin):
         memory_ids are the cache key). The /api/state poll therefore never
         triggers an LLM narrator call while the world is quiet. In-memory
         stores don't expose active_rows, so there is nothing to narrate.
+
+        The narrator call runs on a background thread (M3): a cache miss
+        returns the stale narrative immediately instead of blocking the web
+        lock for the whole narrator call, and the ``_narrative_regenerating``
+        latch prevents the engine step + state poll from double-running it.
         """
         try:
             rows = self.brain.memory.active_rows()
@@ -1144,10 +1144,23 @@ class NoviWebServer(IntegrationMixin):
         sig = tuple(r.memory_id for r in episodic[-5:])
         if sig == self._narrative_sig and self._narrative_cache is not None:
             return self._narrative_cache
-        narrative = self.brain._episodic_narrative()
-        self._narrative_cache = narrative
-        self._narrative_sig = sig
-        return narrative
+        if self._narrative_regenerating:
+            return self._narrative_cache or []
+        self._narrative_regenerating = True
+        target_sig = sig
+
+        def _regenerate() -> None:
+            try:
+                narrative = self.brain._episodic_narrative()
+            except Exception:  # noqa: BLE001 - a narrator failure degrades to no narrative
+                narrative = []
+            with self._lock:
+                self._narrative_cache = narrative
+                self._narrative_sig = target_sig
+                self._narrative_regenerating = False
+
+        threading.Thread(target=_regenerate, daemon=True, name="novi-narrative").start()
+        return self._narrative_cache or []
 
     def _memory_summaries(self, limit: int = 5) -> list[dict[str, Any]]:
         """Recent consolidated summary memories for the web UI."""
@@ -1520,10 +1533,8 @@ class Handler(BaseHTTPRequestHandler):
                     pass
             finally:
                 if gen is not None:
-                    try:
+                    with contextlib.suppress(Exception):
                         gen.close()
-                    except Exception:
-                        pass
                     # Ensure the speaking lease is released even if the client
                     # disconnected mid-stream before the generator's own finally ran.
                     try:
@@ -1532,10 +1543,8 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception:
                         pass
                 # Ensure the connection closes so the client's fetch stream sees EOF.
-                try:
+                with contextlib.suppress(Exception):
                     self.close_connection = True
-                except Exception:
-                    pass
             return
         data = self._read_json()
         novi = self.server.novi

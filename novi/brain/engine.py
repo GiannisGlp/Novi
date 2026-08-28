@@ -1477,7 +1477,11 @@ class MacBrain(ChatMixin):
             if event.speech:
                 self._emit("hearing.voice", {"cycle": self._cycle, **event.snapshot()})
             if event.anomaly:
-                self._emit("hearing.anomaly", {"cycle": self._cycle, "event_type": event.event_type, "novelty": event.novelty, "direction_deg": event.direction_deg})
+                anomaly = {"cycle": self._cycle, "event_type": event.event_type, "novelty": event.novelty, "direction_deg": event.direction_deg}
+                self._emit("hearing.anomaly", anomaly)
+                # GAP-1b: also route the anomaly through the input bus so the
+                # salience evaluator can seed a proactive remark about it.
+                self.submit("hearing", "hearing.anomaly", anomaly)
             if self.hearing.worth_attention(event):
                 classification = self.governance.classify(memory_type="audio_event", content=event.snapshot(), entity_refs=(), modality="audio")
                 allowed, mem_class = self._gate_memory("audio_event")

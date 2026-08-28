@@ -90,6 +90,17 @@ class BrainAudioTests(unittest.TestCase):
         b.stop()
         self.assertIn("hearing.anomaly", [e["event_type"] for e in b.events])
 
+    def test_anomaly_submitted_to_input_bus(self):
+        """GAP-1b: a hearing anomaly must reach the input bus (salience can react)."""
+        from novi.brain.audio import AudioFrame
+        b = self._brain()
+        b.start()
+        b.ingest_audio_frame(AudioFrame(rms=0.5, novelty=0.9))
+        drained = b.drain_inputs(max_items=8)
+        b.stop()
+        kinds = [r["kind"] for r in drained]
+        self.assertIn("hearing.anomaly", kinds)
+
     def test_audio_feeds_fusion_and_step_report(self):
         from novi.brain.audio import AudioFrame
         b = self._brain()

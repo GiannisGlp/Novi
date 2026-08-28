@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import unittest
 
 from novi.web.server import NoviWebServer
@@ -23,10 +24,8 @@ class RealIOWiringTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        try:
+        with contextlib.suppress(Exception):
             cls.s.stop()
-        except Exception:
-            pass
 
     def test_default_off(self) -> None:
         # fresh server: real I/O must start disabled regardless of other tests

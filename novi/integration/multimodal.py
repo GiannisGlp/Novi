@@ -175,7 +175,7 @@ class MultimodalRuntime:
                     canonical_pid = f"person-{label.lower().replace(' ', '-')}"
                     self._record_sighting(RecognitionKind.FACE, canonical_pid, label,
                                           place=self.current_place, frame_id=frame.frame_id)
-                    self._emit("identity.recognized", person=label, tier=dec.tier.value)
+                    self._stage_event("identity.recognized", person=label, tier=dec.tier.value)
                 elif dec.reason == "ambiguous":
                     self._emit("identity.ambiguous", similarity=round(dec.similarity, 3))
                 elif dec.new_person_proposal:
@@ -369,7 +369,7 @@ class MultimodalRuntime:
                 self.current_person = m.label
                 self.current_person_tier = "recognized"
                 self.pending_enrollment_proposal = False
-                self._emit("identity.recognized", person=m.label, tier="recognized")
+                self._stage_event("identity.recognized", person=m.label, tier="recognized")
                 return ""
         if self.faces is None:
             return ""
@@ -476,7 +476,7 @@ class MultimodalRuntime:
                 self._record_sighting(RecognitionKind.OBJECT, m.person_id, m.label,
                                       place=self.current_place, frame_id=frame_id)
                 if self._object_state.get(label) != resolved:
-                    self._emit(
+                    self._stage_event(
                         "object.recognized", label=label, object=m.label, similarity=round(m.similarity, 3)
                     )
             else:

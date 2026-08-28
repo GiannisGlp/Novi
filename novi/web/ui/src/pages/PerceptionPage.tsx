@@ -1,8 +1,10 @@
-import type { IdentityDetail, PreviewFrame, RecognitionList } from '../api/types'
+import { useState } from 'react'
+import type { IdentityDetail, PreviewFrame, RecognitionList, RecognitionProposal } from '../api/types'
 import { Section } from '../components/Section'
 import { Chips } from '../components/shared/Chips'
 import { KV } from '../components/shared/KV'
 import { Panel } from '../components/shared/Panel'
+import { useProposals } from '../hooks/useProposals'
 import { useRealIO } from '../hooks/useRealIO'
 import { useRecognition } from '../hooks/useRecognition'
 
@@ -31,6 +33,65 @@ function groupByPerson(rows: Enrollment[]): { k: string; v: string }[] {
   }))
 }
 
+/** One unresolved proposal: category/place/seen_at + an inline "name it" row. */
+function ProposalRow({
+  proposal,
+  onName,
+}: {
+  proposal: RecognitionProposal
+  onName: (category: string, name: string) => Promise<string | null>
+}) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const category = proposal.category ?? proposal.label ?? 'object'
+
+  const submit = async () => {
+    const trimmed = name.trim()
+    if (!trimmed || busy) return
+    setBusy(true)
+    setError(null)
+    const err = await onName(category, trimmed)
+    if (err) {
+      setError(err)
+      setBusy(false)
+    }
+    // on success the parent refreshes and this row unmounts
+  }
+
+  return (
+    <div className="proposal-row">
+      <div className="proposal-meta">
+        <span className="entity-chip observed">{category}</span>
+        {proposal.place ? <span className="muted">place: {proposal.place}</span> : null}
+        {proposal.seen_at ? <span className="muted">seen: {proposal.seen_at}</span> : null}
+      </div>
+      <div className="enrollrow">
+        <input
+          type="text"
+          value={name}
+          placeholder={`name this ${category}…`}
+          aria-label={`Name for ${category}`}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void submit()
+          }}
+          disabled={busy}
+        />
+        <button onClick={() => void submit()} disabled={busy || !name.trim()}>
+          {busy ? 'Naming…' : 'Name it'}
+        </button>
+      </div>
+      {error ? (
+        <div className="muted" style={{ color: 'var(--bad)', marginTop: 4 }}>
+          {error}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 /** Perception — camera preview, identity, recognition enrollments, real-I/O devices. */
 export function PerceptionPage({
   reportConnection,
@@ -40,6 +101,7 @@ export function PerceptionPage({
 }: PerceptionPageProps) {
   const { recognition } = useRecognition(reportConnection)
   const { status: realIO } = useRealIO(reportConnection)
+  const { proposals, nameObject } = useProposals(reportConnection)
 
   const health = frame?.camera_health || 'offline'
   const meta = [
@@ -163,6 +225,33 @@ export function PerceptionPage({
           )}
         </Panel>
       </div>
+
+      <Panel
+        title="New objects to name"
+        right={
+          <span className="muted" style={{ fontSize: 11, paddingRight: 10, fontFamily: 'var(--mono)' }}>
+            {proposals === null ? '…' : `${proposals.length} pending`}
+          </span>
+        }
+      >
+        {proposals === null ? (
+          <span className="muted">…</span>
+        ) : proposals.length === 0 ? (
+          <span className="muted">
+            No new objects waiting for a name — Novi names what it can recognize.
+          </span>
+        ) : (
+          <div className="proposal-list">
+            {proposals.map((p) => (
+              <ProposalRow
+                key={`${p.entity_ref ?? p.category ?? p.label ?? 'proposal'}:${p.place ?? ''}:${p.seen_at ?? ''}`}
+                proposal={p}
+                onName={nameObject}
+              />
+            ))}
+          </div>
+        )}
+      </Panel>
     </>
   )
 }

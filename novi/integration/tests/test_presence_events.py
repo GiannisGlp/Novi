@@ -22,7 +22,6 @@ from novi.integration.recognition_store import RecognitionStore
 from novi.perception.detection import DeterministicObjectDetector
 from novi.perception.faces import FaceIdentifier
 
-
 ANNA_FACE = [1.0, 0.0]
 STRANGER_FACE = [0.0, 1.0]
 
@@ -194,11 +193,12 @@ class TestPopPendingEvents:
 
         staged = rt.pop_pending_events()
         assert [e["kind"] for e in staged] == [
-            "identity.auto_enrolled", "presence.entered", "scene.changed",
+            "identity.auto_enrolled", "presence.entered", "scene.changed", "identity.recognized",
         ]
         assert staged[0]["person"] == "new-person-1"
         assert staged[1]["person"] == "new-person-1"
         assert staged[2]["appeared"] == ["book"]
+        assert staged[3]["person"] == "new-person-1"
 
         assert rt.pop_pending_events() == [], "second pop must be empty after drain"
 

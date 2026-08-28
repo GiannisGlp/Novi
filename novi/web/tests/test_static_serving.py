@@ -85,9 +85,11 @@ class StaticServingTests(unittest.TestCase):
     # ── unbuilt UI (dist missing) ──────────────────────────────────
 
     def test_serves_build_hint_when_dist_missing(self) -> None:
-        with patch("novi.web.server._UI_DIST", Path("/nonexistent/ui/dist")):
-            with self.assertRaises(urllib.error.HTTPError) as ctx:
-                self._get("/")
+        with (
+            patch("novi.web.server._UI_DIST", Path("/nonexistent/ui/dist")),
+            self.assertRaises(urllib.error.HTTPError) as ctx,
+        ):
+            self._get("/")
         self.assertEqual(ctx.exception.code, 503)
         self.assertIn(b"npm run build", ctx.exception.read())
 

@@ -60,6 +60,7 @@ _EVENT_AFFORDANCE: dict[str, str] = {
     "hearing.anomaly": "ask",
     "person.holding": "comment",
     "object.novel": "ask",
+    "object.recognized": "comment",
 }
 
 
@@ -132,6 +133,8 @@ class SurgeSalienceEvaluator:
             return f"Nice — you've got your {entity}." if entity else "I see you've got something in your hand."
         if kind == "object.novel":
             return f"Ooh — you've got a new {entity}. What is it?" if entity else "Ooh — something new in your hand. What is it?"
+        if kind == "object.recognized":
+            return f"I see your {entity}." if entity else "I see that object."
         return "Something caught my attention."
 
     def evaluate(
@@ -157,7 +160,7 @@ class SurgeSalienceEvaluator:
             kind = str(event.get("kind") or "").strip().lower()
             if kind not in _EVENT_AFFORDANCE:
                 continue
-            prefer_object = kind in ("person.holding", "object.novel")
+            prefer_object = kind in ("person.holding", "object.novel", "object.recognized")
             entity = _entity_of(event, prefer=("object",) if prefer_object else ())
             key = (kind, entity.lower())
             if self._in_cooldown(key, cycle):
@@ -190,6 +193,8 @@ class SurgeSalienceEvaluator:
                 reason = f"object_novel:novelty={novelty:.2f}"
             elif kind == "person.holding":
                 reason = f"person_holding:object_known={entity.lower() in known}"
+            elif kind == "object.recognized":
+                reason = f"object_recognized:known={entity.lower() in known}"
             else:  # pragma: no cover - guarded by the affordance membership above
                 continue
             self._last_utterance[key] = cycle

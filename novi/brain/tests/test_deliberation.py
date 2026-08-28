@@ -87,6 +87,18 @@ class DeliberativeProviderTests(unittest.TestCase):
             intent = p.decide(conclusion="no_high_salience_change_detected", confidence=0.4, situation={}, recall=())
         self.assertEqual(intent.action, "wait")
 
+    def test_default_max_tokens_is_600(self):
+        """The provider default (600) is what the web path now uses (M4)."""
+        p = DeliberativeLLMReasoningProvider()
+        self.assertEqual(p.max_tokens, 600)
+        self.assertEqual(p.timeout, 60)
+
+    def test_max_tokens_timeout_rounds_are_clamped(self):
+        p = DeliberativeLLMReasoningProvider(max_rounds=0, max_tokens=0, timeout=0)
+        self.assertEqual(p.max_rounds, 1)
+        self.assertEqual(p.max_tokens, 1)
+        self.assertEqual(p.timeout, 1.0)
+
 
 def _queue_urlopen(responses):
     """Fake urlopen that returns each response in turn (one per LLM round)."""

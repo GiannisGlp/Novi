@@ -62,11 +62,43 @@ class TestCameraIntegration:
         out = rt.say("hello", via_voice=False)
         assert out["person"] == "Anna"
 
+    def test_identity_recognized_staged_for_bus(self, tmp_path):
+        """GAP-1b: a recognized face must reach the brain's input bus."""
+        rt, _, _ = _runtime(tmp_path)
+        rt.recognize_person("Anna", face_embedding=ANNA_FACE, frame_id="f0")
+        rt.process_camera_frame(_frame("f1"), face_embedding=ANNA_FACE)
+        kinds = [e["kind"] for e in rt.pop_pending_events()]
+        assert "identity.recognized" in kinds
+
+    def test_object_recognized_staged_for_bus(self, tmp_path):
+        """GAP-1b: a recognized object must reach the brain's input bus."""
+        rt, _, _ = _runtime(tmp_path)
+        rt.recognize_object("my mug", embedding=[1.0, 0.0], frame_id="f0")
+        rt.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+        kinds = [e["kind"] for e in rt.pop_pending_events()]
+        assert "object.recognized" in kinds
+
     def test_unknown_face_proposes_enrollment_once_flagged(self, tmp_path):
         rt, _, _ = _runtime(tmp_path)
         obs = rt.process_camera_frame(_frame("f1"), face_embedding=[0.0, 1.0])
         assert obs.identities[0].new_person_proposal is True
         assert rt.pending_enrollment_proposal is True
+
+    def test_place_auto_enrolls_after_stable_landmarks(self, tmp_path):
+        """GAP-2: a stable landmark set seen 3+ frames auto-enrolls a place."""
+        rt, _, _ = _runtime(tmp_path)
+        rt._place_auto_enroll = True
+        for _ in range(3):
+            rt.process_camera_frame(_frame("f1"))  # f1 scripted: ["cup"]
+        assert rt.current_place == "cup-room"
+        assert any(e["kind"] == "place.auto_enrolled" for e in rt.events)
+
+    def test_place_does_not_auto_enroll_when_disabled(self, tmp_path):
+        rt, _, _ = _runtime(tmp_path)
+        for _ in range(3):
+            rt.process_camera_frame(_frame("f1"))
+        assert rt.current_place == ""
+        assert not any(e["kind"] == "place.auto_enrolled" for e in rt.events)
 
 
 class TestVoiceIntegration:

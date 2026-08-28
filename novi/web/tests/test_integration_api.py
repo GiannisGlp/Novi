@@ -20,6 +20,22 @@ class IntegrationApiTests(unittest.TestCase):
         self.assertIsNotNone(self.s.mm_runtime)
         self.assertIsNotNone(self.s.mm_store)
 
+    def test_place_auto_enroll_wired_to_camera_mode(self) -> None:
+        """GAP-2: real cameras auto-enroll places; demo cameras do not."""
+        from unittest import mock
+
+        with mock.patch.object(NoviWebServer, "real_enable", return_value={}):
+            s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False, camera="real")
+            try:
+                self.assertTrue(s.mm_runtime._place_auto_enroll)
+            finally:
+                s.stop()
+        s2 = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False, camera="demo")
+        try:
+            self.assertFalse(s2.mm_runtime._place_auto_enroll)
+        finally:
+            s2.stop()
+
     def test_event_autonomy_defaults_on(self) -> None:
         self.assertTrue(self.s.event_autonomy)
         self.assertTrue(self.s.brain.config.event_autonomy_enabled)
@@ -39,6 +55,24 @@ class IntegrationApiTests(unittest.TestCase):
         self.assertTrue(_overlaps((60, 40, 20, 20), (50, 30, 100, 150)))
         # object barely brushing the box edge → not held
         self.assertFalse(_overlaps((149, 30, 10, 10), (50, 30, 100, 150)))
+
+    def test_bus_event_filter_includes_recognition_kinds(self) -> None:
+        """GAP-1b: the camera loop must forward recognition events to the bus."""
+        from novi.web.integration_api import _is_bus_event
+
+        for kind in (
+            "presence.entered",
+            "presence.left",
+            "scene.changed",
+            "identity.auto_enrolled",
+            "identity.recognized",
+            "object.recognized",
+            "person.holding",
+            "object.novel",
+        ):
+            self.assertTrue(_is_bus_event(kind), f"{kind} must reach the input bus")
+        self.assertFalse(_is_bus_event("perception.frame"))
+        self.assertFalse(_is_bus_event("identity.ambiguous"))
 
     def test_note_person_holding_ignores_unknown_person(self) -> None:
         class _Det:
@@ -158,10 +192,83 @@ class IntegrationApiTests(unittest.TestCase):
         r = self.s.name_proposal_object({"category": "cup", "name": "x", "embedding": []})
         self.assertIn("error", r)
 
+    def test_name_proposal_uses_last_seen_embedding(self) -> None:
+        """GAP-3: naming a proposal without an embedding uses the last-seen one."""
+        s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+        try:
+            s.mm_runtime.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+            s.mm_last_object_embeddings["cup"] = [1.0, 0.0]
+            r = s.name_proposal_object({"category": "cup", "name": "my-mug", "frame_id": "f2"})
+            self.assertTrue(r["ok"])
+            self.assertEqual(r["object_id"], "object-my-mug")
+        finally:
+            s.stop()
+
     def test_preview_payload_shape(self) -> None:
         p = self.s.preview_frame()
         for key in ("camera_health", "stale", "person", "tier", "place", "detections"):
             self.assertIn(key, p)
+
+    # ---- H1/H2: enrollment must source the FULL-RES frame, not the preview ----
+
+    def test_store_preview_frame_keeps_full_res_for_enrollment(self) -> None:
+        from novi.brain.io import CameraFrame
+
+        full_res = b"\xff\xd8" + b"\x00" * 32  # JPEG magic; full-res payload
+        rec = type("Rec", (), {"frame": CameraFrame(
+            frame_id="f1", captured_at="t", width=1280, height=720, payload=full_res,
+        )})()
+        self.s._store_preview_frame(rec)
+        # the full-res JPEG is preserved for enrollment cropping
+        self.assertEqual(self.s.mm_last_frame_bytes, full_res)
+        # the preview slot is a separate (downscaled/None) value, never the raw frame
+        self.assertNotEqual(self.s.mm_last_frame_b64, full_res)
+
+    def test_enroll_face_uses_full_res_frame(self) -> None:
+        s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+        try:
+            class _FakeEmbedder:
+                def __init__(self) -> None:
+                    self.received: bytes | None = None
+
+                def embed(self, jpeg):
+                    self.received = jpeg
+                    return ([1.0, 0.0], (0, 0, 10, 10))
+
+            fake = _FakeEmbedder()
+            s.face_embedder = fake
+            s.mm_last_frame_bytes = b"\xff\xd8full-res-face"
+            s.mm_last_frame_b64 = "data:image/jpeg;base64,downscaled-preview"
+            r = s.enroll_face_from_camera("Alice")
+            self.assertTrue(r["ok"])
+            # the embedder saw the full-res frame, not the q72 preview
+            self.assertEqual(fake.received, b"\xff\xd8full-res-face")
+        finally:
+            s.stop()
+
+    def test_enroll_object_uses_full_res_frame_and_bbox(self) -> None:
+        s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+        try:
+            class _FakeEmbedder:
+                def __init__(self) -> None:
+                    self.received: tuple[bytes, list] | None = None
+
+                def embed(self, jpeg, bboxes):
+                    self.received = (jpeg, bboxes)
+                    return [[1.0, 0.0]]
+
+            fake = _FakeEmbedder()
+            s.object_embedder = fake
+            s.mm_last_frame_bytes = b"\xff\xd8full-res-object"
+            s.mm_last_frame_b64 = "data:image/jpeg;base64,downscaled-preview"
+            s.mm_last_tracks = [{"label": "cup", "bbox": [10, 20, 30, 40], "is_person": False}]
+            r = s.enroll_object_from_camera("mug")
+            self.assertTrue(r["ok"])
+            # full-res frame + the full-res bbox (no coordinate mismatch)
+            self.assertEqual(fake.received[0], b"\xff\xd8full-res-object")
+            self.assertEqual(fake.received[1], [(10, 20, 30, 40)])
+        finally:
+            s.stop()
 
 
 if __name__ == "__main__":

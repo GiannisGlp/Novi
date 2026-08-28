@@ -8,6 +8,7 @@ undisturbed (doc 16 §4).
 
 from __future__ import annotations
 
+import base64
 import contextlib
 import threading
 import time
@@ -44,6 +45,20 @@ def _overlaps(obj_bbox: tuple[int, int, int, int], person_bbox: tuple[int, int, 
     ix = max(0, min(ax + aw, bx + bw) - max(ax, bx))
     iy = max(0, min(ay + ah, by + bh) - max(ay, by))
     return ix * iy / (aw * ah) >= _HELD_COVERAGE
+
+
+def _is_bus_event(kind: str) -> bool:
+    """True when a runtime event kind should be forwarded to the brain's input bus.
+
+    Presence/scene/identity/object events are real cognition inputs (north star
+    §4.2); raw perception frames and ambiguous identity decisions are not.
+    """
+    return (
+        kind.startswith("presence.")
+        or kind == "scene.changed"
+        or kind in ("identity.auto_enrolled", "identity.recognized")
+        or kind in ("person.holding", "object.novel", "object.recognized")
+    )
 
 
 class IntegrationMixin:
@@ -118,11 +133,18 @@ class IntegrationMixin:
             face_identifier=faces,
             recognition=self.mm_store,
             observations=self.observation_recorder,
+            # GAP-2: only a real camera's stable landmark sets become durable
+            # places; the demo camera's synthetic frames must not pollute the
+            # place store.
+            place_auto_enroll=(self.camera_mode == "real"),
         )
         self.mm_camera_feed = None
         self.mm_last_frame_b64: str | None = None
         # last face identity seen by the camera loop (tier/person/similarity)
         self.mm_last_face: dict[str, Any] | None = None
+        # last object embedding per detection label — lets the UI name a
+        # proposal without re-supplying the vector (GAP-3).
+        self.mm_last_object_embeddings: dict[str, list[float]] = {}
         # stable tracked objects/people for the camera overlay (named boxes)
         self.mm_last_tracks: list[dict[str, Any]] = []
         self.mm_lock = threading.RLock()
@@ -143,8 +165,8 @@ class IntegrationMixin:
         if camera and not self.real_io["camera"]:
             try:
                 from novi.brain.io import MacCamera
-                from novi.perception.camera import CameraFeed
                 from novi.integration.real_io import MacCameraAdapter
+                from novi.perception.camera import CameraFeed
 
                 adapter = MacCameraAdapter(MacCamera())
                 feed = CameraFeed(adapter, queue_size=4)
@@ -178,9 +200,8 @@ class IntegrationMixin:
         if speaker and not self.real_io["speaker"]:
             import shutil
 
-            from novi.voice.tts import SayTTSProvider
-
             from novi.integration.real_io import RealSpeaker
+            from novi.voice.tts import SayTTSProvider
 
             say_bin = "/usr/bin/say" if shutil.which("say") else "/nonexistent/say"
             self._real_speaker = RealSpeaker(SayTTSProvider(say_bin=say_bin))
@@ -190,11 +211,29 @@ class IntegrationMixin:
         self.real_io_enabled = any(self.real_io.values())
         return results
 
+    def _store_preview_frame(self, rec: Any) -> None:
+        """Store the downscaled preview + a full-res JPEG for enrollment.
+
+        The browser preview is shrunk (<=640px, q72) to cut base64/encode cost,
+        but enrollment must crop against the SAME resolution the tracks were
+        computed on — so a full-res JPEG is kept alongside (H1/H2: never crop a
+        full-res bbox against the preview, and never embed a low-res face).
+        """
+        from novi.integration.real_io import encode_frame_jpeg_b64, encode_preview_jpeg_b64
+
+        data_url = encode_preview_jpeg_b64(rec.frame)
+        full_b64 = encode_frame_jpeg_b64(rec.frame)
+        with self.mm_lock:
+            self.mm_last_frame_b64 = data_url
+            self.mm_last_frame_bytes = (
+                base64.b64decode(full_b64.split(",", 1)[1]) if full_b64 else None
+            )
+
     def _start_camera_loop(self) -> None:
         """Background loop: poll frames → perception → preview b64."""
 
         def _loop() -> None:
-            while getattr(self, "mm_camera_feed", None) is not None and not getattr(self, "_stop").is_set():
+            while getattr(self, "mm_camera_feed", None) is not None and not self._stop.is_set():
                 feed = self.mm_camera_feed
                 if feed is None:
                     break
@@ -202,13 +241,9 @@ class IntegrationMixin:
                 if rec is None:
                     continue
                 try:
-                    from novi.integration.real_io import encode_preview_jpeg_b64
-
                     # Preview is downscaled + quality-capped; detection below
                     # runs on the full-res frame.payload untouched.
-                    data_url = encode_preview_jpeg_b64(rec.frame)
-                    with self.mm_lock:
-                        self.mm_last_frame_b64 = data_url
+                    self._store_preview_frame(rec)
                     # Real face identity: embed the largest face in this frame
                     # when the SFace backend is available; None = skip stage.
                     embedding: list[float] | None = None
@@ -235,6 +270,11 @@ class IntegrationMixin:
                             ]
                             if pairs:
                                 self.mm_runtime.recognize_objects(pairs, frame_id=rec.frame.frame_id)
+                                # remember the last embedding per label so the UI
+                                # can name a proposal without re-supplying it (GAP-3)
+                                with self.mm_lock:
+                                    for label, vec in pairs:
+                                        self.mm_last_object_embeddings[label] = vec
                             # person-object co-occurrence (plan 20 WS5): when a
                             # recognized person's box overlaps a detected object,
                             # resolve the held instance → person.holding/object.novel
@@ -289,12 +329,7 @@ class IntegrationMixin:
                     try:
                         for ev in self.mm_runtime.pop_pending_events():
                             kind = str(ev.get("kind", ""))
-                            if (
-                                kind.startswith("presence.")
-                                or kind == "scene.changed"
-                                or kind == "identity.auto_enrolled"
-                                or kind in ("person.holding", "object.novel")
-                            ):
+                            if _is_bus_event(kind):
                                 self.brain.submit(
                                     "camera", kind,
                                     {k: v for k, v in ev.items() if k != "kind"},
@@ -412,15 +447,9 @@ class IntegrationMixin:
         if embedder is None:
             return {"error": "face embedding backend unavailable (opencv models failed to load)"}
         with self.mm_lock:
-            data_url = self.mm_last_frame_b64
-        if not data_url:
+            jpeg = self.mm_last_frame_bytes
+        if not jpeg:
             return {"error": "no camera frame yet — enable the camera and try again"}
-        import base64
-
-        try:
-            jpeg = base64.b64decode(data_url.split(",", 1)[1])
-        except Exception:  # noqa: BLE001 - malformed frame payload
-            return {"error": "could not decode latest frame"}
         vec, bbox = embedder.embed(jpeg)
         if vec is None:
             return {"error": "no face visible — sit facing the camera and retry"}
@@ -458,16 +487,10 @@ class IntegrationMixin:
         # frame and overlay must come from the same loop iteration — capture
         # both under one lock hold or a fresh frame pairs with a stale bbox
         with self.mm_lock:
-            data_url = self.mm_last_frame_b64
+            jpeg = self.mm_last_frame_bytes
             tracks = list(self.mm_last_tracks or [])
-        if not data_url:
+        if not jpeg:
             return {"error": "no camera frame yet — enable the camera and try again"}
-        import base64
-
-        try:
-            jpeg = base64.b64decode(data_url.split(",", 1)[1])
-        except Exception:  # noqa: BLE001 - malformed frame payload
-            return {"error": "could not decode latest frame"}
         # largest non-person track bbox from the latest frame overlay
         best: tuple[int, tuple[int, int, int, int]] | None = None
         for t in tracks:
@@ -519,10 +542,8 @@ class IntegrationMixin:
         return self.enroll_voice({"name": name})
 
     def _emit_enrollment(self, name: str) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.mm_runtime._emit("person.voice-enrolled", person=name)
-        except Exception:  # noqa: BLE001
-            pass
 
     def tts_speak(self, body: dict[str, Any]) -> dict[str, Any]:
         """Speak arbitrary text through the real speaker."""
@@ -673,7 +694,12 @@ class IntegrationMixin:
             return {"proposals": unresolved}
 
     def name_proposal_object(self, body: dict[str, Any]) -> dict[str, Any]:
-        """Bind a novel object to a name + rebind its observed history."""
+        """Bind a novel object to a name + rebind its observed history.
+
+        The embedding is optional: when omitted, the last embedding the camera
+        loop saw for that category is used (GAP-3), so the UI can name a
+        proposal without re-supplying the vector.
+        """
         category = str(body.get("category", "") or "").strip()
         name = str(body.get("name", "")).strip()
         embedding = body.get("embedding")
@@ -681,7 +707,10 @@ class IntegrationMixin:
             return {"error": "category and name required"}
         if (not isinstance(embedding, list) or not embedding
                 or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in embedding)):
-            return {"error": "embedding must be a list of numbers"}
+            with self.mm_lock:
+                embedding = self.mm_last_object_embeddings.get(category)
+            if not embedding:
+                return {"error": f"embedding required — no recent sighting of '{category}'"}
         with self.mm_lock:
             result = self.mm_runtime.name_proposal_object(
                 category, name, embedding=[float(v) for v in embedding],

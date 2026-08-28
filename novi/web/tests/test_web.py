@@ -1,5 +1,6 @@
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -151,7 +152,7 @@ class NoviWebServerTests(unittest.TestCase):
             self.s.switch_model("does-not-exist")
 
     def test_qwen3_32b_is_available_and_switchable(self) -> None:
-        """qwen3:32b is the default qwen model and switchable (plan 19 follow-up)."""
+        """qwen3:32b is a registered switchable model (plan 19 follow-up)."""
         self.assertIn("qwen3:32b", self.s.available_models)
         r = self.s.switch_model("qwen3:32b")
         self.assertEqual(r["current"], "qwen3:32b")
@@ -252,22 +253,27 @@ class NoviWebServerTests(unittest.TestCase):
         real = urllib.request.urlopen
         calls = {"n": 0}
 
-        class _Resp:
-            status = 200
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *exc):
-                return False
-
-        def fake(req, timeout=120):
-            calls["n"] += 1
-            return _Resp()
-
         s = self._server(chat_llm=True)
         s.start()
         try:
+            class _Resp:
+                status = 200
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *exc):
+                    return False
+
+                def read(self):
+                    # /api/tags shape: availability requires the CURRENT model
+                    # to be pulled (M2).
+                    return json.dumps({"models": [{"name": s.llm_model}]}).encode("utf-8")
+
+            def fake(req, timeout=120):
+                calls["n"] += 1
+                return _Resp()
+
             # Stale offline cache from a startup probe.
             s._llm_available = False
             s._llm_probed_at = 0.0  # force immediate re-probe
@@ -362,6 +368,12 @@ class NoviWebServerDurableTests(unittest.TestCase):
         try:
             s.hear("alice moved the door")
             s.hear("alice said hello")
+            # M3: the narrator regenerates on a background thread, so the first
+            # state() returns the stale cache; wait for the thread to finish.
+            s.state()
+            deadline = time.time() + 2.0
+            while s._narrative_regenerating and time.time() < deadline:
+                time.sleep(0.01)
             st = s.state()
             self.assertIn("narrative", st)
             self.assertTrue(st["narrative"], "expected an episodic narrative")

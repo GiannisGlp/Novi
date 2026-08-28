@@ -9,10 +9,12 @@ import type {
   ListenResult,
   MemoryResults,
   ModelInfo,
+  NameObjectResult,
   OpaqueResult,
   PreviewFrame,
   RealIOStatus,
   RecognitionList,
+  RecognitionProposals,
   SoulDetail,
   StreamEvent,
 } from './types'
@@ -126,6 +128,9 @@ export const api = {
   voiceTurn: (text: string) => request<OpaqueResult>('/api/voice/turn', postJson({ text })),
   enrollFace: (name: string) => request<OpaqueResult>('/api/recognition/enroll-face', postJson({ name })),
   enrollVoice: (name: string) => request<OpaqueResult>('/api/recognition/enroll-voice', postJson({ name })),
+  proposals: () => request<RecognitionProposals>('/api/recognition/proposals'),
+  nameObject: (body: { category: string; name: string; frame_id?: string }) =>
+    request<NameObjectResult>('/api/recognition/name-object', postJson(body)),
   p0Gate: () => request<OpaqueResult>('/api/p0-gate'),
 
   // action buttons

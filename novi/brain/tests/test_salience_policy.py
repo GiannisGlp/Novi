@@ -95,6 +95,18 @@ class SurgeSalienceEvaluatorTest(unittest.TestCase):
         assert cand is not None
         self.assertEqual(cand.affordance, "ask")
 
+    def test_object_recognized_comments(self) -> None:
+        cand = self.eval.evaluate(
+            [_event("object.recognized", payload={"object": "my mug", "label": "cup"})],
+            cycle=1,
+            known_entities=["my mug"],
+        )
+        self.assertIsNotNone(cand)
+        assert cand is not None
+        self.assertEqual(cand.affordance, "comment")
+        self.assertEqual(cand.entity, "my mug")
+        self.assertIn("mug", cand.text)
+
     def test_identity_auto_enrolled_asks_for_name(self) -> None:
         cand = self.eval.evaluate(
             [_event("identity.auto_enrolled", payload={"person": "new-person-1"})],

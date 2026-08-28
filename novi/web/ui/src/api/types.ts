@@ -306,6 +306,25 @@ export interface RecognitionList {
   enrollments?: { id?: number; kind?: string; label?: string; person_id?: string }[]
 }
 
+/** One unresolved novel-object proposal awaiting a name (GAP-3). */
+export interface RecognitionProposal {
+  entity_ref?: string
+  category?: string
+  label?: string
+  place?: string
+  seen_at?: string
+}
+
+/** GET /api/recognition/proposals — the server wraps the list in `result`. */
+export interface RecognitionProposals {
+  result?: { proposals?: RecognitionProposal[] }
+}
+
+/** POST /api/recognition/name-object — ok + the canonical id + rebound count. */
+export interface NameObjectResult {
+  result?: { ok?: boolean; object_id?: string; rebound?: number; error?: string }
+}
+
 export interface RealIOStatus {
   enabled?: boolean
   devices?: { camera?: boolean; mic?: boolean; speaker?: boolean }

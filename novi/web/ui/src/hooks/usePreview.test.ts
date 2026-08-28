@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { jsonFetch, jsonResponse } from '../test/helpers'
-import { usePreview } from './usePreview'
+import { PREVIEW_POLL_MS, usePreview } from './usePreview'
 
 describe('usePreview', () => {
   afterEach(() => {
@@ -25,17 +25,17 @@ describe('usePreview', () => {
     await act(async () => {})
     expect(result.current.showImage).toBe(false)
 
-    act(() => vi.advanceTimersByTime(700))
+    act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS))
     await act(async () => {})
-    act(() => vi.advanceTimersByTime(700))
+    act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS))
     await act(async () => {})
-    act(() => vi.advanceTimersByTime(700))
+    act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS))
     await act(async () => {})
     expect(result.current.showImage).toBe(false)
 
     // a frame with an image brings it back
     fetchMock.mockImplementation(() => jsonResponse({ image_data_url: 'data:image/jpeg;base64,xyz' }))
-    act(() => vi.advanceTimersByTime(700))
+    act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS))
     await act(async () => {})
     expect(result.current.showImage).toBe(true)
   })
