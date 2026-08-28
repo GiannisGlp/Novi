@@ -41,3 +41,8 @@ brain_evidence.json
 !novi/data/
 novi/data/*
 !novi/data/README.md
+
+# Novi web UI (React/Vite) — build artifacts and deps
+novi/web/ui/node_modules/
+novi/web/ui/dist/
+novi/web/ui/tsconfig*.tsbuildinfo

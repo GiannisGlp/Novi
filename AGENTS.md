@@ -50,7 +50,7 @@ This repo runs the **ECC** engineering system — 69 agents, 60 project skills, 
 | mle-reviewer | Production ML pipeline review | ML pipelines, evals, serving, monitoring, rollback |
 | rag-pipeline-reviewer | RAG pipeline review | Retrieval quality, chunking, reranking, RAGAS evaluation coverage |
 | typescript-reviewer | TypeScript/JavaScript code review | TypeScript/JavaScript projects |
-| frontend-developer | Frontend implementation (HTML/CSS/JS) | Web UI changes, `novi/web/static/` |
+| frontend-developer | Frontend implementation (React/TypeScript) | Web UI changes, `novi/web/ui/` |
 
 ## Agent Orchestration
 
@@ -64,7 +64,7 @@ Use agents proactively without user prompt:
 - Autonomous loops / loop monitoring → **loop-operator**
 - Harness config reliability and cost → **harness-optimizer**
 - RAG/retrieval pipeline changes → **rag-pipeline-reviewer**
-- Web/frontend changes (`novi/web/static/`, HTML/CSS/JS) → **frontend-developer**
+- Web/frontend changes (`novi/web/ui/`, React/TypeScript) → **frontend-developer**
 
 Use parallel execution for independent operations — launch multiple agents simultaneously.
 

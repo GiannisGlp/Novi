@@ -1,0 +1,73 @@
+/* Design tokens — ported verbatim from novi/web/static/index.html.
+   The active theme is set by [data-theme] on <html> (see index.html bootstrap
+   script). Three themes: dark (default), light, nord. */
+
+:root {
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 12px; --radius-sm: 8px; --radius-xs: 6px;
+  --rail-w: 208px; --topbar-h: 56px; --status-h: 30px;
+}
+
+[data-theme="dark"] {
+  --bg: #0a0e16; --bg-elev: #0e131d; --panel: #121722; --panel-2: #1a212e;
+  --border: #232c3d; --border-strong: #33405a;
+  --text: #e4eaf3; --text-dim: #9aa8bc; --text-mute: #6b7a90;
+  --accent: #34d6d0; --accent-2: #7be8e3; --accent-ink: #04211f;
+  --accent-soft: rgba(52, 214, 208, .13);
+  --soul: #f5b868; --soul-2: #ffd9a0; --soul-soft: rgba(245, 184, 104, .13);
+  --good: #4cc38a; --warn: #e0b34a; --bad: #ff6b6b;
+  --user-bg: #1b2740; --user-border: #2b3a5c; --novi-bg: #141a26;
+  --shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  --glow: 0 0 18px rgba(52, 214, 208, .18);
+}
+
+[data-theme="light"] {
+  --bg: #eef2f7; --bg-elev: #ffffff; --panel: #ffffff; --panel-2: #f4f7fb;
+  --border: #dde4ee; --border-strong: #bccadb;
+  --text: #182130; --text-dim: #4d5c70; --text-mute: #77879c;
+  --accent: #0d8f9c; --accent-2: #12aab8; --accent-ink: #ffffff;
+  --accent-soft: rgba(13, 143, 156, .10);
+  --soul: #b06a10; --soul-2: #d98a2b; --soul-soft: rgba(176, 106, 16, .10);
+  --good: #188a58; --warn: #a06a10; --bad: #cc4444;
+  --user-bg: #e3ecfa; --user-border: #cadaf2; --novi-bg: #f2f6fa;
+  --shadow: 0 4px 14px rgba(24, 36, 54, .07);
+  --glow: 0 0 14px rgba(13, 143, 156, .12);
+}
+
+[data-theme="nord"] {
+  --bg: #2e3440; --bg-elev: #353c4a; --panel: #3b4252; --panel-2: #333a48;
+  --border: #434c5e; --border-strong: #4c566a;
+  --text: #eceff4; --text-dim: #b8c2cf; --text-mute: #7b8597;
+  --accent: #88c0d0; --accent-2: #8fbcbb; --accent-ink: #212b36;
+  --accent-soft: rgba(136, 192, 208, .15);
+  --soul: #ebcb8b; --soul-2: #f0d9a8; --soul-soft: rgba(235, 203, 139, .15);
+  --good: #a3be8c; --warn: #ebcb8b; --bad: #bf616a;
+  --user-bg: #434c5e; --user-border: #4c566a; --novi-bg: #373e4d;
+  --shadow: 0 5px 16px rgba(0, 0, 0, .25);
+  --glow: 0 0 14px rgba(136, 192, 208, .15);
+}
+
+/* Base reset. The SPA renders into #root, which takes over body's role as the
+   full-height flex column (body itself just carries color/background/font). */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--bg);
+  font: 14px/1.5 var(--sans);
+  transition: background .2s, color .2s;
+}
+#root { display: flex; flex-direction: column; overflow: hidden; }
+
+::selection { background: var(--accent-soft); }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }

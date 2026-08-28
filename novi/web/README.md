@@ -1,13 +1,32 @@
 # Novi Web App
 
-The **Novi web app** is a dependency-free (Python stdlib only) local HTTP server that
-owns a running [`Brain`](../brain/engine.py) (`Brain`/`MacBrain`) and serves a browser UI for live
-interaction with Novi. The UI lives in [`static/index.html`](static/index.html); the
-server lives in [`server.py`](server.py).
+The **Novi web app** is a local HTTP server that owns a running
+[`Brain`](../brain/engine.py) (`Brain`/`MacBrain`) and serves a browser UI for live
+interaction with Novi. The server is dependency-free (Python stdlib only) and lives in
+[`server.py`](server.py). The UI is a **React + TypeScript SPA** in [`ui/`](ui/), built
+with Vite to `ui/dist/` (gitignored); the server serves only the built bundle.
 
 The brain runs on a background thread (a bounded auto-step loop). All brain access is
 serialized through a single lock, so the UI never races the background loop. No external
-web framework, and no network access beyond your local Ollama instance, is required.
+web framework on the server, and no network access beyond your local Ollama instance, is
+required.
+
+---
+
+## Building the UI
+
+The browser UI is a React + TypeScript SPA under [`ui/`](ui/) (Vite + React 19).
+Build it before starting the server — the server serves `ui/dist/index.html`, and
+returns a 503 "not built" hint if the bundle is missing.
+
+```bash
+cd novi/web/ui
+npm install   # first time only
+npm run build # → ui/dist/ (gitignored)
+```
+
+Development workflow in `ui/`: `npx vitest run` for the test suite, `npx tsc --noEmit`
+for type checking, `npm run build` to produce the served bundle.
 
 ---
 

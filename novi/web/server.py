@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import mimetypes
 import re
 import threading
 import time
@@ -27,15 +28,26 @@ from typing import Any
 
 from novi.brain.audio import AudioFrame
 from novi.brain.autonomy import Goal
-from novi.brain.contracts import utc_now
-from novi.web.integration_api import IntegrationMixin
-from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.b2_perception import SpecialistPerception
+from novi.brain.contracts import utc_now
+from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
 from novi.brain.models.stt import TranscriptionResult
+from novi.web.integration_api import IntegrationMixin
 
 _ROUTED = Path(__file__).resolve().parent
+
+_UI_DIST = _ROUTED / "ui" / "dist"
+
+
+def _resolve_ui_asset(rel_path: str) -> Path | None:
+    """Resolve a URL path to a file under ui/dist, rejecting path traversal."""
+    base = _UI_DIST.resolve()
+    target = (base / rel_path).resolve()
+    if not target.is_relative_to(base):
+        return None
+    return target if target.is_file() else None
 
 
 class DemoCamera:
@@ -1128,6 +1140,26 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, obj: Any, status: int = 200) -> None:
         self._send(status, json.dumps(obj).encode())
 
+    def _serve_spa(self) -> None:
+        """Serve the built React SPA shell (novi/web/ui/dist/index.html)."""
+        dist_index = _UI_DIST / "index.html"
+        if dist_index.is_file():
+            self._send(200, dist_index.read_bytes(), "text/html")
+        else:
+            self._send(
+                503,
+                b"novi web ui is not built - run `npm run build` in novi/web/ui",
+                "text/plain",
+            )
+
+    def _serve_ui_asset(self, rel_path: str) -> None:
+        target = _resolve_ui_asset(rel_path)
+        if target is None:
+            self._send(404, b"not found", "text/plain")
+            return
+        ctype = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+        self._send(200, target.read_bytes(), ctype)
+
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -1146,6 +1178,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = self.path.split("?")[0]
+        if path.startswith("/assets/"):
+            self._serve_ui_asset(path.lstrip("/"))
+            return
         if path == "/api/events/stream":
             # Server-Sent Events: push brain events as they appear (replaces polling)
             from urllib.parse import parse_qs, urlparse
@@ -1197,12 +1232,10 @@ class Handler(BaseHTTPRequestHandler):
                     break
             return
         if path in ("/", "/index.html"):
-            html = (_ROUTED / "static" / "index.html").read_text(encoding="utf-8")
-            self._send(200, html.encode("utf-8"), "text/html")
+            self._serve_spa()
             return
         if path in ("/camera", "/camera.html", "/live"):
-            html = (_ROUTED / "static" / "camera.html").read_text(encoding="utf-8")
-            self._send(200, html.encode("utf-8"), "text/html")
+            self._serve_spa()
             return
         if path == "/api/state":
             self._json(self.server.novi.state())
@@ -1270,8 +1303,7 @@ class Handler(BaseHTTPRequestHandler):
         # ---- multimodal integration (doc 16) ----
         novi = self.server.novi
         if path == "/preview":
-            html = (_ROUTED / "static" / "preview.html").read_text(encoding="utf-8")
-            self._send(200, html.encode("utf-8"), "text/html")
+            self._serve_spa()
             return
         if path == "/api/perception/state":
             self._json(novi.perception_state() if novi.mm_runtime else {"error": "integration unavailable"})
@@ -1302,6 +1334,11 @@ class Handler(BaseHTTPRequestHandler):
             with self.server.novi._lock:
                 result = self.server.novi.brain.p0_gate()
             self._json(result)
+            return
+        # SPA fallback: any other non-API GET serves the React shell so client-side
+        # routes (/overview, /cognition, ...) work on refresh.
+        if not path.startswith("/api/"):
+            self._serve_spa()
             return
         self._send(404, b"not found", "text/plain")
 

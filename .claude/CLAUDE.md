@@ -64,7 +64,7 @@ Use the following skills when working on related files:
 |---------|-------|
 | `*.py` | `python-patterns`, `python-testing` |
 | `novi/brain/**` | `tdd-workflow`, `coding-standards` |
-| `novi/web/static/**`, `*.html`, `*.css`, `*.js` | `frontend-design`, `canvas-design` |
+| `novi/web/ui/**` (React SPA), `*.tsx`, `*.ts`, `*.css` | `frontend-design`, `canvas-design` |
 | `docs/**` | `living-docs-governance` |
 | security-sensitive code | `security-review`, `security-scan` |
 | new capability | `plan-canvas`, `architecture-decision-records` |

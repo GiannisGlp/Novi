@@ -21,7 +21,7 @@ Plus its web half:
 
 ```text
 novi/web/integration_api.py     IntegrationMixin (runtime + handler methods)
-novi/web/static/preview.html    /preview live page
+novi/web/ui/ (React SPA)        /preview + camera live pages
 novi/web/tests/test_integration_api.py  (7)
 ```
 
@@ -110,7 +110,7 @@ POST (JSON body):
 
 ## Preview page
 
-`static/preview.html` polls `/api/preview` every second and shows: camera health badge (available/degraded/failed/offline), stale warning, recognized person + identity tier, current place, and last-frame detections. When a real camera provider supplies base64 JPEGs (`mm_last_frame_b64`), the image renders inline. Dependency-free, dark-theme, consistent with the main UI. Link back to `/` included.
+The SPA's `/preview` route polls `/api/preview` every second and shows: camera health badge (available/degraded/failed/offline), stale warning, recognized person + identity tier, current place, and last-frame detections. When a real camera provider supplies base64 JPEGs (`mm_last_frame_b64`), the image renders inline. Dark-theme, consistent with the main UI. The `/camera` route adds voice listen/enroll controls.
 
 ## The end-to-end acceptance test
 

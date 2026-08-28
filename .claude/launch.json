@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "novi-web-server",
+      "runtimeExecutable": "/Users/vanonatobaidze/projects/Novi/.venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "novi.web.server",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8080",
+        "--no-auto-step"
+      ],
+      "port": 8080
+    }
+  ]
+}
