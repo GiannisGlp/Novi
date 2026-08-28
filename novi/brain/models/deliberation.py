@@ -87,12 +87,16 @@ class DeliberativeLLMReasoningProvider:
         allowed_actions: frozenset[str] = DEFAULT_ALLOWED,
         default_action: str = "observe",
         max_rounds: int = 2,
+        max_tokens: int = 600,
+        timeout: float = 60,
     ) -> None:
         self.model = model
         self.base_url = base_url
         self.allowed_actions = allowed_actions
         self.default_action = default_action
         self.max_rounds = max(1, int(max_rounds))
+        self.max_tokens = max(1, int(max_tokens))
+        self.timeout = max(1.0, float(timeout))
         self.last_deliberation: dict[str, Any] | None = None
 
     def decide(self, *, conclusion: str, confidence: float, situation: Any, recall: Any = ()) -> ActionIntent:
@@ -153,7 +157,7 @@ class DeliberativeLLMReasoningProvider:
             "prompt": user_prompt,
             "format": "json",
             "stream": False,
-            "options": {"num_predict": 600},
+            "options": {"num_predict": self.max_tokens},
         }
         if "nemotron" in self.model.lower():
             body["think"] = False
@@ -162,7 +166,7 @@ class DeliberativeLLMReasoningProvider:
             data=json.dumps(body).encode("utf-8"),
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=self.timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         raw = data.get("response", "")
         if not (raw or "").strip():

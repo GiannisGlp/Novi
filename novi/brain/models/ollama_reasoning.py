@@ -97,6 +97,28 @@ class OllamaReasoningProvider:
         provider = MacModelProvider(spec, backend)
         self._llm = LLMReasoningProvider(provider, allowed_actions=allowed_actions, default_action=default_action)
         self.model_id = spec.model_id
+        self.model = model
+        self.base_url = base_url
+
+    def set_model(self, name: str) -> None:
+        """Rebind the provider to another Ollama model at runtime."""
+        name = name.strip()
+        if not name:
+            return
+        spec = MacModelSpec(
+            capability="reasoning",
+            model_id=f"ollama:{name}",
+            model_version="1.0.0",
+            artifact_digest="sha256:local-ollama",
+            runtime="ollama",
+            runtime_version="0.32",
+            modalities=("text",),
+        )
+        backend = _ollama_backend_fn(base_url=self.base_url, model=name)
+        provider = MacModelProvider(spec, backend)
+        self._llm = LLMReasoningProvider(provider, allowed_actions=self._llm.allowed_actions, default_action=self._llm.default_action)
+        self.model_id = spec.model_id
+        self.model = name
 
     def decide(self, *, conclusion: str, confidence: float, situation: Any, recall: Any = ()) -> ActionIntent:
         return self._llm.decide(conclusion=conclusion, confidence=confidence, situation=situation, recall=recall)

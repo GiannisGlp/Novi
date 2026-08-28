@@ -82,6 +82,45 @@ def encode_frame_jpeg_b64(frame: CameraFrame) -> str | None:
     return None
 
 
+def encode_preview_jpeg_b64(
+    frame: CameraFrame, *, max_width: int = 640, quality: int = 72
+) -> str | None:
+    """Downscaled preview data URL; detection stays full-res and untouched.
+
+    The camera-loop embeddings run on ``frame.payload`` unchanged — only the
+    browser preview is shrunk, so the base64 payload and encode cost drop
+    sharply without degrading face/object recognition.
+    """
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:  # noqa: SIM105 - optional heavy deps; degrade to no preview
+        return None
+    payload = frame.payload
+    try:
+        if isinstance(payload, (bytes, bytearray)) and payload[:2] == b"\xff\xd8":
+            image = cv2.imdecode(np.frombuffer(bytes(payload), dtype=np.uint8), cv2.IMREAD_COLOR)
+        elif hasattr(payload, "shape"):
+            image = payload
+        else:
+            return None
+        if image is None:
+            return None
+        height, width = image.shape[:2]
+        if width > max_width:
+            scale = max_width / float(width)
+            image = cv2.resize(
+                image, (max_width, int(round(height * scale))), interpolation=cv2.INTER_AREA
+            )
+        ok, buf = cv2.imencode(".jpg", image, [int(cv2.IMWRITE_JPEG_QUALITY), int(quality)])
+        if not ok:
+            return None
+        b64 = base64.b64encode(bytes(buf.tobytes())).decode()
+        return f"data:image/jpeg;base64,{b64}"
+    except Exception:  # noqa: BLE001 - preview encode is best-effort
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Microphone + STT
 # ---------------------------------------------------------------------------

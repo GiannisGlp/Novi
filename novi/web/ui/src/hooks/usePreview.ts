@@ -3,7 +3,7 @@ import { api } from '../api/client'
 import type { PreviewFrame } from '../api/types'
 import { usePoll } from './usePoll'
 
-export const PREVIEW_POLL_MS = 700
+export const PREVIEW_POLL_MS = 300
 const HIDE_AFTER_MISSES = 3
 
 export interface PreviewData {
@@ -13,7 +13,7 @@ export interface PreviewData {
 }
 
 /**
- * 700ms poll of /api/preview. Ports the legacy refreshPreview(): keeps the last
+ * 300ms poll of /api/preview. Ports the legacy refreshPreview(): keeps the last
  * frame while the server is busy, hides the image after 3 consecutive empty polls,
  * and does not report disconnection (a busy camera is not a lost server).
  */

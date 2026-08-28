@@ -179,9 +179,11 @@ class IntegrationMixin:
                 if rec is None:
                     continue
                 try:
-                    from novi.integration.real_io import encode_frame_jpeg_b64
+                    from novi.integration.real_io import encode_preview_jpeg_b64
 
-                    data_url = encode_frame_jpeg_b64(rec.frame)
+                    # Preview is downscaled + quality-capped; detection below
+                    # runs on the full-res frame.payload untouched.
+                    data_url = encode_preview_jpeg_b64(rec.frame)
                     with self.mm_lock:
                         self.mm_last_frame_b64 = data_url
                     # Real face identity: embed the largest face in this frame

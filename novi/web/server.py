@@ -50,6 +50,38 @@ def _resolve_ui_asset(rel_path: str) -> Path | None:
     return target if target.is_file() else None
 
 
+def _model_choice_path(store_path: str | None) -> Path:
+    """Persisted model choice lives next to the canonical DB (never a second DB)."""
+    if store_path:  # noqa: SIM108 - if/else is clearer than a ternary here
+        base = Path(store_path).resolve().parent
+    else:
+        base = Path(__file__).resolve().parents[1] / "data"
+    return base / "model.json"
+
+
+def _load_model_choice(store_path: str | None) -> str | None:
+    """Read the last UI-selected model; None when unset or unreadable."""
+    try:
+        path = _model_choice_path(store_path)
+        if not path.is_file():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        name = str(data.get("model") or "").strip()
+        return name or None
+    except Exception:  # noqa: BLE001 - a corrupt choice file degrades to the default
+        return None
+
+
+def _save_model_choice(store_path: str | None, name: str) -> None:
+    """Persist the runtime-selected model so it survives restarts."""
+    try:
+        path = _model_choice_path(store_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"model": name}), encoding="utf-8")
+    except Exception:  # noqa: BLE001 - persistence is best-effort
+        pass
+
+
 class DemoCamera:
     """No-hardware deterministic camera (works without webcam permissions)."""
 
@@ -84,7 +116,7 @@ class NoviWebServer(IntegrationMixin):
         auto_step: bool = True,
         chat_llm: bool = True,
         llm_url: str = DEFAULT_OLLAMA_URL,
-        llm_model: str = DEFAULT_OLLAMA_MODEL,
+        llm_model: str | None = None,
         camera: str = "demo",
         reasoning: str = "router",
         route_threshold: float = 0.6,
@@ -94,6 +126,8 @@ class NoviWebServer(IntegrationMixin):
         sleep_every_n_cycles: int = 500,
         available_models: tuple[str, ...] = ("qwen3:32b", "qwen3:8b", "qwen3:4b", "nemotron-3.5-lightning"),
         embedder: str = "auto",
+        deliberation_rounds: int = 1,
+        persist_model: bool = False,
     ) -> None:
         self.host = host
         self.port = port
@@ -103,10 +137,15 @@ class NoviWebServer(IntegrationMixin):
         self.sleep_every_n_cycles = max(0, int(sleep_every_n_cycles))
         self.chat_llm = chat_llm
         self.llm_url = llm_url
+        self._persist_model = bool(persist_model)
         self.available_models = list(available_models)
-        if llm_model not in self.available_models and llm_model != DEFAULT_OLLAMA_MODEL:
-            self.available_models.insert(0, llm_model)
-        self.llm_model = llm_model
+        resolved_model = llm_model
+        if not resolved_model and self._persist_model:
+            resolved_model = _load_model_choice(store_path)
+        resolved_model = resolved_model or DEFAULT_OLLAMA_MODEL
+        if resolved_model not in self.available_models and resolved_model != DEFAULT_OLLAMA_MODEL:
+            self.available_models.insert(0, resolved_model)
+        self.llm_model = resolved_model
         self.camera_mode = camera
         self.reasoning_mode = reasoning
         self.route_threshold = route_threshold
@@ -114,6 +153,17 @@ class NoviWebServer(IntegrationMixin):
         self.stt_device = stt_device
         self.listen_seconds = listen_seconds
         self.embedder_mode = embedder
+        self.deliberation_rounds = max(1, int(deliberation_rounds))
+        # Live LLM components, held so switch_model can re-point them all at one
+        # model (single source of truth for the chat/cognition stack).
+        self._reasoning_provider: Any | None = None
+        self._narrator_inner: Any | None = None
+        self._summarizer_inner: Any | None = None
+        self._conversation_summarizer_inner: Any | None = None
+        # Episodic narrative cache: regenerated only when new episodic memories
+        # arrive, so the 1s /api/state poll never triggers an LLM narrator call.
+        self._narrative_cache: list[str] | None = None
+        self._narrative_sig: tuple[Any, ...] | None = None
         self._llm_available: bool | None = None
         self._llm_probed_at: float = 0.0
         # How often to re-probe Ollama availability so a server that started
@@ -164,6 +214,7 @@ class NoviWebServer(IntegrationMixin):
         from novi.brain.models.conversation_summarizer import ConversationSummarizer
 
         inner = ConversationSummarizer(model=self.llm_model)
+        self._conversation_summarizer_inner = inner
 
         def fast_conv_summarizer(turns):  # type: ignore[no-untyped-def]
             if not self.chat_llm or not self._llm_up():
@@ -277,6 +328,7 @@ class NoviWebServer(IntegrationMixin):
         from novi.brain.models.narrator import LLMNarrator
 
         inner = LLMNarrator(model=self.llm_model)
+        self._narrator_inner = inner
 
         def fast_narrator(episodes):  # type: ignore[no-untyped-def]
             # When chat LLM is disabled or Ollama is offline, fail fast instead of 5s LLM timeout.
@@ -295,6 +347,7 @@ class NoviWebServer(IntegrationMixin):
         from novi.brain.models.summarizer import LLMSummarizer
 
         inner = LLMSummarizer(model=self.llm_model)
+        self._summarizer_inner = inner
 
         def fast_summarizer(entity, records):  # type: ignore[no-untyped-def]
             if not self.chat_llm or not self._llm_up():
@@ -310,11 +363,21 @@ class NoviWebServer(IntegrationMixin):
         if mode in ("ollama", "router"):
             from novi.brain.models import DeliberativeLLMReasoningProvider
 
-            llm = DeliberativeLLMReasoningProvider(model=self.llm_model)
+            # Single-round deliberation for the web path: one /api/generate call
+            # (~300 tokens, 30s cap) instead of the multi-round critique loop, so
+            # a chat turn never blocks the server for minutes.
+            llm = DeliberativeLLMReasoningProvider(
+                model=self.llm_model,
+                max_rounds=self.deliberation_rounds,
+                max_tokens=300,
+                timeout=30,
+            )
             if mode == "router":
                 from novi.brain.models.router import ReasoningRouter
 
-                return ReasoningRouter(llm=llm, confidence_threshold=self.route_threshold)
+                self._reasoning_provider = ReasoningRouter(llm=llm, confidence_threshold=self.route_threshold)
+                return self._reasoning_provider
+            self._reasoning_provider = llm
             return llm
         return None  # MacBrain defaults to DeterministicReasoningProvider
 
@@ -572,13 +635,34 @@ class NoviWebServer(IntegrationMixin):
         return {"current": self.llm_model, "available": list(self.available_models)}
 
     def switch_model(self, name: str) -> dict[str, Any]:
-        """Switch the chat/reasoning LLM at runtime (kept models: qwen + nemotron)."""
+        """Switch the chat/reasoning LLM at runtime (kept models: qwen + nemotron).
+
+        The choice is propagated to every LLM component (deliberation, narrator,
+        summarizer, conversation summarizer) so the whole cognition stack runs
+        ONE model, and persisted so it survives a server restart.
+        """
         name = name.strip()
         if name not in self.available_models:
             raise ValueError(f"unknown model '{name}'; available: {self.available_models}")
         self.llm_model = name
         self._llm_available = None  # re-probe availability for the new model
+        self._apply_model_to_components()
+        if self._persist_model:
+            _save_model_choice(self.store_path, name)
         return {"current": self.llm_model, "available": list(self.available_models)}
+
+    def _apply_model_to_components(self) -> None:
+        """Re-point the deliberation/narrator/summarizer providers at self.llm_model."""
+        reasoning = self._reasoning_provider
+        if reasoning is not None:
+            llm = getattr(reasoning, "llm", reasoning)
+            if hasattr(llm, "model"):
+                llm.model = self.llm_model
+            elif hasattr(llm, "set_model"):
+                llm.set_model(self.llm_model)
+        for inner in (self._narrator_inner, self._summarizer_inner, self._conversation_summarizer_inner):
+            if inner is not None:
+                inner.model = self.llm_model
 
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
         options: dict[str, Any] = {"temperature": temperature, "num_predict": 512}
@@ -829,7 +913,7 @@ class NoviWebServer(IntegrationMixin):
             pass
 
 
-    def _maybe_summarize_chat(self, threshold: int = 20, keep_recent: int = 8) -> None:
+    def _maybe_summarize_chat(self, threshold: int = 30, keep_recent: int = 8) -> None:
         """When the thread grows long, distill the older turns into a durable summary.
 
         Gated so the LLM summarizer only runs once the thread has grown by
@@ -954,7 +1038,7 @@ class NoviWebServer(IntegrationMixin):
                 "knowledge": self.brain.knowledge.counts(),
                 "hearing": self.brain._last_audio_events,
                 "memory": {"active": getattr(self.brain.memory, "active_count", None), "summaries": self._memory_summaries(), "embedder": self._embedding_info()},
-                "narrative": self.brain._episodic_narrative(),
+                "narrative": self._cached_narrative(),
                 # Phase P1/P2 observability: sleep-cycle health + per-class routing.
                 "sleep_cycle": self._sleep_cycle_info(),
                 "router": self._router_info(),
@@ -1009,6 +1093,30 @@ class NoviWebServer(IntegrationMixin):
             "route_counts_by_class": snap.get("route_counts_by_class"),
             "cache_size": len(getattr(router, "_route_cache", {}) or {}),
         }
+
+    def _cached_narrative(self) -> list[str]:
+        """Episodic narrative for the dashboard.
+
+        Regenerated only when NEW episodic memories arrive (the last-5 episodic
+        memory_ids are the cache key). The /api/state poll therefore never
+        triggers an LLM narrator call while the world is quiet. In-memory
+        stores don't expose active_rows, so there is nothing to narrate.
+        """
+        try:
+            rows = self.brain.memory.active_rows()
+        except Exception:  # noqa: BLE001 - a memory hiccup degrades to no narrative
+            return []
+        episodic = [
+            item["record"] for item in rows if item["record"].memory_type in {"utterance", "perception"}
+        ]
+        episodic.sort(key=lambda r: r.created_at)
+        sig = tuple(r.memory_id for r in episodic[-5:])
+        if sig == self._narrative_sig and self._narrative_cache is not None:
+            return self._narrative_cache
+        narrative = self.brain._episodic_narrative()
+        self._narrative_cache = narrative
+        self._narrative_sig = sig
+        return narrative
 
     def _memory_summaries(self, limit: int = 5) -> list[dict[str, Any]]:
         """Recent consolidated summary memories for the web UI."""
@@ -1543,8 +1651,8 @@ def main() -> None:
     parser.add_argument("--camera", choices=["demo", "real"], default="demo", help="'demo' = no-hardware camera; 'real' = live webcam + real speech-to-text")
     parser.add_argument("--reasoning", choices=["deterministic", "ollama", "router"], default="router", help="brain decision backend; 'router' escalates uncertain steps to the local LLM (default: router — falls back to deterministic when Ollama is offline)")
     parser.add_argument("--route-threshold", type=float, default=0.6, help="confidence below which the router escalates to the local LLM")
-    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: nemotron-3.5-lightning)")
-    parser.add_argument("--model", dest="model", type=str, default="nemotron-3.5-lightning", help="default chat model (switch at runtime via the UI)")
+    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: qwen3:4b, or the last UI-selected model)")
+    parser.add_argument("--model", dest="model", type=str, default=None, help="default chat model; falls back to the persisted UI selection, then qwen3:4b (switch at runtime via the UI)")
     parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for real microphone STT (tiny/base/small)")
     parser.add_argument("--stt-device", type=str, default="cpu", help="STT device (cpu or mps)")
     parser.add_argument("--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button")
@@ -1563,6 +1671,7 @@ def main() -> None:
         route_threshold=args.route_threshold,
         llm_model=args.ollama_model or args.model,
         stt_model=args.stt_model,
+        persist_model=True,
         stt_device=args.stt_device,
         listen_seconds=args.listen_seconds,
         sleep_every_n_cycles=args.sleep_every,
@@ -1571,7 +1680,7 @@ def main() -> None:
     httpd = NoviWebHTTPServer((args.host, args.port), novi)
     novi.start()
     print(f"Novi live web app -> http://{args.host}:{args.port}")
-    print(f"  camera={args.camera} reasoning={args.reasoning} model={args.ollama_model or args.model}")
+    print(f"  camera={args.camera} reasoning={args.reasoning} model={novi.llm_model}")
     print("Ctrl-C to stop.")
     try:
         httpd.serve_forever()

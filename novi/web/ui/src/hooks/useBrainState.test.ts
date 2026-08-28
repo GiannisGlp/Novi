@@ -24,14 +24,14 @@ describe('useBrainState', () => {
     expect(report).toHaveBeenCalledWith(true)
   })
 
-  it('polls on the 1s interval', async () => {
+  it('polls on the 2s interval', async () => {
     vi.useFakeTimers()
     const fetchMock = jsonFetch({ cycle: 1 })
     vi.stubGlobal('fetch', fetchMock)
     const { result } = renderHook(() => useBrainState(() => undefined))
     await act(async () => {})
     const initialCalls = fetchMock.mock.calls.length
-    act(() => vi.advanceTimersByTime(1000))
+    act(() => vi.advanceTimersByTime(2000))
     await act(async () => {})
     expect(fetchMock.mock.calls.length).toBeGreaterThan(initialCalls)
     expect(result.current.state?.cycle).toBe(1)
@@ -59,7 +59,7 @@ describe('useBrainState', () => {
     vi.stubGlobal('fetch', fetchMock)
     const { result } = renderHook(() => useBrainState(() => undefined))
     await act(async () => {})
-    act(() => vi.advanceTimersByTime(60000))
+    act(() => vi.advanceTimersByTime(120000))
     await act(async () => {})
     expect(fetchMock.mock.calls.length).toBeGreaterThan(HISTORY_CAP)
     expect(result.current.confHist.length).toBeLessThanOrEqual(HISTORY_CAP)

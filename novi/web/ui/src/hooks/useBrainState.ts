@@ -3,7 +3,7 @@ import { api } from '../api/client'
 import type { BrainState } from '../api/types'
 import { usePoll } from './usePoll'
 
-export const STATE_POLL_MS = 1000
+export const STATE_POLL_MS = 2000
 export const HISTORY_CAP = 60
 
 export interface BrainStateData {
@@ -15,7 +15,7 @@ export interface BrainStateData {
 }
 
 /**
- * 1s poll of /api/state. Ports the legacy refreshState(): keeps the last good
+ * 2s poll of /api/state. Ports the legacy refreshState(): keeps the last good
  * state on failure, records the confidence + triples histories for the activity
  * chart (capped at 60 samples each).
  */

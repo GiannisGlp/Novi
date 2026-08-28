@@ -15,6 +15,7 @@ from novi.brain.io import CameraFrame as BrainCameraFrame
 from novi.integration.real_io import (
     MacCameraAdapter,
     encode_frame_jpeg_b64,
+    encode_preview_jpeg_b64,
 )
 
 
@@ -86,6 +87,60 @@ class TestJpegEncoding(unittest.TestCase):
 
         frame = CameraFrame(frame_id="f", captured_at="t", width=4, height=4, payload=b"not-an-image")
         self.assertIsNone(encode_frame_jpeg_b64(frame))
+
+
+class TestPreviewJpegEncoding(unittest.TestCase):
+    """encode_preview_jpeg_b64: downscale to <=640px, cheap quality, honest None."""
+
+    def _decode_url(self, url: str):
+        import cv2
+        import numpy as np
+
+        raw = base64.b64decode(url.split(",", 1)[1])
+        return cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+    def test_downsizes_wide_ndarray_frame(self):
+        import numpy as np
+
+        from novi.brain.io import CameraFrame
+
+        img = np.full((480, 1280, 3), 200, dtype="uint8")
+        frame = CameraFrame(frame_id="f", captured_at="t", width=1280, height=480, payload=img)
+        url = encode_preview_jpeg_b64(frame)
+        self.assertTrue(url.startswith("data:image/jpeg;base64,"))
+        height, width = self._decode_url(url).shape[:2]
+        self.assertLessEqual(width, 640)
+        self.assertLess(height, 480)
+
+    def test_small_frame_kept_at_full_width(self):
+        import numpy as np
+
+        from novi.brain.io import CameraFrame
+
+        img = np.full((48, 64, 3), 127, dtype="uint8")
+        frame = CameraFrame(frame_id="f", captured_at="t", width=64, height=48, payload=img)
+        url = encode_preview_jpeg_b64(frame)
+        height, width = self._decode_url(url).shape[:2]
+        self.assertEqual((height, width), (48, 64))
+
+    def test_downsizes_jpeg_payload(self):
+        import cv2
+        import numpy as np
+
+        from novi.brain.io import CameraFrame
+
+        img = np.full((480, 1280, 3), 60, dtype="uint8")
+        ok, jpeg = cv2.imencode(".jpg", img)
+        frame = CameraFrame(frame_id="f", captured_at="t", width=1280, height=480, payload=bytes(jpeg.tobytes()))
+        url = encode_preview_jpeg_b64(frame)
+        height, width = self._decode_url(url).shape[:2]
+        self.assertLessEqual(width, 640)
+
+    def test_unencodable_payload_returns_none(self):
+        from novi.brain.io import CameraFrame
+
+        frame = CameraFrame(frame_id="f", captured_at="t", width=4, height=4, payload=b"not-an-image")
+        self.assertIsNone(encode_preview_jpeg_b64(frame))
 
 
 if __name__ == "__main__":
