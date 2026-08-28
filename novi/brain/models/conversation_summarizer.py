@@ -12,7 +12,7 @@ import urllib.request
 from typing import Any
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3.8"
+DEFAULT_OLLAMA_MODEL = "qwen3:4b"
 
 
 def _summary_prompt(turns: list[dict[str, Any]]) -> str:

@@ -8,7 +8,7 @@ from .provider import MacModelProvider, MacModelSpec
 from .reasoning import ActionIntent, LLMReasoningProvider
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3.8"
+DEFAULT_OLLAMA_MODEL = "qwen3:4b"
 
 
 def _ollama_backend_fn(*, base_url: str, model: str) -> Callable[[dict[str, Any]], dict[str, Any]]:

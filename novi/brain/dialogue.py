@@ -29,7 +29,7 @@ import urllib.request
 from typing import Any
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3.8"
+DEFAULT_OLLAMA_MODEL = "qwen3:4b"
 
 # Rule 8 — patterns that make Novi sound like a scripted assistant/AI. A reply
 # whose first sentence matches one of these is stripped; a reply that still
