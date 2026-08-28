@@ -25,6 +25,7 @@ from novi.perception.detection import ObjectDetector
 from novi.perception.faces import FaceIdentifier, IdentityTier
 from novi.perception.pipeline import PerceptionPipeline
 
+from .observation_recorder import ObservationRecorder
 from .recognition_store import RecognitionKind, RecognitionStore
 
 
@@ -65,8 +66,10 @@ class MultimodalRuntime:
         detector: ObjectDetector,
         face_identifier: FaceIdentifier | None = None,
         recognition: RecognitionStore | None = None,
+        observations: ObservationRecorder | None = None,
         absent_frames: int = 8,
         scene_change_enabled: bool = True,
+        place_auto_enroll: bool = False,
     ) -> None:
         if absent_frames < 1:
             raise ValueError("absent_frames must be >= 1")
@@ -74,6 +77,7 @@ class MultimodalRuntime:
         self.perception = PerceptionPipeline(detector=detector, face_identifier=face_identifier)
         self.faces = face_identifier
         self.recognition = recognition
+        self.observations = observations
         self._events: list[dict[str, Any]] = []
         self._lock = threading.RLock()
         self._id_to_label: dict[str, str] = {}  # FaceIdentifier pid -> human label
@@ -89,6 +93,8 @@ class MultimodalRuntime:
         # salience: presence transitions + scene-change detection
         self._absent_frames = absent_frames
         self._scene_change_enabled = scene_change_enabled
+        self._place_auto_enroll = place_auto_enroll
+        self._place_landmarks_count: dict[frozenset[str], int] = {}
         self._frame_seq = 0  # monotonically increasing per processed frame
         self._presence_tracks: dict[str, _PresenceTrack] = {}
         self._last_scene_labels: set[str] | None = None
@@ -137,6 +143,11 @@ class MultimodalRuntime:
                     self.current_person = label
                     self.current_person_tier = dec.tier.value
                     self.pending_enrollment_proposal = False
+                    # canonical person id (same scheme as recognize_person) so
+                    # sightings are retrievable by the durable person record
+                    canonical_pid = f"person-{label.lower().replace(' ', '-')}"
+                    self._record_sighting(RecognitionKind.FACE, canonical_pid, label,
+                                          place=self.current_place, frame_id=frame.frame_id)
                     self._emit("identity.recognized", person=label, tier=dec.tier.value)
                 elif dec.reason == "ambiguous":
                     self._emit("identity.ambiguous", similarity=round(dec.similarity, 3))
@@ -295,6 +306,7 @@ class MultimodalRuntime:
         observations: list[tuple[str, list[float]]],
         *,
         min_similarity: float = 0.85,
+        frame_id: str = "",
     ) -> list[dict[str, Any]]:
         """Match per-detection embeddings against enrolled objects.
 
@@ -318,12 +330,18 @@ class MultimodalRuntime:
                     {"label": label, "object": m.label, "similarity": round(m.similarity, 3), "recognized": True}
                 )
                 recognized.append(m.label)
+                # durable sighting of the recognized instance at the current place
+                self._record_sighting(RecognitionKind.OBJECT, m.person_id, m.label,
+                                      place=self.current_place, frame_id=frame_id)
                 if self._object_state.get(label) != resolved:
                     self._emit(
                         "object.recognized", label=label, object=m.label, similarity=round(m.similarity, 3)
                     )
             else:
                 decisions.append({"label": label, "object": None, "recognized": False})
+                # novel (unresolved) instance: stable per-label ref so it coalesces
+                self._record_sighting(RecognitionKind.OBJECT, f"object-unresolved-{label}", label,
+                                      place=self.current_place, frame_id=frame_id)
                 if self._object_state.get(label) != "":
                     self._emit("object.proposal", label=label)
             next_state[label] = resolved
@@ -331,6 +349,60 @@ class MultimodalRuntime:
         with self._lock:
             self.current_objects = sorted(set(recognized))
         return decisions
+
+    def name_proposal_object(self, category: str, name: str, *, embedding: list[float],
+                             frame_id: str = "") -> dict[str, Any]:
+        """Naming loop (doc 02 §1.5 / GAP-S3): name a novel (unresolved) object.
+
+        Enrolls the instance under the given name, then re-binds any prior
+        observations recorded under the unresolved per-label ref to the new
+        canonical id, so "where did I last see {name}" answers across the
+        whole history. Returns the canonical object id + how many sightings
+        were re-bound.
+        """
+        if self.recognition is None or self.observations is None:
+            raise RuntimeError("no RecognitionStore/ObservationRecorder configured")
+        object_id = self.recognize_object(name, embedding=embedding, frame_id=frame_id)
+        unresolved = f"object-unresolved-{category}"
+        moved = self.observations.rename_entity(RecognitionKind.OBJECT, unresolved, object_id)
+        self._emit("object.named", category=category, name=name, object=object_id, rebound=moved)
+        return {"object_id": object_id, "rebound": moved}
+
+    def _record_sighting(
+        self,
+        kind: RecognitionKind,
+        entity_ref: str | None,
+        label: str,
+        *,
+        place: str,
+        frame_id: str = "",
+    ) -> None:
+        """Persist a durable sighting via the optional ObservationRecorder.
+
+        Best-effort by design: observation memory never breaks recognition —
+        if no recorder (or a storage fault) is present, the frame that was
+        recognized simply has no durable spatial record. Face is biometric and
+        is refused-anyway when the recorder's privacy switch is off; objects
+        are non-biometric and always allowed.
+        """
+        if self.observations is None:
+            return
+        if not entity_ref:
+            return
+        try:
+            self.observations.record(
+                kind=kind,
+                entity_ref=entity_ref,
+                label=label,
+                place=place,
+                frame_id=frame_id,
+                provenance={"source": "recognition"},
+            )
+        except PermissionError:
+            # biometric refused while privacy off -> sighting not recorded
+            pass
+        except Exception:  # noqa: BLE001 - observation memory is best-effort
+            pass
 
     def _label_for_person(self, person_id: str | None) -> str:
         """Resolve a FaceIdentifier person id to its human label."""
@@ -345,12 +417,36 @@ class MultimodalRuntime:
         return person_id
 
     def _update_place(self, labels: list[str]) -> None:
-        """Match seen landmarks against enrolled places; tag current place."""
+        """Match seen landmarks against enrolled places; tag current place.
+
+        When a place is already enrolled and its landmarks are in view,
+        current_place tags it. If ``place_auto_enroll`` is enabled, a stable
+        landmark set seen across consecutive frames is auto-enrolled as a new
+        place (from the most salient landmark) so observations that follow get
+        a durable spatial anchor even before a human names the room.
+        """
         if not labels or self.recognition is None:
             return
         hits = self.recognition.lookup_by_descriptor(RecognitionKind.PLACE, {"landmarks": labels})
         if hits:
             self.current_place = hits[0]["label"]
+            return
+        # auto-enroll a stable scene as a place when enabled
+        signature = frozenset(labels)
+        self._place_landmarks_count[signature] = self._place_landmarks_count.get(signature, 0) + 1
+        if self._place_auto_enroll and self._place_landmarks_count[signature] >= 3:
+            # pick the most salient landmark as a tentative room name
+            name = sorted(signature)[0] if signature else "unnamed"
+            try:
+                self.recognition.enroll(
+                    kind=RecognitionKind.PLACE, label=f"{name}-room",
+                    descriptor={"landmarks": sorted(signature)},
+                    provenance={"source": "auto-enroll"},
+                )
+                self.current_place = f"{name}-room"
+                self._emit("place.auto_enrolled", place=f"{name}-room", landmarks=sorted(signature))
+            except Exception:  # noqa: BLE001 - auto-place is best-effort
+                pass
 
     # -- voice -------------------------------------------------------------------
 

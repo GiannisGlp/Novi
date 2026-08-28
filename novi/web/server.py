@@ -1499,6 +1499,16 @@ class Handler(BaseHTTPRequestHandler):
                 # Enroll an object from the CURRENT live camera frame: server
                 # embeds the largest non-person crop with ResNet18 and stores it.
                 self._json({"result": novi.enroll_object_from_camera(str(data.get("name", "")))})
+            elif path == "/api/observation/last-sighting":
+                self._json({"result": novi.observation_last_sighting(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/observation/in-place":
+                self._json({"result": novi.observation_in_place(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/observation/search":
+                self._json({"result": novi.observation_search(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/recognition/proposals":
+                self._json({"result": novi.proposal_list()} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/recognition/name-object":
+                self._json({"result": novi.name_proposal_object(data)} if novi.mm_runtime else {"error": "integration unavailable"})
             else:
                 self._json({"error": "unknown endpoint"}, 404)
         except Exception as exc:  # noqa: BLE001

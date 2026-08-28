@@ -1,132 +1,223 @@
-# Perception — Face and Object Recognition
+# Perception — Vision, Recognition, and Spatial Memory
+
+**Status: OPEN**
+**Workstream:** `docs/plans/02_PERCEPTION/`
+**Sibling docs:** [`01_CAMERA_ACQUISITION.md`](01_CAMERA_ACQUISITION.md) · [`../UNIFIED_INPUT_NORTH_STAR.md`](../UNIFIED_INPUT_NORTH_STAR.md)
+**Purpose:** This is the **single combined plan** for perception recognition work — it unifies visual
+recognition (object detection, face detection + identity) with durable spatial observation memory
+("remember what I saw and where") into one canonical document. Recognition is largely
+**implemented**; this plan documents that canon and carries the **still-open spatial-memory** workstream forward.
+**Governing:** single canonical DB (`novi/data/novi.db`), resource parity, evidence gates, docs before implementation,
+one patch at a time.
+
+---
 
 ## Objective
 
-Give Novi real visual recognition on the Mac body: object detection feeding world state, face detection + identity resolution feeding the existing `PersonIdentity` tier system — closing gap **G4** (identity providers unimplemented) from [`13_GAP_AUDIT_IMPLEMENTATION_PLAN_2026-08-23.md`](../01_BRAIN/13_GAP_AUDIT_IMPLEMENTATION_PLAN_2026-08-23.md) and enabling cross-modal (face + speaker) verified identity.
+Give Novi **real, durable visual understanding** — two halves, one story:
 
-Recognition runs over frames from [`01_CAMERA_ACQUISITION.md`](01_CAMERA_ACQUISITION.md) and stays behind the brain's capability interfaces (`ObjectDetector` pattern from README M1) — recognition is a provider, never a brain-core change.
+1. **Recognize in the moment** — identify objects (category + instance) and people (face),
+   through a provider-based pipeline feeding the brain's existing identity tier system
+   (`unknown → recognized → verified`), closing gap **G4** (identity providers unimplemented)
+   from [`13_GAP_AUDIT_IMPLEMENTATION_PLAN_2026-08-23.md`](../01_BRAIN/13_GAP_AUDIT_IMPLEMENTATION_PLAN_2026-08-23.md).
+2. **Remember what it saw and where** — persist each recognized *face* and *object instance*
+   with a place, a frame position, a timestamp, **and its perceptual vector**, so Novi can
+   answer "where did I last see my blue mug?" across restarts.
 
-## 1. Object detection
+This turns transient recognition ("a mug is here now") into recallable memory ("I last saw the
+blue mug on the kitchen counter at 14:32 yesterday"). Everything stays behind the brain's
+capability interfaces — perception is a provider, never a brain-core change.
 
-### Contract
+---
 
-Existing `ObjectDetector` capability interface remains canonical:
+## 1. Architecture overview
 
 ```text
-ObjectDetector (capability)
-  detect(frame) -> list[Detection]
-  Detection: {label, confidence, bbox, frame_ref, timestamp}
+ camera frame
+   │  (01_CAMERA_ACQUISITION)
+   ▼
+ PerceptionPipeline.process_frame()         novi/perception/pipeline.py
+   │  detector.detect()  → Detection {label, conf, bbox, frame_id, ts}
+   │  tracker.update()   → active Track (IoU + hysteresis)
+   │  faces.observe_observation() → IdentityDecision (unknown/recognized/verified)
+   ▼
+ MultimodalRuntime.process_camera_frame()   novi/integration/multimodal.py
+   │  current_place ← place descriptor match
+   │  identity.recognized / identity.proposal
+   │  recognize_objects(pairs) → object.recognized / object.proposal
+   │  presence.entered/left · scene.changed   (salience)
+   ▼
+ [[ NEW ]] ObservationRecorder                            (§3 — spatial memory)
+   │  persists face/object sightings → observation_records (novi.db)
+   ▼
+ InputBus.brain.submit("camera", kind, payload)           (north-star §4.2)
 ```
 
-### Candidate models
+**Two provider boundaries (no brain-core change):**
+- `ObjectDetector.detect(frame) -> list[Detection]` (canonical, exists)
+- `FaceIdentifier.observe_observation(...) -> IdentityDecision` (exists)
+- `ObservationRecorder.record(...)` (**new**, §3.2)
 
+---
+
+## 2. What already exists (recognized, verified 2026-08-28)
+
+| Capability | Where | Status |
+|---|---|---|
+| Object detection — SSDLite320–MobileNetV3 (MPS), `ObjectDetector` contract | `perception/real_backends.py` `TorchvisionPerceptionDetector` | ✅ live, deterministic fallback |
+| Tracking-lite (IoU + hysteresis) | `perception/tracking.py` | ✅ live |
+| Face detect + SFace **128-d embedding** | `perception/real_backends.py` `OpenCVFaceEmbedder` | ✅ live |
+| Face identity tiers + conversational enrollment + privacy gate + cross-modal voice escalation | `perception/faces.py` | ✅ live |
+| Instance object recognition — ResNet18 **512-d crop embeddings**, `RecognitionKind.OBJECT` | `real_backends.py` `TorchvisionObjectEmbedder`; `multimodal.recognize_objects` | ✅ live (commit `5ebfb87`) |
+| Durable enrollment store **saving the vectors** (`embedding_json`, cosine match, privacy-gated) | `integration/recognition_store.py` (same `novi.db`) | ✅ live |
+| Real camera loop → face→∞id, object→match, presence/scene → InputBus | `web/integration_api.py` `_start_camera_loop` | ✅ live |
+| Durable memory primitives — `spatial_context`/`temporal_context`, `place` filter, semantic `vectors` table | `brain/storage.py` `DurableMemoryStore`; `b1_memory.py` `MemoryRecord` | ✅ exists, **unused by perception** |
+
+**Confirmed:** the ask "saving vectors" is already met — perceptual embeddings are persisted in
+the canonical DB and matched by cosine. The open work is the **observation (spatial) memory**.
+
+---
+
+## 3. Gaps still open (the work)
+
+- **GAP-S1 — No durable observation record.** The camera loop drops the resolved instance name,
+  the person, the bbox position, and the place before submitting to the brain; `object.recognized`
+  and `identity.recognized` events aren't forwarded at all. Nothing binds {object/person, place,
+  position, time, vector} durably ⇒ can't answer "where is X.".
+- **GAP-S2 — Place binding isn't automatic.** `current_place` only tags a frame when a
+  manual-enrolled PLACE descriptor's landmarks match; recognition never enrolls/binds places.
+- **GAP-S3 — Novel-object & novel-person naming loops unclosed** (doc02 §1.5 tail). `object.proposal`
+  and `identity.proposal` fire but no conversational "what is this?" / "what's your name?" loop.
+- **GAP-S4 — Evidence gates not formally run on-Mac** (doc02 gates + a spatial-recall gate §5).
+- **GAP-S5 — Index/search scale.** Linear brute-force cosine over per-row JSON. Fine now (~dozens
+  of enrollments); revisit (in-Python limit, encoder) only above ~few-thousand enrollments. No cloud, no heavy ANN yet.
+
+---
+
+## 3B. Recognition design (reference — canonical + candidate models)
+
+### Object detection candidates
 | Candidate | Role | Parity |
 |---|---|---|
-| Torchvision SSDLite320 MobileNetV3 | primary candidate per README M1 | TensorRT-exportable, Jetson-class |
-| RT-DETR | accuracy alternative (see `05_RT_DETR.md`) | benchmark-gated |
-| YOLO-nano class | latency alternative if SSDLite underperforms live | benchmark-gated |
+| Torchvision SSDLite320-MobileNetV3 (shipped) | primary | TensorRT-exportable, Jetson-class |
+| RT-DETR | accuracy alternative | benchmark-gated, not evaluated |
+| YOLO-nano class | latency alternative | benchmark-gated, not evaluated |
 
-Selection follows the repo rule: a candidate becomes an official provider only after successful execution on the actual Mac with representative inputs and evidence.
+Selection rule: a candidate becomes an official provider only after real on-Mac execution with
+representative inputs + evidence. Detection rate decoupled from cognitive rate (world state updates
+at cognitive sampling). Confidence floor + hysteresis prevent flicker. Novel labels → generic
+"unknown object" entities until named by dialogue.
 
-### Integration requirements
-
-1. Detections update world-state entities: label, bbox, first_seen/last_seen, track continuity.
-2. Tracking-lite: IoU/centroid association across consecutive frames to keep `last_seen` coherent (no heavy tracker; re-ID deferred).
-3. Detection rate decoupled from cognitive rate: detector consumes full-rate frames, world state updates at cognitive sampling.
-4. Confidence floor + hysteresis so world state doesn't flicker objects in/out at threshold boundary.
-5. Novel-object handling: unseen labels enter as generic "unknown object" entities until named by dialogue (ties into knowledge learning loops).
-
-## 2. Face detection and identity
-
-### Pipeline
-
+### Face pipeline (shipped)
 ```text
-frame ─► face detect ─► alignment ─► embedding (ArcFace-class) ─► match vs enrolled
-                                                                      │
-                                                        match ≥ τ ────┤──── no match ─► new-person proposal
-                                                                      ▼
-                                                     PersonIdentity tier assignment
+frame → face detect (YuNet) → align (SFace) → embedding (SFace 128-d) → match vs enrolled
+        match ≥ τ → tier assignment; match ≥ τ_ambig & < τ → ambiguous (stays unknown, no guess)
+```
+Identity tiers existing: `unknown` (propose by dialogue) / `recognized` (match) / `verified`
+(cross-modal face+voice agreement). Biometrics are **local-only**, privacy-gated (camera off ⇒ no
+face processing, audited), provenance-chained, deletable per person. Ambigual matches stay ambiguous.
+
+### Cross-modal fusion payoff (doc02 §3)
+Face+voice co-presence escalates to `verified`, making addressee resolution (G2) trustworthy:
+```
+person walks in ─► face→recognized "Anna"
+Anna speaks ─────► diarization+voiceprint evidence → same person → verified
+Novi greets Anna by name while continuing navigation; chat mid-exchange → turn_taking arbitrates.
 ```
 
-### Identity tiers (existing system, now fed)
+---
 
-| Tier | Meaning | Trigger |
-|---|---|---|
-| `unknown` | detected face, not enrolled | first sighting → propose enrollment via dialogue |
-| `recognized` | matched enrolled person | embedding distance < τ_match |
-| `verified` | cross-modal confirmation | face match + speaker diarization/voiceprint agreement |
+## 4. Spatial Observation Memory (the new design)
 
-Requirements:
-
-1. Enrollment is conversational ("I don't think we've met — what's your name?") — never silent database writes about people.
-2. Embeddings stored with provenance (enrollment date, image quality, consent state); privacy states honored per hardware doc §26 (camera privacy off ⇒ no face processing).
-3. Ambiguous matches stay ambiguous: below-threshold faces remain `unknown` rather than best-guessing identities.
-4. Cross-modal verification: when voice activity and a face co-occur and the speaker embedding agrees, identity escalates to `verified` — this is what makes addressee resolution (G2) trustworthy instead of regex-guessed.
-
-### Privacy boundaries
-
-- Face processing only while camera privacy state permits; audit record per state transition (hardware docs §26).
-- Biometric data is local-only storage, exportable/deletable per person on request.
-- Recognition confidence and sensor provenance ride along wherever identity enters memory/knowledge records.
-
-## 3. Multi-channel fusion payoff
-
-This module plus voice closes the loop that SCENARIO-V1 needs:
+### 4.1 One more table in the canonical DB (never a second DB)
+New `observation_records` in `novi/data/novi.db` (WAL), additive to `schema_version` migrations:
 
 ```text
-person walks in ─► face detect ─► recognized: "Anna" (tier: recognized)
-Anna speaks ─────► diarization + voiceprint ─► same person (tier: verified)
-Novi greets Anna by name while continuing navigation track;
-owner's chat message arrives mid-exchange ─► turn_taking arbitrates (15_VOICE_CONTINUOUS_DIALOG.md)
+observation_records(
+  id          INTEGER PRIMARY KEY,
+  obs_kind    TEXT NOT NULL,          -- 'face' | 'object'
+  entity_ref  TEXT NOT NULL,          -- recognition person_id / object_id (="object-my-blue-mug")
+  category    TEXT,                   -- detector label, e.g. 'cup' (empty when instance-only)
+  label_name  TEXT NOT NULL,          -- resolved human name ('Vano', 'my blue mug')
+  place       TEXT,                   -- spatial anchor (may be NULL → 'unspecified')
+  bbox_json   TEXT NOT NULL DEFAULT '[]',   -- (x,y,w,h) in frame px
+  temporal_at TEXT NOT NULL,               -- ISO8601 UTC
+  frame_ref   TEXT NOT NULL DEFAULT '',
+  vector_json TEXT NOT NULL DEFAULT '[]',  -- perceptual embedding saved at sight (128-d/512-d)
+  provenance  TEXT NOT NULL DEFAULT '{}',  -- source, camera, privacy state
+)
+CREATE INDEX idx_obs_entity ON observation_records(entity_ref, temporal_at);
+CREATE INDEX idx_obs_place  ON observation_records(place, temporal_at);
 ```
+Same SQLite WAL file, `RLock`-guarded like `RecognitionStore`/`DurableMemoryStore`. **Vectors
+saved on every observation** (the ask) — bounded write, independent of later enrollment updates;
+storage is small and retention-bounded.
 
-## Deterministic testing
+### 4.2 ObservationRecorder (adapter, no brain-core change)
+A small recorder called from the **camera loop adapter** (`integration_api._start_camera_loop`)
+and `MultimodalRuntime` at events/decision points:
+- resolved `identity.{recognized,verified}` → insert `obs_kind='face'`, `entity_ref=person_id`,
+  place from current_place, bbox from the face stage;
+- `object.{recognized,proposal}` → insert `obs_kind='object'`, `entity_ref=object_id` (or a
+  device-observed-instance if unresolved), bbox from the Detection.
+- Coalesce per observation window / per presence departure (e.g. one record per
+  `(entity_ref, place)` with a last-seen timestamp), honoring the repo's "detection rate decoupled
+  from cognitive rate" rule so disk growth stays bounded.
 
-CI uses synthetic frames with planted faces/objects (deterministic fixtures, no model downloads): detection→world-state entity updates, tracking-lite continuity, tier transitions including ambiguous-match refusal, enrollment conversation flow, privacy-state gating, provenance chains. Real-model evidence runs happen on-Mac against real people/lighting.
+### 4.3 Retrieval / "where" surface
+Thin query methods used by the brain + web API:
+- `last_sighting(entity_ref) -> {place, bbox, temporal_at, vector}`
+- `objects_in(place) -> [label_name, temporal_at]`
+- `recall(query_embedding, place?, since?) -> top-k episodes` (cosine over `vector_json`) —
+  the instance-search path to add a `.search()` on the store.
 
-## Evidence gates
+### 4.4 Naming-loop wiring (closes GAP-S3 / doc02 §1.5)
+Route `object.proposal`/`identity.proposal` into a conversational-capability surface (web
+thin-client / dialogue hook) that asks the human for a name and calls the existing
+`recognize_object` / `recognize_person` enrollment APIs; the resulting `entity_ref` binds to the
+already-recorded (abstract) `observation_records`.
 
-- Live detection run: common household objects ≥ 10 FPS sustained on Mac, world-state entities updating with correct last_seen decay.
-- Identity run: 3 enrolled persons, tier transitions exercised live including one deliberate ambiguity (stays unknown).
-- Cross-modal: face+voice co-presence escalates to `verified` in a recorded session.
-- Regression wall green with fakes; hardware absent ⇒ deterministic fallbacks.
+### 4.5 Privacy & resource parity
+- Face observations gated by `privacy_enabled` (biometric) mirroring `RecognitionStore`; object
+  observations are non-biometric (always allowed). Privacy transitions audit-recorded.
+- Local-only; no cloud. Vectors are tiny (128/512−d) ⇒ Jetson-Orin/Thor-plausible.
 
-## Resource parity
+---
 
-SSDLite/ArcFace-class/Silero-diarization all have Orin/Thor-plausible TensorRT/onnx deployments; embeddings are small (≤ 512-d), storage bounded. No cloud vision APIs anywhere.
+## 5. Deterministic testing (CI, no models/hardware)
+Scripted fixtures (synthetic frames, planted faces/objects, scripted embedders) cover:
+- detection→world-state updates with tracking continuity (IoU association), correct last_seen decay;
+- tier transitions incl. ambiguous-match refusal; cross-modal face+voice→`verified`; privacy-gate refusal + audit;
+- enrollment conversational flow (via web API contract);
+- observation insert with bbox/place/time/vector correctness; last_sighting + in_place queries deterministic;
+- coalescing (no duplicate rows per window); instance-search ranking; privacy gate on face obs;
+- restart persistence: a fresh `ObservationRecorder` on the same DB reads prior observations;
+- regression wall green with the deterministic suite.
 
-## Status
+## 6. Evidence gates (on-Mac, real images/objects/lighting)
+1. **Live detection:** common household objects ≥10 FPS sustained, world-state entities updating with correct last_seen decay.
+2. **Identity:** 3 enrolled persons, tier transitions exercised live incl. one deliberate ambiguity (stays `unknown`).
+3. **Cross-modal:** face + voice co-presence escalates to `verified` in a recorded session.
+4. **Spatial recall:** visit two places, leave a known object at the first, return later; "where did I last see my blue mug?" returns the correct place + approx-time — recorded, reproducible trace.
+5. **Durability:** after restart with a fresh process, `last_sighting` still answers, proving vectors + episodes in canonical DB.
+The first three carry over from the former face/documentation plan; the last two (spatial recall,
+durability) gate the new observation-memory work. All gates are the workstream boundary.
 
-> **Correction 2026-08-28:** this plan's earlier status ("PLANNED / DOC PHASE") was stale —
-> the pipeline had already shipped. Current state, verified against code and tests:
+## 7. Scope of first implementation (smallest closing at a time)
+1. `observation_records` table + `ObservationRecorder` (persist + coalescing) + tests.
+2. Wire recorder into `MultimodalRuntime`/camera loop (identity + object resolution).
+3. `last_sighting` / `in_place` / instance `search` retrieval + web endpoints.
+4. Naming loops → conversational enrollment (GAP-S3), auto place (GAP-S2).
 
-**Implemented:**
+## 8. Non-Do
+- No second database (single `novi.db`).
+- No cloud vision/embedding path; no ANN index yet.
+- No change to `novi/brain/` core; `novi/web/ui/` React SPA untouched.
 
-- **§1 Object detection** — live. SSDLite320-MobileNetV3 (`TorchvisionPerceptionDetector`)
-  behind the `ObjectDetector` contract, tracking-lite continuity, confidence floor;
-  deterministic fallback in CI (`novi/integration/tests/test_real_detection.py`).
-- **§2 Face pipeline** — live. OpenCV YuNet detect + SFace 128-d embedding (the
-  ArcFace-class candidate resolved to SFace under the provider-evidence rule), tiers
-  `unknown`/`recognized`/`verified` incl. cross-modal voiceprint escalation, conversational
-  enrollment via web API, privacy gating, provenance
-  (`novi/perception/tests/test_faces.py`, `novi/integration/tests/test_multimodal.py`).
-- **Instance-level object memory** (§1 req 5, added 2026-08-28, commit `5ebfb87`) — live.
-  ResNet18 512-d crop embeddings (`TorchvisionObjectEmbedder`), `RecognitionKind.OBJECT`
-  in the durable `RecognitionStore` (non-biometric: no privacy gate, matching at 0.85
-  cosine), enroll via `POST /api/recognition/object` + `/api/recognition/enroll-object`,
-  transition-gated `object.recognized` / `object.proposal` events
-  (`novi/perception/tests/test_real_backends.py`, OBJECT tests in
-  `test_recognition_store.py` / `test_multimodal.py`, e2e persistence test).
+## 9. Status
+**OPEN.** Recognition + vector storage shipped (see §2). Spatial observation memory (§3–§4) is
+planned, not implemented. Registration into `02_PERCEPTION_IMPLEMENTATION_INDEX.md` is a
+separate follow-up patch (workflow rule 2). Implementation waits for user approval of this doc.
 
-**Still open:**
-
-- **Novel-object naming by dialogue** (§1 req 5 tail) — partial: `object.proposal` fires
-  for unmatched objects, but wiring proposals into conversational naming loops is open.
-- **Evidence gates** — the recorded live runs below (≥10 FPS world-state decay,
-  3-person tier exercise incl. deliberate ambiguity, cross-modal `verified` session)
-  have not been formally evidenced on-Mac.
-- **RT-DETR / YOLO-nano alternatives** — remain benchmark-gated, not evaluated.
-
-Shipped sequencing: detection + tracking → face pipeline → cross-modal verification →
-object instance memory. Enrollment stays conversational-upstream via the web API rather
-than a dedicated dialogue loop.
+Header note: this file consolidates the former `02_FACE_AND_OBJECT_RECOGNITION.md` and
+`03_SPATIAL_OBSERVATION_MEMORY.md` into one canonical plan. The former `03` file was removed.

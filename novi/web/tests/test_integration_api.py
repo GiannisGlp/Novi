@@ -72,6 +72,55 @@ class IntegrationApiTests(unittest.TestCase):
             self.s.recognize_person({"name": "X", "face_embedding": [1.0], "frame_id": "f"})
         self.s.recognition_privacy({"enabled": True, "reason": "restore"})
 
+    def test_observation_last_sighting_roundtrip(self) -> None:
+        # enroll + recognize an object so a durable sighting is written
+        self.s.mm_runtime.recognize_object("mug", embedding=[1.0, 0.0], frame_id="f0")
+        self.s.mm_runtime.current_place = "kitchen"
+        self.s.mm_runtime.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+        r = self.s.observation_last_sighting({"kind": "object", "entity_ref": "object-mug"})
+        self.assertIsNotNone(r["sighting"])
+        self.assertEqual(r["sighting"]["place"], "kitchen")
+        self.assertEqual(r["sighting"]["label"], "mug")
+
+    def test_observation_last_sighting_none_for_unknown(self) -> None:
+        r = self.s.observation_last_sighting({"kind": "object", "entity_ref": "object-nope"})
+        self.assertIsNone(r["sighting"])
+
+    def test_observation_in_place_returns_objects(self) -> None:
+        self.s.mm_runtime.current_place = "kitchen"
+        self.s.mm_runtime.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+        r = self.s.observation_in_place({"place": "kitchen", "kind": "object"})
+        refs = {o["entity_ref"] for o in r["observations"]}
+        self.assertEqual(refs, {"object-unresolved-cup"})
+
+    def test_observation_search_ranks_by_cosine(self) -> None:
+        self.s.mm_runtime.recognize_objects([("book", [0.0, 1.0])], frame_id="f1")
+        r = self.s.observation_search({"query_vector": [0.95, 0.1]})
+        self.assertIn("matches", r)
+        # a distant cosine still ranks the single object highest
+        self.assertTrue(r["matches"])
+
+    def test_proposal_list_and_name_object(self) -> None:
+        # a novel object appears -> proposal ledger lists it
+        self.s.mm_runtime.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+        pl = self.s.proposal_list()
+        refs = {p["entity_ref"] for p in pl["proposals"]}
+        self.assertIn("object-unresolved-cup", refs)
+
+        # name it -> history rebinds to the canonical id
+        r = self.s.name_proposal_object(
+            {"category": "cup", "name": "my-mug", "embedding": [1.0, 0.0], "frame_id": "f2"}
+        )
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["object_id"], "object-my-mug")
+        self.assertGreaterEqual(r["rebound"], 1)
+        named = self.s.observation_last_sighting({"kind": "object", "entity_ref": "object-my-mug"})
+        self.assertIsNotNone(named["sighting"])
+
+    def test_name_proposal_requires_embedding(self) -> None:
+        r = self.s.name_proposal_object({"category": "cup", "name": "x", "embedding": []})
+        self.assertIn("error", r)
+
     def test_preview_payload_shape(self) -> None:
         p = self.s.preview_frame()
         for key in ("camera_health", "stale", "person", "tier", "place", "detections"):

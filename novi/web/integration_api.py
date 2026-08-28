@@ -35,6 +35,11 @@ class IntegrationMixin:
     def _integration_init(self) -> None:
         db = Path(self.store_path) if getattr(self, "store_path", None) else None
         self.mm_store = RecognitionStore(db or ":memory:")
+        # Durable sighting memory (what/where/when + vector) — same canonical
+        # DB file, non-biometric alongside the RecognitionStore enrollments.
+        from novi.integration.observation_recorder import ObservationRecorder
+
+        self.observation_recorder = ObservationRecorder(db or ":memory:")
         # Voice turns get the same LLM transport as chat so spoken dialogue is
         # real dialogue (router-grade), not just the deterministic fallback.
         llm_transport = self._llm_chat if getattr(self, "chat_llm", False) else None
@@ -89,6 +94,7 @@ class IntegrationMixin:
             detector=detector,
             face_identifier=faces,
             recognition=self.mm_store,
+            observations=self.observation_recorder,
         )
         self.mm_camera_feed = None
         self.mm_last_frame_b64: str | None = None
@@ -203,7 +209,7 @@ class IntegrationMixin:
                                 if v is not None
                             ]
                             if pairs:
-                                self.mm_runtime.recognize_objects(pairs)
+                                self.mm_runtime.recognize_objects(pairs, frame_id=rec.frame.frame_id)
                         except Exception:  # noqa: BLE001 - object recognition best-effort
                             pass
                     if embedding is not None and obs.identities:
@@ -550,6 +556,80 @@ class IntegrationMixin:
     def recognition_list(self, kind: str | None = None) -> dict[str, Any]:
         k = RecognitionKind(kind) if kind else None
         return {"enrollments": self.mm_store.all(k)}
+
+    # ---- observation memory (spatial/sighting retrieval) --------------------
+
+    def _require_observations(self):
+        if self.observation_recorder is None:
+            raise RuntimeError("observation memory unavailable")
+        return self.observation_recorder
+
+    def observation_last_sighting(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Most recent where/when/vector for a recognized person or object."""
+        kind = str(body.get("kind", "")).strip().lower()
+        entity_ref = str(body.get("entity_ref", "")).strip()
+        if kind not in ("face", "object"):
+            return {"error": "kind must be face|object"}
+        if not entity_ref:
+            return {"error": "entity_ref required"}
+        with self.mm_lock:
+            oc = self._require_observations()
+            hit = oc.last_sighting(RecognitionKind(kind), entity_ref)
+            return {"sighting": hit.as_dict() if hit else None}
+
+    def observation_in_place(self, body: dict[str, Any]) -> dict[str, Any]:
+        """What Novi currently knows to have been seen at this place."""
+        place = str(body.get("place", "")).strip()
+        if not place:
+            return {"error": "place required"}
+        kind_raw = str(body.get("kind", "") or "").strip().lower()
+        with self.mm_lock:
+            oc = self._require_observations()
+            kind = RecognitionKind(kind_raw) if kind_raw in ("face", "object", "place") else None
+            return {"observations": [o.as_dict() for o in oc.in_place(place, kind)]}
+
+    def observation_search(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Top-k instances ranked by cosine over saved sighting vectors."""
+        query = body.get("query_vector")
+        if not isinstance(query, list) or not query:
+            return {"error": "query_vector required"}
+        kind_raw = str(body.get("kind", "") or "").strip().lower()
+        kind = RecognitionKind(kind_raw) if kind_raw in ("face", "object") else None
+        place = str(body.get("place", "") or "").strip() or None
+        limit = max(1, min(int(body.get("limit", 5)), 100))
+        with self.mm_lock:
+            oc = self._require_observations()
+            hits = oc.search([float(v) for v in query], kind=kind, place=place, limit=limit)
+            return {"matches": [{"entity_ref": ref, "similarity": round(sim, 3)} for ref, sim in hits]}
+
+    def proposal_list(self) -> dict[str, Any]:
+        """Pending novel-object proposals awaiting a name (GAP-S3)."""
+        with self.mm_lock:
+            oc = self._require_observations()
+            rows = oc.all(kind=RecognitionKind.OBJECT)
+            unresolved = [
+                {"entity_ref": o.entity_ref, "category": o.category or o.label,
+                 "label": o.label, "place": o.place, "seen_at": o.temporal_at}
+                for o in rows if o.entity_ref.startswith("object-unresolved-")
+            ]
+            return {"proposals": unresolved}
+
+    def name_proposal_object(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Bind a novel object to a name + rebind its observed history."""
+        category = str(body.get("category", "") or "").strip()
+        name = str(body.get("name", "")).strip()
+        embedding = body.get("embedding")
+        if not category or not name:
+            return {"error": "category and name required"}
+        if (not isinstance(embedding, list) or not embedding
+                or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in embedding)):
+            return {"error": "embedding must be a list of numbers"}
+        with self.mm_lock:
+            result = self.mm_runtime.name_proposal_object(
+                category, name, embedding=[float(v) for v in embedding],
+                frame_id=str(body.get("frame_id", "") or ""),
+            )
+            return {"ok": True, **result}
 
     def enroll_place_or_noise(self, body: dict[str, Any]) -> dict[str, Any]:
         kind = str(body.get("kind", ""))
