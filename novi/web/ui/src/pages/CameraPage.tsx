@@ -24,7 +24,7 @@ function healthBadgeCls(health: string): string {
   return 'warn'
 }
 
-/** Camera & voice — full live perception, enrollment, talk/listen dialog (port of camera.html). */
+/** Camera & voice — full live perception, talk/listen dialog (port of camera.html). */
 export function CameraPage({ reportConnection, frame, showImage }: CameraPageProps) {
   const { status, refresh } = useRealIO(reportConnection)
 
@@ -35,11 +35,7 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
   const [speakBack, setSpeakBackState] = useState(true)
   const [reply, setReply] = useState<{ heard: string; reply: string; spoken?: boolean } | null>(null)
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([])
-  const [nameInput, setNameInput] = useState('')
   const [typeInput, setTypeInput] = useState('')
-  const [enrollHint, setEnrollHint] = useState(
-    'Sit facing the camera, then enroll. After that Novi greets you by name and recognizes your voice.',
-  )
   const [lastHeard, setLastHeard] = useState('—')
 
   const listeningRef = useRef(false)
@@ -176,45 +172,6 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
     }
   }
 
-  const enrollFace = async () => {
-    const name = nameInput.trim()
-    if (!name) {
-      setEnrollHint('Type your name first, then press enroll.')
-      return
-    }
-    setEnrollHint('Enrolling face… look at the camera.')
-    try {
-      const res = await api.enrollFace(name)
-      const r = (res.result ?? res) as Record<string, unknown>
-      if (r.ok) {
-        setEnrollHint(`✓ ${name} enrolled — Novi will recognize you now`)
-        setNameInput('')
-      } else {
-        setEnrollHint('enroll failed: ' + (r.error || 'unknown'))
-      }
-    } catch (e) {
-      setEnrollHint('enroll error: ' + (e instanceof Error ? e.message : String(e)))
-    }
-  }
-
-  const enrollVoice = async () => {
-    const name = nameInput.trim()
-    if (!name) {
-      setEnrollHint('Type your name first, then record your voice.')
-      return
-    }
-    setEnrollHint('Recording ~4s of voice… speak normally.')
-    try {
-      const res = await api.enrollVoice(name)
-      const r = (res.result ?? res) as Record<string, unknown>
-      setEnrollHint(
-        r.ok ? `✓ voiceprint saved for ${name}` : 'voice enroll failed: ' + (r.error || 'unknown'),
-      )
-    } catch (e) {
-      setEnrollHint('voice enroll error: ' + (e instanceof Error ? e.message : String(e)))
-    }
-  }
-
   return (
     <>
       <Section eyebrow="Camera" title="Camera &amp; voice" desc="Novi sees you, hears you, talks back." />
@@ -296,24 +253,6 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
             </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <h2 className="cam-cardtitle">Introduce yourself</h2>
-            <div className="enrollrow">
-              <input
-                type="text"
-                value={nameInput}
-                maxLength={40}
-                placeholder="your name, e.g. Vano"
-                aria-label="Your name"
-                onChange={(e) => setNameInput(e.target.value)}
-              />
-              <button onClick={enrollFace}>👋 Enroll my face</button>
-              <button onClick={enrollVoice} title="records ~4s of your voice">
-                🎙 +voice
-              </button>
-            </div>
-            <div className="hintline">{enrollHint}</div>
-          </div>
         </div>
 
         <div className="cam-card">

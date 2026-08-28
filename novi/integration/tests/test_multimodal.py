@@ -16,6 +16,7 @@ from __future__ import annotations
 from novi.brain.agent import BrainDriver
 from novi.brain.io import CameraFrame
 from novi.integration.multimodal import MultimodalRuntime
+from novi.integration.observation_recorder import ObservationRecorder
 from novi.integration.recognition_store import RecognitionKind, RecognitionStore
 from novi.perception.detection import DeterministicObjectDetector
 from novi.perception.faces import FaceIdentifier, IdentityTier
@@ -135,6 +136,48 @@ class TestObjectRecognition:
         assert len(proposals) == 1
 
 
+class TestPersonHolding:
+    """Person-object co-occurrence (plan 20 WS5): held object resolve + novelty."""
+
+    def test_known_object_stages_person_holding(self, tmp_path):
+        rt, _, store = _runtime(tmp_path)
+        rt.recognize_object("my mug", embedding=[1.0, 0.0], frame_id="f0")
+        res = rt.note_person_holding("Anna", "mug", embedding=[1.0, 0.0], frame_id="f1")
+        assert res == {"person": "Anna", "object": "my mug", "recognized": True, "enrolled": False}
+        holding = [e for e in rt.events if e["kind"] == "person.holding"]
+        assert len(holding) == 1
+        assert holding[0]["person"] == "Anna"
+        assert holding[0]["object"] == "my mug"
+        assert not any(e["kind"] == "object.novel" for e in rt.events)
+
+    def test_novel_object_auto_enrolls_and_stages_object_novel(self, tmp_path):
+        rt, _, store = _runtime(tmp_path)
+        rt.recognize_object("my mug", embedding=[1.0, 0.0], frame_id="f0")
+        res = rt.note_person_holding("Anna", "cup", embedding=[0.0, 1.0], frame_id="f1")
+        assert res["enrolled"] is True and res["recognized"] is False
+        assert res["object"] == "new-object-1"
+        m = store.match(RecognitionKind.OBJECT, [0.0, 1.0])
+        assert m is not None and m.label == "new-object-1"
+        assert m.person_id == "object-new-object-1"
+        novel = [e for e in rt.events if e["kind"] == "object.novel"]
+        assert len(novel) == 1
+        assert novel[0]["object"] == "new-object-1"
+        assert novel[0]["novelty"] == 1.0
+
+    def test_novel_placeholders_number_sequentially(self, tmp_path):
+        rt, _, _ = _runtime(tmp_path)
+        rt.note_person_holding("Anna", "cup", embedding=[0.0, 1.0], frame_id="f1")
+        rt.note_person_holding("Bob", "book", embedding=[0.0, 0.0], frame_id="f2")
+        assert rt.events[-1]["object"] == "new-object-2"
+
+    def test_no_store_is_a_safe_noop(self, tmp_path):
+        detector = DeterministicObjectDetector(scripted={})
+        faces = FaceIdentifier(tau_match=0.90, tau_ambig=0.75)
+        rt = MultimodalRuntime(driver=BrainDriver(), detector=detector, face_identifier=faces, recognition=None)
+        res = rt.note_person_holding("Anna", "cup", embedding=[1.0, 0.0])
+        assert res == {"person": "Anna", "object": "cup", "recognized": False, "enrolled": False}
+
+
 class TestPlaceAndPersistence:
     def test_place_lookup_tags_events(self, tmp_path):
         rt, _, store = _runtime(tmp_path)
@@ -152,3 +195,89 @@ class TestPlaceAndPersistence:
         store.close()
         store2 = RecognitionStore(path)
         assert store2.lookup_by_descriptor(RecognitionKind.PLACE, {"landmarks": ["cup"]})
+
+
+class TestAutoEnrollAndNaming:
+    """Unknown faces auto-enroll as placeholders; introductions bind the name."""
+
+    def test_unknown_face_auto_enrolls_placeholder(self, tmp_path):
+        rt, faces, store = _runtime(tmp_path)
+        rt.process_camera_frame(_frame("f1"), face_embedding=[0.0, 1.0])
+        assert rt.current_person == "new-person-1"
+        rows = store.all(RecognitionKind.FACE)
+        assert len(rows) == 1
+        assert rows[0]["person_id"] == "person-new-person-1"
+        assert rows[0]["label"] == "new-person-1"
+        assert any(e["kind"] == "identity.auto_enrolled" for e in rt.events)
+        # next frame the placeholder is recognized, not re-proposed
+        obs = rt.process_camera_frame(_frame("f2"), face_embedding=[0.0, 1.0])
+        assert obs.identities[0].tier is IdentityTier.RECOGNIZED
+
+    def test_same_unknown_face_not_re_enrolled_each_frame(self, tmp_path):
+        rt, _, store = _runtime(tmp_path)
+        rt.process_camera_frame(_frame("f1"), face_embedding=[0.0, 1.0])
+        # a slightly different embedding of the same face (cosine ~0.99)
+        rt.process_camera_frame(_frame("f2"), face_embedding=[0.01, 0.99995])
+        assert len(store.all(RecognitionKind.FACE)) == 1, "one placeholder per face"
+
+    def test_distinct_unknown_face_gets_its_own_placeholder(self, tmp_path):
+        rt, _, store = _runtime(tmp_path)
+        rt.process_camera_frame(_frame("f1"), face_embedding=[0.0, 1.0])
+        # wait for the first placeholder to be recognized so a new proposal is fresh
+        rt.process_camera_frame(_frame("f2"), face_embedding=[0.0, 1.0])
+        # second, genuinely different face (cosine ~0)
+        rt.process_camera_frame(_frame("f3"), face_embedding=[1.0, 0.0])
+        assert len(store.all(RecognitionKind.FACE)) == 2
+        assert sorted(r["label"] for r in store.all(RecognitionKind.FACE)) == [
+            "new-person-1",
+            "new-person-2",
+        ]
+
+    def test_known_face_recalled_from_store_after_restart(self, tmp_path):
+        path = tmp_path / "rec.db"
+        store = RecognitionStore(path)
+        rt = MultimodalRuntime(driver=BrainDriver(), detector=DeterministicObjectDetector(scripted={}),
+                               face_identifier=FaceIdentifier(), recognition=store)
+        rt.recognize_person("Anna", face_embedding=ANNA_FACE, frame_id="f0")
+        store.close()
+        # a fresh runtime over the same durable store has no in-memory faces
+        store2 = RecognitionStore(path)
+        rt2 = MultimodalRuntime(driver=BrainDriver(), detector=DeterministicObjectDetector(scripted={}),
+                                face_identifier=FaceIdentifier(), recognition=store2)
+        obs = rt2.process_camera_frame(_frame("f1"), face_embedding=ANNA_FACE)
+        assert rt2.current_person == "Anna", "store recall binds the known name, not a placeholder"
+        assert obs.identities[0].new_person_proposal is True  # this frame still proposed
+        assert not any(e["kind"] == "identity.auto_enrolled" for e in rt2.events)
+        # and the face is recognized from the next frame on
+        obs2 = rt2.process_camera_frame(_frame("f2"), face_embedding=ANNA_FACE)
+        assert obs2.identities[0].tier is IdentityTier.RECOGNIZED
+
+    def test_name_person_renames_store_and_sightings(self, tmp_path):
+        obs = ObservationRecorder(tmp_path / "obs.db")
+        rt, _, store = _runtime(tmp_path)
+        rt.observations = obs
+        rt.process_camera_frame(_frame("f1"), face_embedding=[0.0, 1.0])
+        assert rt.current_person == "new-person-1"
+        # the recognized placeholder frame records a durable sighting under the
+        # placeholder ref — the naming loop then re-keys it to the real name
+        rt.process_camera_frame(_frame("f2"), face_embedding=[0.0, 1.0])
+        assert len(obs.all(RecognitionKind.FACE)) == 1
+        res = rt.name_person("new-person-1", "Anna")
+        assert res["person_id"] == "person-anna"
+        rows = store.all(RecognitionKind.FACE)
+        assert len(rows) == 1 and rows[0]["label"] == "Anna" and rows[0]["person_id"] == "person-anna"
+        assert rt.current_person == "Anna"
+        # sighting bound to the placeholder was re-keyed to the canonical id
+        sightings = obs.all(RecognitionKind.FACE)
+        assert len(sightings) == 1
+        assert sightings[0].entity_ref == "person-anna"
+        # the face now resolves to the real name
+        obs2 = rt.process_camera_frame(_frame("f3"), face_embedding=[0.0, 1.0])
+        assert obs2.identities[0].tier is IdentityTier.RECOGNIZED
+        assert rt.current_person == "Anna"
+
+    def test_name_person_on_unknown_placeholder_moves_nothing(self, tmp_path):
+        rt, _, _ = _runtime(tmp_path)
+        res = rt.name_person("new-person-9", "Bob")
+        assert res["moved"] == 0
+        assert res["person_id"] == "person-bob"

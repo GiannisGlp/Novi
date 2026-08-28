@@ -20,6 +20,43 @@ class IntegrationApiTests(unittest.TestCase):
         self.assertIsNotNone(self.s.mm_runtime)
         self.assertIsNotNone(self.s.mm_store)
 
+    def test_event_autonomy_defaults_on(self) -> None:
+        self.assertTrue(self.s.event_autonomy)
+        self.assertTrue(self.s.brain.config.event_autonomy_enabled)
+
+    def test_event_autonomy_can_be_disabled(self) -> None:
+        s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False, event_autonomy=False)
+        try:
+            self.assertFalse(s.event_autonomy)
+            self.assertFalse(s.brain.config.event_autonomy_enabled)
+        finally:
+            s.stop()
+
+    def test_overlaps_reads_contained_object_as_held(self) -> None:
+        from novi.web.integration_api import _overlaps
+
+        # object fully inside the person box → held
+        self.assertTrue(_overlaps((60, 40, 20, 20), (50, 30, 100, 150)))
+        # object barely brushing the box edge → not held
+        self.assertFalse(_overlaps((149, 30, 10, 10), (50, 30, 100, 150)))
+
+    def test_note_person_holding_ignores_unknown_person(self) -> None:
+        class _Det:
+            def __init__(self, label, bbox):
+                self.label = label
+                self.bbox = bbox
+
+        rt = self.s.mm_runtime
+        rt.current_person = "new-person-1"
+        self.s._note_person_holding(
+            [_Det("cup", (60, 40, 20, 20))],
+            (50, 30, 100, 150),
+            [[1.0, 0.0]],
+            "web-f1",
+        )
+        self.assertEqual(rt.current_person, "new-person-1")
+        self.assertFalse(any(e["kind"] in ("person.holding", "object.novel") for e in rt.events))
+
     def test_perception_frame_endpoint_payload(self) -> None:
         res = self.s.perception_frame({
             "frame_id": "web-f1",

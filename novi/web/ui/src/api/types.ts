@@ -303,7 +303,7 @@ export interface PreviewFrame {
 }
 
 export interface RecognitionList {
-  enrollments?: { kind?: string; label?: string }[]
+  enrollments?: { id?: number; kind?: string; label?: string; person_id?: string }[]
 }
 
 export interface RealIOStatus {

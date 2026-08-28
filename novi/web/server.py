@@ -16,6 +16,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import mimetypes
 import re
@@ -30,6 +31,7 @@ from novi.brain.audio import AudioFrame
 from novi.brain.autonomy import Goal
 from novi.brain.b2_perception import SpecialistPerception
 from novi.brain.contracts import utc_now
+from novi.brain.dialogue import _extract_self_name
 from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
@@ -128,6 +130,7 @@ class NoviWebServer(IntegrationMixin):
         embedder: str = "auto",
         deliberation_rounds: int = 1,
         persist_model: bool = False,
+        event_autonomy: bool = True,
     ) -> None:
         self.host = host
         self.port = port
@@ -149,6 +152,7 @@ class NoviWebServer(IntegrationMixin):
         self.camera_mode = camera
         self.reasoning_mode = reasoning
         self.route_threshold = route_threshold
+        self.event_autonomy = bool(event_autonomy)
         self.stt_model = stt_model
         self.stt_device = stt_device
         self.listen_seconds = listen_seconds
@@ -262,7 +266,11 @@ class NoviWebServer(IntegrationMixin):
             narrator=narrator,
             perception=perception,
             speaker_id=speaker_id,
-            config=MacBrainConfig(initiative_enabled=True, sleep_every_n_cycles=self.sleep_every_n_cycles),
+            config=MacBrainConfig(
+                initiative_enabled=True,
+                event_autonomy_enabled=self.event_autonomy,
+                sleep_every_n_cycles=self.sleep_every_n_cycles,
+            ),
         )
 
     def _build_perception(self) -> Any:
@@ -473,6 +481,27 @@ class NoviWebServer(IntegrationMixin):
     def _recent_novi(self, limit: int = 4) -> list[str]:
         return [self._clean_chat_text(c["text"]) for c in reversed(self._chat) if c.get("role") == "novi"][:limit]
 
+    def _bind_introduced_name(self, text: str) -> None:
+        """Bind a self-introduction to a placeholder person (conversational naming).
+
+        When the current camera-tracked person is an auto-enrolled placeholder
+        (``new-person-N``) and the user says "I'm <name>", the brain's own reply
+        already acknowledges the introduction; this renames the placeholder in the
+        durable + in-memory identity records so future frames resolve the real name.
+        """
+        runtime = getattr(self, "mm_runtime", None)
+        if runtime is None:
+            return
+        name = _extract_self_name(text)
+        if not name:
+            return
+        current = runtime.current_person
+        if not current.startswith("new-person-"):
+            return
+        # naming is best-effort, never blocks a reply
+        with contextlib.suppress(Exception):
+            runtime.name_person(current, name.title())
+
     def chat_send(self, text: str, confidence: float = 0.9) -> dict[str, Any]:
         """Hear the user message, let the brain decide, and append a chat turn."""
         # Strip the '[heard] ' STT display marker off the incoming message before
@@ -529,6 +558,7 @@ class NoviWebServer(IntegrationMixin):
                 text, history=history, llm_chat=transport,
                 last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
             )
+            self._bind_introduced_name(text)
             novi_text = resp.get("text")
             reply_source = resp.get("reply_source", "dialogue")
             llm = reply_source == "dialogue"
@@ -593,6 +623,7 @@ class NoviWebServer(IntegrationMixin):
                 text, history=history, llm_chat=transport,
                 last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
             )
+            self._bind_introduced_name(text)
             novi_text = resp.get("text")
             reply_source = resp.get("reply_source", "dialogue")
             llm = reply_source == "dialogue"
@@ -1656,6 +1687,7 @@ def main() -> None:
     parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for real microphone STT (tiny/base/small)")
     parser.add_argument("--stt-device", type=str, default="cpu", help="STT device (cpu or mps)")
     parser.add_argument("--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button")
+    parser.add_argument("--no-event-autonomy", action="store_true", help="disable proactive speech from camera/presence events")
     parser.add_argument("--sleep-every", type=int, default=500, help="run the memory sleep-cycle (consolidate/decay/strengthen) every N brain cycles (0 disables)")
     parser.add_argument("--embedder", choices=["auto", "hash", "minilm"], default="auto", help="embedding provider for memory recall: 'auto' tries MiniLM (MPS, 384d) then falls back to hashing; 'hash' forces deterministic hashing (256d)")
     args = parser.parse_args()
@@ -1676,6 +1708,7 @@ def main() -> None:
         listen_seconds=args.listen_seconds,
         sleep_every_n_cycles=args.sleep_every,
         embedder=args.embedder,
+        event_autonomy=not args.no_event_autonomy,
     )
     httpd = NoviWebHTTPServer((args.host, args.port), novi)
     novi.start()

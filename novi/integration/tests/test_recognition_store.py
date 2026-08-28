@@ -97,6 +97,115 @@ class TestObjectKind:
         assert m is not None and m.label == "my-mug"
 
 
+class TestVoiceFaceFusion:
+    """Face + voice enroll under one canonical person id; re-enroll upserts.
+
+    Plan 21 fix for "Perception page shows Voice: Vano twice": voices no longer
+    enroll under a separate ``voice-{label}`` id, and repeated enrollments
+    replace the stored embedding instead of inserting duplicate rows.
+    """
+
+    def test_voice_defaults_to_canonical_person_id(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        pid = st.enroll(kind=RecognitionKind.VOICE, label="Vano", embedding=[1.0, 0.0], provenance={"source": "test"})
+        assert pid == "person-vano"
+
+    def test_face_and_voice_share_one_person_id(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        face_pid = st.enroll(kind=RecognitionKind.FACE, label="Vano", embedding=[1.0, 0.0], frame_id="f0")
+        voice_pid = st.enroll(kind=RecognitionKind.VOICE, label="Vano", embedding=[1.0, 0.0], provenance={"source": "test"})
+        assert voice_pid == face_pid == "person-vano"
+        assert len(st.all(RecognitionKind.VOICE)) == 1
+
+    def test_reenrolling_voice_upserts_single_row(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        st.enroll(kind=RecognitionKind.VOICE, label="Vano", embedding=[1.0, 0.0], provenance={"source": "a"})
+        st.enroll(kind=RecognitionKind.VOICE, label="Vano", embedding=[0.0, 1.0], provenance={"source": "b"})
+        rows = st.all(RecognitionKind.VOICE)
+        assert len(rows) == 1, "voice re-enrollment must upsert, not duplicate"
+        m = st.match(RecognitionKind.VOICE, [0.0, 1.0])
+        assert m is not None and m.person_id == "person-vano"
+
+    def test_reenrolling_face_upserts_single_row(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        st.enroll(kind=RecognitionKind.FACE, label="Anna", embedding=[1.0, 0.0], frame_id="f0")
+        st.enroll(kind=RecognitionKind.FACE, label="Anna", embedding=[0.0, 1.0], frame_id="f1")
+        assert len(st.all(RecognitionKind.FACE)) == 1
+
+    def test_backfill_rewrites_legacy_voice_pids_and_dedupes(self, tmp_path):
+        import sqlite3
+
+        path = tmp_path / "legacy.db"
+        conn = sqlite3.connect(str(path))
+        conn.executescript(
+            "CREATE TABLE recognition_enrollments ("
+            " id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, label TEXT NOT NULL,"
+            " person_id TEXT NOT NULL, embedding_json TEXT NOT NULL DEFAULT '[]',"
+            " descriptor_json TEXT NOT NULL DEFAULT '{}', frame_ref TEXT NOT NULL DEFAULT '',"
+            " provenance_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT '')"
+        )
+        conn.execute(
+            "INSERT INTO recognition_enrollments (kind, label, person_id, embedding_json)"
+            " VALUES ('voice', 'Vano', 'voice-vano', '[1.0]')"
+        )
+        conn.execute(
+            "INSERT INTO recognition_enrollments (kind, label, person_id, embedding_json)"
+            " VALUES ('voice', 'Vano', 'voice-vano', '[2.0]')"
+        )
+        conn.execute(
+            "INSERT INTO recognition_enrollments (kind, label, person_id, embedding_json)"
+            " VALUES ('face', 'Vano', 'person-vano', '[3.0]')"
+        )
+        conn.commit()
+        conn.close()
+
+        st = RecognitionStore(path)
+        voices = st.all(RecognitionKind.VOICE)
+        assert len(voices) == 1, "legacy duplicates must collapse to one row"
+        assert voices[0]["person_id"] == "person-vano"
+        # the unique index is in place: a fresh enrollment upserts cleanly
+        st.enroll(kind=RecognitionKind.VOICE, label="Vano", embedding=[4.0], provenance={"source": "new"})
+        assert len(st.all(RecognitionKind.VOICE)) == 1
+
+
+class TestRenameEntity:
+    """Conversational naming re-keys a placeholder person to a real name."""
+
+    def test_rename_placeholder_to_canonical(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        st.enroll(kind=RecognitionKind.FACE, label="new-person-1",
+                  embedding=[1.0, 0.0], person_id="person-new-person-1", frame_id="f0")
+        moved = st.rename_entity(RecognitionKind.FACE, "person-new-person-1", "person-anna", label="Anna")
+        assert moved == 1
+        rows = st.all(RecognitionKind.FACE)
+        assert len(rows) == 1
+        assert rows[0]["person_id"] == "person-anna"
+        assert rows[0]["label"] == "Anna"
+        m = st.match(RecognitionKind.FACE, [1.0, 0.0])
+        assert m is not None and m.person_id == "person-anna" and m.label == "Anna"
+
+    def test_rename_onto_existing_target_merges(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        st.enroll(kind=RecognitionKind.FACE, label="new-person-1",
+                  embedding=[1.0, 0.0], person_id="person-new-person-1", frame_id="f0")
+        st.enroll(kind=RecognitionKind.FACE, label="Anna",
+                  embedding=[0.5, 0.5], person_id="person-anna", frame_id="f1")
+        moved = st.rename_entity(RecognitionKind.FACE, "person-new-person-1", "person-anna", label="Anna")
+        assert moved == 1
+        rows = st.all(RecognitionKind.FACE)
+        assert len(rows) == 1, "target identity wins; placeholder row is dropped"
+        assert rows[0]["person_id"] == "person-anna"
+
+    def test_rename_unknown_source_returns_zero(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        assert st.rename_entity(RecognitionKind.FACE, "person-nobody", "person-anna", label="Anna") == 0
+
+    def test_rename_same_ref_is_noop(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        st.enroll(kind=RecognitionKind.FACE, label="Anna", embedding=[1.0, 0.0], frame_id="f0")
+        assert st.rename_entity(RecognitionKind.FACE, "person-anna", "person-anna") == 0
+
+
 class TestPrivacy:
     def test_biometrics_refused_when_disabled(self, tmp_path):
         st = _tmp_store(tmp_path)

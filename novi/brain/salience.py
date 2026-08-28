@@ -56,15 +56,23 @@ _EVENT_AFFORDANCE: dict[str, str] = {
     "presence.left": "note",
     "scene.changed": "comment",
     "identity.recognized": "greet",
+    "identity.auto_enrolled": "ask",
     "hearing.anomaly": "ask",
+    "person.holding": "comment",
+    "object.novel": "ask",
 }
 
 
-def _entity_of(event: dict) -> str:
-    """Extract a named entity from an event payload, if present."""
+def _entity_of(event: dict, *, prefer: tuple[str, ...] = ()) -> str:
+    """Extract a named entity from an event payload, if present.
+
+    ``prefer`` keys are checked before the defaults so object-centric events
+    (``person.holding``/``object.novel``) name the held object rather than the
+    person holding it.
+    """
     payload = event.get("payload")
     if isinstance(payload, dict):
-        for key in ("person", "entity", "name", "label"):
+        for key in (*prefer, "person", "entity", "name", "label", "object"):
             value = payload.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
@@ -116,8 +124,14 @@ class SurgeSalienceEvaluator:
             return f"I noticed {entity} moved." if entity else "Something in the room changed."
         if kind == "identity.recognized":
             return f"Oh, it's you, {entity}." if entity else "Oh — I know you."
+        if kind == "identity.auto_enrolled":
+            return "Hey — you're new to me. I'm Novi. What's your name?"
         if kind == "hearing.anomaly":
             return "That sound was odd — did you hear it?"
+        if kind == "person.holding":
+            return f"Nice — you've got your {entity}." if entity else "I see you've got something in your hand."
+        if kind == "object.novel":
+            return f"Ooh — you've got a new {entity}. What is it?" if entity else "Ooh — something new in your hand. What is it?"
         return "Something caught my attention."
 
     def evaluate(
@@ -143,7 +157,8 @@ class SurgeSalienceEvaluator:
             kind = str(event.get("kind") or "").strip().lower()
             if kind not in _EVENT_AFFORDANCE:
                 continue
-            entity = _entity_of(event)
+            prefer_object = kind in ("person.holding", "object.novel")
+            entity = _entity_of(event, prefer=("object",) if prefer_object else ())
             key = (kind, entity.lower())
             if self._in_cooldown(key, cycle):
                 continue
@@ -161,11 +176,20 @@ class SurgeSalienceEvaluator:
                 reason = f"scene_changed:novelty={novelty:.2f}"
             elif kind == "identity.recognized":
                 reason = f"identity_recognized:known={entity.lower() in known}"
+            elif kind == "identity.auto_enrolled":
+                reason = f"identity_auto_enrolled:known={entity.lower() in known}"
             elif kind == "hearing.anomaly":
                 novelty = _novelty_of(event)
                 if novelty < self.policy.novelty_threshold:
                     continue
                 reason = f"hearing_anomaly:novelty={novelty:.2f}"
+            elif kind == "object.novel":
+                novelty = _novelty_of(event)
+                if novelty < self.policy.novelty_threshold:
+                    continue
+                reason = f"object_novel:novelty={novelty:.2f}"
+            elif kind == "person.holding":
+                reason = f"person_holding:object_known={entity.lower() in known}"
             else:  # pragma: no cover - guarded by the affordance membership above
                 continue
             self._last_utterance[key] = cycle

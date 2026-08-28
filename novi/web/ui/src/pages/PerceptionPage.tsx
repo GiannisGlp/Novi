@@ -1,4 +1,4 @@
-import type { IdentityDetail, PreviewFrame } from '../api/types'
+import type { IdentityDetail, PreviewFrame, RecognitionList } from '../api/types'
 import { Section } from '../components/Section'
 import { Chips } from '../components/shared/Chips'
 import { KV } from '../components/shared/KV'
@@ -11,6 +11,24 @@ export interface PerceptionPageProps {
   frame: PreviewFrame | null
   showImage: boolean
   identity: IdentityDetail | null
+}
+
+type Enrollment = NonNullable<RecognitionList['enrollments']>[number]
+
+/** Group enrollment rows per person — a person may appear as BOTH face + voice rows. */
+function groupByPerson(rows: Enrollment[]): { k: string; v: string }[] {
+  const byPerson = new Map<string, { name: string; kinds: Set<string> }>()
+  for (const e of rows) {
+    const key = (e.person_id ?? '').trim() || (e.label ?? '')
+    if (!key) continue
+    const group = byPerson.get(key) ?? { name: e.label ?? key, kinds: new Set<string>() }
+    if (e.kind) group.kinds.add(e.kind)
+    byPerson.set(key, group)
+  }
+  return [...byPerson.values()].slice(0, 20).map((g) => ({
+    k: g.name,
+    v: g.kinds.size > 1 ? [...g.kinds].sort().join('+') : '',
+  }))
 }
 
 /** Perception — camera preview, identity, recognition enrollments, real-I/O devices. */
@@ -124,12 +142,7 @@ export function PerceptionPage({
           {recognition === null ? (
             <span className="muted">…</span>
           ) : recognition.enrollments && recognition.enrollments.length > 0 ? (
-            <Chips
-              items={recognition.enrollments.slice(0, 20).map((e) => ({
-                k: e.kind ?? '',
-                v: e.label ?? '',
-              }))}
-            />
+            <Chips items={groupByPerson(recognition.enrollments)} />
           ) : (
             <span className="muted">
               No one enrolled yet — faces, voices, places, and sounds are stored here.

@@ -40,6 +40,23 @@ class RuntimeEvent:
 
 _ANONYMOUS_PERSON = "someone"  # label for a genuinely-observed but unresolved face
 
+# Minimum cosine between two proposal embeddings to treat them as the same
+# face. A placeholder is auto-enrolled once per face: embeddings from the same
+# person across frames sit well above this (typically >0.9); a genuinely new
+# face drops below it and gets its own placeholder.
+_PROPOSAL_SAME_FACE_SIM = 0.7
+
+
+def _cosine_sim(a: list[float], b: list[float]) -> float:
+    if not a or not b or len(a) != len(b):
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+    if na == 0.0 or nb == 0.0:
+        return 0.0
+    return dot / (na * nb)
+
 
 @dataclass
 class _PresenceTrack:
@@ -89,7 +106,17 @@ class MultimodalRuntime:
         # per-detection-label resolution state, used to gate object events so
         # recognized/proposal fire on transitions, not every frame
         self._object_state: dict[str, str] = {}
+        # person -> currently held object ref, gating person.holding/object.novel
+        # so they fire on a change of (person, held object), not every frame
+        self._holding_state: dict[str, str] = {}
         self.pending_enrollment_proposal: bool = False
+        # auto-enroll bookkeeping: last proposal embedding (so a placeholder is
+        # enrolled once per face, not every frame) + placeholder -> FaceIdentifier pid
+        self._last_proposal_embedding: list[float] | None = None
+        self._placeholder_internal: dict[str, str] = {}
+        # label auto-enrolled on the current frame, if any (presence uses it so
+        # one arrival fires one presence.entered — the placeholder, not "someone")
+        self._last_auto_enrolled: str = ""
         # salience: presence transitions + scene-change detection
         self._absent_frames = absent_frames
         self._scene_change_enabled = scene_change_enabled
@@ -154,6 +181,16 @@ class MultimodalRuntime:
                 elif dec.new_person_proposal:
                     self.pending_enrollment_proposal = True
                     self._emit("identity.proposal", frame_id=frame.frame_id)
+                    # auto-enroll (plan 20 WS4): a genuinely new face becomes a
+                    # placeholder person immediately; a face the durable store
+                    # already knows (post-restart) is re-bound instead. The
+                    # embedding gate stops re-enrolling the same face each frame.
+                    if face_embedding is not None and not self._proposal_face_recent(face_embedding):
+                        self._last_proposal_embedding = face_embedding
+                        enrolled = self._handle_proposal_face(face_embedding, frame_id=frame.frame_id)
+                        if enrolled:
+                            self._last_auto_enrolled = enrolled
+                            self._stage_event("identity.auto_enrolled", person=enrolled)
 
         # presence salience: who did the face stage actually resolve this
         # frame? Only identity decisions count — raw object detections never
@@ -168,7 +205,13 @@ class MultimodalRuntime:
             else:
                 # unknown tier: a face was genuinely observed but unresolved
                 presence_now[_ANONYMOUS_PERSON] = IdentityTier.UNKNOWN.value
+        if self._last_auto_enrolled:
+            # a just-enrolled placeholder is the resolved identity for this
+            # frame — one arrival, one presence.entered (not "someone")
+            presence_now.pop(_ANONYMOUS_PERSON, None)
+            presence_now[self._last_auto_enrolled] = IdentityTier.RECOGNIZED.value
         self._update_presence(presence_now)
+        self._last_auto_enrolled = ""
 
         return obs
 
@@ -244,6 +287,21 @@ class MultimodalRuntime:
             self._pending_events.clear()
             return staged
 
+    def _emit_holding(self, kind: str, person: str, obj: str, **payload: Any) -> None:
+        """Stage a holding/novel event only when the (person, object) changes.
+
+        The camera loop calls ``note_person_holding`` every frame; without this
+        gate the trail would replay the same remark indefinitely. A person
+        switching hands to a new object re-fires, as does putting it down and
+        picking it up again.
+        """
+        with self._lock:
+            if self._holding_state.get(person) == obj:
+                return
+            self._holding_state[person] = obj
+            self._pending_events.append({"kind": kind, "person": person, "object": obj, **payload})
+        self._emit(kind, person=person, object=obj, **payload)
+
     # -- enrollment -----------------------------------------------------------
 
     def recognize_person(self, name: str, *, face_embedding: list[float] | None = None,
@@ -276,6 +334,89 @@ class MultimodalRuntime:
         self._emit("person.enrolled", person=name)
         return person_id
 
+    # -- auto-enroll & conversational naming -------------------------------------
+
+    def _proposal_face_recent(self, embedding: list[float]) -> bool:
+        """True when this proposal embedding matches the last auto-enrolled one."""
+        last = self._last_proposal_embedding
+        return last is not None and _cosine_sim(last, embedding) >= _PROPOSAL_SAME_FACE_SIM
+
+    def _next_placeholder_ref(self) -> str:
+        """First free ``new-person-N`` label across in-memory + durable names."""
+        taken = set(self._id_to_label.values())
+        if self.recognition is not None:
+            taken.update(e["label"] for e in self.recognition.all(RecognitionKind.FACE))
+        n = 1
+        while f"new-person-{n}" in taken:
+            n += 1
+        return f"new-person-{n}"
+
+    def _handle_proposal_face(self, embedding: list[float], *, frame_id: str) -> str:
+        """Resolve an unknown-face proposal into an identity ('' = no new person).
+
+        Durable recall first: a face the RecognitionStore already knows (e.g. it
+        survived a restart) is re-bound into the in-memory FaceIdentifier under
+        its stored name instead of being proposed as new again. Otherwise the
+        face is auto-enrolled as a ``new-person-N`` placeholder in both systems,
+        and that ref triggers the conversational "what's your name?" ask.
+        """
+        if self.recognition is not None:
+            m = self.recognition.match(RecognitionKind.FACE, embedding)
+            if m is not None:
+                if self.faces is not None:
+                    internal_pid = self.faces.enroll(m.label, embedding, frame_id=frame_id or "recall")
+                    self._id_to_label[internal_pid] = m.label
+                self.current_person = m.label
+                self.current_person_tier = "recognized"
+                self.pending_enrollment_proposal = False
+                self._emit("identity.recognized", person=m.label, tier="recognized")
+                return ""
+        if self.faces is None:
+            return ""
+        ref = self._next_placeholder_ref()
+        internal_pid = self.faces.enroll(ref, embedding, frame_id=frame_id or "auto")
+        self._id_to_label[internal_pid] = ref
+        self._placeholder_internal[ref] = internal_pid
+        if self.recognition is not None:
+            self.recognition.enroll(
+                kind=RecognitionKind.FACE,
+                label=ref,
+                embedding=embedding,
+                person_id=f"person-{ref}",
+                frame_id=frame_id,
+                provenance={"source": "auto-enroll"},
+            )
+        self.current_person = ref
+        self.current_person_tier = "unknown"
+        self._emit("person.enrolled", person=ref)
+        return ref
+
+    def name_person(self, placeholder_ref: str, name: str) -> dict[str, Any]:
+        """Bind a real name to a placeholder person (conversational naming).
+
+        Renames the durable FACE enrollment and any observation sightings from
+        ``person-{placeholder_ref}`` to the canonical ``person-{name}``, and
+        re-labels the in-memory FaceIdentifier binding so future frames resolve
+        the real name. Returns the canonical person id + store rows moved.
+        """
+        if self.recognition is None:
+            raise RuntimeError("no RecognitionStore configured")
+        if not name.strip():
+            return {"person_id": "", "moved": 0}
+        canonical = f"person-{name.lower().replace(' ', '-')}"
+        old_ref = f"person-{placeholder_ref}"
+        moved = self.recognition.rename_entity(RecognitionKind.FACE, old_ref, canonical, label=name.title())
+        internal_pid = self._placeholder_internal.pop(placeholder_ref, None)
+        if internal_pid is not None:
+            self._id_to_label[internal_pid] = name.title()
+        if self.observations is not None:
+            self.observations.rename_entity(RecognitionKind.FACE, old_ref, canonical)
+        if self.current_person == placeholder_ref:
+            self.current_person = name.title()
+        self.pending_enrollment_proposal = False
+        self._emit("person.named", old=placeholder_ref, person=name.title(), person_id=canonical)
+        return {"person_id": canonical, "moved": moved}
+
     # -- object recognition ---------------------------------------------------
 
     def recognize_object(self, name: str, *, embedding: list[float], frame_id: str = "") -> str:
@@ -289,7 +430,8 @@ class MultimodalRuntime:
         if self.recognition is None:
             raise RuntimeError("no RecognitionStore configured")
         object_id = f"object-{name.lower().replace(' ', '-')}"
-        self.recognition.delete(RecognitionKind.OBJECT, object_id)
+        # store.enroll upserts by (kind, person_id): re-enrollment replaces
+        # the stored embedding rather than inserting a duplicate row
         self.recognition.enroll(
             kind=RecognitionKind.OBJECT,
             label=name,
@@ -367,6 +509,55 @@ class MultimodalRuntime:
         moved = self.observations.rename_entity(RecognitionKind.OBJECT, unresolved, object_id)
         self._emit("object.named", category=category, name=name, object=object_id, rebound=moved)
         return {"object_id": object_id, "rebound": moved}
+
+    def _next_placeholder_object_ref(self) -> str:
+        """First free ``new-object-N`` label across durable object names."""
+        taken: set[str] = set()
+        if self.recognition is not None:
+            taken.update(e["label"] for e in self.recognition.all(RecognitionKind.OBJECT))
+        n = 1
+        while f"new-object-{n}" in taken:
+            n += 1
+        return f"new-object-{n}"
+
+    def note_person_holding(
+        self,
+        person: str,
+        object_label: str,
+        *,
+        embedding: list[float],
+        frame_id: str = "",
+    ) -> dict[str, Any]:
+        """Person-object co-occurrence (plan 20 WS5): resolve a held object.
+
+        The camera loop has established bbox overlap between a recognized
+        person and a detected object; this resolves the held instance against
+        durable OBJECT memory. A known instance stages ``person.holding``; a
+        novel one is auto-enrolled as an ``object-{new-N}`` placeholder and
+        stages ``object.novel`` so the salience evaluator can comment on it.
+        """
+        if self.recognition is None:
+            return {"person": person, "object": object_label, "recognized": False, "enrolled": False}
+        m = self.recognition.match(RecognitionKind.OBJECT, embedding)
+        if m is not None:
+            self._record_sighting(RecognitionKind.OBJECT, m.person_id, m.label,
+                                  place=self.current_place, frame_id=frame_id)
+            self._emit_holding("person.holding", person, m.label)
+            return {"person": person, "object": m.label, "recognized": True, "enrolled": False}
+        ref = self._next_placeholder_object_ref()
+        self.recognition.enroll(
+            kind=RecognitionKind.OBJECT,
+            label=ref,
+            embedding=embedding,
+            person_id=f"object-{ref}",
+            frame_id=frame_id,
+            provenance={"source": "auto-enroll"},
+        )
+        if self.observations is not None:
+            # re-key any sightings recorded under the unresolved per-class ref
+            self.observations.rename_entity(RecognitionKind.OBJECT, f"object-unresolved-{object_label}", f"object-{ref}")
+        self._emit_holding("object.novel", person, ref, novelty=1.0)
+        return {"person": person, "object": ref, "recognized": False, "enrolled": True}
 
     def _record_sighting(
         self,

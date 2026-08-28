@@ -103,17 +103,20 @@ class TestPresenceTransitions:
         ) == 1
         assert _of_kind(rt.events, "presence.left") == []
 
-    def test_anonymous_face_counts_as_someone(self, tmp_path):
+    def test_unknown_face_auto_enrolls_and_enters_as_placeholder(self, tmp_path):
+        # Auto-enroll (plan 20 WS4) resolves a stranger to a placeholder
+        # identity on the spot: presence enters once, under the placeholder.
         rt, _, _ = _runtime(tmp_path, absent_frames=2)
         rt.process_camera_frame(_frame("f1"), face_embedding=STRANGER_FACE)
         rt.process_camera_frame(_frame("f2"), face_embedding=STRANGER_FACE)  # no dupe
 
         entered = _of_kind(rt.events, "presence.entered")
-        assert [(e["person"], e["tier"]) for e in entered] == [("someone", "unknown")]
+        assert [(e["person"], e["tier"]) for e in entered] == [("new-person-1", "recognized")]
+        assert any(e["kind"] == "identity.auto_enrolled" for e in rt.events)
 
         rt.process_camera_frame(_frame("f3"))
         rt.process_camera_frame(_frame("f4"))
-        assert [(e["person"]) for e in _of_kind(rt.events, "presence.left")] == ["someone"]
+        assert [(e["person"]) for e in _of_kind(rt.events, "presence.left")] == ["new-person-1"]
 
     def test_no_presence_without_identity_decision(self, tmp_path):
         # Faces configured but no embedding supplied: a face stage that never
@@ -186,13 +189,16 @@ class TestPopPendingEvents:
     def test_pop_drains_atomically_and_keeps_audit_trail(self, tmp_path):
         scripted = {"f1": [("cup", 0.9, (1, 1, 4, 4))], "f2": [("book", 0.9, (30, 30, 4, 4))]}
         rt, _, _ = _runtime(tmp_path, scripted=scripted, absent_frames=2)
-        rt.process_camera_frame(_frame("f1"), face_embedding=STRANGER_FACE)  # someone enters
+        rt.process_camera_frame(_frame("f1"), face_embedding=STRANGER_FACE)  # auto-enroll + enter
         rt.process_camera_frame(_frame("f2"), face_embedding=STRANGER_FACE)  # scene changes
 
         staged = rt.pop_pending_events()
-        assert [e["kind"] for e in staged] == ["presence.entered", "scene.changed"]
-        assert staged[0]["person"] == "someone"
-        assert staged[1]["appeared"] == ["book"]
+        assert [e["kind"] for e in staged] == [
+            "identity.auto_enrolled", "presence.entered", "scene.changed",
+        ]
+        assert staged[0]["person"] == "new-person-1"
+        assert staged[1]["person"] == "new-person-1"
+        assert staged[2]["appeared"] == ["book"]
 
         assert rt.pop_pending_events() == [], "second pop must be empty after drain"
 

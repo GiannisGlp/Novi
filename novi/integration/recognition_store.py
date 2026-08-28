@@ -57,6 +57,20 @@ CREATE TABLE IF NOT EXISTS recognition_audit (
 """
 
 
+def _default_person_id(kind: "RecognitionKind", label: str) -> str:
+    """Canonical person id for a labeled enrollment.
+
+    Biometric person kinds (face AND voice) share one scheme
+    (``person-{label}``), so the same person enrolls under a single identity
+    regardless of modality — this is what fuses "Face: Vano" and
+    "Voice: Vano" into one person. Other kinds keep the ``{kind}-{label}``
+    namespace (noise, place, object).
+    """
+    if kind in _BIOMETRIC:
+        return f"person-{label.lower().replace(' ', '-')}"
+    return f"{kind.value}-{label.lower().replace(' ', '-')}"
+
+
 def _now() -> str:
     from datetime import datetime, timezone
 
@@ -92,9 +106,38 @@ class RecognitionStore:
         self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.executescript(_SCHEMA)
-        self._conn.commit()
+        self._backfill_and_dedupe()
         self.audit_log: list[dict] = []
         self._privacy = True
+
+    def _backfill_and_dedupe(self) -> None:
+        """Heal pre-upsert data so enrollment can rely on (kind, person_id).
+
+        Rewrites legacy ``voice-{label}`` pids to the canonical ``person-{label}``
+        (fusing old voice rows under the same identity as the matching face),
+        drops duplicate (kind, person_id) rows keeping the newest, then adds
+        the unique index the upsert needs. Idempotent — safe on every open.
+        """
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, label, person_id FROM recognition_enrollments WHERE kind = 'voice'"
+            ).fetchall()
+            for rid, label, pid in rows:
+                if pid == f"voice-{label.lower().replace(' ', '-')}":
+                    self._conn.execute(
+                        "UPDATE recognition_enrollments SET person_id = ? WHERE id = ?",
+                        (f"person-{label.lower().replace(' ', '-')}", rid),
+                    )
+            self._conn.execute(
+                "DELETE FROM recognition_enrollments WHERE id NOT IN ("
+                "  SELECT MAX(id) FROM recognition_enrollments GROUP BY kind, person_id"
+                ")"
+            )
+            self._conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_recognition_enroll_unique"
+                " ON recognition_enrollments (kind, person_id)"
+            )
+            self._conn.commit()
 
     # -- privacy -------------------------------------------------------------
 
@@ -134,11 +177,18 @@ class RecognitionStore:
             raise ValueError("recognition enrollment requires provenance (frame_id or provenance dict)")
         if kind in _BIOMETRIC and not self.privacy_enabled:
             raise PermissionError(f"{kind.value} enrollment refused: biometric processing disabled")
-        pid = person_id or f"{kind.value}-{label.lower().replace(' ', '-')}"
+        pid = person_id or _default_person_id(kind, label)
         with self._lock:
             self._conn.execute(
                 "INSERT INTO recognition_enrollments (kind, label, person_id, embedding_json, descriptor_json, frame_ref, provenance_json, created_at)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                " ON CONFLICT(kind, person_id) DO UPDATE SET"
+                " label = excluded.label,"
+                " embedding_json = excluded.embedding_json,"
+                " descriptor_json = excluded.descriptor_json,"
+                " frame_ref = excluded.frame_ref,"
+                " provenance_json = excluded.provenance_json,"
+                " created_at = excluded.created_at",
                 (
                     kind.value,
                     label,
@@ -162,6 +212,43 @@ class RecognitionStore:
             )
             self._conn.commit()
             return cur.rowcount
+
+    def rename_entity(self, kind: RecognitionKind, old_ref: str, new_ref: str, *, label: str | None = None) -> int:
+        """Re-key an enrollment row from old_ref to new_ref; returns rows moved.
+
+        Used by conversational naming: a placeholder person (``person-new-person-N``)
+        is renamed to the real ``person-{name}`` once the person tells Novi their
+        name. If the target already exists (e.g. a face was enrolled under the real
+        name by another modality), the placeholder row is dropped and the target's
+        label refreshed instead — the durable identity wins.
+        """
+        if old_ref == new_ref:
+            return 0
+        with self._lock:
+            target = self._conn.execute(
+                "SELECT id FROM recognition_enrollments WHERE kind = ? AND person_id = ?",
+                (kind.value, new_ref),
+            ).fetchone()
+            if target is not None:
+                self._conn.execute(
+                    "DELETE FROM recognition_enrollments WHERE kind = ? AND person_id = ?",
+                    (kind.value, old_ref),
+                )
+                if label:
+                    self._conn.execute(
+                        "UPDATE recognition_enrollments SET label = ? WHERE id = ?",
+                        (label, target[0]),
+                    )
+                moved = 1
+            else:
+                cur = self._conn.execute(
+                    "UPDATE recognition_enrollments SET person_id = ?,"
+                    " label = COALESCE(?, label) WHERE kind = ? AND person_id = ?",
+                    (new_ref, label, kind.value, old_ref),
+                )
+                moved = cur.rowcount
+            self._conn.commit()
+            return moved
 
     # -- matching ---------------------------------------------------------------
 

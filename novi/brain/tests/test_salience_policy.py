@@ -95,6 +95,49 @@ class SurgeSalienceEvaluatorTest(unittest.TestCase):
         assert cand is not None
         self.assertEqual(cand.affordance, "ask")
 
+    def test_identity_auto_enrolled_asks_for_name(self) -> None:
+        cand = self.eval.evaluate(
+            [_event("identity.auto_enrolled", payload={"person": "new-person-1"})],
+            cycle=1,
+            known_entities=["vanya"],
+        )
+        self.assertIsNotNone(cand)
+        assert cand is not None
+        self.assertEqual(cand.kind, "identity.auto_enrolled")
+        self.assertEqual(cand.affordance, "ask")
+        self.assertEqual(cand.entity, "new-person-1")
+        self.assertIn("What's your name?", cand.text)
+        self.assertIn("known=False", cand.reason)
+
+    def test_person_holding_known_object_comments(self) -> None:
+        cand = self.eval.evaluate(
+            [_event("person.holding", payload={"person": "Alice", "object": "my mug"})],
+            cycle=1,
+            known_entities=["alice", "my mug"],
+        )
+        self.assertIsNotNone(cand)
+        assert cand is not None
+        self.assertEqual(cand.kind, "person.holding")
+        self.assertEqual(cand.affordance, "comment")
+        # the entity is the held object, not the person
+        self.assertEqual(cand.entity, "my mug")
+        self.assertIn("mug", cand.text)
+        self.assertIn("object_known=True", cand.reason)
+
+    def test_object_novel_above_threshold_asks(self) -> None:
+        cand = self.eval.evaluate(
+            [_event("object.novel", payload={"person": "Alice", "object": "new-object-1", "novelty": 1.0})],
+            cycle=1,
+            known_entities=["alice"],
+        )
+        self.assertIsNotNone(cand)
+        assert cand is not None
+        self.assertEqual(cand.kind, "object.novel")
+        self.assertEqual(cand.affordance, "ask")
+        self.assertEqual(cand.entity, "new-object-1")
+        self.assertIn("What is it?", cand.text)
+        self.assertIn("novelty=1.00", cand.reason)
+
     def test_unknown_event_kind_ignored(self) -> None:
         cand = self.eval.evaluate([_event("chat", payload={"text": "hi"})], cycle=1)
         self.assertIsNone(cand)

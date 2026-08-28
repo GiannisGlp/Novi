@@ -8,6 +8,7 @@ undisturbed (doc 16 §4).
 
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
 from pathlib import Path
@@ -21,6 +22,28 @@ from novi.perception.camera import CameraFeed
 # enrollment input bounds (HTTP boundary validation)
 MAX_ENROLL_NAME_LEN = 80
 MAX_EMBEDDING_DIMS = 4096
+
+# detection classes that denote a person (face box + body classes)
+_PERSON_LABELS = ("person", "human", "face")
+# fraction of an object box covered by the person box to read as "held"
+_HELD_COVERAGE = 0.25
+
+
+def _overlaps(obj_bbox: tuple[int, int, int, int], person_bbox: tuple[int, int, int, int]) -> bool:
+    """True when object bbox overlaps person bbox enough to infer "in hand".
+
+    Uses coverage (the share of the object box inside the person box) so a
+    cup held against a person's body — where the object is largely contained
+    by the person detection — counts, while two boxes merely brushing past
+    each other in a crowd do not.
+    """
+    ax, ay, aw, ah = obj_bbox
+    bx, by, bw, bh = person_bbox
+    if aw <= 0 or ah <= 0 or bw <= 0 or bh <= 0:
+        return False
+    ix = max(0, min(ax + aw, bx + bw) - max(ax, bx))
+    iy = max(0, min(ay + ah, by + bh) - max(ay, by))
+    return ix * iy / (aw * ah) >= _HELD_COVERAGE
 
 
 class IntegrationMixin:
@@ -212,6 +235,10 @@ class IntegrationMixin:
                             ]
                             if pairs:
                                 self.mm_runtime.recognize_objects(pairs, frame_id=rec.frame.frame_id)
+                            # person-object co-occurrence (plan 20 WS5): when a
+                            # recognized person's box overlaps a detected object,
+                            # resolve the held instance → person.holding/object.novel
+                            self._note_person_holding(obs.detections, face_bbox, vecs, rec.frame.frame_id)
                         except Exception:  # noqa: BLE001 - object recognition best-effort
                             pass
                     if embedding is not None and obs.identities:
@@ -262,11 +289,16 @@ class IntegrationMixin:
                     try:
                         for ev in self.mm_runtime.pop_pending_events():
                             kind = str(ev.get("kind", ""))
-                            if kind.startswith("presence.") or kind == "scene.changed":
+                            if (
+                                kind.startswith("presence.")
+                                or kind == "scene.changed"
+                                or kind == "identity.auto_enrolled"
+                                or kind in ("person.holding", "object.novel")
+                            ):
                                 self.brain.submit(
                                     "camera", kind,
                                     {k: v for k, v in ev.items() if k != "kind"},
-                                    coalesce_key=f"{kind}:{ev.get('person', 'scene')}",
+                                    coalesce_key=f"{kind}:{ev.get('person', ev.get('object', 'scene'))}",
                                 )
                     except Exception:  # noqa: BLE001 - event feed is best-effort
                         pass
@@ -276,6 +308,30 @@ class IntegrationMixin:
         t = threading.Thread(target=_loop, daemon=True, name="novi-real-camera")
         t.start()
         self._camera_thread = t
+
+    def _note_person_holding(self, detections, face_bbox, vecs, frame_id: str) -> None:
+        """Feed bbox-overlapping (person, object) pairs into the runtime.
+
+        Gated on ``current_person`` being a *recognized* identity — a
+        ``new-person-N`` placeholder or "someone" is too unstable to attach an
+        object to. The runtime stages ``person.holding`` for known instances and
+        auto-enrolls + stages ``object.novel`` for unknown ones.
+        """
+        person = self.mm_runtime.current_person
+        if not person or person == "someone" or person.startswith("new-person-"):
+            return
+        person_boxes = [tuple(face_bbox)] if face_bbox else []
+        person_boxes += [d.bbox for d in detections if d.label in _PERSON_LABELS]
+        if not person_boxes:
+            return
+        for d, vec in zip(detections, vecs, strict=False):
+            if d.label in _PERSON_LABELS or vec is None:
+                continue
+            if any(_overlaps(d.bbox, pb) for pb in person_boxes):
+                with contextlib.suppress(Exception):  # co-occurrence is best-effort
+                    self.mm_runtime.note_person_holding(
+                        person, d.label, embedding=vec, frame_id=frame_id
+                    )
 
     def voice_listen(self, seconds: float = 3.0) -> dict[str, Any]:
         """Record from the real mic → STT → brain → reply (+ optional speak-back).
