@@ -67,8 +67,8 @@ class TestSpeakerRecognizer(unittest.TestCase):
         self.assertIsNone(self.rec.match(stranger, min_similarity=0.85))
 
     def test_persists_via_recognition_store(self):
-        from novi.integration.recognition_store import RecognitionKind, RecognitionStore
         from novi.integration.real_io_voice import RealSpeakerRecognizer
+        from novi.integration.recognition_store import RecognitionKind, RecognitionStore
 
         store = RecognitionStore(self.tmp / "rec.db")
         rec = RealSpeakerRecognizer(store=store)

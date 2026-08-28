@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import enum
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 class IdentityTier(enum.Enum):
@@ -47,7 +47,7 @@ class IdentityDecision:
 
 
 def _cosine(a: tuple[float, ...] | list[float], b: tuple[float, ...] | list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
     if na == 0 or nb == 0:

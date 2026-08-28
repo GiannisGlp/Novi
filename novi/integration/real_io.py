@@ -10,14 +10,10 @@ hardware is absent so CI never depends on devices.
 from __future__ import annotations
 
 import base64
-import threading
-import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from novi.brain.io import CameraFrame
-
 
 # ---------------------------------------------------------------------------
 # Camera

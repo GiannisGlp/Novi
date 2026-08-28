@@ -27,8 +27,13 @@ export function useModels(reportConnection: (ok: boolean) => void): ModelsData {
   }, [])
 
   const setModel = useCallback(async (name: string) => {
-    await api.setModel(name)
-    setCurrent(name)
+    try {
+      await api.setModel(name)
+      setCurrent(name)
+    } catch (err) {
+      reportRef.current(false)
+      throw err
+    }
   }, [])
 
   useEffect(() => {

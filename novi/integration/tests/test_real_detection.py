@@ -11,7 +11,6 @@ Contract:
 from __future__ import annotations
 
 import unittest
-from unittest import mock
 
 import numpy as np
 
@@ -19,10 +18,8 @@ from novi.brain.io import CameraFrame
 from novi.integration.real_io_detection import RealObjectDetector
 
 
-
 def _jpeg() -> bytes:
     import cv2
-    import numpy as np
 
     ok, buf = cv2.imencode(".jpg", np.zeros((48, 64, 3), dtype="uint8"))
     assert ok
@@ -39,7 +36,6 @@ class _FakeCore:
     categories = ["__background__", "cup", "book", "person"]
 
     def __init__(self, boxes, scores, labels):
-        import numpy as np
 
         self.out = {
             "boxes": np.array(boxes, dtype="float32"),
@@ -50,7 +46,6 @@ class _FakeCore:
 
     def __call__(self, tensor_list):
         self.calls += 1
-        import numpy as np
 
         # emulate torchvision: dict of stacked tensors keyed the same way
         return [{

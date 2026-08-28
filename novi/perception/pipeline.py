@@ -16,7 +16,7 @@ from novi.brain.io import CameraFrame
 
 from .detection import Detection, ObjectDetector
 from .faces import FaceIdentifier, FaceObservation, IdentityDecision
-from .tracking import Track, ObjectTracker
+from .tracking import ObjectTracker, Track
 
 
 @dataclass
@@ -59,18 +59,17 @@ class PerceptionPipeline:
         active = self.tracker.update(detections, frame_id=frame.frame_id)
 
         identities: list[IdentityDecision] = []
-        if face_embedding is not None and self.faces is not None:
-            if self.faces.privacy_enabled:
-                d = self.faces.observe_observation(
-                    FaceObservation(
-                        embedding=tuple(face_embedding),
-                        frame_id=frame.frame_id,
-                        captured_at=frame.captured_at,
-                    ),
-                    speaker_person_id=speaker_person_id,
-                )
-                identities.append(d)
-            # privacy off: biometrics refused — detection/tracking still ran
+        if face_embedding is not None and self.faces is not None and self.faces.privacy_enabled:
+            d = self.faces.observe_observation(
+                FaceObservation(
+                    embedding=tuple(face_embedding),
+                    frame_id=frame.frame_id,
+                    captured_at=frame.captured_at,
+                ),
+                speaker_person_id=speaker_person_id,
+            )
+            identities.append(d)
+        # privacy off: biometrics refused — detection/tracking still ran
 
         self._frames_processed += 1
         return WorldObservation(

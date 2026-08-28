@@ -70,7 +70,6 @@ class TestFusionScenario:
         assert obs_verified.identities[0].tier is IdentityTier.VERIFIED
 
         # --- object continuity throughout --------------------------------------
-        cup_now = pipe.tracker.all_tracks[pipe.tracker.track_count - 1]
         cups = [t for t in pipe.tracker.all_tracks if t.label == "cup"]
         assert len(cups) == 1 and cups[0].track_id == cup_track.track_id
         snap = pipe.snapshot()

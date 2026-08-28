@@ -51,7 +51,6 @@ class TorchvisionPerceptionDetector:
 
     def detect(self, frame: CameraFrame) -> list[Any]:
         import cv2
-        import numpy as np
 
         from novi.perception.detection import Detection
 

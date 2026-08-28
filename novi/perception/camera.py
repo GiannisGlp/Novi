@@ -8,6 +8,7 @@ loss. Health transitions surface into the hardware-health view.
 
 from __future__ import annotations
 
+import contextlib
 import enum
 import queue
 import threading
@@ -98,10 +99,8 @@ class CameraFeed:
         if t is not None:
             t.join(timeout=2.0)
             self._thread = None
-        try:
+        with contextlib.suppress(Exception):
             self._provider.close()
-        except Exception:
-            pass
         self.health = CameraHealth.OFFLINE
 
     # -- consumption -----------------------------------------------------------
@@ -163,7 +162,5 @@ class CameraFeed:
                     self.dropped += 1
                 except queue.Empty:
                     pass
-                try:
+                with contextlib.suppress(queue.Full):  # pragma: no cover - race guard
                     self._q.put_nowait(rec)
-                except queue.Full:  # pragma: no cover - race guard
-                    pass

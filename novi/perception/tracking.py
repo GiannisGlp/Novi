@@ -8,7 +8,7 @@ confirm, max_age_frames to expire) prevents threshold flicker.
 from __future__ import annotations
 
 import itertools
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from novi.perception.detection import Detection
 

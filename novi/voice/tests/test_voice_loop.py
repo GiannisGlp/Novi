@@ -50,7 +50,7 @@ class TestVoiceLoop:
     def test_speech_turn_flows_to_reply_and_tts(self):
         loop, tts, seen = _loop({"u1": "hello novi"}, {"hello novi": "hello!"})
         loop.feed_frame(_speech("u1"))
-        for i in range(EP):
+        for _i in range(EP):
             loop.feed_frame(_sil())
         spoken = loop.drain()
         assert seen == [("", "hello novi")]

@@ -84,7 +84,7 @@ class TestCrossModalVerification:
 
     def test_voiceprint_disagreement_keeps_recognized(self):
         fid = FaceIdentifier()
-        anna = fid.enroll("Anna", _emb(ANNA), frame_id="f0")
+        fid.enroll("Anna", _emb(ANNA), frame_id="f0")
         bob = fid.enroll("Bob", _emb(BOB), frame_id="f0")
         d = fid.observe(_emb(ANNA), frame_id="f1", speaker_person_id=bob)
         assert d.tier is IdentityTier.RECOGNIZED

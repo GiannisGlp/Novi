@@ -14,7 +14,7 @@ from novi.brain.audio import AudioFrame
 
 from .stt import STTProvider
 from .tts import TTSProvider
-from .turn_taking import TurnDecision, TurnTakingPolicy, Channel
+from .turn_taking import Channel, TurnDecision, TurnTakingPolicy
 from .vad import SpeechTurn, TurnSegmenter
 
 

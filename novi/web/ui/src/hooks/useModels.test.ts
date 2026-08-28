@@ -42,4 +42,13 @@ describe('useModels', () => {
     await act(async () => {})
     expect(report).toHaveBeenLastCalledWith(false)
   })
+
+  it('reports disconnected and rethrows when the switch fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('boom', { status: 500 })))
+    const report = vi.fn()
+    const { result } = renderHook(() => useModels(report))
+    await act(async () => {})
+    await expect(result.current.setModel('qwen3:8b')).rejects.toThrow()
+    expect(report).toHaveBeenLastCalledWith(false)
+  })
 })

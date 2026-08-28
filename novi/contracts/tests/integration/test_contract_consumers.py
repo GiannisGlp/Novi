@@ -63,13 +63,19 @@ def main() -> int:
     # The integration boundary must preserve the architecture's semantic
     # separation: observation/evidence are not interchangeable, and proposal
     # is not execution authority.
-    if "novi.observation" in contracts and "novi.evidence" in contracts:
-        if contracts["novi.observation"]["canonical_name"] == contracts["novi.evidence"]["canonical_name"]:
-            failures.append("Observation and Evidence cannot share a canonical semantic identity")
+    if (
+        "novi.observation" in contracts
+        and "novi.evidence" in contracts
+        and contracts["novi.observation"]["canonical_name"] == contracts["novi.evidence"]["canonical_name"]
+    ):
+        failures.append("Observation and Evidence cannot share a canonical semantic identity")
 
-    if "novi.action-proposal" in contracts and "novi.action-execution" in contracts:
-        if contracts["novi.action-proposal"]["canonical_name"] == contracts["novi.action-execution"]["canonical_name"]:
-            failures.append("ActionProposal and ActionExecution cannot share a canonical semantic identity")
+    if (
+        "novi.action-proposal" in contracts
+        and "novi.action-execution" in contracts
+        and contracts["novi.action-proposal"]["canonical_name"] == contracts["novi.action-execution"]["canonical_name"]
+    ):
+        failures.append("ActionProposal and ActionExecution cannot share a canonical semantic identity")
 
     if failures:
         print("CONTRACT CONSUMER INTEGRATION VALIDATION: FAIL")

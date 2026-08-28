@@ -53,7 +53,6 @@ def validate_semantics() -> list[str]:
     if observation["provenance"] is None:
         failures.append("Observation must carry provenance")
 
-    evidence_schema = load_schema("system/evidence/1.0.0/schema.json")
     evidence = {
         "evidence_id": "evidence-semantic-001",
         "created_at": "2026-01-01T00:00:01Z",

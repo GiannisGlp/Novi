@@ -14,7 +14,6 @@ from __future__ import annotations
 from novi.brain.audio import AudioFrame
 from novi.voice.stt import DeterministicSTTProvider
 from novi.voice.tts import DeterministicTTSProvider
-from novi.voice.turn_taking import Channel
 from novi.voice.vad import TurnSegmenter
 from novi.voice.voice_loop import VoiceLoop
 

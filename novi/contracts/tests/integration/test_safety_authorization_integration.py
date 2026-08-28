@@ -46,9 +46,7 @@ def can_execute(proposal: dict, authorization: dict, safety: dict, hardware: dic
         return False
     if hardware["state"] != "HEALTHY" or hardware["communication_state"] != "CONNECTED":
         return False
-    if hardware["calibration_state"] != "VALID" or "EMERGENCY_STOP" in hardware["fault_codes"]:
-        return False
-    return True
+    return hardware["calibration_state"] == "VALID" and "EMERGENCY_STOP" not in hardware["fault_codes"]
 
 
 def base_documents(now: datetime) -> tuple[dict, dict, dict, dict]:
@@ -86,7 +84,8 @@ def run() -> int:
         if can_execute(proposal, candidate, safety, hardware, now):
             failures.append(f"{name} was accepted")
 
-    blocked_safety = dict(safety); blocked_safety["decision"] = "DENY"
+    blocked_safety = dict(safety)
+    blocked_safety["decision"] = "DENY"
     if can_execute(proposal, authorization, blocked_safety, hardware, now):
         failures.append("denied safety decision was accepted")
 
@@ -96,7 +95,8 @@ def run() -> int:
         ("uncalibrated hardware", lambda x: x.update(calibration_state="INVALID")),
         ("emergency stop", lambda x: x.update(fault_codes=["EMERGENCY_STOP"])),
     ]:
-        candidate = dict(hardware); mutation(candidate)
+        candidate = dict(hardware)
+        mutation(candidate)
         if can_execute(proposal, authorization, safety, candidate, now):
             failures.append(f"{name} was accepted")
 

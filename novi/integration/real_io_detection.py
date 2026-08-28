@@ -9,12 +9,10 @@ confidence floor.
 
 from __future__ import annotations
 
-import io
 from typing import Any
 
 from novi.brain.io import CameraFrame
 from novi.perception.detection import Detection
-
 
 # COCO 91-class indices -> names, subset relevant to Novi's household scope.
 # Full mapping loaded from torchvision at runtime when available.

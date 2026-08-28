@@ -132,8 +132,6 @@ class TestHealth:
 
 class TestFreshness:
     def test_frame_record_carries_received_age_and_staleness(self):
-        prov = _ScriptedProvider([])
-        feed = CameraFeed(prov, queue_size=2)
         now = 1000.0
         rec = FrameRecord(frame=_frame(), received_monotonic=now - 0.2, seq=7)
         assert rec.age_s(now) == pytest.approx(0.2, abs=1e-6)

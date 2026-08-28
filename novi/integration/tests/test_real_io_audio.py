@@ -41,9 +41,8 @@ class TestRealMicrophone(unittest.TestCase):
         inner = mock.Mock()
         inner.record.side_effect = RuntimeError("sounddevice is required for MacMicrophone")
         mic._mic = inner
-        with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaises(RuntimeError):
-                mic.record(1.0, output_dir=Path(tmp))
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(RuntimeError):
+            mic.record(1.0, output_dir=Path(tmp))
 
 
 class TestListenAndTranscribe(unittest.TestCase):
@@ -55,7 +54,6 @@ class TestListenAndTranscribe(unittest.TestCase):
         return RealSTT(stt_mock, mac_microphone=mic)
 
     def test_listen_then_stt_produces_transcript(self):
-        from novi.integration.real_io import RealSTT
 
         stt = mock.Mock()
         stt.transcribe.return_value = mock.Mock(
@@ -68,7 +66,6 @@ class TestListenAndTranscribe(unittest.TestCase):
         stt.transcribe.assert_called_once_with("/tmp/x.wav")
 
     def test_silence_yields_empty_text_ok(self):
-        from novi.integration.real_io import RealSTT
 
         stt = mock.Mock()
         stt.transcribe.return_value = mock.Mock(text="", confidence=0.4, provider="whisper", model_id="m")
@@ -80,9 +77,8 @@ class TestListenAndTranscribe(unittest.TestCase):
 
 class TestRealSpeaker(unittest.TestCase):
     def test_speak_when_available(self):
-        from novi.voice.tts import SayTTSProvider
-
         from novi.integration.real_io import RealSpeaker
+        from novi.voice.tts import SayTTSProvider
 
         speaker = RealSpeaker(SayTTSProvider(say_bin="/bin/echo"))
         if not speaker.available():
@@ -91,9 +87,8 @@ class TestRealSpeaker(unittest.TestCase):
         self.assertTrue(out["spoken"])
 
     def test_speak_when_unavailable_degrades_not_raises(self):
-        from novi.voice.tts import SayTTSProvider
-
         from novi.integration.real_io import RealSpeaker
+        from novi.voice.tts import SayTTSProvider
 
         speaker = RealSpeaker(SayTTSProvider(say_bin="/nonexistent/say"))
         out = speaker.speak("should degrade")
