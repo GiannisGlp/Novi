@@ -97,4 +97,36 @@ SSDLite/ArcFace-class/Silero-diarization all have Orin/Thor-plausible TensorRT/o
 
 ## Status
 
-**PLANNED / DOC PHASE.** Sequencing: object detection live → tracking-lite + world-state entities → face pipeline → enrollment dialogue → cross-modal verification.
+> **Correction 2026-08-28:** this plan's earlier status ("PLANNED / DOC PHASE") was stale —
+> the pipeline had already shipped. Current state, verified against code and tests:
+
+**Implemented:**
+
+- **§1 Object detection** — live. SSDLite320-MobileNetV3 (`TorchvisionPerceptionDetector`)
+  behind the `ObjectDetector` contract, tracking-lite continuity, confidence floor;
+  deterministic fallback in CI (`novi/integration/tests/test_real_detection.py`).
+- **§2 Face pipeline** — live. OpenCV YuNet detect + SFace 128-d embedding (the
+  ArcFace-class candidate resolved to SFace under the provider-evidence rule), tiers
+  `unknown`/`recognized`/`verified` incl. cross-modal voiceprint escalation, conversational
+  enrollment via web API, privacy gating, provenance
+  (`novi/perception/tests/test_faces.py`, `novi/integration/tests/test_multimodal.py`).
+- **Instance-level object memory** (§1 req 5, added 2026-08-28, commit `5ebfb87`) — live.
+  ResNet18 512-d crop embeddings (`TorchvisionObjectEmbedder`), `RecognitionKind.OBJECT`
+  in the durable `RecognitionStore` (non-biometric: no privacy gate, matching at 0.85
+  cosine), enroll via `POST /api/recognition/object` + `/api/recognition/enroll-object`,
+  transition-gated `object.recognized` / `object.proposal` events
+  (`novi/perception/tests/test_real_backends.py`, OBJECT tests in
+  `test_recognition_store.py` / `test_multimodal.py`, e2e persistence test).
+
+**Still open:**
+
+- **Novel-object naming by dialogue** (§1 req 5 tail) — partial: `object.proposal` fires
+  for unmatched objects, but wiring proposals into conversational naming loops is open.
+- **Evidence gates** — the recorded live runs below (≥10 FPS world-state decay,
+  3-person tier exercise incl. deliberate ambiguity, cross-modal `verified` session)
+  have not been formally evidenced on-Mac.
+- **RT-DETR / YOLO-nano alternatives** — remain benchmark-gated, not evaluated.
+
+Shipped sequencing: detection + tracking → face pipeline → cross-modal verification →
+object instance memory. Enrollment stays conversational-upstream via the web API rather
+than a dedicated dialogue loop.
