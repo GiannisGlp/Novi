@@ -64,6 +64,39 @@ class TestEnrollmentAndMatch:
             st.enroll(kind=RecognitionKind.FACE, label="X", embedding=[1.0])
 
 
+class TestObjectKind:
+    def test_enroll_object_and_match_exact(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        oid = st.enroll(kind=RecognitionKind.OBJECT, label="my-mug", embedding=[1.0, 0.0], frame_id="f0")
+        m = st.match(RecognitionKind.OBJECT, [1.0, 0.0])
+        assert m is not None
+        assert m.label == "my-mug" and m.person_id == oid and m.similarity == pytest.approx(1.0)
+
+    def test_object_best_match_among_instances(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        st.enroll(kind=RecognitionKind.OBJECT, label="mug-a", embedding=[1.0, 0.0], frame_id="f0")
+        st.enroll(kind=RecognitionKind.OBJECT, label="mug-b", embedding=[0.1, 1.0], frame_id="f0")
+        m = st.match(RecognitionKind.OBJECT, [0.95, 0.25])
+        assert m is not None and m.label == "mug-a"
+
+    def test_object_persists_across_reopen(self, tmp_path):
+        path = tmp_path / "obj.db"
+        st = RecognitionStore(path)
+        oid = st.enroll(kind=RecognitionKind.OBJECT, label="my-mug", embedding=[1.0, 0.0], frame_id="f0")
+        st.close()
+        st2 = RecognitionStore(path)
+        m = st2.match(RecognitionKind.OBJECT, [1.0, 0.0])
+        assert m is not None and m.person_id == oid and m.label == "my-mug"
+        st2.close()
+
+    def test_object_is_non_biometric_works_with_privacy_off(self, tmp_path):
+        st = _tmp_store(tmp_path)
+        st.enroll(kind=RecognitionKind.OBJECT, label="my-mug", embedding=[1.0, 0.0], frame_id="f0")
+        st.set_privacy(False, reason="owner request")
+        m = st.match(RecognitionKind.OBJECT, [1.0, 0.0])
+        assert m is not None and m.label == "my-mug"
+
+
 class TestPrivacy:
     def test_biometrics_refused_when_disabled(self, tmp_path):
         st = _tmp_store(tmp_path)

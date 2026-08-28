@@ -1492,6 +1492,13 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"result": novi.enroll_voice_live(str(data.get("name", "")))})
                 except RuntimeError as exc:
                     self._json({"error": str(exc)}, status=400)
+            elif path == "/api/recognition/object":
+                # Enroll an object instance from a supplied embedding.
+                self._json({"result": novi.recognize_object(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+            elif path == "/api/recognition/enroll-object":
+                # Enroll an object from the CURRENT live camera frame: server
+                # embeds the largest non-person crop with ResNet18 and stores it.
+                self._json({"result": novi.enroll_object_from_camera(str(data.get("name", "")))})
             else:
                 self._json({"error": "unknown endpoint"}, 404)
         except Exception as exc:  # noqa: BLE001

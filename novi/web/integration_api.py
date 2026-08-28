@@ -18,6 +18,10 @@ from novi.integration.multimodal import MultimodalRuntime
 from novi.integration.recognition_store import RecognitionKind, RecognitionStore
 from novi.perception.camera import CameraFeed
 
+# enrollment input bounds (HTTP boundary validation)
+MAX_ENROLL_NAME_LEN = 80
+MAX_EMBEDDING_DIMS = 4096
+
 
 class IntegrationMixin:
     """Voice/perception/recognition endpoints for NoviWebServer."""
@@ -70,6 +74,16 @@ class IntegrationMixin:
         from novi.perception.faces import FaceIdentifier  # noqa: F401 - re-import for typing
 
         self._faces_real = self.face_embedder is not None
+        # Real object embedding (ResNet18) for instance-level object memory;
+        # lazy — no model download until the camera loop first uses it.
+        self.object_embedder = None
+        try:
+            from novi.perception.real_backends import build_object_embedder
+
+            self.object_embedder = build_object_embedder()
+        except Exception:  # noqa: BLE001 - neural deps optional
+            self.object_embedder = None
+        self._objects_real = self.object_embedder is not None
         self.mm_runtime = MultimodalRuntime(
             driver=driver,
             detector=detector,
@@ -177,6 +191,21 @@ class IntegrationMixin:
                         rec.frame,
                         face_embedding=embedding,
                     )
+                    # Instance-level object recognition: embed each detection's
+                    # crop and match against enrolled objects (durable memory).
+                    if self.object_embedder is not None and obs.detections:
+                        try:
+                            bboxes = [d.bbox for d in obs.detections]
+                            vecs = self.object_embedder.embed(rec.frame.payload, bboxes)
+                            pairs = [
+                                (d.label, v)
+                                for d, v in zip(obs.detections, vecs, strict=False)
+                                if v is not None
+                            ]
+                            if pairs:
+                                self.mm_runtime.recognize_objects(pairs)
+                        except Exception:  # noqa: BLE001 - object recognition best-effort
+                            pass
                     if embedding is not None and obs.identities:
                         dec = obs.identities[-1]
                         self.mm_last_face = {
@@ -350,6 +379,72 @@ class IntegrationMixin:
         self.mm_runtime._emit("person.face-enrolled", person=name)
         return {"ok": True, "person_id": person_id, "bbox": list(bbox or ())}
 
+    def enroll_object_from_camera(self, name: str) -> dict[str, Any]:
+        """Embed the largest detected object crop and store it as `name`.
+
+        Uses the same ResNet18 embedder as recognition so enrollment and
+        later matching share one embedding space. Durable via RecognitionStore.
+        """
+        name = (name or "").strip()
+        if not name or len(name) > MAX_ENROLL_NAME_LEN:
+            return {"error": f"name required (1-{MAX_ENROLL_NAME_LEN} chars)"}
+        embedder = getattr(self, "object_embedder", None)
+        if embedder is None:
+            return {"error": "object embedding backend unavailable (torch/torchvision missing)"}
+        # frame and overlay must come from the same loop iteration — capture
+        # both under one lock hold or a fresh frame pairs with a stale bbox
+        with self.mm_lock:
+            data_url = self.mm_last_frame_b64
+            tracks = list(self.mm_last_tracks or [])
+        if not data_url:
+            return {"error": "no camera frame yet — enable the camera and try again"}
+        import base64
+
+        try:
+            jpeg = base64.b64decode(data_url.split(",", 1)[1])
+        except Exception:  # noqa: BLE001 - malformed frame payload
+            return {"error": "could not decode latest frame"}
+        # largest non-person track bbox from the latest frame overlay
+        best: tuple[int, tuple[int, int, int, int]] | None = None
+        for t in tracks:
+            if t.get("is_person"):
+                continue
+            bbox = t.get("bbox")
+            if not bbox or len(bbox) != 4:
+                continue
+            area = int(bbox[2]) * int(bbox[3])
+            if best is None or area > best[0]:
+                best = (area, (int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
+        if best is None:
+            return {"error": "no object visible — point the camera at an object and retry"}
+        vecs = embedder.embed(jpeg, [best[1]])
+        vec = vecs[0] if vecs else None
+        if vec is None:
+            return {"error": "could not embed the object crop"}
+        object_id = self.mm_runtime.recognize_object(name, embedding=vec, frame_id="enroll-webcam")
+        return {"ok": True, "object_id": object_id, "bbox": list(best[1])}
+
+    def recognize_object(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Enroll an object instance from a supplied embedding (API path)."""
+        name = str(body.get("name", "")).strip()
+        embedding = body.get("embedding")
+        if not name or len(name) > MAX_ENROLL_NAME_LEN:
+            return {"error": f"name required (1-{MAX_ENROLL_NAME_LEN} chars)"}
+        if (
+            not isinstance(embedding, list)
+            or not embedding
+            or len(embedding) > MAX_EMBEDDING_DIMS
+            or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in embedding)
+        ):
+            return {"error": f"embedding must be a list of numbers (1-{MAX_EMBEDDING_DIMS} dims)"}
+        with self.mm_lock:
+            oid = self.mm_runtime.recognize_object(
+                name,
+                embedding=[float(v) for v in embedding],
+                frame_id=str(body.get("frame_id", "")),
+            )
+            return {"ok": True, "object_id": oid}
+
     def enroll_voice_live(self, name: str) -> dict[str, Any]:
         """Record ~4s from the real mic now and enroll the voiceprint."""
         name = (name or "").strip()
@@ -502,5 +597,7 @@ class IntegrationMixin:
                 "tracks": self.mm_last_tracks,
                 "detector_backend": getattr(self, "detector_backend", "deterministic"),
                 "faces_backend": ("opencv:sface" if getattr(self, "_faces_real", False) else "deterministic"),
+                "objects": snap.get("objects", []),
+                "objects_backend": ("torchvision:resnet18" if getattr(self, "_objects_real", False) else "deterministic"),
                 "image_data_url": self.mm_last_frame_b64,
             }

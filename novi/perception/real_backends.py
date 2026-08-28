@@ -12,6 +12,7 @@ No cloud: every model runs locally on the Mac (Jetson-plausible later).
 
 from __future__ import annotations
 
+import math
 import os
 import threading
 import urllib.request
@@ -220,3 +221,136 @@ def build_face_identifier():
     # SFace cosine: same-person typically >= ~0.40, different <= ~0.25.
     faces = FaceIdentifier(tau_match=0.42, tau_ambig=0.30)
     return faces, embedder
+
+
+# ---------------------------------------------------------------------------
+# Objects — torchvision ResNet18 features (instance-level object embedding)
+# ---------------------------------------------------------------------------
+
+
+def _l2(v: list[float]) -> list[float]:
+    n = math.sqrt(sum(x * x for x in v)) or 1.0
+    return [x / n for x in v]
+
+
+class TorchvisionObjectEmbedder:
+    """Extracts a 512-d visual embedding per object crop via ResNet18.
+
+    Instance-level object recognition: the same physical object yields a
+    similar embedding across frames/sessions, so Novi can remember *"my
+    mug"* rather than just the category "cup". Lazy: the model loads on
+    first successful use (not import), so importing this module never
+    touches the network. ``available`` reports usability; ``embed``
+    returns None per bbox otherwise. A ``core`` callable may be injected
+    for CI (no model download).
+    """
+
+    def __init__(self, *, device: str | None = None, core: Any | None = None) -> None:
+        self._device = device
+        self._core = core  # callable(PIL RGB image) -> list[float]; None -> lazy ResNet18
+        self._failed = False
+        self._lock = threading.Lock()
+
+    # -- availability ---------------------------------------------------------
+
+    @property
+    def available(self) -> bool:
+        if self._core is not None:
+            return True  # injected core (CI) needs no torch/torchvision
+        try:
+            import torch  # noqa: F401
+            import torchvision  # noqa: F401
+        except Exception:  # noqa: BLE001
+            return False
+        return not self._failed and self._ensure()
+
+    def _ensure(self) -> bool:
+        with self._lock:
+            if self._core is not None:
+                return True
+            if self._failed:
+                return False
+            try:
+                import torch
+                from torchvision.models import ResNet18_Weights, resnet18
+
+                weights = ResNet18_Weights.DEFAULT
+                model = resnet18(weights=weights)
+                model.fc = torch.nn.Identity()  # drop classifier -> 512-d features
+                device = self._device
+                if device is None:
+                    device = (
+                        "mps"
+                        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+                        else "cpu"
+                    )
+                model.eval().to(device)
+                preprocess = weights.transforms()
+                self._device = device
+
+                def _core(pil_img: Any) -> list[float]:
+                    tensor = preprocess(pil_img).unsqueeze(0).to(device)
+                    with torch.inference_mode():
+                        vec = model(tensor)
+                    return vec.squeeze(0).detach().cpu().tolist()
+
+                self._core = _core
+                return True
+            except Exception:  # noqa: BLE001 - offline/no-torch => honest degrade
+                self._failed = True
+                self._core = None
+                return False
+
+    # -- inference --------------------------------------------------------------
+
+    def embed(self, payload: Any, bboxes: list[tuple[int, int, int, int]]) -> list[list[float] | None]:
+        """JPEG/PNG bytes or ndarray + list of (x, y, w, h) -> one vector per bbox."""
+        img = self._decode(payload)
+        if img is None:
+            return [None] * len(bboxes)
+        if not self.available:
+            return [None] * len(bboxes)
+        return [self._embed_crop(img, bbox) for bbox in bboxes]
+
+    def _embed_crop(self, img: Any, bbox: tuple[int, int, int, int]) -> list[float] | None:
+        try:
+            import cv2
+            from PIL import Image
+
+            x, y, w, h = (int(v) for v in bbox)
+            ih, iw = img.shape[:2]
+            x2, y2 = min(x + w, iw), min(y + h, ih)
+            if x2 - x < 8 or y2 - y < 8:
+                return None
+            crop = img[y:y2, x:x2]
+            rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
+            pil = Image.fromarray(rgb)
+            vec = self._core(pil)  # type: ignore[misc]
+            return _l2([float(v) for v in vec])
+        except Exception:  # noqa: BLE001 - degenerate crop => no embedding
+            return None
+
+    @staticmethod
+    def _decode(payload: Any):
+        """JPEG bytes / ndarray -> BGR ndarray, else None."""
+        try:
+            import cv2
+            import numpy as np
+
+            if isinstance(payload, (bytes, bytearray)):
+                return cv2.imdecode(np.frombuffer(payload, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if isinstance(payload, np.ndarray) and payload.ndim == 3:
+                return payload
+        except Exception:  # noqa: BLE001 - decode failure means no embeddings
+            return None
+        return None
+
+
+def build_object_embedder() -> TorchvisionObjectEmbedder | None:
+    """Lazy object embedder (no model download until first use), or None."""
+    try:
+        import torch  # noqa: F401
+        import torchvision  # noqa: F401
+    except Exception:  # noqa: BLE001 - neural deps optional
+        return None
+    return TorchvisionObjectEmbedder()

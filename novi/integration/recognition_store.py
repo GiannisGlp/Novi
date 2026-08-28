@@ -31,6 +31,7 @@ class RecognitionKind(str, enum.Enum):
     VOICE = "voice"
     NOISE = "noise"
     PLACE = "place"
+    OBJECT = "object"
 
 
 _BIOMETRIC = {RecognitionKind.FACE, RecognitionKind.VOICE}
@@ -151,6 +152,16 @@ class RecognitionStore:
             )
             self._conn.commit()
         return pid
+
+    def delete(self, kind: RecognitionKind, person_id: str) -> int:
+        """Remove all enrollments for a kind + person id; returns rows deleted."""
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM recognition_enrollments WHERE kind = ? AND person_id = ?",
+                (kind.value, person_id),
+            )
+            self._conn.commit()
+            return cur.rowcount
 
     # -- matching ---------------------------------------------------------------
 

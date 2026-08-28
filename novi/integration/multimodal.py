@@ -81,6 +81,10 @@ class MultimodalRuntime:
         self.current_person: str = ""
         self.current_person_tier: str = ""
         self.current_place: str = ""
+        self.current_objects: list[str] = []
+        # per-detection-label resolution state, used to gate object events so
+        # recognized/proposal fire on transitions, not every frame
+        self._object_state: dict[str, str] = {}
         self.pending_enrollment_proposal: bool = False
         # salience: presence transitions + scene-change detection
         self._absent_frames = absent_frames
@@ -261,6 +265,73 @@ class MultimodalRuntime:
         self._emit("person.enrolled", person=name)
         return person_id
 
+    # -- object recognition ---------------------------------------------------
+
+    def recognize_object(self, name: str, *, embedding: list[float], frame_id: str = "") -> str:
+        """Enroll a specific object instance under a canonical id.
+
+        Mirrors recognize_person: the object is stored durably in the
+        RecognitionStore (OBJECT kind) so Novi remembers it across restarts.
+        Re-enrollment under the same name replaces the stored embedding
+        (upsert semantics) so the per-frame match scan stays bounded.
+        """
+        if self.recognition is None:
+            raise RuntimeError("no RecognitionStore configured")
+        object_id = f"object-{name.lower().replace(' ', '-')}"
+        self.recognition.delete(RecognitionKind.OBJECT, object_id)
+        self.recognition.enroll(
+            kind=RecognitionKind.OBJECT,
+            label=name,
+            embedding=embedding,
+            person_id=object_id,
+            frame_id=frame_id or "enroll",
+            provenance={"source": "enrollment"},
+        )
+        self._emit("object.enrolled", object=name)
+        return object_id
+
+    def recognize_objects(
+        self,
+        observations: list[tuple[str, list[float]]],
+        *,
+        min_similarity: float = 0.85,
+    ) -> list[dict[str, Any]]:
+        """Match per-detection embeddings against enrolled objects.
+
+        Each (label, embedding) is matched by cosine against the durable
+        OBJECT store. A match marks the decision recognized and adds the
+        label to current_objects; no match leaves it unresolved (novel
+        object, named later by dialogue — doc 02 §1.5). Events fire only on
+        transitions (object.recognized / object.proposal), mirroring the
+        presence/scene hysteresis so the trail stays per-change, per-frame.
+        """
+        decisions: list[dict[str, Any]] = []
+        if self.recognition is None:
+            return decisions
+        recognized: list[str] = []
+        next_state: dict[str, str] = {}
+        for label, embedding in observations:
+            m = self.recognition.match(RecognitionKind.OBJECT, embedding, min_similarity=min_similarity)
+            resolved = m.label if m is not None else ""
+            if m is not None:
+                decisions.append(
+                    {"label": label, "object": m.label, "similarity": round(m.similarity, 3), "recognized": True}
+                )
+                recognized.append(m.label)
+                if self._object_state.get(label) != resolved:
+                    self._emit(
+                        "object.recognized", label=label, object=m.label, similarity=round(m.similarity, 3)
+                    )
+            else:
+                decisions.append({"label": label, "object": None, "recognized": False})
+                if self._object_state.get(label) != "":
+                    self._emit("object.proposal", label=label)
+            next_state[label] = resolved
+        self._object_state = next_state
+        with self._lock:
+            self.current_objects = sorted(set(recognized))
+        return decisions
+
     def _label_for_person(self, person_id: str | None) -> str:
         """Resolve a FaceIdentifier person id to its human label."""
         if not person_id:
@@ -317,6 +388,7 @@ class MultimodalRuntime:
             "person": self.current_person,
             "tier": self.current_person_tier,
             "place": self.current_place,
+            "objects": self.current_objects,
             "enrollment_proposal": self.pending_enrollment_proposal,
             "perception": self.perception.snapshot(),
             "recent_events": self._events[-12:],

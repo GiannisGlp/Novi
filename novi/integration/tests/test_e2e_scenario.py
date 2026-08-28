@@ -82,6 +82,45 @@ class EndToEndScenarioTests(unittest.TestCase):
             self.assertEqual(len(places), 1)
             store2.close()
 
+    def test_object_api_rejects_malformed_input(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            s = NoviWebServer(port=0, store_path=str(Path(tmp) / "novi-e2e-guard.db"), auto_step=False, chat_llm=False)
+            # embedding must be a bounded list of numbers
+            self.assertIn("error", s.recognize_object({"name": "mug", "embedding": "123"}))
+            self.assertIn("error", s.recognize_object({"name": "mug", "embedding": [1.0] * 10000}))
+            self.assertIn("error", s.recognize_object({"name": "mug", "embedding": ["a", "b"]}))
+            # name must be present and bounded
+            self.assertIn("error", s.recognize_object({"name": "", "embedding": [1.0]}))
+            self.assertIn("error", s.recognize_object({"name": "x" * 81, "embedding": [1.0]}))
+            s.stop()
+
+    def test_object_enrollment_recognition_and_persistence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store_path = str(Path(tmp) / "novi-e2e-objects.db")
+            s = NoviWebServer(port=0, store_path=store_path, auto_step=False, chat_llm=False)
+
+            # 1. enroll an object instance via the API handler
+            r = s.recognize_object({"name": "my mug", "embedding": [1.0, 0.0], "frame_id": "f0"})
+            self.assertTrue(r["ok"])
+            self.assertEqual(r["object_id"], "object-my-mug")
+
+            # 2. recognize it in a later frame via the runtime
+            decisions = s.mm_runtime.recognize_objects([("cup", [1.0, 0.0])])
+            self.assertTrue(decisions[0]["recognized"])
+            self.assertEqual(decisions[0]["object"], "my mug")
+            self.assertEqual(s.mm_runtime.current_objects, ["my mug"])
+
+            # 3. preview surfaces current objects
+            prev = s.preview_frame()
+            self.assertEqual(prev["objects"], ["my mug"])
+
+            # 4. persistence: object survives server restart
+            s.stop()
+            store2 = RecognitionStore(store_path)
+            objs = [e for e in store2.all(RecognitionKind.OBJECT) if e["label"] == "my mug"]
+            self.assertEqual(len(objs), 1)
+            store2.close()
+
 
 if __name__ == "__main__":
     unittest.main()
