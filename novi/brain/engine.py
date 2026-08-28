@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,6 +60,7 @@ from .planner import Plan, Planner
 from .privacy import _PERSON_LABELS, COMMON_ENTITY_LABELS, PrivacyGovernance
 from .reflection import ReflectionEngine
 from .resource_telemetry import ResourceTelemetry, combine_resource_modes
+from .salience import EventSaliencePolicy, SurgeSalienceEvaluator
 from .self_model import build_self_model
 from .situation_model import SituationModel
 from .skill_contract import SUCCESS as SKILL_SUCCESS
@@ -106,6 +108,10 @@ class MacBrainConfig:
     initiative_enabled: bool = False
     initiative_neglect_threshold: int = 30
     initiative_cooldown: int = 60
+    # Plan 20: event-driven autonomous speech (GAP-A/B/C). When enabled, drained
+    # non-text events (presence/scene/identity/hearing) can seed a proactive
+    # utterance, gated by the same speaking-lease and initiative budget.
+    event_autonomy_enabled: bool = False
     # Phase P1 (sleep cycle): memory-maturation cadence in cycles (0 disables).
     sleep_every_n_cycles: int = 500
     # Phase 5 (plan 19): neural perception cadence — run the (expensive)
@@ -277,6 +283,8 @@ class MacBrain(ChatMixin):
             self.relationships = Relationships()
         self.social = social or SocialIntelligence()
         self.social_initiative = SocialInitiative(InitiativeConfig(neglect_threshold=self.config.initiative_neglect_threshold, cooldown=self.config.initiative_cooldown))
+        # Plan 20: event salience → autonomous utterance (GAP-A/B/C).
+        self.salience = SurgeSalienceEvaluator(EventSaliencePolicy())
         # Speaking lease (plan 19, Phase 2): while a reply is being composed
         # (the lease is held), spontaneous initiative stays silent. This
         # replaces the web server's `_chat_busy` loop-freeze: the cognitive loop
@@ -503,11 +511,93 @@ class MacBrain(ChatMixin):
                     record["admit_error"] = str(exc)
             else:
                 # Non-text input: keep it in the audit trail + world context.
+                # Carry the payload so the salience evaluator (plan 20) can
+                # decide whether this event is worth a proactive remark.
+                record["payload"] = payload
                 self._emit("input.consumed", {"cycle": self._cycle, **record})
             consumed.append(record)
         if consumed:
             self._emit("inputs.drained", {"cycle": self._cycle, "count": len(consumed)})
         return consumed
+
+    def _known_entities(self) -> list[str]:
+        """Entity names Novi remembers: identity bindings + knowledge graph."""
+        names: list[str] = []
+        idn = getattr(self, "identity", None)
+        if idn is not None:
+            with contextlib.suppress(Exception):
+                snap = idn.snapshot()
+                for binds in snap.get("bindings", {}).values():
+                    names.extend(binds.keys())
+        kg = getattr(self, "knowledge", None)
+        if kg is not None and hasattr(kg, "entity_types"):
+            with contextlib.suppress(Exception):
+                names.extend(kg.entity_types().keys())
+        return names
+
+    def _memory_grounding(self, entity: str) -> str:
+        """A short memory-grounded clause for a proactive remark, or ''.
+
+        Searches recent episodic memories for a mention of the entity so a
+        scene-change remark can reference prior context ("I remember your red
+        mug was on the counter."). Best-effort; returns '' when memory is
+        unavailable or the entity is unknown.
+        """
+        if not entity:
+            return ""
+        rows = getattr(self.memory, "active_rows", None)
+        if rows is None:
+            return ""
+        try:
+            episodic = [r["record"] for r in rows() if r["record"].memory_type in {"utterance", "perception"}]
+        except Exception:  # noqa: BLE001 - memory is best-effort
+            return ""
+        needle = entity.lower()
+        for rec in sorted(episodic, key=lambda r: r.created_at, reverse=True):
+            content = rec.content if isinstance(rec.content, str) else str(rec.content)
+            if needle in content.lower():
+                return f"I remember {entity} was around earlier."
+        return ""
+
+    def _maybe_autonomous_speech(self, events: list[dict], detections, person: str | None) -> dict[str, Any] | None:
+        """Event-driven proactive speech (plan 20, GAP-A/B/C).
+
+        Runs the salience evaluator over drained non-text events + perception
+        detections/identity. Gated by the same speaking-lease and social budget
+        as neglect-driven initiative; never interrupts goal pursuit. Returns the
+        respond_event() result (and speaks) or None to stay silent.
+        """
+        if not self.config.event_autonomy_enabled:
+            return None
+        if self._speaking_lease:
+            self._emit("speech.initiative_suppressed", {
+                "cycle": self._cycle, "reason": "speaking_lease_held",
+            })
+            return None
+        affect = self.soul.affect.dimensions
+        if affect.get("social_comfort", 0.5) < 0.35 and affect.get("engagement", 0.5) < 0.5:
+            self._emit("speech.initiative_suppressed", {
+                "cycle": self._cycle, "reason": "social_overload_reduction",
+            })
+            return None
+        if self.goals.has_active:
+            return None
+        present = [d.label for d in detections] if detections else []
+        candidate = self.salience.evaluate(
+            events,
+            cycle=self._cycle,
+            known_entities=self._known_entities(),
+            present_entities=present,
+        )
+        if candidate is None:
+            return None
+        # GAP-E grounding: a scene-change remark can reference prior memory
+        # ("I remember your red mug was on the counter.").
+        grounding = self._memory_grounding(candidate.entity) if candidate.kind == "scene.changed" else ""
+        result = self.respond_event(candidate, person=person or "", grounding=grounding)
+        if result.get("text"):
+            self.speak(result["text"], person=person or "")
+        return result
 
     def step(self, *, resource_constrained: bool = False) -> dict[str, Any]:
         if self.brain.lifecycle is not Lifecycle.ACTIVE:
@@ -1062,6 +1152,13 @@ class MacBrain(ChatMixin):
             social_expression = self.social.expression(person, self.relationships, self.soul.affect.dimensions, {"serious": uncertain})
             self._emit("social.interaction", {"cycle": self._cycle, "person": person, "category": self.relationships.category_for(person).value, "expression": social_expression})
         initiative = self._maybe_initiate(person, has_active_goal=self.goals.has_active)
+        # Plan 20: event-driven autonomous speech (GAP-A/B/C). If neglect-driven
+        # initiative stayed silent, let a salient drained event seed a proactive
+        # remark — gated by the same speaking-lease and social budget.
+        autonomous = None
+        if initiative is None:
+            event_records = [r for r in consumed_inputs if r.get("kind") and r.get("payload") is not None]
+            autonomous = self._maybe_autonomous_speech(event_records, evidence.detections, person)
         # CommunicationDecision: advance fatigue cooldown each cycle.
         self.communication_decision.tick()
         # Autonomy state machine: return to OBSERVING after action completes.
@@ -1104,6 +1201,7 @@ class MacBrain(ChatMixin):
             "identity": identity.snapshot() if identity is not None else None,
             "social": {"person": person, "expression": social_expression},
             "initiative": initiative,
+            "autonomous": autonomous,
             "temporal": {"expected": temporal_expected, "top_links": [link.snapshot() for link in self.temporal.top_links(limit=3)]},
             "fusion": fused_reported,
             "knowledge": self.knowledge.counts(),

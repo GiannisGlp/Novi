@@ -39,6 +39,7 @@ from .dialogue import (
     _is_introduction,
     _is_joke_request,
     _is_memory_question,
+    _is_meta_referential,
     _is_perception_question,
     _is_physical_action_request,
     _is_praise,
@@ -52,6 +53,7 @@ from .dialogue import (
     _is_thanks,
     _is_time_greeting,
     _is_world_question,
+    _strip_forbidden_opener,
     acknowledgment_reply,
     assurance_reply,
     check_in_reply,
@@ -790,6 +792,47 @@ class ChatMixin:
             "grounding": reply_obj.get("grounding", {}),
             "trace": {"conclusion": reply, "route": "local_llm",
                       "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
+        }
+
+    def respond_event(self, initiative: Any, *, person: str = "", grounding: str = "") -> dict[str, Any]:
+        """Autonomous-utterance variant of respond() (plan 20 §3B).
+
+        Seeded from a CandidateInitiative (produced by the salience evaluator)
+        rather than user text. Reuses the same naturalization guardrails so a
+        proactive remark reads like Novi, not a canned notification string.
+        ``grounding`` is an optional memory/world-grounded clause appended to
+        the remark (e.g. "I remember your red mug was on the counter.").
+
+        Returns {"text", "reply_source", "addressee", "reason", "trace"}.
+        """
+        text = (getattr(initiative, "text", None) or "").strip()
+        if grounding:
+            text = f"{text} {grounding}".strip()
+        if not text:
+            return {"text": None, "reply_source": "none", "addressee": person or "", "trace": {}}
+        # Naturalization guardrails apply to autonomous remarks too (no
+        # assistant-speak, no meta-referential phrasing, no name repetition).
+        cleaned = _strip_forbidden_opener(text)
+        if cleaned is None or _is_meta_referential(cleaned):
+            return {"text": None, "reply_source": "rejected", "addressee": person or "", "trace": {"route": "guardrail"}}
+        cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+        if not cleaned:
+            return {"text": None, "reply_source": "rejected", "addressee": person or "", "trace": {"route": "guardrail"}}
+        reason = getattr(initiative, "reason", "") or ""
+        self._emit("speech.autonomous", {
+            "cycle": getattr(self, "_cycle", 0),
+            "kind": getattr(initiative, "kind", ""),
+            "entity": getattr(initiative, "entity", ""),
+            "text": cleaned,
+            "reason": reason,
+            "affordance": getattr(initiative, "affordance", ""),
+        })
+        return {
+            "text": cleaned,
+            "reply_source": "autonomous",
+            "addressee": person or "",
+            "reason": reason,
+            "trace": {"conclusion": cleaned, "route": "autonomous", "route_reason": reason},
         }
 
     def _compose_reply_impl(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
