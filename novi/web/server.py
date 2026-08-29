@@ -38,6 +38,13 @@ from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL
 from novi.brain.models.stt import TranscriptionResult
+from novi.perception.detection import DeterministicObjectDetector
+from novi.perception.grounding import SpatialInferencePolicy, SpatialPerceptionBackend, SpatialQuery
+from novi.perception.grounding_client import GroundingClient
+from novi.perception.grounding_rpc import observation_to_dict
+from novi.perception.locate_anything import DeterministicLocateAnythingBackend
+from novi.perception.pipeline import PerceptionPipeline
+from novi.perception.tracking import ObjectTracker
 from novi.web.integration_api import IntegrationMixin
 
 _ROUTED = Path(__file__).resolve().parent
@@ -118,6 +125,42 @@ class DemoCamera:
         return None
 
 
+class _GroundingWithFallback:
+    """L3: try the local grounding service; fall back to the deterministic
+    backend when it is unreachable (Novi's never-crash rule — the web app
+    keeps answering scripted results if the model service is down)."""
+
+    def __init__(self, service_url: str | None = None) -> None:
+        self._client = GroundingClient(
+            service_url or os.environ.get("NOVI_GROUNDING_URL", "http://127.0.0.1:8721")
+        )
+        self._fallback = DeterministicLocateAnythingBackend(scripted={})
+
+    def capabilities(self) -> Any:
+        try:
+            return self._client.capabilities()
+        except ConnectionError:
+            return self._fallback.capabilities()
+
+    def ground(self, image: CameraFrame, query: SpatialQuery, policy: SpatialInferencePolicy) -> Any:
+        try:
+            return self._client.ground(image, query, policy)
+        except ConnectionError:
+            return self._fallback.ground(image, query, policy)
+
+    def point(self, image: CameraFrame, query: SpatialQuery, policy: SpatialInferencePolicy) -> Any:
+        try:
+            return self._client.point(image, query, policy)
+        except ConnectionError:
+            return self._fallback.point(image, query, policy)
+
+    def detect(self, image: CameraFrame, labels: tuple[str, ...], policy: SpatialInferencePolicy) -> Any:
+        try:
+            return self._client.detect(image, labels, policy)
+        except ConnectionError:
+            return self._fallback.detect(image, labels, policy)
+
+
 class NoviWebServer(IntegrationMixin):
     """Owns a MacBrain and drives it from HTTP requests."""
 
@@ -144,6 +187,7 @@ class NoviWebServer(IntegrationMixin):
         deliberation_rounds: int = 1,
         persist_model: bool = False,
         event_autonomy: bool = True,
+        grounding_backend: SpatialPerceptionBackend | None = None,
     ) -> None:
         self.host = host
         self.port = port
@@ -166,6 +210,11 @@ class NoviWebServer(IntegrationMixin):
         self.reasoning_mode = reasoning
         self.route_threshold = route_threshold
         self.event_autonomy = bool(event_autonomy)
+        # L3: language grounding through the same capability every surface
+        # uses. Default: the local grounding service with a deterministic
+        # fallback (never-crash rule); tests inject a backend directly.
+        self.grounding_backend = grounding_backend if grounding_backend is not None else _GroundingWithFallback()
+        self._grounding_pipeline: PerceptionPipeline | None = None
         self.stt_model = stt_model
         self.stt_device = stt_device
         self.listen_seconds = listen_seconds
@@ -1108,6 +1157,67 @@ class NoviWebServer(IntegrationMixin):
             "phases_run": getattr(sc, "phases_run", 0),
         }
 
+    # -- language grounding (L3: same capability, any surface) -------------
+
+    def _grounding_frame(self, data: dict) -> CameraFrame:
+        """The frame to ground: client-supplied > live camera feed > demo."""
+        import base64
+
+        b64 = data.get("frame_b64")
+        if b64:
+            payload = base64.b64decode(str(b64))
+            return CameraFrame(
+                frame_id="web-ground",
+                captured_at=utc_now(),
+                width=int(data.get("width", 640)),
+                height=int(data.get("height", 480)),
+                payload=payload,
+            )
+        feed = getattr(self, "mm_camera_feed", None)
+        if feed is not None:
+            rec = feed.poll()
+            if rec is not None:
+                f = rec.frame
+                return CameraFrame(frame_id=f.frame_id, captured_at=f.captured_at, width=f.width, height=f.height, payload=f.payload)
+        return DemoCamera().read()
+
+    def _pipeline_for_grounding(self) -> PerceptionPipeline:
+        if self._grounding_pipeline is None:
+            self._grounding_pipeline = PerceptionPipeline(
+                detector=DeterministicObjectDetector(scripted={}),
+                grounding_backend=self.grounding_backend,
+                tracker=ObjectTracker(),
+            )
+        return self._grounding_pipeline
+
+    def _api_grounding(self, data: dict) -> tuple[dict, int]:
+        query_text = str(data.get("query", "")).strip()
+        if not query_text:
+            return {"error": "empty query"}, 400
+        frame = self._grounding_frame(data)
+        query = SpatialQuery(text=query_text, frame_id=frame.frame_id, timestamp=frame.captured_at)
+        outcome = self._pipeline_for_grounding().ground_frame(frame, query, SpatialInferencePolicy())
+        r = outcome.result
+        return (
+            {
+                "success": r.success,
+                "no_object": r.no_object,
+                "backend_status": r.backend_status,
+                "model_id": r.model_id,
+                "model_revision": r.model_revision,
+                "latency_ms": r.latency_ms,
+                "frame_id": r.frame_id,
+                "query": r.query,
+                "validation_errors": list(r.validation_errors),
+                "observations": [observation_to_dict(o) for o in r.observations],
+                "associations": [
+                    {"observation_id": a.observation.observation_id, "track_id": a.track_id, "status": a.status}
+                    for a in outcome.associations
+                ],
+            },
+            200,
+        )
+
     def _router_info(self) -> dict[str, Any]:
         """Phase P2 observability: per-input-class route counts."""
         router = getattr(self.brain, "reasoning", None)
@@ -1555,6 +1665,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"error": "empty text"})
                     return
                 self._json({"result": novi.hear(text, confidence=float(data.get("confidence", 0.9)))})
+            elif path == "/api/grounding":
+                payload, status = novi._api_grounding(data)
+                self._json(payload, status)
             elif path == "/api/chat":
                 text = str(data.get("text", "")).strip()
                 if not text:
