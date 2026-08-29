@@ -20,6 +20,19 @@ steps 16–20/23/28 complete. Brain-zone steps deferred honestly (the
   grounding tokens only.") eliminated stray tail text in validation runs and
   yields fuller labels ("the largest object" not "the largest").
 
+**Session 2 (2026-08-29) — input-agnostic integration (user directive):**
+- L1 full-flow integration scenario (deterministic): camera → escalation →
+  grounding → association → world state → durable memory → prediction
+  confirmed/violated → deliberation → promotion → cache/dedup → verification
+  (caught + fixed cross-frame verification semantics);
+- L2 bridge: localhost grounding service + stdlib GroundingClient —
+  cross-venv real-model round-trip proven;
+- L3 web surface: `POST /api/grounding` — same pipeline, service-down
+  fallback; live real-model run "locate the menu bar" → (0,0,1000,29) ✓.
+- ⚠️ disk incident: data volume hit 0 free (parallel stack's ~46 GB of MLX
+  LLMs + the 7.8 GB LocateAnything snapshot); uv/pip caches pruned, 5 GB
+  recovered — large-model cleanup is the user's call.
+
 ## Status by plan §19 sequence
 
 | # | Step | Status | Evidence |
@@ -64,13 +77,15 @@ steps 16–20/23/28 complete. Brain-zone steps deferred honestly (the
 | LA-0 Research baseline | ✅ DONE | `docs/07-locate-anything/00..05` + gap analysis |
 | LA-1 Adapter | ✅ DONE | contracts + strict parser + optional backend + mocked tests |
 | LA-2 Mac feasibility | ✅ DONE | isolated runtime; load/inference evidence; **decision gate B** (`07_MAC_FEASIBILITY.md`) |
-| LA-3 Perception integration | 🟡 PARTIAL | pipeline grounding + tracking association + provenance done; web/CLI observability pending (web is another workstream's zone) |
+| LA-3 Perception integration | ✅ DONE (surface) | pipeline grounding + tracking association + provenance + **web surface (`/api/grounding`)** — same `ground_frame` for web/CLI/body; frontend untouched (React/Vite freeze) |
 | LA-4 Active perception | 🟡 PARTIAL | escalation + budgets + dedup + cache done; cognitive query generation is brain-side |
 | LA-5 Cognitive integration | 🟡 PARTIAL | perception-side seams done (world-state admission, prediction verification, deliberation record, promotion criterion); brain-side wiring is the brain workstream's call |
 | LA-6 Real-IO closed loop | 🟡 PARTIAL | camera → LocateAnything → grounding → tracker ✅ (camera acceptance, ~1.7 s at 640×480); world-state/cognition leg is brain-zone |
 | LA-7 NVIDIA hardware evaluation | ⛔ BLOCKED | needs GPU |
 | LA-8 Production decision | ⛔ BLOCKED | needs 26–31 |
 | LA-9 (Phase 10) Benchmark | ✅ DONE (v1) | corpus + metrics + runner + comparison harness (241 tests); real-model evidence run complete — precision +0.167, FP −8 vs SSDLite on corpus-v1 |
+| LA-10 (L2 bridge) | ✅ DONE | localhost grounding service (heavy venv) + stdlib `GroundingClient`; cross-venv real-model round-trip validated |
+| LA-11 (L3 web) | ✅ DONE | `POST /api/grounding` — same `PerceptionPipeline.ground_frame`; service-down fallback to deterministic; live real-model web run: "locate the menu bar" → (0,0,1000,29) ✓ |
 
 ## Regressions
 

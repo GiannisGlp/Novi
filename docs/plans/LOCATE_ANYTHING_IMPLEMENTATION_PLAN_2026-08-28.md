@@ -1,7 +1,7 @@
 # Novi — LocateAnything Implementation Plan
 
 **Date:** 2026-08-28  
-**Status:** IMPLEMENTING — §19 sequence steps 1–28 done (Mac feasibility gate **B**; benchmark evidence; camera acceptance ~1.7 s @640×480; brain-zone seams 18/21/22/24 delivered protocol-based; prompt tuning removes stray tail text). Steps 29–32: spec + license record ready (`09_NVIDIA_RUNTIME_BENCHMARK_PLAN.md`, `10_LICENSE_GATE.md`); execution blocked on NVIDIA hardware / legal review. Live tracking: `docs/07-locate-anything/08_IMPLEMENTATION_STATUS.md`.  
+**Status:** IMPLEMENTING — §19 sequence steps 1–28 done; input-agnostic integration done (L1 full-flow scenario, L2 grounding service bridge, L3 `/api/grounding` web surface — same pipeline for web/CLI/body). Steps 29–32: spec + license record ready; execution blocked on NVIDIA hardware / legal review. Live tracking: `docs/07-locate-anything/08_IMPLEMENTATION_STATUS.md`.  
 **Primary objective:** Integrate NVIDIA LocateAnything as an optional language-conditioned spatial-perception backend without weakening Novi's existing perception contracts, deterministic core, safety boundaries, Mac-first development posture, or future NVIDIA/Jetson portability.
 
 ---
