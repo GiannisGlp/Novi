@@ -46,7 +46,7 @@ class LLMPayloadThinkTests(unittest.TestCase):
         try:
             body = _capture_chat_payload(s, "qwen3:4b")
             self.assertIs(body.get("think"), False)
-            self.assertEqual(body["options"]["num_predict"], 160)
+            self.assertEqual(body["options"]["num_predict"], 320)
         finally:
             s.stop()
 

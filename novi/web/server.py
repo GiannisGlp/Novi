@@ -182,7 +182,7 @@ class NoviWebServer(IntegrationMixin):
         stt_device: str = "cpu",
         listen_seconds: float = 3.0,
         sleep_every_n_cycles: int = 500,
-        available_models: tuple[str, ...] = ("qwen3.8:27b", "qwen3:8b", "qwen3:4b", "nemotron-3.5-lightning"),
+        available_models: tuple[str, ...] = ("nemotron-3.5-lightning", "qwen3:8b", "qwen3.8:27b", "qwen3:4b"),
         embedder: str = "auto",
         deliberation_rounds: int = 1,
         persist_model: bool = False,
@@ -733,8 +733,9 @@ class NoviWebServer(IntegrationMixin):
                     data = json.loads(response.read().decode("utf-8"))
                     # Only claim availability when the CURRENT model is actually
                     # pulled — a 200 with an unpulled model would otherwise let
-                    # _llm_chat raise a 404 mid-reply (M2).
-                    models = {str(m.get("name", "")) for m in data.get("models", [])}
+                    # _llm_chat raise a 404 mid-reply (M2). Normalize ':latest'
+                    # so 'nemotron-3.5-lightning' matches the '…:latest' tag.
+                    models = {str(m.get("name", "")).removesuffix(":latest") for m in data.get("models", [])}
                     self._llm_available = self.llm_model in models
             except Exception:  # noqa: BLE001 - offline fallback
                 self._llm_available = False
@@ -787,7 +788,7 @@ class NoviWebServer(IntegrationMixin):
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
         from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
 
-        options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 160)}
+        options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 320)}
         payload: dict[str, Any] = {
             "model": self.llm_model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -818,7 +819,7 @@ class NoviWebServer(IntegrationMixin):
         """Yield token deltas from Ollama with stream=True (SSE-like)."""
         from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
 
-        options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 160)}
+        options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 320)}
         payload: dict[str, Any] = {
             "model": self.llm_model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -1814,8 +1815,8 @@ def main() -> None:
     parser.add_argument("--camera", choices=["demo", "real"], default="demo", help="'demo' = no-hardware camera; 'real' = live webcam + real speech-to-text")
     parser.add_argument("--reasoning", choices=["deterministic", "ollama", "router"], default="router", help="brain decision backend; 'router' escalates uncertain steps to the local LLM (default: router — falls back to deterministic when Ollama is offline)")
     parser.add_argument("--route-threshold", type=float, default=0.6, help="confidence below which the router escalates to the local LLM")
-    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: qwen3:4b, or the last UI-selected model)")
-    parser.add_argument("--model", dest="model", type=str, default=None, help="default chat model; falls back to the persisted UI selection, then qwen3:4b (switch at runtime via the UI)")
+    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: nemotron-3.5-lightning, or the last UI-selected model)")
+    parser.add_argument("--model", dest="model", type=str, default=None, help="default chat model; falls back to the persisted UI selection, then nemotron-3.5-lightning (switch at runtime via the UI)")
     parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for real microphone STT (tiny/base/small)")
     parser.add_argument("--stt-device", type=str, default="cpu", help="STT device (cpu or mps)")
     parser.add_argument("--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button")

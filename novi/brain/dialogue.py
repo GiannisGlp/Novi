@@ -29,7 +29,7 @@ import urllib.request
 from typing import Any
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3:4b"
+DEFAULT_OLLAMA_MODEL = "nemotron-3.5-lightning"
 
 # Rule 8 — patterns that make Novi sound like a scripted assistant/AI. A reply
 # whose first sentence matches one of these is stripped; a reply that still
@@ -110,12 +110,61 @@ _META_REFERENTIAL = [
         r"\bthe main interaction we('?ve| have) had\b",
         r"\byou greeted (me|the)\b",
         r"\bthat('?s| is) all we('?ve| have) (talked|spoken) about\b",
+        r"\blet me (unpack|break (?:this|it) down|go through (?:this|it) step by step)\b",
+        r"\bthe user (?:just |has been )?(?:said|asked|wants|typed|saying|asking)\b",
+        r"\bthey'?ve been (?:asking|saying|checking)\b",
+        r"\bthe facts show\b",
+        r"\bwe'?ve had (?:this|that) pattern\b",
+        r"\bwe are (?:given|looking at) (?:the )?(?:conversation|history)\b",
+        r"\bi(?:'| )ll (?:try to )?figure out how to respond\b",
+        # qwen3 narration style (think disabled): the model narrates the task
+        # instead of answering. Any of these means the reply is meta-talk.
+        r"\blooking at (?:the )?(?:conversation|history|facts|context)\b",
+        r"\bconversation history\b",
+        r"\bnovi (?:has|was|is|should|can)\b",
+        r"\bi (?:was|am) mid[- ]sentence\b",
+        r"\bimportant context\b",
+        r"\b(?:in|from) the previous reply\b",
+        r"\bresponding with\b",
+        r"\bmy (?:curiosity|warmth|affect|valence|tone|fatigue|traits)\b",
+        r"\*[a-z ]{2,40}\*",  # roleplay action markers: *checks traits*
     )
 ]
 
 
 def _is_meta_referential(text: str) -> bool:
     return any(p.search(text) for p in _META_REFERENTIAL)
+
+
+# Leading self-directed planning/meta narration that leaks into replies
+# ("Okay, let me unpack this carefully…", "The user just asked…"). These are
+# STRIPPED (not just rejected) so a good answer hidden behind meta-framing
+# survives without a wasted regeneration call.
+_META_OPENER = [
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"^(?:okay|alright|all right|right|so|well|hmm|um|ah|oh|then|first|firstly|let'?s see|let me see)[,.]?\s",
+        r"^(?:let me|let'?s)\s+(?:unpack|think|go through|break (?:this|it) down|figure|start|try|work|take|recap)",
+        r"^(?:the user|they|she|he|they'?ve)\s+(?:just\s+|has been\s+|been\s+)?(?:said|asked|wants|want|wrote|typed|sent|saying|asking|checking)\s",
+        r"^(?:we are|we'?re)\s+(?:given|looking at|talking about)\s",
+        r"^(?:i'?m|i am)\s+(?:still\s+)?(?:forming|trying to figure|going to figure|thinking about how)\s",
+        r"^(?:i'?ll|i will)\s+(?:try to|need to|just)\s+(?:figure|respond|answer|unpack)\s",
+        r"^(?:based on|looking at|from)\s+(?:the\s+)?(?:conversation|history|context|facts)\s",
+        r"^(?:novi|i)\s+(?:has|was|is|should|can)\s+(?:been|responding|mid[- ]sentence)\s",
+        r"^important context\b",
+    )
+]
+
+
+def _strip_meta_framing(text: str) -> str:
+    """Drop leading meta-commentary sentences ("Okay, let me unpack this…")."""
+    remaining = (text or "").strip()
+    for _ in range(4):  # bounded: at most 4 leading meta sentences
+        first, rest = _split_first_sentence(remaining)
+        if not first or not any(p.search(first) for p in _META_OPENER):
+            break
+        remaining = rest.strip()
+    return remaining
 
 _SENTENCE_END = re.compile(r"[.!?]\s")
 
@@ -925,8 +974,8 @@ def followup_question(text: str) -> str:
     """
     topic = _extract_topic(text)
     if topic:
-        return f"I'm still forming my thoughts on {topic} — what's your take?"
-    return "I'm still forming my thoughts there — what's behind the question?"
+        return f"Good question — what's your angle on {topic}?"
+    return "Good question — what's your angle on that?"
 
 
 def _is_near_repetitive(text: str, recent_novi: list[str] | None) -> bool:
@@ -1045,6 +1094,11 @@ class DialogueEngine:
             return {"text": None, "silent": True, "rejected": False}
         cleaned = _strip_forbidden_opener(text)
         if cleaned is None:
+            return {"text": None, "silent": False, "rejected": True}
+        # Drop leading meta-commentary ("Okay, let me unpack this…") so a real
+        # answer behind the framing survives without a wasted regeneration.
+        cleaned = _strip_meta_framing(cleaned)
+        if not cleaned:
             return {"text": None, "silent": False, "rejected": True}
         if _is_repetitive(cleaned, last_novi_text):
             return {"text": None, "silent": False, "rejected": True}

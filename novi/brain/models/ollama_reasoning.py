@@ -8,7 +8,7 @@ from .provider import MacModelProvider, MacModelSpec
 from .reasoning import ActionIntent, LLMReasoningProvider
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3:4b"
+DEFAULT_OLLAMA_MODEL = "nemotron-3.5-lightning"
 
 
 def disable_thinking_for(model: str) -> bool:

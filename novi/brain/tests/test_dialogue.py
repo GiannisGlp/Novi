@@ -684,11 +684,15 @@ class ComposeReplyTests(unittest.TestCase):
 
     def test_thanks_gets_brief_natural_reply(self):
         b = self._brain()
-        r = b.compose_reply("thanks", llm_chat=lambda **k: "I'm glad I could help.")
+        r = b.compose_reply("thanks", llm_chat=lambda **k: "No problem — happy to.")
         self.assertIsNotNone(r["text"])
-        self.assertEqual(r["grounding"]["route"], "thanks")
-        self.assertNotIn("glad i could help", r["text"].lower())
-        self.assertLess(len(r["text"]), 40)
+        # With a transport, thanks is LLM-composed (cognition-first contract);
+        # without one the deterministic bank still fires (checked below).
+        self.assertEqual(r["grounding"]["route"], "dialogue")
+        self.assertEqual(r["text"], "No problem — happy to.")
+        det = b._det_social_reply("thanks")
+        assert det is not None
+        self.assertEqual(det["grounding"]["route"], "thanks")
 
     def test_time_greeting_routes_to_matching_reply(self):
         b = self._brain()
@@ -724,10 +728,15 @@ class ComposeReplyTests(unittest.TestCase):
         for u in ["got it", "sure", "yeah", "okay"]:
             r = b.compose_reply(u, llm_chat=lambda **k: "ignored")
             self.assertIsNotNone(r["text"])
-            self.assertEqual(r["grounding"]["route"], "acknowledgment", u)
+            # With a transport these are LLM-composed (cognition-first);
+            # the deterministic bank is the no-LLM fallback.
+            self.assertEqual(r["grounding"]["route"], "dialogue", u)
             # must not be the "no good answer on X" topic fallback or an intro
             self.assertNotIn("good answer", r["text"].lower())
             self.assertNotIn("i'm novi", r["text"].lower())
+        det = b._det_social_reply("got it")
+        assert det is not None
+        self.assertEqual(det["grounding"]["route"], "acknowledgment")
 
     def test_homework_not_flagged_as_physical_action(self):
         # A mental/intellectual request must not trigger the physical-action honesty

@@ -13,7 +13,7 @@ import urllib.request
 from typing import Any
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3:4b"
+DEFAULT_OLLAMA_MODEL = "nemotron-3.5-lightning"
 
 
 def _narrative_prompt(episodes: list[dict[str, Any]]) -> str:

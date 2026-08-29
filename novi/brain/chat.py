@@ -618,7 +618,9 @@ class ChatMixin:
             "Do not ask 'what's on your mind?' or 'how can I help?'. "
             "Do not repeat what you already said, and do not say the person's name more than once unless it changes meaning. "
             "Ask at most one question per reply — people naturally ask one thing at a time, not a list. "
-            "Reply in 1-3 short, natural spoken sentences. Vary your openings; no disclaimers, no chain of thought — just the answer."
+            "Reply in 1-3 short, natural spoken sentences. Vary your openings; no disclaimers, no chain of thought — just the answer. "
+            "Never open with meta-commentary ('Okay, let me...', 'Let me unpack/think about this...', 'The user asked...', "
+            "'I'll break this down...', 'Based on the conversation...') — say the thing directly, like a person answering a friend."
             + caps_clause
         )
 
@@ -641,6 +643,31 @@ class ChatMixin:
         if can_hear:
             return "I'm right here — I can hear you. What would you like to say?"
         return "I'm here — I can't hear you right now, but I'm reading what you send me. What would you like to say?"
+
+    def _det_social_reply(self, text: str) -> dict[str, Any] | None:
+        """Deterministic bank replies for common social moves (NO-LLM fallback).
+
+        With an LLM transport available these moves are composed by the model
+        (grounded in cognition/memory/context — issues 6/8); this bank only
+        fires when no transport exists so the user is never left dry.
+        """
+        if _is_check_in(text):
+            return {"text": check_in_reply(cycle=self._cycle), "fallback": True, "reason": "You asked how I am, so I answered warmly in plain human terms — no internal/system talk.", "grounding": {"route": "check_in"}}
+        if _is_joke_request(text):
+            return {"text": joke_reply(cycle=self._cycle), "fallback": True, "reason": "You asked for a joke, so I gave you a light, in-character one.", "grounding": {"route": "joke"}}
+        if _is_thanks(text):
+            return {"text": thanks_reply(cycle=self._cycle), "fallback": True, "reason": "You thanked me, so I acknowledged it warmly and briefly.", "grounding": {"route": "thanks"}}
+        if _is_acknowledgment(text):
+            return {"text": acknowledgment_reply(cycle=self._cycle), "fallback": True, "reason": "You acknowledged something, so I replied briefly and naturally.", "grounding": {"route": "acknowledgment"}}
+        if _is_assurance_question(text):
+            return {"text": assurance_reply(cycle=self._cycle), "fallback": True, "reason": "You asked if I can keep a secret / be trusted, so I reassured you warmly.", "grounding": {"route": "assurance"}}
+        if _is_praise(text):
+            return {"text": praise_reply(cycle=self._cycle), "fallback": True, "reason": "You praised or said you like me, so I accepted it warmly.", "grounding": {"route": "praise"}}
+        if _is_reassurance_question(text):
+            return {"text": reassurance_reply(cycle=self._cycle), "fallback": True, "reason": "You worried I'm upset with you, so I reassured you warmly.", "grounding": {"route": "reassurance"}}
+        if _is_engagement_check(text):
+            return {"text": self._engagement_reply(), "fallback": True, "reason": "You checked whether I'm here/listening, so I acknowledged warmly.", "grounding": {"route": "engagement"}}
+        return None
 
     def _perception_reply(self, text: str) -> str:
         """Honest, natural answer to a perception question ("can you hear/see me?")."""
@@ -905,8 +932,12 @@ class ChatMixin:
                 "fatigue_level": self.communication_decision.fatigue_level,
             })
             return {"text": None, "fallback": False, "grounding": {}, "silent": True, "silence_reason": silence_reason}
-        # A time-of-day greeting ("good morning/night") gets a matching, natural
-        # reply, not a generic "hey".
+        # Pure social grease stays instant and deterministic: time-of-day
+        # greetings, plain greetings, farewells, and name introductions (which
+        # bind the camera identity). Everything else goes through the LLM when
+        # a transport is available so replies are grounded in cognition, memory
+        # and context (issues 6/8); the deterministic banks below are the
+        # no-LLM fallback only.
         if _is_time_greeting(text):
             tg = time_greeting_reply(text, cycle=self._cycle)
             return {"text": tg, "fallback": False, "reason": "You greeted me by time of day, so I matched it warmly.", "grounding": {"route": "time_greeting"}}
@@ -915,10 +946,6 @@ class ChatMixin:
         if _is_greeting(text):
             g = greeting_reply(cycle=self._cycle)
             return {"text": g, "fallback": False, "reason": "You just greeted me, so I replied warmly and briefly — no need to over-explain.", "grounding": {"route": "greeting"}}
-        # "how are you? / what's up? / how's it going?" — answer like a person,
-        # never "the system's running smoothly" (implementation leak).
-        if _is_check_in(text):
-            return {"text": check_in_reply(cycle=self._cycle), "fallback": False, "reason": "You asked how I am, so I answered warmly in plain human terms — no internal/system talk.", "grounding": {"route": "check_in"}}
         # A farewell ("bye", "i'm leaving", "see you later") — wish them well.
         if _is_farewell(text):
             return {"text": farewell_reply(cycle=self._cycle), "fallback": False, "reason": "You're leaving or said goodbye, so I wished you well.", "grounding": {"route": "farewell"}}
@@ -928,29 +955,10 @@ class ChatMixin:
             ir = introduction_reply(text, cycle=self._cycle)
             if ir:
                 return {"text": ir, "fallback": False, "reason": "You told me your name, so I acknowledged it and said I'd remember it.", "grounding": {"route": "introduction"}}
-        # The user asks for a joke / something funny — give a light, clean quip.
-        if _is_joke_request(text):
-            return {"text": joke_reply(cycle=self._cycle), "fallback": False, "reason": "You asked for a joke, so I gave you a light, in-character one.", "grounding": {"route": "joke"}}
-        # A simple thank-you gets a brief, warm line — not "I'm glad I could help".
-        if _is_thanks(text):
-            return {"text": thanks_reply(cycle=self._cycle), "fallback": False, "reason": "You thanked me, so I acknowledged it warmly and briefly.", "grounding": {"route": "thanks"}}
-        # A short acknowledgment ("okay", "sure", "got it", "sounds good") is not a
-        # topic or introduction — give a brief, natural acknowledgement instead of
-        # "I don't have a good answer on got yet" or a forced introduction.
-        if _is_acknowledgment(text):
-            return {"text": acknowledgment_reply(cycle=self._cycle), "fallback": False, "reason": "You acknowledged something, so I replied briefly and naturally.", "grounding": {"route": "acknowledgment"}}
-        # "Can you keep a secret?" is a social trust question, not a topic.
-        if _is_assurance_question(text):
-            return {"text": assurance_reply(cycle=self._cycle), "fallback": False, "reason": "You asked if I can keep a secret / be trusted, so I reassured you warmly.", "grounding": {"route": "assurance"}}
-        # "you're amazing / i love you" — accept the praise warmly, not a topic.
-        if _is_praise(text):
-            return {"text": praise_reply(cycle=self._cycle), "fallback": False, "reason": "You praised or said you like me, so I accepted it warmly.", "grounding": {"route": "praise"}}
-        # "are you mad at me? / do you hate me?" — reassure warmly, not a topic.
-        if _is_reassurance_question(text):
-            return {"text": reassurance_reply(cycle=self._cycle), "fallback": False, "reason": "You worried I'm upset with you, so I reassured you warmly.", "grounding": {"route": "reassurance"}}
-        # "Are you there? / can you hear me?" — acknowledge present, warm.
-        if _is_engagement_check(text):
-            return {"text": self._engagement_reply(), "fallback": False, "reason": "You checked whether I'm here/listening, so I acknowledged warmly.", "grounding": {"route": "engagement"}}
+        if llm_chat is None:
+            det = self._det_social_reply(text)
+            if det is not None:
+                return det
         self_state = self._chat_self_state()
         surroundings = self._chat_surroundings()
         relationship = self._chat_relationship(person or addressee_name)
@@ -1186,7 +1194,9 @@ class ChatMixin:
             nudge = (
                 f" Your previous reply was: {last_novi_text!r}. It was rejected for repeating yourself "
                 "verbatim or sounding like an assistant. Say something new, natural and brief; if the user asked "
-                "the same thing, vary your wording or acknowledge you already answered — but do not repeat it verbatim."
+                "the same thing, vary your wording or acknowledge you already answered — but do not repeat it verbatim. "
+                "Answer DIRECTLY in 1-2 sentences in your own voice. No meta-commentary, no 'let me', no 'the user asked', "
+                "no narration of the conversation — just the answer."
             )
             retry = self.dialogue.reply(system=system + nudge, user=user_json, last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi, llm_chat=llm_chat)
             if retry["text"] is not None:
@@ -1207,7 +1217,14 @@ class ChatMixin:
                 **out,
             }
             return {"text": out["text"], "fallback": False, "reason": reason, "grounding": grounding}
-        # No usable reply. A clarification request ("what system?", "what do you
+        # No usable reply. The deterministic social banks still apply when the
+        # LLM was configured but returned nothing (LLM down/unresponsive) —
+        # better a natural bank reply than a generic follow-up.
+        if out["text"] is None:
+            det = self._det_social_reply(text)
+            if det is not None:
+                return det
+        # A clarification request ("what system?", "what do you
         # mean?") is answered by acknowledging + re-engaging, never by guessing at
         # a topic. Otherwise, when we have nothing on a substantive topic, ask a
         # logical in-context question; for a bare one-liner prefer a short ack.

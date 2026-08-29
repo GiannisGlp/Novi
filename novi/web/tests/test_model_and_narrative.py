@@ -22,12 +22,12 @@ class ModelPropagationTests(unittest.TestCase):
         defaults.update(kw)
         return NoviWebServer(**defaults)
 
-    def test_default_model_is_qwen3_4b(self) -> None:
+    def test_default_model_is_nemotron(self) -> None:
         s = self._server()
         try:
-            self.assertEqual(s.llm_model, "qwen3:4b")
-            self.assertEqual(s._reasoning_provider.llm.model, "qwen3:4b")
-            self.assertEqual(s._narrator_inner.model, "qwen3:4b")
+            self.assertEqual(s.llm_model, "nemotron-3.5-lightning")
+            self.assertEqual(s._reasoning_provider.llm.model, "nemotron-3.5-lightning")
+            self.assertEqual(s._narrator_inner.model, "nemotron-3.5-lightning")
         finally:
             s.stop()
 
@@ -90,7 +90,7 @@ class ModelPropagationTests(unittest.TestCase):
             s._reasoning_provider = provider
             s._apply_model_to_components()
             self.assertIsNot(provider._llm, old_llm, "set_model must rebuild the backend")
-            self.assertEqual(provider.model, "qwen3:4b")
+            self.assertEqual(provider.model, "nemotron-3.5-lightning")
         finally:
             s.stop()
 
@@ -147,6 +147,18 @@ class ModelAvailabilityTests(unittest.TestCase):
             s._llm_available = None
             s._llm_probed_at = 0.0
             with self._stub_tags(["qwen3:4b", "qwen3:8b"]):
+                self.assertTrue(s._llm_up())
+        finally:
+            s.stop()
+
+    def test_llm_up_matches_latest_tag_suffix(self) -> None:
+        """'nemotron-3.5-lightning' must match the ':latest' tag from /api/tags."""
+        s = self._server()
+        try:
+            s.llm_model = "nemotron-3.5-lightning"
+            s._llm_available = None
+            s._llm_probed_at = 0.0
+            with self._stub_tags(["nemotron-3.5-lightning:latest"]):
                 self.assertTrue(s._llm_up())
         finally:
             s.stop()

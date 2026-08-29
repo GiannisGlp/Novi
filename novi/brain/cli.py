@@ -8,7 +8,8 @@ from novi.brain.b2_perception import SpecialistPerception
 
 from .engine import MacBrain
 from .io import CameraFrame, MacCamera
-from .models import NeuralPerceptionBackend, WhisperSTTProvider
+from novi.brain.models import NeuralPerceptionBackend, WhisperSTTProvider
+from novi.brain.models.ollama_reasoning import DEFAULT_OLLAMA_MODEL
 
 
 class DemoCamera:
@@ -67,12 +68,12 @@ def _build_reasoning(args) -> object:
     if args.reasoning == "ollama":
         from .models import OllamaReasoningProvider
 
-        return OllamaReasoningProvider(model=args.ollama_model or "qwen3:4b")
+        return OllamaReasoningProvider(model=args.ollama_model or DEFAULT_OLLAMA_MODEL)
     if args.reasoning == "router":
         from .models import OllamaReasoningProvider
         from .models.router import ReasoningRouter
 
-        llm = OllamaReasoningProvider(model=args.ollama_model or "qwen3:4b")
+        llm = OllamaReasoningProvider(model=args.ollama_model or DEFAULT_OLLAMA_MODEL)
         return ReasoningRouter(llm=llm, confidence_threshold=args.route_threshold)
     return None  # MacBrain defaults to DeterministicReasoningProvider
 
@@ -96,7 +97,7 @@ def main() -> int:
     parser.add_argument("--stt-device", type=str, default="cpu", help="device for speech-to-text (cpu or mps)")
     parser.add_argument("--reasoning", choices=["deterministic", "ollama", "router"], default="deterministic", help="reasoning backend: deterministic symbolic, a local LLM via Ollama, or a confidence-based router between them")
     parser.add_argument("--route-threshold", type=float, default=0.6, help="confidence below which the router escalates to the local LLM")
-    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model name for --reasoning ollama/router (default: qwen3:4b)")
+    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model name for --reasoning ollama/router (default: nemotron-3.5-lightning)")
     parser.add_argument("--goal-target", type=str, default=None, metavar="X,Y", help="adopt a bounded reach goal to (X, Y) in meters before running cycles")
     parser.add_argument("--goal-steps", type=int, default=100, help="max step budget for the reach goal (bounds movement)")
     parser.add_argument("--store", type=str, default=None, metavar="PATH", help="durable storage SQLite DB (default: novi/data/novi.db — the single canonical store; pass ':memory:' for ephemeral)")
