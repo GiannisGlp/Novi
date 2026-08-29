@@ -95,6 +95,9 @@ from .world_model import (
     PLACE as WM_PLACE,
 )
 from .world_model import (
+    ROBOT as ROBOT_WM,
+)
+from .world_model import (
     UNKNOWN as WM_UNKNOWN,
 )
 from .world_model import WorldModel as UnifiedWorldModel
@@ -713,6 +716,9 @@ class MacBrain(ChatMixin):
         self._admit_detections(evidence.detections)
         if self.perception_pipeline is None:
             self._update_unified_world(evidence.detections)
+        # Phase 1c: the robot is a first-class world-model entity whose
+        # spatial_ref/location track the body's live pose via the SpatialMap.
+        self._sync_robot_world_state()
         # Failure detection: perception uncertainty (low-confidence or no detections).
         if not evidence.detections or all(d.confidence < 0.5 for d in evidence.detections):
             failure = self.failure_handler.report_failure(
@@ -2032,6 +2038,56 @@ class MacBrain(ChatMixin):
     # movement actions are R1 (reversible digital) not R3 (physical movement).
     _R0_ACTIONS = frozenset({"wait", "observe", "stop", "idle"})
     _R1_ACTIONS = frozenset({"speak", "move_forward", "turn_left", "turn_right"})
+
+    def _sync_robot_world_state(self) -> None:
+        """Phase 1c: maintain the ROBOT self-entity in the unified world model.
+
+        The robot is a first-class world-model citizen: its metric pose links
+        to the SpatialMap (spatial_ref), and its semantic ``location`` derives
+        from SpatialMap.region_at(body pose). Local odometry is exact in the
+        virtual phase, so pose σ = 0 (confidence 1.0).
+        """
+        body_now = self.body.snapshot()
+        x = float(body_now.get("x_m", 0.0))
+        y = float(body_now.get("y_m", 0.0))
+        now = datetime.now(timezone.utc).isoformat()
+        robot = self.unified_world.add_entity(
+            "robot", ROBOT_WM,
+            labels=["novi"],
+            epistemic_status=WM_OBSERVED,
+            confidence=1.0,
+            created_at=now,
+        )
+        region = self.spatial.region_at(x, y, frame="map") if self.spatial is not None else None
+        self.unified_world.update_entity_state(
+            "robot", "pose_2d",
+            {"frame": "map", "x_m": x, "y_m": y, "heading_deg": float(body_now.get("heading_deg", 0.0))},
+            epistemic_status=WM_OBSERVED,
+            confidence=1.0,
+            source="body.odometry",
+            timestamp=now,
+            sigma=0.0,
+        )
+        if region is not None:
+            self.unified_world.update_entity_state(
+                "robot", "location", region,
+                epistemic_status=WM_OBSERVED,
+                confidence=1.0,
+                source="spatial_map.region_at",
+                timestamp=now,
+                sigma=0.0,
+            )
+        else:
+            self.unified_world.update_entity_state(
+                "robot", "location", "unknown",
+                epistemic_status=WM_UNKNOWN,
+                confidence=0.5,
+                source="spatial_map.region_at",
+                timestamp=now,
+                sigma=1.0,
+            )
+        robot.spatial_ref = {"frame": "map", "x": x, "y": y}
+        self._seen_entities.add("robot")
 
     def _safety_world_state(self) -> dict[str, Any]:
         """Compose the safety gate's self-reported world state (doc 08 §2).

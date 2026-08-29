@@ -41,6 +41,12 @@ class ModalityObservation:
     captured_at: str = ""
     received_at: str = ""
     source: str = ""
+    # Phase 1b: explicit measurement uncertainty σ ∈ [0,1]; None derives it
+    # honestly as 1 - confidence at fusion time.
+    sigma: float | None = None
+
+    def effective_sigma(self) -> float:
+        return _clamp01(self.sigma) if self.sigma is not None else 1.0 - _clamp01(self.confidence)
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -68,6 +74,9 @@ class FusedEvent:
     # the fusion model so downstream consumers can see how much the estimate
     # is spread (uncertainty-and-units skill).
     confidence_uncertainty: float = 0.0
+    # Phase 1b: the combined measurement uncertainty of the fused VALUE,
+    # computed in quadrature (inverse-variance) from the contributors' σ.
+    value_sigma: float = 1.0
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -75,6 +84,7 @@ class FusedEvent:
             "value": self.value,
             "confidence": round(self.confidence, 3),
             "confidence_uncertainty": round(self.confidence_uncertainty, 3),
+            "value_sigma": round(self.value_sigma, 4),
             "modalities": list(self.modalities),
             "conflict": self.conflict,
             "captured_at": self.captured_at,
@@ -87,6 +97,22 @@ def _noisy_or(confidences: Iterable[float]) -> float:
     for c in confidences:
         product *= 1.0 - _clamp01(c)
     return 1.0 - product
+
+
+def fuse_uncertainty(sigmas: Iterable[float]) -> float:
+    """Combine independent measurement uncertainties in quadrature (Phase 1b).
+
+    Inverse-variance fusion: σ_fused = 1 / sqrt(Σ 1/σ_i²). Independent
+    agreement reduces uncertainty, so fusing two observations yields a σ
+    SMALLER than either input; a perfectly certain observation (σ = 0)
+    dominates (any σ = 0 input → fused σ = 0). Inputs are clamped to [0, 1].
+    """
+    clamped = [_clamp01(s) for s in sigmas]
+    if not clamped:
+        return 0.0
+    if any(s == 0.0 for s in clamped):
+        return 0.0
+    return 1.0 / (sum(1.0 / s**2 for s in clamped) ** 0.5)
 
 
 def _sample_std(values: Iterable[float]) -> float:
@@ -128,6 +154,8 @@ class MultimodalFusion:
             for value, vgroup in by_value.items():
                 conf = _noisy_or(o.confidence for o in vgroup)
                 conf_unc = _sample_std(o.confidence for o in vgroup)
+                # Phase 1b: combine the contributors' measurement σ in quadrature.
+                sigma = fuse_uncertainty(o.effective_sigma() for o in vgroup)
                 mods = tuple(sorted({o.modality for o in vgroup}))
                 latest = max((o.received_at for o in vgroup), default="")
                 events.append(
@@ -140,6 +168,7 @@ class MultimodalFusion:
                         conflict=False,
                         captured_at=latest,
                         confidence_uncertainty=conf_unc,
+                        value_sigma=sigma,
                     )
                 )
             # conflict handling: several strong, disagreeing values for the same entity
@@ -193,12 +222,14 @@ class MultimodalFusion:
                             captured_at=c.get("captured_at", ""),
                             received_at=c.get("received_at", ""),
                             source=c.get("source", ""),
+                            sigma=c.get("sigma"),
                         )
                         for c in row.get("contributions", [])
                     ),
                     conflict=row.get("conflict", False),
                     captured_at=row.get("captured_at", ""),
                     confidence_uncertainty=row.get("confidence_uncertainty", 0.0),
+                    value_sigma=row.get("value_sigma", 1.0),
                 )
             )
         return model

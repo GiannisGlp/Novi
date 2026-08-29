@@ -57,6 +57,11 @@ def _is_real(status: str) -> bool:
     return status in _REAL_STATUSES
 
 
+def _clamp_sigma(sigma: float) -> float:
+    """Clamp a measurement uncertainty σ into [0, 1]."""
+    return max(0.0, min(1.0, float(sigma)))
+
+
 def _is_hypothetical(status: str) -> bool:
     return status in _HYPOTHETICAL_STATUSES
 
@@ -146,6 +151,14 @@ class WorldEntity:
     lifecycle: str = CANDIDATE
     state: dict[str, tuple[Any, str, float]] = field(default_factory=dict)
     # state field -> (value, epistemic_status, confidence)
+    # Phase 1b: per-field measurement uncertainty (σ ∈ [0, 1], 0 = certain),
+    # kept in a parallel dict so the (value, status, confidence) tuples stay
+    # compatible. When a caller supplies no σ it defaults to 1 - confidence.
+    sigma: dict[str, float] = field(default_factory=dict)
+    # Phase 1c: live metric reference into the SpatialMap coordinate space,
+    # e.g. {"frame": "map", "x": 1.0, "y": 0.5} for the robot self-entity —
+    # bridges the semantic world model to frames/regions/visibility.
+    spatial_ref: dict[str, Any] | None = None
     created_at: str = ""
     last_updated_at: str = ""
     privacy_class: str = "unclassified"
@@ -161,7 +174,11 @@ class WorldEntity:
         entry = self.state.get(field_name)
         return entry[1] if entry else None
 
-    def set_state(self, field_name: str, value: Any, *, status: str, confidence: float, provenance: Provenance | None = None) -> None:
+    def state_sigma(self, field_name: str) -> float | None:
+        """Phase 1b: the measurement uncertainty σ (∈ [0,1]) of a state field."""
+        return self.sigma.get(field_name)
+
+    def set_state(self, field_name: str, value: Any, *, status: str, confidence: float, provenance: Provenance | None = None, sigma: float | None = None) -> None:
         """Set a state field with explicit epistemic status.
 
         Hypothetical statuses (PREDICTED/SIMULATED/COUNTERFACTUAL) are stored
@@ -177,6 +194,8 @@ class WorldEntity:
             # An older real observation never regresses a newer one.
             # (Freshness is handled by the WorldModel.update method via timestamps.)
         self.state[field_name] = (value, status, max(confidence, 0.0))
+        # Phase 1b: store the measurement σ (default: 1 - confidence).
+        self.sigma[field_name] = _clamp_sigma(sigma if sigma is not None else 1.0 - max(confidence, 0.0))
         if provenance is not None:
             self.provenance = provenance
         # Promote epistemic status: VERIFIED > OBSERVED > INFERRED/FUSED > UNKNOWN
@@ -194,9 +213,11 @@ class WorldEntity:
             "provenance": self.provenance.snapshot() if self.provenance else None,
             "lifecycle": self.lifecycle,
             "state": {
-                k: {"value": v[0], "epistemic_status": v[1], "confidence": round(v[2], 4)}
+                k: {"value": v[0], "epistemic_status": v[1], "confidence": round(v[2], 4),
+                    "sigma": round(self.sigma.get(k, round(1.0 - v[2], 4)), 4)}
                 for k, v in self.state.items()
             },
+            "spatial_ref": dict(self.spatial_ref) if self.spatial_ref else None,
             "created_at": self.created_at,
             "last_updated_at": self.last_updated_at,
             "privacy_class": self.privacy_class,
@@ -216,10 +237,15 @@ class WorldRelation:
     object_id: str
     epistemic_status: str = UNKNOWN
     confidence: float = 0.0
+    # Phase 1b: measurement uncertainty σ ∈ [0,1] (defaults to 1 - confidence).
+    sigma: float = 0.0
     provenance: Provenance | None = None
     valid_from: str = ""
     valid_until: str | None = None  # None = still valid
     verification_status: str = "unverified"
+
+    def __post_init__(self) -> None:
+        self.sigma = _clamp_sigma(self.sigma)
 
     def is_active(self) -> bool:
         return self.valid_until is None
@@ -232,6 +258,7 @@ class WorldRelation:
             "object_id": self.object_id,
             "epistemic_status": self.epistemic_status,
             "confidence": round(self.confidence, 4),
+            "sigma": round(self.sigma, 4),
             "provenance": self.provenance.snapshot() if self.provenance else None,
             "valid_from": self.valid_from,
             "valid_until": self.valid_until,
@@ -396,12 +423,16 @@ class WorldModel:
         confidence: float,
         source: str,
         timestamp: str = "",
+        sigma: float | None = None,
     ) -> bool:
         """Update a single state field on an entity with epistemic discipline.
 
         Returns True if the update was applied, False if it was rejected
         (e.g. a hypothetical tried to overwrite a real value, or a stale
         observation tried to regress a newer one).
+
+        Phase 1b: an explicit σ (measurement uncertainty ∈ [0,1]) may be
+        attached; it defaults to 1 - confidence when omitted.
         """
         entity = self._entities.get(entity_id)
         if entity is None:
@@ -431,14 +462,19 @@ class WorldModel:
                 # The higher-confidence (or, on a tie, the newer) claim becomes
                 # the current state; the loser stays preserved as history
                 # (doc 03 Step 3: belief revision chooses while preserving evidence).
+                # Phase 1c: an equal-freshness tie (same or newer stamp, e.g.
+                # same-microsecond re-observations from a body's own resolver)
+                # also supersedes — equal timestamp is at least as fresh, so
+                # the later perception is the newer one.
                 newer_than_current = (
                     confidence == old_conf
-                    and bool(timestamp)
-                    and bool(entity.last_updated_at)
-                    and timestamp > entity.last_updated_at
+                    and (
+                        not bool(entity.last_updated_at)
+                        or (bool(timestamp) and timestamp >= entity.last_updated_at)
+                    )
                 )
                 if confidence > old_conf or newer_than_current:
-                    entity.set_state(field_name, value, status=epistemic_status, confidence=confidence, provenance=prov)
+                    entity.set_state(field_name, value, status=epistemic_status, confidence=confidence, provenance=prov, sigma=sigma)
                     entity.confidence = max(entity.confidence, confidence)
                     entity.last_updated_at = timestamp
                     self._world_version += 1
@@ -456,7 +492,7 @@ class WorldModel:
         ):
             return False
 
-        entity.set_state(field_name, value, status=epistemic_status, confidence=confidence, provenance=prov)
+        entity.set_state(field_name, value, status=epistemic_status, confidence=confidence, provenance=prov, sigma=sigma)
         entity.confidence = max(entity.confidence, confidence)
         entity.last_updated_at = timestamp
         if _is_real(epistemic_status):
@@ -611,18 +647,31 @@ class WorldModel:
         return tuple(out)
 
     def uncertainty_summary(self) -> dict[str, Any]:
-        """Summary of current uncertainty across the world model."""
+        """Summary of current uncertainty across the world model.
+
+        Phase 1b: includes per-field measurement σ for every entity that has
+        state fields ("field_sigmas": entity_id -> field -> σ ∈ [0,1]).
+        """
         by_status: dict[str, int] = {}
         uncertain_entities: list[str] = []
+        field_sigmas: dict[str, dict[str, float]] = {}
         for entity in self._entities.values():
             by_status[entity.epistemic_status] = by_status.get(entity.epistemic_status, 0) + 1
             if entity.epistemic_status in (UNKNOWN, INFERRED):
                 uncertain_entities.append(entity.entity_id)
+            sigmas = {
+                field: round(entity.state_sigma(field), 4)
+                for field in entity.state
+                if entity.state_sigma(field) is not None
+            }
+            if sigmas:
+                field_sigmas[entity.entity_id] = sigmas
         return {
             "total_entities": len(self._entities),
             "by_epistemic_status": by_status,
             "uncertain_entities": uncertain_entities,
             "unresolved_contradictions": sum(1 for c in self._contradictions if c.resolution == "unresolved"),
+            "field_sigmas": field_sigmas,
         }
 
     def provenance_summary(self) -> dict[str, Any]:

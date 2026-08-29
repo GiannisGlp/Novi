@@ -19,6 +19,7 @@ it, and `SpatialMap.to_spatial_state()` feeds the typed `WorldState.spatial_stat
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -234,6 +235,75 @@ class SpatialMap:
             if region.frame == frame and region.contains(float(x), float(y)):
                 return region.region_id
         return None
+
+    def pose_in(self, pose: Pose2D, *, from_frame: str, to_frame: str) -> Pose2D | None:
+        """Convert ``pose`` between connected frames through parent transforms.
+
+        Phase 1c (north-star): the world model's metric references resolve
+        through this. Composition walk: lift ``pose`` from ``from_frame`` to
+        the common ancestor (child->parent via each frame's origin), then
+        lower it to ``to_frame`` (parent->child). Uncertainties are composed
+        in quadrature with GUM linearization of the rigid transform. Fails
+        closed (None) for unknown frames or frames without a common ancestor
+        — never guesses coordinates.
+        """
+        def chain(frame: str) -> list[SpatialFrame] | None:
+            """Root->leaf ancestor chain of ``frame`` (None if unknown)."""
+            out: list[SpatialFrame] = []
+            current: str | None = frame
+            while current is not None:
+                fr = self._frames.get(current)
+                if fr is None:
+                    return None
+                out.append(fr)
+                current = fr.parent
+            out.reverse()
+            return out
+
+        source_chain = chain(from_frame)
+        target_chain = chain(to_frame)
+        if source_chain is None or target_chain is None:
+            return None
+        # Both chains are root->leaf; find the common ancestor prefix.
+        i = 0
+        while (
+            i < min(len(source_chain), len(target_chain))
+            and source_chain[i].name == target_chain[i].name
+        ):
+            i += 1
+        if i == 0:
+            return None  # disjoint frames: refuse (fail closed)
+
+        x, y, heading = pose.x_m, pose.y_m, pose.heading_rad
+        ux, uy, uheading = pose.x_unc_m, pose.y_unc_m, pose.heading_unc_rad
+
+        # child -> parent (lift): p_parent = origin_child ⊕ p_child.
+        for fr in reversed(source_chain[i:]):
+            ox, oy = fr.origin.x_m, fr.origin.y_m
+            theta = fr.origin.heading_rad
+            c, s = math.cos(theta), math.sin(theta)
+            x, y = x * c - y * s + ox, x * s + y * c + oy
+            heading = heading + theta
+            ux = ((c * ux) ** 2 + (s * uy) ** 2 + fr.origin.x_unc_m**2) ** 0.5
+            uy = ((s * ux) ** 2 + (c * uy) ** 2 + fr.origin.y_unc_m**2) ** 0.5
+            uheading = (uheading**2 + fr.origin.heading_unc_rad**2) ** 0.5
+
+        # parent -> child (lower): p_child = origin_child⁻¹ ⊕ p_parent.
+        for fr in reversed(target_chain[i:]):
+            ox, oy = fr.origin.x_m, fr.origin.y_m
+            theta = fr.origin.heading_rad
+            c, s = math.cos(theta), math.sin(theta)
+            dx, dy = x - ox, y - oy
+            x, y = dx * c + dy * s, -dx * s + dy * c
+            heading = heading - theta
+            ux = ((c * ux) ** 2 + (s * uy) ** 2 + fr.origin.x_unc_m**2) ** 0.5
+            uy = ((s * ux) ** 2 + (c * uy) ** 2 + fr.origin.y_unc_m**2) ** 0.5
+            uheading = (uheading**2 + fr.origin.heading_unc_rad**2) ** 0.5
+
+        return Pose2D(
+            x_m=x, y_m=y, heading_rad=heading,
+            x_unc_m=ux, y_unc_m=uy, heading_unc_rad=uheading,
+        )
 
     def region_of(self, entity_id: str) -> str | None:
         ref = self._entity_poses.get(entity_id)
