@@ -179,6 +179,7 @@ class MacBrain(ChatMixin):
         spatial_map: Any | None = None,
         telemetry: ResourceTelemetry | None = None,
         embedder: Any | None = None,
+        retention_policy: Any | None = None,
         perception_pipeline: Any | None = None,
         safety_policy: Any | None = None,
         safety_monitor: Any | None = None,
@@ -269,6 +270,15 @@ class MacBrain(ChatMixin):
         write_gate = WriteGate()
         self.memory = DurableMemoryStore(store_path, embedder=embedder, write_gate=write_gate) if store_path else HardenedMemoryManager(write_gate=write_gate)
         self._using_hardened_memory = isinstance(self.memory, HardenedMemoryManager)
+        # Phase 4b: retention is enforced at the store (per-type TTLs, capacity
+        # eviction, expires_at honoring with audited tombstone reports). The
+        # sweep rides the sleep cadence; retrieval excludes expired records
+        # regardless. The in-memory hardened manager has no store to sweep.
+        from .retention import RetentionEnforcer, RetentionPolicy
+        retention_policy_obj = retention_policy or RetentionPolicy(default_ttl_days=365.0, max_records=50000)
+        self.retention_enforcer = (
+            None if self._using_hardened_memory else RetentionEnforcer(self.memory, retention_policy_obj)
+        )
         if body is None and isinstance(self.memory, DurableMemoryStore):
             pose = self.memory.load_body()
             if pose is not None:
@@ -1413,6 +1423,13 @@ class MacBrain(ChatMixin):
             sleep_report = self._sleep_cycle.maybe_sleep(self._cycle)
             if sleep_report:
                 self._emit("sleep.phase", sleep_report)
+        # Phase 4b: retention sweep rides the same maturation cadence — the
+        # store's expires_at is already honored at query time; the sweep
+        # reconciles tombstones + capacity as an auditable pass.
+        if self.retention_enforcer is not None and self._cycle % max(1, self.config.sleep_every_n_cycles) == 0:
+            retention_report = self.retention_enforcer.sweep()
+            if any([retention_report.expired_expired, retention_report.expired_ttl, retention_report.evicted]):
+                self._emit("retention.swept", retention_report.snapshot())
         return {
             "run_id": self.run_id,
             "cycle": self._cycle,

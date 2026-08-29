@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -540,6 +541,8 @@ class DurableMemoryStore:
         terms = {term.lower() for term in query.split() if term}
         scored: list[tuple[int, str, MemoryRecord]] = []
         for row in rows:
+            if self._row_expired(row):
+                continue
             record = self._to_record(row)
             if entity is not None and entity not in record.entity_refs:
                 continue
@@ -586,7 +589,7 @@ class DurableMemoryStore:
         scored: list[tuple[int, str, MemoryRecord]] = []
         for (memory_id,) in candidates:
             row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
-            if row is None:
+            if row is None or self._row_expired(row):
                 continue
             record = self._to_record(row)
             if entity is not None and entity not in record.entity_refs:
@@ -624,7 +627,7 @@ class DurableMemoryStore:
         similarity_by_id: dict[str, float] = {}
         for (memory_id, score) in candidates:
             row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
-            if row is None:
+            if row is None or self._row_expired(row):
                 continue
             record = self._to_record(row)
             if entity is not None and entity not in record.entity_refs:
@@ -640,6 +643,24 @@ class DurableMemoryStore:
             similarity=lambda record, _s=similarity_by_id: _s.get(record.memory_id, 0.0),
             limit=limit,
         )
+
+    def _row_expired(self, row: Any) -> bool:
+        """Phase 4b: a row past its explicit expires_at is expired at query time."""
+        if row is None:
+            return False
+        try:
+            expires_at = row["expires_at"]
+        except (IndexError, KeyError, TypeError):
+            return False
+        if not expires_at:
+            return False
+        try:
+            parsed = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            return False
+        return parsed <= datetime.now(timezone.utc)
 
     def _rank_composite(self, records: list[MemoryRecord], *, similarity: Any, limit: int) -> tuple[MemoryRecord, ...]:
         """Phase 4a: order candidates by the fused retrieval score, not by
@@ -695,7 +716,7 @@ class DurableMemoryStore:
             hits = []
             for (memory_id,) in rows:
                 row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
-                if row is None:
+                if row is None or self._row_expired(row):
                     continue
                 record = self._to_record(row)
                 hits.append((sum(1 for term in terms if term in self._fts_document(record)), record))
@@ -710,7 +731,7 @@ class DurableMemoryStore:
         try:
             for (memory_id, score) in self._embed_index.search(query, limit=200):
                 row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
-                if row is None:
+                if row is None or self._row_expired(row):
                     continue
                 record = self._to_record(row)
                 if not self._filters_ok(record, entity=entity, memory_type=memory_type, place=place, min_confidence=min_confidence, provenance_scope=provenance_scope):
@@ -878,6 +899,24 @@ class DurableMemoryStore:
         return int(row[0])
 
     # ---- lifecycle (consolidation) ----
+    def over_due_rows(self) -> list[dict[str, Any]]:
+        """Phase 4b: active rows past their explicit expires_at (enforcer view).
+
+        Unlike ``active_rows`` (which hides expiry from consumers), this
+        surfaces the expired set so retention can tombstone them.
+        """
+        rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0 AND state='active'").fetchall()
+        return [
+            {
+                "record": self._to_record(row),
+                "state": row["state"],
+                "expires_at": row["expires_at"],
+                "last_accessed_at": row["last_accessed_at"],
+            }
+            for row in rows
+            if self._row_expired(row)
+        ]
+
     def active_rows(self) -> list[dict[str, Any]]:
         rows = self._conn.execute("SELECT * FROM memory_records WHERE deleted=0 AND state='active'").fetchall()
         return [
@@ -888,6 +927,7 @@ class DurableMemoryStore:
                 "last_accessed_at": row["last_accessed_at"],
             }
             for row in rows
+            if not self._row_expired(row)
         ]
 
     def set_state(self, memory_id: str, state: str) -> bool:
