@@ -1,6 +1,6 @@
 {
   "__unexpected_fixture_property__": true,
-  "event_type": "fixture-value",
+  "event_type": "observation_received",
   "id": "fixture-value",
   "occurred_at": "2026-01-01T00:00:00Z"
 }

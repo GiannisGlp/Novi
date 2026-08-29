@@ -1,4 +1,4 @@
 {
-  "event_type": "fixture-value",
+  "event_type": "observation_received",
   "occurred_at": "2026-01-01T00:00:00Z"
 }

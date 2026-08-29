@@ -46,6 +46,17 @@ def main() -> int:
         "novi.safety-decision",
         "novi.action-execution",
         "novi.action-outcome",
+        # 06_AUTONOMY doc 01 contract freeze (autonomy domain).
+        "novi.autonomy-state",
+        "novi.autonomy-event",
+        "novi.goal-status",
+        "novi.plan-step",
+        "novi.authorized-action",
+        "novi.action-result",
+        "novi.verification-result",
+        "novi.recovery-request",
+        "novi.authority-context",
+        "novi.autonomy-health",
     }
     missing = required_ids - contracts.keys()
     if missing:

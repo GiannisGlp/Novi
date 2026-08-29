@@ -15,6 +15,8 @@ def value_for_property(prop: dict):
         return prop["const"]
     if "default" in prop:
         return prop["default"]
+    if "enum" in prop and prop["enum"]:
+        return prop["enum"][0]
     if prop.get("format") == "date-time":
         return "2026-01-01T00:00:00Z"
 
