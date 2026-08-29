@@ -50,6 +50,9 @@ _LAZY = {
     "verify_predicted_presence": (".prediction_verification", "verify_predicted_presence"),
     "build_deliberation_record": (".deliberation_record", "build_deliberation_record"),
     "promotion_candidate": (".spatial_memory_promotion", "promotion_candidate"),
+    # L2 bridge: local grounding service + HTTP client (web/CLI/body consumer)
+    "GroundingServer": (".grounding_service", "GroundingServer"),
+    "GroundingClient": (".grounding_client", "GroundingClient"),
 }
 
 __all__ = list(_LAZY)
