@@ -88,11 +88,15 @@ class TestVerification:
         with pytest.raises(ValueError, match="query"):
             verify_grounding_agreement(first, second)
 
-    def test_frame_mismatch_rejected(self):
+    def test_cross_frame_reobservation_allowed(self):
+        # Re-observation means a LATER frame re-checks the target; frames may
+        # differ as long as the query matches. Both frame ids are recorded.
         first = _result([_box()], frame_id="f1")
-        second = _result([_box()], frame_id="f2")
-        with pytest.raises(ValueError, match="frame"):
-            verify_grounding_agreement(first, second)
+        second = _result([_box()], frame_id="f9")
+        outcome = verify_grounding_agreement(first, second)
+        assert outcome.verified
+        assert outcome.first_frame_id == "f1"
+        assert outcome.second_frame_id == "f9"
 
     def test_outcome_carries_counts(self):
         first = _result([_box()])

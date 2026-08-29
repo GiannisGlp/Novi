@@ -5,10 +5,12 @@ deterministic GEOMETRY of verification: does a second grounding pass on the
 same query and frame agree with the first?
 
 Fail-closed rules:
-- results must share the same query text and frame id (provenance integrity);
+- results must share the same query text (verifying the same target);
+- FRAMES MAY DIFFER — re-observation means a later frame re-checks the
+target (both frame ids are recorded in the outcome);
 - a failed or empty result on either side is NEVER verified;
 - verification is greedy best-pair IoU >= threshold on box observations;
-  points are ignored for geometric agreement (no area).
+points are ignored for geometric agreement (no area).
 
 Pure stdlib, deterministic, safe in CI.
 """
@@ -27,6 +29,8 @@ class VerificationOutcome:
     best_iou: float
     first_count: int
     second_count: int
+    first_frame_id: str
+    second_frame_id: str
 
 
 def _norm(text: str) -> str:
@@ -44,16 +48,15 @@ def verify_grounding_agreement(
         raise ValueError(
             f"verification requires the same query: {first.query!r} vs {second.query!r}"
         )
-    if first.frame_id != second.frame_id:
-        raise ValueError(
-            f"verification requires the same frame: {first.frame_id!r} vs {second.frame_id!r}"
-        )
 
     first_boxes = [o.pixel_box for o in first.observations if isinstance(o, GroundingObservation)]
     second_boxes = [o.pixel_box for o in second.observations if isinstance(o, GroundingObservation)]
 
     if not first.success or not second.success or not first_boxes or not second_boxes:
-        return VerificationOutcome(verified=False, best_iou=0.0, first_count=len(first_boxes), second_count=len(second_boxes))
+        return VerificationOutcome(
+            verified=False, best_iou=0.0, first_count=len(first_boxes), second_count=len(second_boxes),
+            first_frame_id=first.frame_id, second_frame_id=second.frame_id,
+        )
 
     best_iou = 0.0
     for a in first_boxes:
@@ -64,4 +67,6 @@ def verify_grounding_agreement(
         best_iou=round(best_iou, 4),
         first_count=len(first_boxes),
         second_count=len(second_boxes),
+        first_frame_id=first.frame_id,
+        second_frame_id=second.frame_id,
     )
