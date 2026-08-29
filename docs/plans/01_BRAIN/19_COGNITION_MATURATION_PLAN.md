@@ -1,6 +1,6 @@
 # Brain — Cognition Maturation Plan (Reasoning · Cognition · Knowledge · Memory)
 
-**Status:** OPEN — Phases 1–5 implemented 2026-08-27 (full suite 1498 passed, brain+web). Each phase's acceptance criteria below are met; the doc remains OPEN pending the full-suite evidence run and index registration.
+**Status:** IMPLEMENTED — Phases 1–5 implemented 2026-08-27 (full suite 1498 passed, brain+web); each phase's acceptance criteria are met and the plan is registered in `00_BRAIN_IMPLEMENTATION_INDEX.md` (2026-08-28).
 **Date:** 2026-08-27
 **Governs:** the next phase of brain work — closing the remaining seams in reasoning, cognition, knowledge, and memory on top of the unified input architecture (`UNIFIED_INPUT_NORTH_STAR.md`, same folder) and the shipped cognition plan (`BRAIN_COGNITION_IMPROVEMENT_PLAN_2026-08-25.md`).
 **Extends, does not replace:** `13_GAP_AUDIT_IMPLEMENTATION_PLAN_2026-08-23.md` (gap closure A–E), `14_BRAIN_EXIT_CONTRACT.md` (gates B1–B5), `15_VOICE_CONTINUOUS_DIALOG.md` (turn-taking, SCENARIO-V1), `UNIFIED_INPUT_NORTH_STAR.md` (one front door, one response path).

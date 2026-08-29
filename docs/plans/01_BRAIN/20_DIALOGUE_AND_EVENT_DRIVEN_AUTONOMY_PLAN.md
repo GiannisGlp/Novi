@@ -1,6 +1,6 @@
 # Brain — Dialogue, Unified Answering & Event-Driven Autonomy Maturation Plan
 
-**Status: PLANNED / OPEN**
+**Status: IMPLEMENTED**
 **Date:** 2026-08-28
 **Workstream:** `docs/plans/01_BRAIN/`
 **Governs:** how Novi talks and answers — one engine-owned path regardless of input modality (chat / voice / visual / event), improved natural dialogue, multitasking, and **autonomous (proactive) talking when it sees something, hears something, or something changes**.
@@ -146,9 +146,11 @@ Synthetic providers (scripted frames/events, scripted STT/TTS, deterministic LLM
 - Autonomy must never invent events (deterministic salience only; honest degradation).
 
 ## 8. Status
-**PLANNED / OPEN.** Unified input + single response + dialogue depth are shipped (see §0). Registered in `00_BRAIN_IMPLEMENTATION_INDEX.md` (2026-08-28).
+**IMPLEMENTED.** Unified input + single response + dialogue depth are shipped (see §0). Registered in `00_BRAIN_IMPLEMENTATION_INDEX.md` (2026-08-28).
 
-**Implementation (2026-08-28, smallest closing diff §6 + GAP-E grounding):** `novi/brain/salience.py` (`EventSaliencePolicy` + `SurgeSalienceEvaluator`), `respond_event()` in `chat.py` (with optional memory grounding), engine wiring (`event_autonomy_enabled` config, `_maybe_autonomous_speech` in `step()`, drained-event payload, `_memory_grounding`), the `qwen3:4b` default flip, and the SCENARIO-V1 concurrency regression are **implemented** with deterministic tests (`test_salience_policy.py`, `test_respond_event.py`, `test_autonomous_speech.py`, `test_model_default.py`). Full brain suite green (1,464 passed). Remaining: on-Mac evidence runs (§5).
+**Implementation (2026-08-28, smallest closing diff §6 + GAP-E grounding):** `novi/brain/salience.py` (`EventSaliencePolicy` + `SurgeSalienceEvaluator`), `respond_event()` in `chat.py` (with optional memory grounding), engine wiring (`event_autonomy_enabled` config, `_maybe_autonomous_speech` in `step()`, drained-event payload, `_memory_grounding`), the `qwen3:4b` default flip, and the SCENARIO-V1 concurrency regression are **implemented** with deterministic tests (`test_salience_policy.py`, `test_respond_event.py`, `test_autonomous_speech.py`, `test_model_default.py`). Full brain suite green (1,464 passed).
+
+**Wiring gaps closed 2026-08-29 (gap analysis doc 21):** GAP-1a (`event_autonomy_enabled` surfaced from the web server, default on), GAP-1b (`identity.recognized`, `object.recognized`, `hearing.anomaly` now submitted to the InputBus so the salience evaluator can seed proactive remarks), GAP-2 (`place_auto_enroll` wired for real cameras), GAP-3 (object-proposal naming UI over `/api/recognition/proposals` + `/api/recognition/name-object`). Full suite green (1,833 passed).
 
 ---
 

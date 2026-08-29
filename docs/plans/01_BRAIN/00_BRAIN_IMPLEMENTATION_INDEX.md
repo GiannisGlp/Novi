@@ -39,13 +39,14 @@ B2 acceptance                     LATER
 - `11_FAILURE_DEGRADED_MODE_TESTING.md`
 - `12_BRAIN_INTEGRATION_GATE.md`
 - `13_GAP_AUDIT_IMPLEMENTATION_PLAN_2026-08-23.md`
-- `17_SKILL_SYSTEM_DESIGN.md` — portable SKILL.md packages for Novi (maths/pdf/humanizer): analysis, loader/runner design, governance perimeter; dynamic activation (plan_auto + @skill convention) and novi/skills/README implemented
+- `18_SKILL_SYSTEM_DESIGN.md` — portable SKILL.md packages for Novi (maths/pdf/humanizer): analysis, loader/runner design, governance perimeter; dynamic activation (plan_auto + @skill convention) and novi/skills/README implemented
 - `14_BRAIN_EXIT_CONTRACT.md`
 - `15_VOICE_CONTINUOUS_DIALOG.md`
 - `16_MULTIMODAL_INTEGRATION.md` — voice+perception+recognition wired into the engine via MultimodalRuntime; web handlers, /preview, durable RecognitionStore
 - `17_REAL_IO.md` — real camera/mic/speakers live on Mac; listen→Whisper→brain→spoken replies; /preview v2
 - `19_COGNITION_MATURATION_PLAN.md` — reasoning/cognition/knowledge/memory maturation: web thin-client (delete `_chat_busy`, `listen()`→`respond()`), initiative×speaking-lease fusion, prediction-error→curiosity, cross-modal verified-tier, perception cadence (`perception_every_n_cycles`). Implemented 2026-08-27.
-- `20_DIALOGUE_AND_EVENT_DRIVEN_AUTONOMY_PLAN.md` — dialogue + event-driven autonomy: unified `respond()` for every modality (shipped), proactive autonomous speech from non-text events (SalienceToUtterance / `SurgeSalienceEvaluator`), naturalization guardrails for proactive remarks, multitask concurrency regression, and default model → `qwen3:4b`. PLANNED/OPEN 2026-08-28.
+- `20_DIALOGUE_AND_EVENT_DRIVEN_AUTONOMY_PLAN.md` — dialogue + event-driven autonomy: unified `respond()` for every modality (shipped), proactive autonomous speech from non-text events (SalienceToUtterance / `SurgeSalienceEvaluator`), naturalization guardrails for proactive remarks, multitask concurrency regression, and default model → `qwen3:4b`. IMPLEMENTED 2026-08-29 (wiring gaps GAP-1a/1b/2/3 closed via doc 21).
+- `21_GAP_AND_BUG_ANALYSIS_2026-08-28.md` — gap & bug analysis of the uncommitted WIP (model persistence/runtime switch, preview downscale, narrative cache, poll changes) + plan-vs-code drift across 01_BRAIN / 02_PERCEPTION. Phased fix plan executed 2026-08-29: H1–H4/M1–M4/L1–L5, GAP-1b/2/3, ruff clean across `novi/`, CI lint gate widened to the whole package.
 
 ## Hardware candidates
 
