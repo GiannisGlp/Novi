@@ -10,6 +10,13 @@ This directory is the canonical Novi research and integration record for NVIDIA 
 4. `03_DATA_TRAINING_EVALUATION.md` — training data schema, task formats, training system, evaluation suite and Novi-specific benchmark requirements.
 5. `04_NOVI_INTEGRATION_ANALYSIS.md` — exact architectural fit with the current Novi perception, tracking, world model, memory, prediction, reasoning and safety layers.
 6. `05_LICENSE_SECURITY_AND_RISKS.md` — model/code licensing, supply-chain, privacy, safety and operational risks.
+7. `06_ARCHITECTURE_DECISION.md` — ADR-LA-01: accepted architecture (secondary spatial-grounding backend) + frozen model revision record.
+8. `07_MAC_FEASIBILITY.md` — Phase 4 Mac compatibility experiment: load/inference/latency/memory evidence + MPS decision gate.
+9. `08_IMPLEMENTATION_STATUS.md` — live tracking of the plan's 32-step sequence and LA-0..LA-8 milestones.
+10. `evidence/` — machine-readable experiment evidence (JSON).
+11. `benchmark/corpus-v1.json` — versioned Novi-local evaluation set (plan Phase 10; GT with rights/provenance).
+12. `09_NVIDIA_RUNTIME_BENCHMARK_PLAN.md` — Phase 12/13 spec: runtime comparison protocol + acceptance criteria (execution blocked on GPU).
+13. `10_LICENSE_GATE.md` — Phase 13 license record: 3.3 research-only finding + commercial-clearance checklist.
 
 ## Implementation plan
 

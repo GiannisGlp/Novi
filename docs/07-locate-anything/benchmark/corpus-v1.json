@@ -1,0 +1,89 @@
+{
+  "corpus_id": "novi-la-corpus",
+  "version": "1",
+  "description": "Novi-local LocateAnything evaluation set (plan Phase 10, Step 10.1). Seed corpus: one real image (novi/assets/test-image.png — a macOS/VS Code screenshot, 4112x2658) with vision-annotated ground truth, plus negative queries. GT boxes are [0,1000]-normalized x1,y1,x2,y2. Growth path: add images/records with rights metadata; multi-object 'locate all objects' records deferred until box-level annotation tooling exists.",
+  "records": [
+    {
+      "record_id": "rec-menu-bar",
+      "image_path": "novi/assets/test-image.png",
+      "image_sha256": "687433979648824a6a7f12d805e769545c2de359e8d571c001ed686344aaa40f",
+      "image_width": 4112,
+      "image_height": 2658,
+      "query": "locate the menu bar",
+      "category": "novel descriptions",
+      "source": "vision-annotated 2026-08-29 (Omnia visual read of the image)",
+      "license": "Novi repo asset (MIT)",
+      "expected_boxes": [
+        {"label": "menu bar", "box": [0, 0, 1000, 24], "note": "macOS top menu bar; confident"}
+      ],
+      "notes": "Screenshot content: macOS desktop with VS Code (dark mode), terminal running the neural smoke test."
+    },
+    {
+      "record_id": "rec-editor",
+      "image_path": "novi/assets/test-image.png",
+      "image_sha256": "687433979648824a6a7f12d805e769545c2de359e8d571c001ed686344aaa40f",
+      "image_width": 4112,
+      "image_height": 2658,
+      "query": "locate the editor",
+      "category": "novel descriptions",
+      "source": "vision-annotated 2026-08-29 (Omnia visual read of the image)",
+      "license": "Novi repo asset (MIT)",
+      "expected_boxes": [
+        {"label": "editor", "box": [70, 228, 465, 1000], "note": "release-notes editor view; loose GT"}
+      ]
+    },
+    {
+      "record_id": "rec-terminal",
+      "image_path": "novi/assets/test-image.png",
+      "image_sha256": "687433979648824a6a7f12d805e769545c2de359e8d571c001ed686344aaa40f",
+      "image_width": 4112,
+      "image_height": 2658,
+      "query": "locate the terminal",
+      "category": "novel descriptions",
+      "source": "vision-annotated 2026-08-29 (Omnia visual read of the image)",
+      "license": "Novi repo asset (MIT)",
+      "expected_boxes": [
+        {"label": "integrated terminal", "box": [465, 228, 960, 1000], "note": "bottom-right terminal panel; moderate confidence"}
+      ]
+    },
+    {
+      "record_id": "rec-largest",
+      "image_path": "novi/assets/test-image.png",
+      "image_sha256": "687433979648824a6a7f12d805e769545c2de359e8d571c001ed686344aaa40f",
+      "image_width": 4112,
+      "image_height": 2658,
+      "query": "locate the largest object",
+      "category": "novel descriptions",
+      "source": "vision-annotated 2026-08-29 (Omnia visual read of the image)",
+      "license": "Novi repo asset (MIT)",
+      "expected_boxes": [
+        {"label": "VS Code window", "box": [0, 0, 1000, 960], "note": "the application window covers nearly the full frame; strict GT"}
+      ]
+    },
+    {
+      "record_id": "rec-person-negative",
+      "image_path": "novi/assets/test-image.png",
+      "image_sha256": "687433979648824a6a7f12d805e769545c2de359e8d571c001ed686344aaa40f",
+      "image_width": 4112,
+      "image_height": 2658,
+      "query": "locate a person",
+      "category": "people/hands",
+      "source": "vision-annotated 2026-08-29 (Omnia visual read of the image)",
+      "license": "Novi repo asset (MIT)",
+      "expected_no_object": true,
+      "notes": "No people in the screenshot; negative query."
+    },
+    {
+      "record_id": "rec-unicorn-negative",
+      "image_path": "novi/assets/test-image.png",
+      "image_sha256": "687433979648824a6a7f12d805e769545c2de359e8d571c001ed686344aaa40f",
+      "image_width": 4112,
+      "image_height": 2658,
+      "query": "locate a unicorn",
+      "category": "negative queries",
+      "source": "vision-annotated 2026-08-29 (Omnia visual read of the image)",
+      "license": "Novi repo asset (MIT)",
+      "expected_no_object": true
+    }
+  ]
+}

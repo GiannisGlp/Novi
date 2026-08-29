@@ -1,0 +1,257 @@
+{
+  "model_id": "nvidia/LocateAnything-3B",
+  "revision": "c32291ca5e996f5a7a485845b4f57a233936bba0",
+  "python": "3.11.15",
+  "runtime": {
+    "torch": "2.13.0",
+    "transformers": "4.57.1",
+    "mps_available": true,
+    "device": "mps"
+  },
+  "load": {
+    "attempts": [
+      {
+        "dtype": "bfloat16",
+        "load_seconds": 7.52,
+        "ok": true
+      }
+    ],
+    "mem_before_gb": 0.26,
+    "mem_after_gb": 1.13,
+    "mem_delta_gb": 0.87
+  },
+  "inferences": [
+    {
+      "tag": "4.3 all objects",
+      "query": "locate all objects visible in the image",
+      "mode": "hybrid",
+      "latency_ms": 40172.10574999626,
+      "wall_ms": 40570.0,
+      "rss_gb": 1.4,
+      "success": false,
+      "no_object": false,
+      "backend_status": "available",
+      "n_observations": 1,
+      "observations": [
+        {
+          "label": "object",
+          "pixel_box": [
+            0,
+            1493,
+            91,
+            84
+          ],
+          "source_box": [
+            0,
+            562,
+            22,
+            593
+          ],
+          "pixel_point": null
+        }
+      ],
+      "validation_errors": [
+        "unexpected text at offset 45: '\u5f00\u53e3'"
+      ],
+      "raw_hash": "9c34e873f70ee65671055524c62b06f6a8667979d31ab252533a90e35292c3b6",
+      "raw_text": "<ref>object</ref><box><0><562><22><593></box>\u5f00\u53e3"
+    },
+    {
+      "tag": "4.4 locate the person",
+      "query": "locate the person",
+      "mode": "hybrid",
+      "latency_ms": 39374.096125000506,
+      "wall_ms": 39698.3,
+      "rss_gb": 1.4,
+      "success": true,
+      "no_object": false,
+      "backend_status": "available",
+      "n_observations": 1,
+      "observations": [
+        {
+          "label": "the person",
+          "pixel_box": [
+            1986,
+            2511,
+            70,
+            121
+          ],
+          "source_box": [
+            483,
+            945,
+            500,
+            990
+          ],
+          "pixel_point": null
+        }
+      ],
+      "validation_errors": [],
+      "raw_hash": "ac6abbdc47971aa37aef79e61f64222aec513882d4ca2026713dc776c94337d1",
+      "raw_text": "<ref>the person</ref><box><483><945><500><990></box>"
+    },
+    {
+      "tag": "4.4 locate the largest object",
+      "query": "locate the largest object",
+      "mode": "hybrid",
+      "latency_ms": 41066.31812499836,
+      "wall_ms": 41389.1,
+      "rss_gb": 1.4,
+      "success": true,
+      "no_object": false,
+      "backend_status": "available",
+      "n_observations": 1,
+      "observations": [
+        {
+          "label": "the largest",
+          "pixel_box": [
+            94,
+            1605,
+            844,
+            902
+          ],
+          "source_box": [
+            23,
+            604,
+            228,
+            943
+          ],
+          "pixel_point": null
+        }
+      ],
+      "validation_errors": [],
+      "raw_hash": "17d96af3e68e3ff5daffa543e671a98183c6e0bf40582b96c49ec761ac7554a5",
+      "raw_text": "<ref>the largest</ref><box><23><604><228><943></box>"
+    },
+    {
+      "tag": "4.4 locate the object nearest the center",
+      "query": "locate the object nearest the center",
+      "mode": "hybrid",
+      "latency_ms": 38867.24262499774,
+      "wall_ms": 39184.9,
+      "rss_gb": 1.4,
+      "success": true,
+      "no_object": false,
+      "backend_status": "available",
+      "n_observations": 1,
+      "observations": [
+        {
+          "label": "the the center",
+          "pixel_box": [
+            1611,
+            948,
+            211,
+            39
+          ],
+          "source_box": [
+            392,
+            357,
+            443,
+            371
+          ],
+          "pixel_point": null
+        }
+      ],
+      "validation_errors": [],
+      "raw_hash": "12cf0edd0415ea5f3ca1b1700db0f9bb2d7129f1f00f026cf71268e354ee20d7",
+      "raw_text": "<ref>the the center</ref><box><392><357><443><371></box>"
+    },
+    {
+      "tag": "4.4 locate a unicorn",
+      "query": "locate a unicorn",
+      "mode": "hybrid",
+      "latency_ms": 37994.58749999758,
+      "wall_ms": 38300.2,
+      "rss_gb": 1.4,
+      "success": true,
+      "no_object": true,
+      "backend_status": "available",
+      "n_observations": 0,
+      "observations": [],
+      "validation_errors": [],
+      "raw_hash": "01554e619f7294dc1478a0e24772b2f3e0071d289a0202d5cdb1ca84e1c3d2ee",
+      "raw_text": "<ref>a unicorn</ref><box>None</box>"
+    }
+  ],
+  "stress": {
+    "runs": [
+      {
+        "n": 1,
+        "latencies_ms": [
+          38922.2
+        ]
+      },
+      {
+        "n": 5,
+        "latencies_ms": [
+          40144.0,
+          40150.7,
+          40136.2,
+          38810.3,
+          39256.6
+        ]
+      },
+      {
+        "n": 10,
+        "latencies_ms": [
+          39613.1,
+          39748.2,
+          39005.5,
+          40182.0,
+          40168.2,
+          40162.6,
+          40731.1,
+          39941.3,
+          40652.5,
+          39159.4
+        ]
+      },
+      {
+        "n": 1,
+        "tag": "multiple boxes",
+        "latencies_ms": [
+          39584.52054100053
+        ]
+      },
+      {
+        "n": 1,
+        "tag": "large image",
+        "latencies_ms": [
+          11275.958458994864
+        ]
+      },
+      {
+        "n": 1,
+        "tag": "small image",
+        "latencies_ms": [
+          1375.7949999999255
+        ]
+      },
+      {
+        "n": 1,
+        "tag": "cluttered image",
+        "latencies_ms": [
+          7200.438249987201
+        ]
+      }
+    ],
+    "p50_ms": 39680.7,
+    "p95_ms": 40652.5,
+    "p99_ms": 40652.5,
+    "peak_mem_gb": 1.43
+  },
+  "decision_gate": {
+    "outcome": "B",
+    "reason": "MPS works but is heavy (median 39681 ms): usable for occasional cognition-driven grounding on the dev Mac, not per-frame; realtime path is NVIDIA"
+  },
+  "capability_state": "available",
+  "capability_details": [
+    [
+      "model_id",
+      "nvidia/LocateAnything-3B"
+    ],
+    [
+      "model_revision",
+      "c32291ca5e996f5a7a485845b4f57a233936bba0"
+    ]
+  ]
+}

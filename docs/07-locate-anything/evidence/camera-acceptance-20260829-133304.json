@@ -1,0 +1,85 @@
+{
+  "scenario": "real camera -> LocateAnything -> grounding -> tracker",
+  "model": "nvidia/LocateAnything-3B @ c32291ca5e996f5a7a485845b4f57a233936bba0",
+  "backend": "mps/bf16",
+  "results": [
+    {
+      "query": "locate all objects visible in the image",
+      "wall_ms": 8628.7,
+      "latency_ms": 1701.054999997723,
+      "success": true,
+      "no_object": false,
+      "validation_errors": [],
+      "observations": [
+        {
+          "label": "the",
+          "source_box": [
+            0,
+            868,
+            64,
+            1000
+          ],
+          "pixel_box": [
+            0,
+            416,
+            41,
+            64
+          ],
+          "provenance": "locate_anything"
+        }
+      ],
+      "track_associations": [
+        {
+          "observation_label": "the",
+          "track_id": null,
+          "status": "candidate"
+        }
+      ]
+    },
+    {
+      "query": "locate the largest object",
+      "wall_ms": 1741.4,
+      "latency_ms": 1653.6203750001732,
+      "success": true,
+      "no_object": false,
+      "validation_errors": [],
+      "observations": [
+        {
+          "label": "the largest",
+          "source_box": [
+            355,
+            560,
+            1000,
+            997
+          ],
+          "pixel_box": [
+            227,
+            268,
+            413,
+            211
+          ],
+          "provenance": "locate_anything"
+        }
+      ],
+      "track_associations": [
+        {
+          "observation_label": "the largest",
+          "track_id": null,
+          "status": "candidate"
+        }
+      ]
+    }
+  ],
+  "frame": {
+    "frame_id": "mac-camera-2",
+    "width": 640,
+    "height": 480,
+    "captured_at": "2026-08-29T12:32:50.272181Z",
+    "raw_frame_persisted": false
+  },
+  "ssdlite": {
+    "wall_ms": 397.5,
+    "detections": [],
+    "tracks": []
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "corpus_id": "novi-la-corpus",
+  "timestamp": "2026-08-29T13:28:11",
+  "baseline": {
+    "recall@0.5": 0.25,
+    "precision": 0.0833,
+    "false_positives": 11,
+    "false_negatives": 3,
+    "total_gt_boxes": 4
+  },
+  "with_grounding": {
+    "recall@0.5": 0.25,
+    "precision": 0.25,
+    "false_positives": 3,
+    "false_negatives": 3,
+    "iou@0.5": 0.25,
+    "mean_iou": 0.2078,
+    "negative_correct": 0.5,
+    "latency_p50": 40057.3
+  },
+  "delta": {
+    "recall@0.5": 0.0,
+    "precision": 0.1667,
+    "false_positives": -8,
+    "false_negatives": 0
+  },
+  "per_record": [
+    {
+      "record_id": "rec-menu-bar",
+      "query": "locate the menu bar",
+      "category": "novel descriptions",
+      "ssdlite_detections": 2,
+      "ssdlite_recall@0.5": 0.0,
+      "ssdlite_precision": 0.0,
+      "ssdlite_fp": 2,
+      "ssdlite_fn": 1,
+      "grounding_recall@0.5": 1.0,
+      "grounding_precision": 1.0,
+      "grounding_iou@0.5": 1.0,
+      "grounding_negative_correct": null,
+      "grounding_latency_ms": 40426.3
+    },
+    {
+      "record_id": "rec-editor",
+      "query": "locate the editor",
+      "category": "novel descriptions",
+      "ssdlite_detections": 2,
+      "ssdlite_recall@0.5": 0.0,
+      "ssdlite_precision": 0.0,
+      "ssdlite_fp": 2,
+      "ssdlite_fn": 1,
+      "grounding_recall@0.5": 0.0,
+      "grounding_precision": 0.0,
+      "grounding_iou@0.5": 0.0,
+      "grounding_negative_correct": null,
+      "grounding_latency_ms": 41285.3
+    },
+    {
+      "record_id": "rec-terminal",
+      "query": "locate the terminal",
+      "category": "novel descriptions",
+      "ssdlite_detections": 2,
+      "ssdlite_recall@0.5": 0.0,
+      "ssdlite_precision": 0.0,
+      "ssdlite_fp": 2,
+      "ssdlite_fn": 1,
+      "grounding_recall@0.5": 0.0,
+      "grounding_precision": 0.0,
+      "grounding_iou@0.5": 0.0,
+      "grounding_negative_correct": null,
+      "grounding_latency_ms": 40498.0
+    },
+    {
+      "record_id": "rec-largest",
+      "query": "locate the largest object",
+      "category": "novel descriptions",
+      "ssdlite_detections": 2,
+      "ssdlite_recall@0.5": 1.0,
+      "ssdlite_precision": 0.5,
+      "ssdlite_fp": 1,
+      "ssdlite_fn": 0,
+      "grounding_recall@0.5": 0.0,
+      "grounding_precision": 0.0,
+      "grounding_iou@0.5": 0.0,
+      "grounding_negative_correct": null,
+      "grounding_latency_ms": 39534.4
+    },
+    {
+      "record_id": "rec-person-negative",
+      "query": "locate a person",
+      "category": "people/hands",
+      "ssdlite_detections": 2,
+      "ssdlite_recall@0.5": 0.0,
+      "ssdlite_precision": 0.0,
+      "ssdlite_fp": 2,
+      "ssdlite_fn": 0,
+      "grounding_recall@0.5": null,
+      "grounding_precision": null,
+      "grounding_iou@0.5": null,
+      "grounding_negative_correct": false,
+      "grounding_latency_ms": 39688.3
+    },
+    {
+      "record_id": "rec-unicorn-negative",
+      "query": "locate a unicorn",
+      "category": "negative queries",
+      "ssdlite_detections": 2,
+      "ssdlite_recall@0.5": 0.0,
+      "ssdlite_precision": 0.0,
+      "ssdlite_fp": 2,
+      "ssdlite_fn": 0,
+      "grounding_recall@0.5": null,
+      "grounding_precision": null,
+      "grounding_iou@0.5": null,
+      "grounding_negative_correct": true,
+      "grounding_latency_ms": 38636.6
+    }
+  ]
+}
