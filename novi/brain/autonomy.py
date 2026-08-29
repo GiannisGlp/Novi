@@ -56,6 +56,18 @@ class ConflictResolution:
 
 
 @dataclass(frozen=True)
+class GoalArbitration:
+    """An auditable arbitration record: why one goal won (doc 02 Steps 3-4)."""
+    arbitration_id: str
+    winner_goal_id: str
+    loser_goal_id: str
+    basis: str                    # safety | user_priority | urgency | utility | resource
+    score_winner: dict[str, Any]
+    score_loser: dict[str, Any]
+    cycle: int = 0
+
+
+@dataclass(frozen=True)
 class Goal:
     goal_id: str
     kind: str
@@ -63,15 +75,22 @@ class Goal:
     priority: float
     max_steps: int
     created_cycle: int
+    # Doc 02 Step 1 schema extensions (all defaulted: backward compatible).
+    source: str = "human"            # human | routine | safety | prediction | exploration | system
+    urgency: float = 0.0             # 0..1; deadline pressure
+    deadline_cycle: int = 0          # 0 = no deadline
+    authority_requirement: str = "ASSISTED"
+    resource_budget: float = 1.0     # relative cost budget (higher = more expensive)
+    safety_relevant: bool = False    # safety goals dominate arbitration (A-GOAL-01)
 
     @classmethod
-    def reach(cls, x: float, y: float, *, priority: float = 1.0, max_steps: int = 100, created_cycle: int = 0, goal_id: str = "") -> "Goal":
-        return cls(goal_id or f"goal-{uuid4().hex[:12]}", "reach", (float(x), float(y)), priority, max_steps, created_cycle)
+    def reach(cls, x: float, y: float, *, priority: float = 1.0, max_steps: int = 100, created_cycle: int = 0, goal_id: str = "", **kwargs: Any) -> "Goal":
+        return cls(goal_id or f"goal-{uuid4().hex[:12]}", "reach", (float(x), float(y)), priority, max_steps, created_cycle, **kwargs)
 
     @classmethod
-    def investigate(cls, entity: str, *, priority: float = 1.0, max_steps: int = 5, created_cycle: int = 0, goal_id: str = "") -> "Goal":
+    def investigate(cls, entity: str, *, priority: float = 1.0, max_steps: int = 5, created_cycle: int = 0, goal_id: str = "", **kwargs: Any) -> "Goal":
         """A bounded curiosity goal: observe a target for up to ``max_steps`` cycles."""
-        return cls(goal_id or f"goal-{uuid4().hex[:12]}", "investigate", entity, priority, max_steps, created_cycle)
+        return cls(goal_id or f"goal-{uuid4().hex[:12]}", "investigate", entity, priority, max_steps, created_cycle, **kwargs)
 
 
 @dataclass
@@ -106,17 +125,26 @@ class BoundedGoalController:
         turn_degrees: float = 10.0,
         reach_threshold: float = 0.5,
         heading_tolerance: float = 5.0,
+        resource_priority_floor: float = 0.0,
+        max_background_goals: int = 3,
     ) -> None:
         self.move_distance = move_distance
         self.turn_degrees = turn_degrees
         self.reach_threshold = reach_threshold
         self.heading_tolerance = heading_tolerance
+        # Doc 02 Step 7: while resources are constrained, pending goals below
+        # this priority floor are postponed rather than promoted.
+        self.resource_priority_floor = resource_priority_floor
+        # Doc 02 Step 8: cap on self-generated background goals.
+        self.max_background_goals = max_background_goals
         self.active: GoalState | None = None
         self.history: list[GoalState] = []
         self._pending: list[GoalState] = []
         self.conflict_resolutions: list[ConflictResolution] = []
+        self.arbitrations: list[GoalArbitration] = []
         self._resolution_seq = 0
         self._resolved_pairs: set[tuple[str, str]] = set()
+        self._revalidation_required: set[str] = set()
 
     # ---- lifecycle API (canonical authority: docs/02-autonomy/04 §Goal Lifecycle) ----
 
@@ -134,10 +162,12 @@ class BoundedGoalController:
         state = self._find(goal_id)
         if state is None or state.status not in (GoalStatus.PAUSED, GoalStatus.BLOCKED):
             return False
+        if goal_id in self._revalidation_required:
+            return False  # must be reaccepted explicitly after restart (doc 02 Step 5)
         state.status = GoalStatus.PENDING
         if state not in self._pending:
             self._pending.append(state)
-            self._pending.sort(key=lambda s: s.goal.priority, reverse=True)
+            self._pending.sort(key=lambda s: self.arbitration_key(s.goal), reverse=True)
         state.block_reason = ""
         # When the active slot is free, promote immediately (resume is explicit).
         if self.active is None or self.active.status is not GoalStatus.ACTIVE:
@@ -191,6 +221,63 @@ class BoundedGoalController:
                 return s
         return None
 
+    # ---- deterministic arbitration (doc 02 Step 3, gate A-GOAL-01) ----
+
+    @staticmethod
+    def arbitration_key(goal: Goal) -> tuple[Any, ...]:
+        """Deterministic, auditable ranking key.
+
+        Order: safety relevance > priority > urgency > deadline pressure >
+        freshness (later-created wins ties). A pure function of the goal and
+        the world/policy state: the same state always picks the same winner.
+        The score is a decision aid, never permission to bypass safety.
+        """
+        deadline_pressure = 0.0 if goal.deadline_cycle == 0 else 1.0 / max(1, goal.deadline_cycle)
+        return (
+            int(goal.safety_relevant),
+            goal.priority,
+            goal.urgency,
+            deadline_pressure,
+            goal.created_cycle,
+        )
+
+    def score_of(self, goal: Goal) -> dict[str, Any]:
+        """Breakdown of the arbitration score for a goal (auditable explanation)."""
+        key = self.arbitration_key(goal)
+        return {
+            "safety_relevant": bool(key[0]),
+            "priority": key[1],
+            "urgency": key[2],
+            "deadline_pressure": key[3],
+            "created_cycle": key[4],
+        }
+
+    def _record_arbitration(
+        self, *, winner: Goal, loser: Goal, basis: str, cycle: int = 0,
+    ) -> None:
+        self.arbitrations.append(GoalArbitration(
+            arbitration_id=f"arb-{len(self.arbitrations) + 1}",
+            winner_goal_id=winner.goal_id, loser_goal_id=loser.goal_id,
+            basis=basis, score_winner=self.score_of(winner), score_loser=self.score_of(loser),
+            cycle=cycle,
+        ))
+
+    def _is_background(self, goal: Goal) -> bool:
+        """Self-generated goals (doc 02 Step 8) are capped."""
+        return goal.source in ("exploration", "prediction", "routine", "system")
+
+    @property
+    def background_count(self) -> int:
+        """Number of non-terminal background goals currently held."""
+        count = 0
+        if self.active is not None and self._is_background(self.active.goal) \
+                and self.active.status not in _TERMINAL_STATES:
+            count += 1
+        for state in self._pending:
+            if self._is_background(state.goal) and state.status not in _TERMINAL_STATES:
+                count += 1
+        return count
+
     def _record_conflict(
         self,
         *,
@@ -243,6 +330,19 @@ class BoundedGoalController:
             )
             return "rejected_challenger"
 
+        # Safety dominance (doc 02 Step 4 / A-GOAL-01): a safety goal beats any
+        # lower-authority goal regardless of kind; the reverse is rejected.
+        if challenger.goal.safety_relevant and not active.goal.safety_relevant:
+            return self._supersede_active_for(challenger, cycle=cycle, basis="safety")
+        if active.goal.safety_relevant and not challenger.goal.safety_relevant:
+            self._record_conflict(
+                active_goal_id=active.goal.goal_id, challenger_goal_id=challenger.goal.goal_id,
+                basis="safety", outcome="rejected_challenger",
+                reason="active_safety_goal_dominates", cycle=cycle,
+            )
+            self._record_arbitration(winner=active.goal, loser=challenger.goal, basis="safety", cycle=cycle)
+            return "rejected_challenger"
+
         # Same kind: higher priority wins; ties keep the active goal
         # (utility/cost comparison per doc 04 §Goal Conflicts).
         if active.goal.kind == challenger.goal.kind:
@@ -255,6 +355,7 @@ class BoundedGoalController:
                 basis="utility", outcome="rejected_challenger",
                 reason="active_goal_higher_or_equal_priority", cycle=cycle,
             )
+            self._record_arbitration(winner=active.goal, loser=challenger.goal, basis="utility", cycle=cycle)
             return "rejected_challenger"
 
         # Different kinds: investigate (curiosity) yields to reach (explicit goal).
@@ -266,6 +367,7 @@ class BoundedGoalController:
                 basis="utility", outcome="rejected_challenger",
                 reason="explicit_goal_beats_curiosity", cycle=cycle,
             )
+            self._record_arbitration(winner=active.goal, loser=challenger.goal, basis="utility", cycle=cycle)
             return "rejected_challenger"
 
         self._record_conflict(
@@ -273,9 +375,10 @@ class BoundedGoalController:
             basis="utility", outcome="rejected_challenger", reason="unresolved_conflict_keeps_active",
             cycle=cycle,
         )
+        self._record_arbitration(winner=active.goal, loser=challenger.goal, basis="utility", cycle=cycle)
         return "rejected_challenger"
 
-    def _supersede_active_for(self, challenger: GoalState, *, cycle: int) -> str:
+    def _supersede_active_for(self, challenger: GoalState, *, cycle: int, basis: str | None = None) -> str:
         active = self.active
         if active is not None:
             active.status = GoalStatus.SUPERSEDED
@@ -283,12 +386,18 @@ class BoundedGoalController:
         challenger.status = GoalStatus.ACTIVE
         self.active = challenger
         self.history.append(challenger)
+        reason_basis = basis or ("user_priority" if challenger.goal.priority > 2.0 else "utility")
         self._record_conflict(
             active_goal_id=active.goal.goal_id if active else "(none)",
             challenger_goal_id=challenger.goal.goal_id,
-            basis="user_priority" if challenger.goal.priority > 2.0 else "utility",
+            basis=reason_basis,
             outcome="superseded_active", cycle=cycle,
         )
+        if active is not None:
+            self._record_arbitration(
+                winner=challenger.goal, loser=active.goal,
+                basis=reason_basis, cycle=cycle,
+            )
         return "superseded_active"
 
     def _pause_active_for(self, challenger: GoalState, *, cycle: int) -> str:
@@ -297,7 +406,7 @@ class BoundedGoalController:
             active.status = GoalStatus.PAUSED
             active.block_reason = "paused_for_higher_priority"
             self._pending.append(active)
-            self._pending.sort(key=lambda s: s.goal.priority, reverse=True)
+            self._pending.sort(key=lambda s: self.arbitration_key(s.goal), reverse=True)
         self._pending.remove(challenger) if challenger in self._pending else None
         challenger.status = GoalStatus.ACTIVE
         self.active = challenger
@@ -307,6 +416,8 @@ class BoundedGoalController:
             challenger_goal_id=challenger.goal.goal_id,
             basis="utility", outcome="paused_active", reason="resource_constrained", cycle=cycle,
         )
+        if active is not None:
+            self._record_arbitration(winner=challenger.goal, loser=active.goal, basis="utility", cycle=cycle)
         return "paused_active"
 
     def adopt(self, goal: Goal, *, cycle: int = 0, resource_constrained: bool = False) -> GoalState:
@@ -318,12 +429,17 @@ class BoundedGoalController:
         supersedes the active goal, pauses it (resource-constrained), or is
         rejected and queued.
         """
+        if self._is_background(goal) and self.background_count >= self.max_background_goals:
+            state = GoalState(goal, GoalStatus.BLOCKED, 0)
+            state.block_reason = "background_goal_limit"
+            self.history.append(state)
+            return state
         challenger = GoalState(goal, GoalStatus.PENDING, 0)
         if self.active is not None and self.active.status is GoalStatus.ACTIVE:
             outcome = self.resolve_conflict(challenger, cycle=cycle, resource_constrained=resource_constrained)
             if outcome == "rejected_challenger":
                 self._pending.append(challenger)
-                self._pending.sort(key=lambda s: s.goal.priority, reverse=True)
+                self._pending.sort(key=lambda s: self.arbitration_key(s.goal), reverse=True)
                 return challenger
             return challenger if self.active is challenger else challenger
         challenger.status = GoalStatus.ACTIVE
@@ -332,10 +448,16 @@ class BoundedGoalController:
         return challenger
 
     def enqueue(self, goal: Goal) -> GoalState:
-        """Queue a goal for later pursuit, selected by priority (higher wins)."""
+        """Queue a goal for later pursuit, selected by the arbitration key."""
+        if self._is_background(goal) and self.background_count >= self.max_background_goals:
+            # Doc 02 Step 8: cap self-generated goals; record the rejection.
+            state = GoalState(goal, GoalStatus.BLOCKED, 0)
+            state.block_reason = "background_goal_limit"
+            self.history.append(state)
+            return state
         state = GoalState(goal, GoalStatus.PENDING, 0)
         self._pending.append(state)
-        self._pending.sort(key=lambda s: s.goal.priority, reverse=True)
+        self._pending.sort(key=lambda s: self.arbitration_key(s.goal), reverse=True)
         return state
 
     @property
@@ -351,18 +473,21 @@ class BoundedGoalController:
         return tuple(self._pending)
 
     def _reconcile(self, *, cycle: int = 0, resource_constrained: bool = False) -> None:
-        """Promote pending goals via conflict resolution.
+        """Promote pending goals via deterministic arbitration.
 
-        Conflict resolution decides outcome (doc 04 §Goal Conflicts): higher
-        priority wins within a kind; explicit reach goals beat curiosity;
-        when resources are constrained, a lower-priority active goal is paused
-        (not discarded) for a higher-priority challenger. Each active/challenger
+        The arbitration key (doc 02 Step 3) decides the winner: safety goals
+        dominate, then priority, urgency, deadline pressure, freshness. When
+        resources are constrained, goals below the priority floor are
+        postponed rather than promoted (doc 02 Step 7). Each active/challenger
         pair is resolved at most once so rejected challengers are not
         re-recorded every cycle as they wait in the queue.
         """
         if not self._pending:
             return
+        self._pending.sort(key=lambda s: self.arbitration_key(s.goal), reverse=True)
         top = self._pending[0]
+        if resource_constrained and top.goal.priority < self.resource_priority_floor:
+            return  # postpone low-value goals until resources recover
         if self.active is None or self.active.status is not GoalStatus.ACTIVE:
             self._pending.pop(0)
             top.status = GoalStatus.ACTIVE
@@ -440,6 +565,40 @@ class BoundedGoalController:
         if state is None:
             return False
         state.validity_expires_cycle = max(0, int(expires_cycle))
+        return True
+
+    # ---- restart revalidation (doc 02 Step 5) ----
+
+    def mark_requires_revalidation(self, goal_id: str) -> bool:
+        """Block a goal until its physical preconditions are revalidated.
+
+        A goal restored after restart must not resume physical action merely
+        because it was active before shutdown. Until ``reaccept`` is called,
+        the goal stays BLOCKED and cannot be resumed.
+        """
+        state = self._find(goal_id)
+        if state is None or state.status in _TERMINAL_STATES:
+            return False
+        self._revalidation_required.add(goal_id)
+        if state.status is GoalStatus.ACTIVE and self.active is state:
+            self.active = None
+        if state in self._pending:
+            self._pending.remove(state)
+        state.status = GoalStatus.BLOCKED
+        state.block_reason = "revalidation_required"
+        return True
+
+    def reaccept(self, goal_id: str) -> bool:
+        """Explicit revalidation: the goal re-enters the arbitration queue."""
+        state = self._find(goal_id)
+        if state is None or goal_id not in self._revalidation_required:
+            return False
+        self._revalidation_required.discard(goal_id)
+        state.block_reason = ""
+        state.status = GoalStatus.PENDING
+        if state not in self._pending:
+            self._pending.append(state)
+            self._pending.sort(key=lambda s: self.arbitration_key(s.goal), reverse=True)
         return True
 
     @property

@@ -227,3 +227,92 @@ class SequencePredictor:
             "pending": [p.snapshot() for p in self._pending],
             "accuracy": None if acc is None else round(acc, 4),
         }
+
+
+# ---------------------------------------------------------------------------
+# Prediction-error records (06_AUTONOMY doc 03 Step 7)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PredictionErrorRecord:
+    """Expected-vs-actual discrepancy after a prediction window (doc 03 Step 7)."""
+    error_id: str
+    prediction_ref: str
+    expected: Any
+    actual: Any
+    cycle: int
+    magnitude: float = 0.0
+    cause_hypothesis: str = ""       # what might have changed
+    should_update_model: bool = False
+    warrants_perception: bool = False  # additional perception is warranted
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "error_id": self.error_id, "prediction_ref": self.prediction_ref,
+            "expected": self.expected, "actual": self.actual, "cycle": self.cycle,
+            "magnitude": round(self.magnitude, 4),
+            "cause_hypothesis": self.cause_hypothesis,
+            "should_update_model": self.should_update_model,
+            "warrants_perception": self.warrants_perception,
+        }
+
+
+class PredictionErrorTracker:
+    """Records prediction errors and summarizes them (doc 03 Step 7).
+
+    Each window compares expected vs observed state: magnitude, a cause
+    hypothesis, whether the model should update, and whether additional
+    perception is warranted — the raw material for curiosity (doc 06) and
+    metacognitive recalibration (doc 07).
+    """
+
+    def __init__(self, *, error_threshold: float = 0.0) -> None:
+        self._errors: list[PredictionErrorRecord] = []
+        self._error_threshold = error_threshold
+        self._seq = 0
+
+    def record(
+        self,
+        *,
+        prediction_ref: str,
+        expected: Any,
+        actual: Any,
+        cycle: int,
+        magnitude: float = 0.0,
+        cause_hypothesis: str = "",
+    ) -> PredictionErrorRecord:
+        self._seq += 1
+        record = PredictionErrorRecord(
+            error_id=f"pe-{self._seq}",
+            prediction_ref=prediction_ref, expected=expected, actual=actual, cycle=cycle,
+            magnitude=float(magnitude),
+            cause_hypothesis=cause_hypothesis,
+            should_update_model=float(magnitude) > self._error_threshold,
+            warrants_perception=float(magnitude) > self._error_threshold,
+        )
+        self._errors.append(record)
+        return record
+
+    def errors(self, *, limit: int | None = None) -> tuple[PredictionErrorRecord, ...]:
+        records = tuple(self._errors)
+        return records[-limit:] if limit else records
+
+    def count(self) -> int:
+        return len(self._errors)
+
+    def mean_magnitude(self) -> float:
+        if not self._errors:
+            return 0.0
+        return sum(e.magnitude for e in self._errors) / len(self._errors)
+
+    def high_error_count(self) -> int:
+        return sum(1 for e in self._errors if e.warrants_perception)
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "count": self.count(),
+            "mean_magnitude": round(self.mean_magnitude(), 4),
+            "high_error_count": self.high_error_count(),
+            "errors": [e.snapshot() for e in self._errors[-10:]],
+        }
