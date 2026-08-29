@@ -52,6 +52,7 @@ from .models import (
     SpeechToTextProvider,
     TranscriptionResult,
 )
+from .models.router import ReasoningRouter
 from .multi_speed_runtime import SYSTEM_0, AutonomyState, MultiSpeedRuntime, ResourceMode
 from .nvidia_experiments import ALL_ADAPTERS, EpisodeRecorder, NoviEpisode
 from .nvidia_experiments import OBSERVED as EP_OBSERVED
@@ -142,6 +143,7 @@ class MacBrain(ChatMixin):
         body: VirtualBody | None = None,
         perception: SpecialistPerception | None = None,
         reasoning: ReasoningProvider | None = None,
+        llm_reasoning: Any | None = None,
         microphone: MacMicrophone | None = None,
         stt: SpeechToTextProvider | None = None,
         goals: BoundedGoalController | None = None,
@@ -198,7 +200,16 @@ class MacBrain(ChatMixin):
         self.perception_pipeline = perception_pipeline
         self._last_frame: Any | None = None
         self._last_world_observation: Any | None = None
-        self.reasoning = reasoning or DeliberativeReasoningProvider()
+        # Phase 3a (north-star gap analysis): grounded reasoning is the default
+        # — the engine routes through ReasoningRouter (cost-aware: the LLM is
+        # only paid when the input class or confidence warrants it; an absent
+        # or erroring LLM degrades to the deterministic provider). Surfaces may
+        # inject an LLM reasoning provider (llm_reasoning) or fully override
+        # the provider (reasoning=), preserving test/CI behavior.
+        self.reasoning = reasoning or ReasoningRouter(
+            deterministic=DeliberativeReasoningProvider(),
+            llm=llm_reasoning,
+        )
         self.reflection = ReflectionEngine()
         self.stt = stt or DeterministicSTTProvider()
         self.unified_world = UnifiedWorldModel()
@@ -919,7 +930,14 @@ class MacBrain(ChatMixin):
             )
         if hasattr(self.reasoning, "last_route"):
             self._emit("reasoning.route", {"cycle": self._cycle, "route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")})
-            route_info = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
+            route_info: dict[str, Any] = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
+            # Phase 3a: per-route cost tracking — route counts surface both as
+            # live metrics (Dashboard/health) and in the step result.
+            counts = getattr(self.reasoning, "route_counts", None)
+            if counts:
+                route_info["counts"] = dict(counts)
+                self.metrics.set("reasoning_route_deterministic", float(counts.get("deterministic", 0)), unit="count")
+                self.metrics.set("reasoning_route_llm", float(counts.get("llm", 0)), unit="count")
         self._emit("reasoning.completed", {"cycle": self._cycle, "action": intent.action, "rationale": intent.rationale})
         # Closed-loop PLAN: record the reasoning decision.
         self.closed_loop.plan({"action": intent.action, "rationale": intent.rationale, "cycle": self._cycle})
