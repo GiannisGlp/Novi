@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -9,7 +9,8 @@ from uuid import uuid4
 
 from novi.brain.b1_cognition import DeterministicCognition
 from novi.brain.b1_world import SensorObservation
-from novi.brain.b2_perception import SpecialistPerception
+from novi.brain.b2_perception import Detection as B2Detection
+from novi.brain.b2_perception import PerceptionEvidence, SpecialistPerception
 from novi.brain.runtime import ActionProposal as RuntimeActionProposal
 from novi.brain.runtime import BrainSupervisor, Lifecycle
 
@@ -167,6 +168,7 @@ class MacBrain(ChatMixin):
         spatial_map: Any | None = None,
         telemetry: ResourceTelemetry | None = None,
         embedder: Any | None = None,
+        perception_pipeline: Any | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -181,6 +183,14 @@ class MacBrain(ChatMixin):
         self.microphone = microphone or MacMicrophone()
         self.brain = BrainSupervisor()
         self.perception = perception or SpecialistPerception()
+        # North-star Phase 1a (gap analysis 2026-08-29): the `novi/perception/`
+        # package becomes the brain's camera perception path when attached.
+        # process_frame feeds the unified world model with track-stable
+        # entities; ground_frame stays an explicit capability (`ground_scene`,
+        # investigate goals). None keeps the legacy SpecialistPerception path.
+        self.perception_pipeline = perception_pipeline
+        self._last_frame: Any | None = None
+        self._last_world_observation: Any | None = None
         self.reasoning = reasoning or DeliberativeReasoningProvider()
         self.reflection = ReflectionEngine()
         self.stt = stt or DeterministicSTTProvider()
@@ -642,6 +652,9 @@ class MacBrain(ChatMixin):
             self.multi_speed.set_state(AutonomyState.SAFE_MINIMUM)
             return {"cycle": self._cycle, "safety_gate": "failed", "detections": [], "action": "stop", "authorized": False}
         frame = self.camera.read()
+        # Keep the latest frame available for the explicit grounding capability
+        # (ground_scene): SpatialQuery frame_id must match the grounded frame.
+        self._last_frame = frame
         self._emit("sensor.camera.frame", {"frame_id": frame.frame_id, "width": frame.width, "height": frame.height, "captured_at": frame.captured_at, "metadata": frame.metadata})
         # Closed-loop OBSERVE: record the start of a new cycle.
         self.closed_loop.observe({"cycle": self._cycle, "frame_id": frame.frame_id})
@@ -653,6 +666,8 @@ class MacBrain(ChatMixin):
         if cadence == 1 or self._cycle % cadence == 0:
             evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
             self._last_evidence = evidence
+            if self.perception_pipeline is not None:
+                evidence = self._run_perception_pipeline(frame, evidence)
         else:
             evidence = getattr(self, "_last_evidence", None)
             if evidence is None:
@@ -661,7 +676,8 @@ class MacBrain(ChatMixin):
         self._emit("perception.completed", {"frame_id": evidence.frame_id, "detection_count": len(evidence.detections), "provenance": dict(evidence.provenance)})
         observations = tuple(SensorObservation(cycle=self._cycle, source=f"{self.config.sensor_id}.perception", entity=detection.label, location=None, state="present", confidence=detection.confidence, captured_cycle=self._cycle) for detection in evidence.detections)
         self._admit_detections(evidence.detections)
-        self._update_unified_world(evidence.detections)
+        if self.perception_pipeline is None:
+            self._update_unified_world(evidence.detections)
         # Failure detection: perception uncertainty (low-confidence or no detections).
         if not evidence.detections or all(d.confidence < 0.5 for d in evidence.detections):
             failure = self.failure_handler.report_failure(
@@ -921,6 +937,10 @@ class MacBrain(ChatMixin):
         }
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)
+        # North-star Phase 1a: an active investigate goal grounds its target
+        # explicitly against the current frame (plan Step 5.3 — grounding
+        # never runs implicitly; the goal asking IS the explicit ask).
+        grounding = self._ground_for_active_goal()
 
         goal_was_active = self.goals.has_active
         # Autonomy state machine: AWARE → sub-states.
@@ -1208,6 +1228,7 @@ class MacBrain(ChatMixin):
             "social": {"person": person, "expression": social_expression},
             "initiative": initiative,
             "autonomous": autonomous,
+            "grounding": grounding,
             "temporal": {"expected": temporal_expected, "top_links": [link.snapshot() for link in self.temporal.top_links(limit=3)]},
             "fusion": fused_reported,
             "knowledge": self.knowledge.counts(),
@@ -1611,6 +1632,192 @@ class MacBrain(ChatMixin):
                 timestamp=now,
             )
             self._seen_entities.add(entity_id)
+
+    # -- North-star Phase 1a: vision pipeline as the perception path ----------
+
+    def _run_perception_pipeline(self, frame: Any, evidence: PerceptionEvidence) -> PerceptionEvidence:
+        """Run the vision pipeline as the camera perception path (Phase 1a).
+
+        `PerceptionPipeline.process_frame` produces a WorldObservation
+        (detections + active tracks + identities) that is admitted into the
+        unified world model with track-stable entity ids (`track-<id>`)
+        instead of the legacy per-cycle `det:<label>:<cycle>` ids. The
+        pipeline's detections then become the cycle's evidence so memory
+        admission, beliefs, identity, attention, and curiosity all see the
+        same pipeline results. Fail-closed: a pipeline crash degrades to the
+        specialist evidence for this cycle (reported, never invented).
+        """
+        try:
+            observation = self.perception_pipeline.process_frame(frame)
+        except Exception as exc:
+            self._emit("failure.detected", {
+                "cycle": self._cycle,
+                "component": "vision_pipeline",
+                "message": f"process_frame_failed: {exc}",
+                "severity": "warning",
+            })
+            self.failure_handler.report_failure(
+                PERCEPTION_UNCERTAINTY,
+                severity="warning",
+                component="vision_pipeline",
+                message=f"process_frame_failed: {exc}",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+            return evidence
+        self._last_world_observation = observation
+        self._emit("perception.vision_observation", {
+            "frame_id": observation.frame_id,
+            "tracked": len(observation.tracks),
+            "detections": [d.label for d in observation.detections],
+            "identities": len(observation.identities),
+            "grounding_backend": self.perception_pipeline.grounding_backend is not None,
+        })
+        self._admit_world_observation(observation)
+        # Convert to the brain-side evidence shape so every downstream
+        # consumer (memory admission, beliefs, identity, fusion, attention,
+        # curiosity) sees the pipeline results as the cycle's evidence.
+        b2_detections = tuple(
+            B2Detection(
+                label=d.label,
+                confidence=d.confidence,
+                bbox_xyxy=(
+                    float(d.bbox[0]),
+                    float(d.bbox[1]),
+                    float(d.bbox[0] + d.bbox[2]),
+                    float(d.bbox[1] + d.bbox[3]),
+                ),
+            )
+            for d in observation.detections
+        )
+        return replace(
+            evidence,
+            detections=b2_detections,
+            provenance={**evidence.provenance, "vision_pipeline": "novi.perception"},
+        )
+
+    def _admit_world_observation(self, observation: Any) -> None:
+        """Admit a perception WorldObservation into the unified world model.
+
+        Track-stable entity ids (`track-<id>`) keep one entity per tracked
+        object across frames (replacing the legacy per-cycle recreation);
+        status follows the legacy rule (OBSERVED when confidence >= 0.5, else
+        UNKNOWN). Hypothetical candidates are admitted ONLY through the
+        explicit grounding path (`ground_scene` ->
+        world_state_adapter.admit_grounding_outcome): candidates can never
+        overwrite observed state (epistemic discipline).
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        from .kgraph import infer_entity_type
+        for track in observation.tracks:
+            entity_id = f"track-{track.track_id}"
+            entity_type = infer_entity_type(track.label)
+            wm_type = {
+                "person": WM_PERSON,
+                "place": WM_PLACE,
+                "building": WM_BUILDING,
+                "object": WM_OBJECT,
+            }.get(entity_type, WM_OBJECT)
+            confident = track.last_confidence >= 0.5
+            status = WM_OBSERVED if confident else WM_UNKNOWN
+            existing = self.unified_world.resolve(entity_id)
+            if existing is None:
+                self.unified_world.add_entity(
+                    entity_id, wm_type,
+                    labels=[track.label],
+                    epistemic_status=status,
+                    confidence=track.last_confidence,
+                    created_at=now,
+                )
+            elif track.label not in existing.labels:
+                # Same physical object under a refined label: merge, never fork.
+                self.unified_world.add_entity(entity_id, wm_type, labels=[track.label])
+            self.unified_world.update_entity_state(
+                entity_id, "presence", "present",
+                epistemic_status=status,
+                confidence=track.last_confidence,
+                source=self.config.sensor_id,
+                timestamp=now,
+            )
+            self.unified_world.update_entity_state(
+                entity_id, "bbox_px", list(track.bbox),
+                epistemic_status=status,
+                confidence=track.last_confidence,
+                source=self.config.sensor_id,
+                timestamp=now,
+            )
+            self._seen_entities.add(entity_id)
+
+    def ground_scene(self, query_text: str, *, policy: Any | None = None, requester: str = "brain") -> dict[str, Any]:
+        """Explicit language-grounding capability (Phase 1a; plan Step 5.3).
+
+        Grounds `query_text` against the most recent camera frame through the
+        vision pipeline and admits the GroundingOutcome into the unified world
+        model via novi.perception.world_state_adapter.admit_grounding_outcome:
+        associated observations update their track entity (OBSERVED); unmatched
+        observations become HYPOTHESIZED candidates that can never overwrite
+        observed state. Fail-closed: without a pipeline, a grounding backend,
+        or a frame, NOTHING is admitted — absence is never inferred from a
+        failure.
+        """
+        if self.perception_pipeline is None:
+            return {"grounded": False, "reason": "no_vision_pipeline"}
+        if self.perception_pipeline.grounding_backend is None:
+            return {"grounded": False, "reason": "no_grounding_backend"}
+        frame = self._last_frame
+        if frame is None:
+            return {"grounded": False, "reason": "no_frame"}
+        from novi.perception.grounding import SpatialInferencePolicy, SpatialQuery
+        from novi.perception.world_state_adapter import admit_grounding_outcome
+
+        grounding_policy = policy or SpatialInferencePolicy()
+        query = SpatialQuery(
+            text=query_text,
+            frame_id=frame.frame_id,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            requester=requester,
+        )
+        try:
+            outcome = self.perception_pipeline.ground_frame(frame, query, grounding_policy)
+            summary = admit_grounding_outcome(self.unified_world, outcome)
+        except Exception as exc:
+            self._emit("failure.detected", {
+                "cycle": self._cycle,
+                "component": "vision_pipeline",
+                "message": f"ground_frame_failed: {exc}",
+                "severity": "warning",
+            })
+            return {"grounded": False, "reason": f"grounding_error: {exc}"}
+        self._emit("perception.grounded", {
+            "frame_id": frame.frame_id,
+            "query": query_text,
+            "requester": requester,
+            "created": summary.created,
+            "updated": summary.updates,
+            "candidates": summary.candidates,
+            "success": bool(outcome.result.success),
+            "no_object": bool(outcome.result.no_object),
+        })
+        return {
+            "grounded": True,
+            "frame_id": frame.frame_id,
+            "created": summary.created,
+            "updated": summary.updates,
+            "candidates": summary.candidates,
+        }
+
+    def _ground_for_active_goal(self) -> dict[str, Any] | None:
+        """Ground an active investigate goal's target (explicit ask, Step 5.3).
+
+        A curiosity-spawned investigate goal is the explicit ask: grounding
+        runs once for this cycle against the current frame and is skipped
+        entirely when no pipeline/grounding backend is attached.
+        """
+        if self.perception_pipeline is None:
+            return None
+        active = self.goals.active
+        if active is None or active.goal.kind != "investigate":
+            return None
+        return self.ground_scene(str(active.goal.target), requester="curiosity_goal")
 
     # Risk class mapping for governance (docs/02-autonomy/09 §Risk Classes).
     # In the brain phase, the body is virtual (simulated actuation), so
