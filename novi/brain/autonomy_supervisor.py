@@ -760,9 +760,11 @@ class AutonomySupervisor:
     # ---- observation ----
 
     def snapshot(self) -> dict[str, Any]:
+        from .canonical_autonomy import project_supervisor_state
         return {
             "cycle": self.clock.cycle,
             "state": self.state.value,
+            "canonical_state": project_supervisor_state(self.state),
             "authority": self.authority,
             "goal_id": self._goal.goal_id if self._goal is not None else None,
             "plan_id": self._plan.plan_id if self._plan is not None else None,

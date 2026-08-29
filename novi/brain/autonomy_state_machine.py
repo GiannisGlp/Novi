@@ -537,8 +537,10 @@ class AutonomyStateMachine:
         }
 
     def snapshot(self) -> dict[str, Any]:
+        from .canonical_autonomy import project_engine_state
         return {
             "state": self._state.value,
+            "canonical_state": project_engine_state(self._state),
             "is_operational": self.is_operational,
             "is_emergency": self.is_emergency,
             "is_degraded": self.is_degraded,
