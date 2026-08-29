@@ -99,3 +99,60 @@ def record_importance(record: Any) -> float:
         if raw is not None:
             return _clamp01(raw)
     return _clamp01(getattr(record, "confidence", 0.0))
+
+
+def recency_score(record: Any, *, now: str | None = None, tau_days: float = 30.0) -> float:
+    """Exponential recency of a record by its created_at stamp, in [0, 1].
+
+    Phase 4a (north-star): retrieval must not rank by vector similarity
+    alone. Age decays as exp(-age_days / tau); a record with no parseable
+    timestamp scores a neutral 0.5 (never punished, never pretended fresh).
+    """
+    import math
+    from datetime import datetime, timezone
+
+    created = str(getattr(record, "created_at", "") or "")
+    if not created:
+        return 0.5
+    try:
+        stamp = created.replace("Z", "+00:00")
+        created_dt = datetime.fromisoformat(stamp)
+        if created_dt.tzinfo is None:
+            created_dt = created_dt.replace(tzinfo=timezone.utc)
+        reference = (
+            datetime.fromisoformat(now.replace("Z", "+00:00"))
+            if now
+            else datetime.now(timezone.utc)
+        )
+        age_days = max(0.0, (reference - created_dt).total_seconds() / 86400.0)
+    except (ValueError, TypeError):
+        return 0.5
+    return _clamp01(math.exp(-age_days / max(tau_days, 1e-6)))
+
+
+def rank_memory(
+    record: Any,
+    *,
+    similarity: float,
+    now: str | None = None,
+    recency_weight: float = 0.2,
+    importance_weight: float = 0.2,
+    trust_weight: float = 0.1,
+    similarity_weight: float = 0.5,
+) -> float:
+    """Composite retrieval score: similarity + recency + importance + trust.
+
+    Phase 4a (north-star): primary retrieval paths must NEVER rank by vector
+    similarity alone. The weights sum freely — the score is a weighted mean
+    of normalized components; deterministic and explainable.
+    """
+    total = similarity_weight + recency_weight + importance_weight + trust_weight
+    if total <= 0:
+        return 0.0
+    raw = (
+        _clamp01(similarity) * similarity_weight
+        + recency_score(record, now=now) * recency_weight
+        + record_importance(record) * importance_weight
+        + provenance_trust(record) * trust_weight
+    )
+    return _clamp01(raw / total)

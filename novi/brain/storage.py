@@ -17,6 +17,7 @@ from typing import Any, Iterable
 
 from novi.brain.b1_memory import DeterministicMemoryManager, MemoryAdmission, MemoryRecord, utc_now, validate_contract
 
+from .importance import rank_memory
 from .memory_hardening import (
     ACTIVE as LIFE_ACTIVE,
 )
@@ -552,8 +553,15 @@ class DurableMemoryStore:
             if terms and score == 0:
                 continue
             scored.append((score, record.memory_id, record))
-        scored.sort(key=lambda item: (-item[0], item[1]))
-        return tuple(item[2] for item in scored[:limit])
+        # Phase 4a: same composite ranking as retrieve_indexed so both paths
+        # agree (normalized term relevance = the similarity component).
+        best = max((item[0] for item in scored), default=1) or 1
+        similarity_by_id = {item[1]: item[0] / best for item in scored}
+        return self._rank_composite(
+            [item[2] for item in scored],
+            similarity=lambda record, _s=similarity_by_id: _s.get(record.memory_id, 0.0),
+            limit=limit,
+        )
 
     def retrieve_indexed(self, query: str, *, entity: str | None = None, memory_type: str | None = None, place: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
         """FTS5-backed retrieval: candidate memory_ids are found via MATCH, so only
@@ -592,15 +600,28 @@ class DurableMemoryStore:
             if score == 0:
                 continue
             scored.append((score, record.memory_id, record))
-        scored.sort(key=lambda item: (-item[0], item[1]))
-        return tuple(item[2] for item in scored[:limit])
+        # Phase 4a: FTS term-relevance (normalized) is the SIMILARITY component;
+        # the final order still fuses recency/importance/trust, never rank alone.
+        best = max((item[0] for item in scored), default=1) or 1
+        similarity_by_id = {item[1]: item[0] / best for item in scored}
+        return self._rank_composite(
+            [item[2] for item in scored],
+            similarity=lambda record, _s=similarity_by_id: _s.get(record.memory_id, 0.0),
+            limit=limit,
+        )
 
     def retrieve_semantic(self, query: str, *, entity: str | None = None, memory_type: str | None = None, place: str | None = None, limit: int = 5) -> tuple[MemoryRecord, ...]:
-        """Vector-similarity retrieval over the embedding index."""
+        """Vector-similarity retrieval over the embedding index.
+
+        Phase 4a (north-star): vector similarity is the CANDIDATE signal;
+        the final order fuses similarity with recency, importance and trust —
+        a low-confidence/stale record never outranks a high-confidence/fresh
+        one with equal similarity.
+        """
         if limit <= 0:
             return ()
         candidates = self._embed_index.search(query, limit=max(limit * 20, 50))
-        scored: list[tuple[float, MemoryRecord]] = []
+        similarity_by_id: dict[str, float] = {}
         for (memory_id, score) in candidates:
             row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
             if row is None:
@@ -612,9 +633,139 @@ class DurableMemoryStore:
                 continue
             if place is not None and self._place_of(record) != place:
                 continue
-            scored.append((score, record))
-        scored.sort(key=lambda item: -item[0])
-        return tuple(item[1] for item in scored[:limit])
+            if record.memory_id not in similarity_by_id or score > similarity_by_id[record.memory_id]:
+                similarity_by_id[record.memory_id] = score
+        return self._rank_composite(
+            [self._to_record(self._conn.execute("SELECT * FROM memory_records WHERE memory_id=?", (mid,)).fetchone()) for mid in similarity_by_id],
+            similarity=lambda record, _s=similarity_by_id: _s.get(record.memory_id, 0.0),
+            limit=limit,
+        )
+
+    def _rank_composite(self, records: list[MemoryRecord], *, similarity: Any, limit: int) -> tuple[MemoryRecord, ...]:
+        """Phase 4a: order candidates by the fused retrieval score, not by
+        vector similarity alone. Deterministic tie-break on memory_id."""
+        ranked = sorted(
+            records,
+            key=lambda record: (
+                -rank_memory(record, similarity=similarity(record)),
+                record.memory_id,
+            ),
+        )
+        return tuple(ranked[:limit])
+
+    def retrieve_ranked(
+        self,
+        query: str,
+        *,
+        entity: str | None = None,
+        memory_type: str | None = None,
+        place: str | None = None,
+        limit: int = 5,
+        min_confidence: float = 0.0,
+        provenance_scope: str | None = None,
+        recency_weight: float = 0.2,
+        importance_weight: float = 0.2,
+        trust_weight: float = 0.1,
+    ) -> tuple[MemoryRecord, ...]:
+        """Phase 4a (north-star): retrieval that ranks by time/provenance/
+        confidence — never vector similarity alone.
+
+        Candidates come from BOTH the FTS index and the vector index (union,
+        best similarity kept per record); the final order fuses FTS/vector
+        relevance with recency, importance and provenance trust. Filters:
+        ``min_confidence`` drops weaker claims; ``provenance_scope`` ("sensor"
+        | "verified") restricts to records from observable/verified origin.
+        """
+        if limit <= 0:
+            return ()
+        now = utc_now()
+        similarity_by_id: dict[str, float] = {}
+        records_by_id: dict[str, MemoryRecord] = {}
+
+        # FTS candidates (term relevance normalized below).
+        terms = [t.lower() for t in query.split() if t]
+        if terms:
+            matcher = " OR ".join(f'"{t}"' for t in terms)
+            try:
+                rows = self._conn.execute(
+                    "SELECT memory_id FROM memory_fts WHERE memory_fts MATCH ? ORDER BY rank LIMIT ?", (matcher, 200)
+                ).fetchall()
+            except Exception:
+                rows = []
+            hits = []
+            for (memory_id,) in rows:
+                row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
+                if row is None:
+                    continue
+                record = self._to_record(row)
+                hits.append((sum(1 for term in terms if term in self._fts_document(record)), record))
+            best = max((s for s, _ in hits), default=1) or 1
+            for score, record in hits:
+                if not self._filters_ok(record, entity=entity, memory_type=memory_type, place=place, min_confidence=min_confidence, provenance_scope=provenance_scope):
+                    continue
+                similarity_by_id[record.memory_id] = score / best
+                records_by_id[record.memory_id] = record
+
+        # Vector candidates (similarity as-is).
+        try:
+            for (memory_id, score) in self._embed_index.search(query, limit=200):
+                row = self._conn.execute("SELECT * FROM memory_records WHERE memory_id=? AND deleted=0 AND state='active'", (memory_id,)).fetchone()
+                if row is None:
+                    continue
+                record = self._to_record(row)
+                if not self._filters_ok(record, entity=entity, memory_type=memory_type, place=place, min_confidence=min_confidence, provenance_scope=provenance_scope):
+                    continue
+                records_by_id[record.memory_id] = record
+                if score > similarity_by_id.get(record.memory_id, 0.0):
+                    similarity_by_id[record.memory_id] = score
+        except Exception:
+            pass  # no embedder / empty index: FTS candidates still rank
+
+        ranked = sorted(
+            records_by_id.values(),
+            key=lambda record: (
+                -rank_memory(
+                    record,
+                    similarity=similarity_by_id.get(record.memory_id, 0.0),
+                    now=now,
+                    recency_weight=recency_weight,
+                    importance_weight=importance_weight,
+                    trust_weight=trust_weight,
+                    similarity_weight=0.5,
+                ),
+                record.memory_id,
+            ),
+        )
+        return tuple(ranked[:limit])
+
+    def _filters_ok(
+        self,
+        record: MemoryRecord,
+        *,
+        entity: str | None,
+        memory_type: str | None,
+        place: str | None,
+        min_confidence: float,
+        provenance_scope: str | None,
+    ) -> bool:
+        if entity is not None and entity not in record.entity_refs:
+            return False
+        if memory_type is not None and memory_type != record.memory_type:
+            return False
+        if place is not None and self._place_of(record) != place:
+            return False
+        if min_confidence and record.confidence < min_confidence:
+            return False
+        if provenance_scope == "sensor":
+            src = ""
+            if isinstance(record.provenance, dict):
+                src = str(record.provenance.get("source_class") or record.provenance.get("source") or "").lower()
+            if not any(k in src for k in ("sensor", "camera", "vision", "audio", "microphone", "stt")):
+                return False
+        return not (
+            provenance_scope == "verified"
+            and str(record.verification_status or "").lower() != "verified"
+        )
 
     def forget(self, memory_id: str) -> bool:
         cur = self._conn.execute("UPDATE memory_records SET deleted=1 WHERE memory_id=? AND deleted=0", (memory_id,))
