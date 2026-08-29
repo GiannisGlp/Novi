@@ -279,5 +279,47 @@ class WorldModelLineageTests(unittest.TestCase):
         self.assertEqual(d["entities"]["alice_001"]["entity_type"], PERSON)
 
 
+class WorldModelEvidenceClassTests(unittest.TestCase):
+    """Evidence classes maintained by Novi (NVIDIA research §18)."""
+
+    # docs/NOVI_NVIDIA_ROBOT_LEARNING_COGNITION_AUTONOMY_RESEARCH.md §18:
+    # OBSERVED / INFERRED / PREDICTED / SIMULATED / COUNTERFACTUAL /
+    # HYPOTHESIZED / VERIFIED — a simulated or hypothesized event must never
+    # silently become a remembered real-world fact.
+    NVIDIA_EVIDENCE_CLASSES = frozenset({
+        "OBSERVED", "INFERRED", "PREDICTED", "SIMULATED",
+        "COUNTERFACTUAL", "HYPOTHESIZED", "VERIFIED",
+    })
+
+    def test_all_nvidia_evidence_classes_are_supported(self):
+        from novi.brain.world_model import ALL_EPISTEMIC_STATUSES
+        missing = self.NVIDIA_EVIDENCE_CLASSES - ALL_EPISTEMIC_STATUSES
+        self.assertEqual(missing, frozenset(), f"missing evidence classes: {missing}")
+
+    def test_hypothesized_status_accepted_by_world_model(self):
+        from novi.brain.world_model import HYPOTHESIZED
+        wm = WorldModel()
+        wm.add_entity("cup_001", OBJECT, labels=["cup"], epistemic_status=HYPOTHESIZED, confidence=0.3)
+        wm.update_entity_state(
+            "cup_001", "location", "kitchen",
+            epistemic_status=HYPOTHESIZED, confidence=0.3, source="scenario",
+        )
+        entity = wm.get_entity("cup_001")
+        self.assertIsNotNone(entity)
+        self.assertEqual(entity.epistemic_status, HYPOTHESIZED)
+        self.assertEqual(entity.state_value("location"), "kitchen")
+        self.assertEqual(entity.state_status("location"), HYPOTHESIZED)
+
+    def test_hypothesized_state_never_overwrites_observed(self):
+        from novi.brain.world_model import HYPOTHESIZED
+        wm = WorldModel()
+        wm.add_entity("cup_001", OBJECT, labels=["cup"], epistemic_status=OBSERVED, confidence=0.9)
+        wm.update_entity_state("cup_001", "location", "table", epistemic_status=OBSERVED, confidence=0.9, source="cam")
+        # A hypothesis must not overwrite the observed location.
+        wm.update_entity_state("cup_001", "location", "bedroom", epistemic_status=HYPOTHESIZED, confidence=0.2, source="scenario")
+        self.assertEqual(wm.get_entity("cup_001").state_value("location"), "table")
+        self.assertEqual(wm.get_entity("cup_001").state_status("location"), OBSERVED)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -33,19 +33,24 @@ REMEMBERED = "REMEMBERED"
 PREDICTED = "PREDICTED"
 SIMULATED = "SIMULATED"
 COUNTERFACTUAL = "COUNTERFACTUAL"
+HYPOTHESIZED = "HYPOTHESIZED"
 VERIFIED = "VERIFIED"
 UNKNOWN = "UNKNOWN"
 
+# Evidence classes maintained by Novi (docs/NOVI_NVIDIA_ROBOT_LEARNING_COGNITION_AUTONOMY_RESEARCH.md
+# research 18: OBSERVED / INFERRED / PREDICTED / SIMULATED / COUNTERFACTUAL /
+# HYPOTHESIZED / VERIFIED), extended with FUSED/REMEMBERED/UNKNOWN by the domain
+# authority (docs/03-cognition/02 §Epistemic State).
 ALL_EPISTEMIC_STATUSES = frozenset({
     OBSERVED, INFERRED, FUSED, REMEMBERED, PREDICTED, SIMULATED,
-    COUNTERFACTUAL, VERIFIED, UNKNOWN,
+    COUNTERFACTUAL, HYPOTHESIZED, VERIFIED, UNKNOWN,
 })
 
 # Statuses that represent the *current real* world (as opposed to hypothetical).
 _REAL_STATUSES = frozenset({OBSERVED, INFERRED, FUSED, REMEMBERED, VERIFIED, UNKNOWN})
 
 # Statuses that must never overwrite current observed state.
-_HYPOTHETICAL_STATUSES = frozenset({PREDICTED, SIMULATED, COUNTERFACTUAL})
+_HYPOTHETICAL_STATUSES = frozenset({PREDICTED, SIMULATED, COUNTERFACTUAL, HYPOTHESIZED})
 
 
 def _is_real(status: str) -> bool:
@@ -315,6 +320,11 @@ class WorldModel:
         self._active_events: list[dict[str, Any]] = []
         self._world_version: int = 0
         self._label_index: dict[str, str] = {}  # label -> entity_id
+        # Freshness policy (doc 03 Step 2): (entity_id, field) ->
+        # (observed_cycle, ttl_cycles). 0 ttl = never expires.
+        self._field_ttl: dict[tuple[str, str], tuple[int, int]] = {}
+        # Pairs already reported expired (idempotency for expire_stale).
+        self._expired_fields: set[tuple[str, str]] = set()
 
     # ---- entity management ----
 
@@ -418,8 +428,16 @@ class WorldModel:
                     created_at=timestamp,
                 )
                 self._contradictions.append(contradiction)
-                # The higher-confidence (or newer) claim becomes the current state.
-                if confidence > old_conf:
+                # The higher-confidence (or, on a tie, the newer) claim becomes
+                # the current state; the loser stays preserved as history
+                # (doc 03 Step 3: belief revision chooses while preserving evidence).
+                newer_than_current = (
+                    confidence == old_conf
+                    and bool(timestamp)
+                    and bool(entity.last_updated_at)
+                    and timestamp > entity.last_updated_at
+                )
+                if confidence > old_conf or newer_than_current:
                     entity.set_state(field_name, value, status=epistemic_status, confidence=confidence, provenance=prov)
                     entity.confidence = max(entity.confidence, confidence)
                     entity.last_updated_at = timestamp
@@ -453,6 +471,48 @@ class WorldModel:
         if entity is not None:
             entity.lifecycle = lifecycle
             self._world_version += 1
+
+    # ---- freshness / TTL policy (doc 03 Step 2) ----
+
+    def set_field_ttl(self, entity_id: str, field_name: str, *, ttl_cycles: int, observed_cycle: int = 0) -> bool:
+        """Declare how long a state field stays fresh (0 = never expires).
+
+        A person's location may expire quickly; a room name may remain stable.
+        The planner must never treat expired data as current.
+        """
+        if entity_id not in self._entities:
+            return False
+        self._field_ttl[(entity_id, field_name)] = (max(0, int(observed_cycle)), max(0, int(ttl_cycles)))
+        return True
+
+    def freshness_of(self, entity_id: str, field_name: str, *, cycle: int) -> str:
+        """fresh | stale | unknown — never lets callers assume freshness."""
+        policy = self._field_ttl.get((entity_id, field_name))
+        if policy is None:
+            return "unknown"
+        observed_cycle, ttl_cycles = policy
+        if ttl_cycles == 0:
+            return "fresh"
+        return "fresh" if cycle <= observed_cycle + ttl_cycles else "stale"
+
+    def expire_stale(self, *, cycle: int) -> list[tuple[str, str]]:
+        """Expire state fields past their TTL; mark their entities STALE.
+
+        Returns the list of (entity_id, field_name) pairs that expired in this
+        call (idempotent: an already-expired pair is not reported twice).
+        """
+        expired: list[tuple[str, str]] = []
+        for (entity_id, field_name), (observed_cycle, ttl_cycles) in self._field_ttl.items():
+            if ttl_cycles and cycle > observed_cycle + ttl_cycles:
+                pair = (entity_id, field_name)
+                if pair not in self._expired_fields:
+                    self._expired_fields.add(pair)
+                    entity = self._entities.get(entity_id)
+                    if entity is not None and entity.lifecycle != STALE:
+                        entity.lifecycle = STALE
+                        self._world_version += 1
+                    expired.append(pair)
+        return expired
 
     # ---- relation management ----
 
