@@ -294,7 +294,9 @@ class MacBrain(ChatMixin):
         # replaces the web server's `_chat_busy` loop-freeze: the cognitive loop
         # keeps ticking (SCENARIO-V1) and the lease alone gates outbound
         # spontaneity, so a concurrent step can never fire a duplicate remark.
-        self._speaking_lease = False
+        # Phase 2 (multitasking): per-ADDRESSEE leases — person A's reply only
+        # gates initiative toward A; person B keeps talking to Novi.
+        self._speaking_leases: dict[str, bool] = {}
         if lexicon is not None:
             self.lexicon = lexicon
         elif isinstance(self.memory, DurableMemoryStore):
@@ -573,7 +575,7 @@ class MacBrain(ChatMixin):
         """
         if not self.config.event_autonomy_enabled:
             return None
-        if self._speaking_lease:
+        if self.speaking_lease_for(person):
             self._emit("speech.initiative_suppressed", {
                 "cycle": self._cycle, "reason": "speaking_lease_held",
             })

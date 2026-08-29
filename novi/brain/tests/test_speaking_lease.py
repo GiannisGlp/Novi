@@ -104,6 +104,52 @@ class SpeakingLeaseTests(unittest.TestCase):
         finally:
             brain.stop()
 
+    def test_per_person_lease_scoping(self):
+        """Phase 2: one person's lease never blocks another person's stream."""
+        brain = _brain()
+        brain.start()
+        try:
+            brain.acquire_speaking_lease("alice")
+            self.assertTrue(brain.speaking_lease_for("alice"))
+            self.assertFalse(brain.speaking_lease_for("bob"))
+            self.assertTrue(brain.speaking_lease, "global view must see any held lease")
+            brain.release_speaking_lease("alice")
+            self.assertFalse(brain.speaking_lease_for("alice"))
+            self.assertFalse(brain.speaking_lease)
+        finally:
+            brain.stop()
+
+    def test_generic_room_chatter_suppressed_while_any_lease_held(self):
+        """No-person (room) initiative must not overlap a directed reply."""
+        brain = _brain()
+        brain.start()
+        try:
+            brain.acquire_speaking_lease("alice")
+            self.assertTrue(brain.speaking_lease_for(None))
+            self.assertTrue(brain.speaking_lease_for(""))
+        finally:
+            brain.stop()
+
+    def test_respond_holds_lease_for_its_addressee(self):
+        """respond() scopes the lease to the resolved addressee, then releases."""
+        brain = _brain()
+        brain.start()
+        try:
+            observed: dict = {}
+
+            def llm_chat(*, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str:
+                observed["lease_during"] = brain.speaking_lease_for("alice")
+                observed["other_free"] = not brain.speaking_lease_for("bob")
+                return "I remember you, alice — the door moved earlier."
+
+            out = brain.respond("alice, what do you make of the weather?", llm_chat=llm_chat)
+            self.assertIsNotNone(out["text"])
+            self.assertTrue(observed.get("lease_during"), "lease must be held for alice while composing")
+            self.assertTrue(observed.get("other_free"), "bob must stay free while alice's reply composes")
+            self.assertFalse(brain.speaking_lease_for("alice"), "lease must be released after the reply")
+        finally:
+            brain.stop()
+
 
 if __name__ == "__main__":
     unittest.main()

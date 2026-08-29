@@ -798,47 +798,54 @@ class ChatMixin:
         if not text:
             return {"text": None, "reply_source": "none", "addressee": person or "", "trace": {}}
         addressee = self.resolve_addressee(text, person=person)
-        if learn:
-            with contextlib.suppress(Exception):
-                self._learn_from_chat(text, addressee)
-        cycle = getattr(self, "_cycle", 0)
-        discourse_hint = self.note_user_message(text)["resolved_topic"]
-        reply_obj = self.compose_reply(
-            text, person=addressee, history=history, llm_chat=llm_chat,
-            last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
-            topic_hint=discourse_hint,
-        )
-        reply = reply_obj.get("text")
-        if reply is not None:
-            # Slow personality learning from typed interactions (Phase E1):
-            # only clear moments nudge traits, by ≤0.01 each, so character
-            # changes come from repetition, not single messages.
-            try:
-                if _is_joke_request(text):
-                    self.soul.learn_from_interaction(addressee or "user", "play")
-                elif _is_emotional_statement(text):
-                    self.soul.learn_from_interaction(addressee or "user", "comfort")
-            except Exception:  # noqa: BLE001 - soul learning is best-effort
-                pass
-        if reply is None:
-            fb = self.natural_reply_fallback(text=text, cycle=cycle)
+        # Phase 2: every reply holds the speaking lease for ITS addressee, so a
+        # concurrent step can never fire a second stream at the same person
+        # (one voice per conversation) while other people stay free to talk.
+        self.acquire_speaking_lease(addressee)
+        try:
+            if learn:
+                with contextlib.suppress(Exception):
+                    self._learn_from_chat(text, addressee)
+            cycle = getattr(self, "_cycle", 0)
+            discourse_hint = self.note_user_message(text)["resolved_topic"]
+            reply_obj = self.compose_reply(
+                text, person=addressee, history=history, llm_chat=llm_chat,
+                last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
+                topic_hint=discourse_hint,
+            )
+            reply = reply_obj.get("text")
+            if reply is not None:
+                # Slow personality learning from typed interactions (Phase E1):
+                # only clear moments nudge traits, by ≤0.01 each, so character
+                # changes come from repetition, not single messages.
+                try:
+                    if _is_joke_request(text):
+                        self.soul.learn_from_interaction(addressee or "user", "play")
+                    elif _is_emotional_statement(text):
+                        self.soul.learn_from_interaction(addressee or "user", "comfort")
+                except Exception:  # noqa: BLE001 - soul learning is best-effort
+                    pass
+            if reply is None:
+                fb = self.natural_reply_fallback(text=text, cycle=cycle)
+                return {
+                    "text": fb.get("text"),
+                    "reply_source": "fallback",
+                    "addressee": addressee,
+                    "reason": fb.get("reason") or "No LLM reply available; used a natural acknowledgement.",
+                    "grounding": reply_obj.get("grounding", {}),
+                    "trace": {"conclusion": None, "route": "deterministic", "route_reason": "no_llm_transport"},
+                }
             return {
-                "text": fb.get("text"),
-                "reply_source": "fallback",
+                "text": reply,
+                "reply_source": "fallback" if reply_obj.get("fallback") else "dialogue",
                 "addressee": addressee,
-                "reason": fb.get("reason") or "No LLM reply available; used a natural acknowledgement.",
+                "reason": reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state.",
                 "grounding": reply_obj.get("grounding", {}),
-                "trace": {"conclusion": None, "route": "deterministic", "route_reason": "no_llm_transport"},
+                "trace": {"conclusion": reply, "route": "local_llm",
+                          "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
             }
-        return {
-            "text": reply,
-            "reply_source": "fallback" if reply_obj.get("fallback") else "dialogue",
-            "addressee": addressee,
-            "reason": reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state.",
-            "grounding": reply_obj.get("grounding", {}),
-            "trace": {"conclusion": reply, "route": "local_llm",
-                      "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
-        }
+        finally:
+            self.release_speaking_lease(addressee)
 
     def respond_event(self, initiative: Any, *, person: str = "", grounding: str = "") -> dict[str, Any]:
         """Autonomous-utterance variant of respond() (plan 20 §3B).
@@ -1294,23 +1301,41 @@ class ChatMixin:
         reason = "No LLM reply available; used a brief tone-aware acknowledgement so the user is not left dry"
         return {"text": fb, "fallback": True, "reason": reason, "grounding": {"route": "fallback", **out}}
 
-    def acquire_speaking_lease(self) -> None:
-        """Hold the speaking lease while a reply is being composed (plan 19, P2).
+    def acquire_speaking_lease(self, person: str = "") -> None:
+        """Hold the speaking lease for ONE addressee while a reply is composed.
 
-        While held, spontaneous initiative stays silent so a concurrent step
-        cannot fire a duplicate remark. Replaces the web server's `_chat_busy`
-        loop-freeze: the cognitive loop keeps ticking (SCENARIO-V1).
+        Phase 2 (multitasking): leases are per-addressee. Person A's reply no
+        longer silences initiative toward person B — but nobody else can
+        answer A at the same time. Empty person = the anonymous/general
+        conversation (e.g. the web chat pane).
         """
-        self._speaking_lease = True
+        self._speaking_leases[(person or "").lower()] = True
 
-    def release_speaking_lease(self) -> None:
-        """Release the speaking lease, re-enabling spontaneous initiative."""
-        self._speaking_lease = False
+    def release_speaking_lease(self, person: str = "") -> None:
+        """Release the lease for this addressee, re-enabling initiative toward them."""
+        self._speaking_leases[(person or "").lower()] = False
 
     @property
     def speaking_lease(self) -> bool:
-        """True while a reply is being composed (initiative suppressed)."""
-        return self._speaking_lease
+        """True while ANY reply is being composed (global view)."""
+        return any(self._speaking_leases.values())
+
+    def speaking_lease_for(self, person: str | None) -> bool:
+        """True while a reply is being composed FOR this person.
+
+        - A specific person is gated only by their OWN lease (multitasking:
+          alice's reply doesn't block bob).
+        - The anonymous/general channel (empty person — e.g. the web chat pane)
+          is assumed to potentially be ANYONE, so while IT is busy all
+          initiative is suppressed (one voice per conversation, issue 2).
+        - No person at all (generic room chatter) is busy while any lease is
+          held, so a directed reply never overlaps a generic remark.
+        """
+        if not person:
+            return any(self._speaking_leases.values())
+        if self._speaking_leases.get("", False):
+            return True
+        return self._speaking_leases.get(person.lower(), False)
 
     def _initiation_utterance(self, kind: str, person: str, cycle: int) -> str:
         """Deterministic, natural spontaneous remark (no LLM in the perception loop).
@@ -1340,7 +1365,7 @@ class ChatMixin:
         """
         if not self.config.initiative_enabled:
             return None
-        if self._speaking_lease:
+        if self.speaking_lease_for(person):
             self._emit("speech.initiative_suppressed", {
                 "cycle": self._cycle, "reason": "speaking_lease_held",
             })

@@ -164,6 +164,42 @@ class _GroundingWithFallback:
 class NoviWebServer(IntegrationMixin):
     """Owns a MacBrain and drives it from HTTP requests."""
 
+    # Per-PERSON conversation threads (phase 2, multitasking): the web UI pane
+    # is the "" thread; recognized in-home people and remote-app users get
+    # their own threads so no conversation corrupts another (issue 3). The
+    # _chat/_chat_seq names remain as property aliases for the "" thread so all
+    # existing persistence/summarization code keeps working unchanged.
+    @property
+    def _chat(self) -> list[dict[str, Any]]:
+        return self._threads[""]
+
+    @_chat.setter
+    def _chat(self, value: list[dict[str, Any]]) -> None:
+        self._threads[""] = value
+
+    @property
+    def _chat_seq(self) -> int:
+        return self._seqs[""]
+
+    @_chat_seq.setter
+    def _chat_seq(self, value: int) -> None:
+        self._seqs[""] = value
+
+    def _chat_thread(self, person: str = "") -> list[dict[str, Any]]:
+        """The conversation thread for this person ("" = the web UI pane)."""
+        return self._threads.setdefault((person or "").lower(), [])
+
+    def _bump_seq(self, person: str = "") -> int:
+        key = (person or "").lower()
+        self._seqs[key] = self._seqs.get(key, 0) + 1
+        return self._seqs[key]
+
+    def _seq_for(self, person: str = "") -> int:
+        return self._seqs.get((person or "").lower(), 0)
+
+    def _last_novi_text(self, person: str = "") -> str:
+        return next((c["text"] for c in reversed(self._chat_thread(person)) if c.get("role") == "novi"), "")
+
     def __init__(
         self,
         *,
@@ -255,9 +291,9 @@ class NoviWebServer(IntegrationMixin):
         self._seen = 0
         self._seq = 0
         self._log: list[dict[str, Any]] = []
-        # chat conversation (user <-> Novi reasoning responses)
-        self._chat_seq = 0
-        self._chat: list[dict[str, Any]] = []
+        # chat conversation (user <-> Novi reasoning responses), per person
+        self._threads: dict[str, list[dict[str, Any]]] = {"": []}
+        self._seqs: dict[str, int] = {"": 0}
         # Length at the last chat summarization; used to gate summarization so the
         # LLM summarizer doesn't run on every single append past the threshold.
         self._last_summarized_len: int | None = None
@@ -546,14 +582,16 @@ class NoviWebServer(IntegrationMixin):
         so Novi doesn't think the user addressed 'the system' or a 'heard' marker."""
         return re.sub(r"^\s*\[heard\]\s*", "", text)
 
-    def _build_history(self, limit: int = 6) -> list[dict[str, Any]]:
+    def _build_history(self, limit: int = 6, person: str = "") -> list[dict[str, Any]]:
         # Capped turns AND per-turn text: history rides inside the LLM prompt
         # (user_payload.conversation_so_far), so unbounded turns inflate prefill
         # time on every reply. 6 turns × 240 chars keeps context without the cost.
-        return [{"role": c["role"], "text": self._clean_chat_text(c["text"])[:240]} for c in self._chat[-limit:]]
+        thread = self._chat_thread(person)
+        return [{"role": c["role"], "text": self._clean_chat_text(c["text"])[:240]} for c in thread[-limit:]]
 
-    def _recent_novi(self, limit: int = 4) -> list[str]:
-        return [self._clean_chat_text(c["text"]) for c in reversed(self._chat) if c.get("role") == "novi"][:limit]
+    def _recent_novi(self, limit: int = 4, person: str = "") -> list[str]:
+        thread = self._chat_thread(person)
+        return [self._clean_chat_text(c["text"]) for c in reversed(thread) if c.get("role") == "novi"][:limit]
 
     def _bind_introduced_name(self, text: str) -> None:
         """Bind a self-introduction to a placeholder person (conversational naming).
@@ -576,8 +614,14 @@ class NoviWebServer(IntegrationMixin):
         with contextlib.suppress(Exception):
             runtime.name_person(current, name.title())
 
-    def chat_send(self, text: str, confidence: float = 0.9) -> dict[str, Any]:
-        """Hear the user message, let the brain decide, and append a chat turn."""
+    def chat_send(self, text: str, confidence: float = 0.9, person: str = "") -> dict[str, Any]:
+        """Hear the user message, let the brain decide, and append a chat turn.
+
+        ``person`` is the optional identity of the sender (the remote-app user,
+        or the recognized in-home person). It scopes the speaking lease so one
+        person never gets two simultaneous streams while others stay free
+        (phase 2 multitasking).
+        """
         # Strip the '[heard] ' STT display marker off the incoming message before
         # detection/compose_reply, so a greeting like '[heard] Hello.' is recognised
         # as a greeting (the raw prefix would defeat the greeting/clarification
@@ -593,10 +637,10 @@ class NoviWebServer(IntegrationMixin):
                     and (now - self._last_sent_time) < self._dedup_window_seconds):
                 # Return the last novi if available; otherwise a bare dedup marker.
                 # Do not create new rows — the previous turn is still in-flight.
-                for c in reversed(self._chat):
+                for c in reversed(self._chat_thread(person)):
                     if c.get("role") == "novi":
-                        return {"novi": c, "accepted": True, "memory_id": None, "llm": c.get("llm", False), "deduplicated": True, "after": self._chat_seq}
-                return {"accepted": False, "deduplicated": True, "after": self._chat_seq}
+                        return {"novi": c, "accepted": True, "memory_id": None, "llm": c.get("llm", False), "deduplicated": True, "after": self._seq_for(person)}
+                return {"accepted": False, "deduplicated": True, "after": self._seq_for(person)}
             self._last_sent_text = text
             self._last_sent_time = now
 
@@ -605,10 +649,12 @@ class NoviWebServer(IntegrationMixin):
         # the same cycle), then ingest + step under a short lock, and compose
         # the reply with the LLM OUTSIDE the lock.
         self.brain.submit("web", "chat", {"text": text})
-        # Hold the brain's speaking lease while composing so a concurrent step
-        # cannot fire a duplicate initiative (replaces the old _chat_busy
-        # loop-freeze; the loop keeps ticking — SCENARIO-V1).
-        self.brain.acquire_speaking_lease()
+        # Hold the brain's speaking lease for THIS addressee while composing so
+        # a concurrent step cannot fire a duplicate initiative at the same
+        # person (replaces the old _chat_busy loop-freeze; the loop keeps
+        # ticking — SCENARIO-V1; other people stay free — phase 2).
+        addressee = person or self.brain.resolve_addressee(text)
+        self.brain.acquire_speaking_lease(addressee)
         try:
             with self._lock:
                 r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
@@ -624,12 +670,12 @@ class NoviWebServer(IntegrationMixin):
             # supplies conversation history and the LLM transport; the brain's
             # respond() detects the addressee, learns from the message, and
             # composes the reply (or the deterministic fallback) in one call.
-            history = self._build_history(6)
-            recent_novi = self._recent_novi(4)
-            last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
+            history = self._build_history(6, person)
+            recent_novi = self._recent_novi(4, person)
+            last_novi = self._last_novi_text(person)
             transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
             resp = self.brain.respond(
-                text, history=history, llm_chat=transport,
+                text, person=addressee, history=history, llm_chat=transport,
                 last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
             )
             self._bind_introduced_name(text)
@@ -651,11 +697,11 @@ class NoviWebServer(IntegrationMixin):
                 trace["route_reason"] = "no_llm_transport"
                 trace["confidence"] = heard_conf
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
-            self._append_chat({"role": "user", "text": text})
-            self._append_chat(novi)
+            self._append_chat({"role": "user", "text": text}, person)
+            self._append_chat(novi, person)
             return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": llm}
         finally:
-            self.brain.release_speaking_lease()
+            self.brain.release_speaking_lease(addressee)
 
     def listen(self, seconds: float | None = None) -> dict[str, Any]:
         """Record from the microphone, transcribe locally, and respond in chat.
@@ -682,19 +728,24 @@ class NoviWebServer(IntegrationMixin):
         with self._lock:
             step = self.brain.step()
             trace = dict(self.brain._last_reasoning_trace)
-        # Hold the speaking lease while composing (replaces _chat_busy loop-freeze).
-        self.brain.acquire_speaking_lease()
+        # Hold the speaking lease for THIS addressee while composing (replaces
+        # _chat_busy loop-freeze). The recognized in-home person scopes the
+        # lease: their voice turn gates their own stream only (phase 2).
+        runtime = getattr(self, "mm_runtime", None)
+        known_person = (getattr(runtime, "current_person", None) or "") if runtime is not None else ""
+        addressee = known_person or self.brain.resolve_addressee(text)
+        self.brain.acquire_speaking_lease(addressee)
         try:
             # Brain-owned reply orchestration (north-star R1/R3): the brain
             # resolves the addressee, learns from the message, and composes the
             # natural reply (or the deterministic fallback) in one call. The web
             # layer only supplies conversation history and the LLM transport.
-            history = self._build_history(6)
-            recent_novi = self._recent_novi(4)
-            last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
+            history = self._build_history(6, addressee)
+            recent_novi = self._recent_novi(4, addressee)
+            last_novi = self._last_novi_text(addressee)
             transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
             resp = self.brain.respond(
-                text, history=history, llm_chat=transport,
+                text, person=addressee, history=history, llm_chat=transport,
                 last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
             )
             self._bind_introduced_name(text)
@@ -715,11 +766,11 @@ class NoviWebServer(IntegrationMixin):
                 trace["route_reason"] = "no_llm_transport"
                 trace["confidence"] = result.get("confidence", 0.8)
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
-            self._append_chat({"role": "user", "text": f"[heard] {text}"})
-            self._append_chat(novi)
+            self._append_chat({"role": "user", "text": f"[heard] {text}"}, addressee)
+            self._append_chat(novi, addressee)
             return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
         finally:
-            self.brain.release_speaking_lease()
+            self.brain.release_speaking_lease(addressee)
 
     def _llm_up(self) -> bool:
         # Re-probe when the cached result is stale so a server that started
@@ -862,7 +913,7 @@ class NoviWebServer(IntegrationMixin):
                     if msg.get("thinking") and not delta:
                         continue
 
-    def chat_send_stream(self, text: str, confidence: float = 0.9):
+    def chat_send_stream(self, text: str, confidence: float = 0.9, person: str = ""):
         """Streaming variant of chat_send: yields {'token': str} then {'done': novi}."""
         text = self._clean_chat_text(text)
         import time as _time
@@ -875,19 +926,21 @@ class NoviWebServer(IntegrationMixin):
                 # would fail and allow a duplicate).
                 # Return the last novi if available, otherwise a bare dedup marker.
                 last_novi = None
-                for c in reversed(self._chat):
+                for c in reversed(self._chat_thread(person)):
                     if c.get("role") == "novi":
                         last_novi = c
                         break
                 if last_novi is not None:
-                    yield {"deduplicated": True, "novi": last_novi, "after": self._chat_seq, "accepted": True, "memory_id": None, "llm": last_novi.get("llm", False)}
+                    yield {"deduplicated": True, "novi": last_novi, "after": self._seq_for(person), "accepted": True, "memory_id": None, "llm": last_novi.get("llm", False)}
                 else:
-                    yield {"deduplicated": True, "after": self._chat_seq, "accepted": False}
+                    yield {"deduplicated": True, "after": self._seq_for(person), "accepted": False}
                 return
             self._last_sent_text = text
             self._last_sent_time = now
-        # Hold the speaking lease while composing (replaces _chat_busy loop-freeze).
-        self.brain.acquire_speaking_lease()
+        # Hold the speaking lease for THIS addressee while composing (replaces
+        # _chat_busy loop-freeze; phase 2: scoped per sender).
+        addressee = person or self.brain.resolve_addressee(text)
+        self.brain.acquire_speaking_lease(addressee)
         try:
             with self._lock:
                 r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
@@ -916,9 +969,9 @@ class NoviWebServer(IntegrationMixin):
                 for ch in [novi_text[i:i+12] for i in range(0, len(novi_text), 12)]:
                     yield {"token": ch}
                 novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": False}
-                user_stored = self._append_chat({"role": "user", "text": text})
-                novi_stored = self._append_chat(novi)
-                yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False, "after": self._chat_seq}
+                user_stored = self._append_chat({"role": "user", "text": text}, person)
+                novi_stored = self._append_chat(novi, person)
+                yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False, "after": self._seq_for(person)}
                 return
             # Streaming path: compose_reply non-streaming, then stream the full reply
             # token-chunked (feels streaming without NDJSON complexity).
@@ -940,9 +993,9 @@ class NoviWebServer(IntegrationMixin):
                 for ch in [novi_text[i:i+16] for i in range(0, len(novi_text), 16)]:
                     yield {"token": ch}
                 novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": False}
-                user_stored = self._append_chat({"role": "user", "text": text})
-                novi_stored = self._append_chat(novi)
-                yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False, "after": self._chat_seq}
+                user_stored = self._append_chat({"role": "user", "text": text}, person)
+                novi_stored = self._append_chat(novi, person)
+                yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False, "after": self._seq_for(person)}
                 return
             # We have a full reply; stream it in small chunks to simulate token streaming
             # (true NDJSON streaming would require deeper brain integration; this chunked
@@ -958,11 +1011,11 @@ class NoviWebServer(IntegrationMixin):
             for i in range(0, len(full_reply), chunk_size):
                 yield {"token": full_reply[i:i+chunk_size]}
             novi = {"role": "novi", "text": full_reply, "trace": trace, "cycle": step.get("cycle"), "llm": True}
-            user_stored = self._append_chat({"role": "user", "text": text})
-            novi_stored = self._append_chat(novi)
-            yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": True, "after": self._chat_seq}
+            user_stored = self._append_chat({"role": "user", "text": text}, person)
+            novi_stored = self._append_chat(novi, person)
+            yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": True, "after": self._seq_for(person)}
         finally:
-            self.brain.release_speaking_lease()
+            self.brain.release_speaking_lease(addressee)
 
     def _knowledge_context(self, text: str, limit: int = 6) -> str:
         # Brain-owned grounding (docs/06-soul/07 §2); the web layer is a caller
@@ -976,13 +1029,14 @@ class NoviWebServer(IntegrationMixin):
         """Recent consolidated summary memories for chat grounding (summary recall)."""
         return self.brain._chat_memory_summaries(limit=limit)
 
-    def _append_chat(self, entry: dict[str, Any]) -> dict[str, Any]:
+    def _append_chat(self, entry: dict[str, Any], person: str = "") -> dict[str, Any]:
         with self._lock:
-            self._chat_seq += 1
-            stored = {"seq": self._chat_seq, **entry}
-            self._chat.append(stored)
-            if len(self._chat) > 200:
-                self._chat = self._chat[-200:]
+            seq = self._bump_seq(person)
+            stored = {"seq": seq, **entry}
+            thread = self._chat_thread(person)
+            thread.append(stored)
+            if len(thread) > 200:
+                self._threads[(person or "").lower()] = thread[-200:]
             # copy for persistence outside the lock to keep the lock short
             snapshot = list(self._chat)
         self._persist_chat_snapshot(snapshot)
@@ -1039,18 +1093,20 @@ class NoviWebServer(IntegrationMixin):
             snapshot = list(self._chat)
         self._persist_chat_snapshot(snapshot)
 
-    def chat(self, after: int = 0) -> dict[str, Any]:
+    def chat(self, after: int = 0, person: str = "") -> dict[str, Any]:
         with self._lock:
-            entries = [c for c in self._chat if c["seq"] > after]
-            next_after = self._chat[-1]["seq"] if self._chat else after
+            thread = self._chat_thread(person)
+            entries = [c for c in thread if c["seq"] > after]
+            next_after = thread[-1]["seq"] if thread else after
             # return copies to avoid caller mutating live list
             return {"entries": [dict(e) for e in entries], "after": next_after}
 
-    def clear_chat(self) -> dict[str, Any]:
+    def clear_chat(self, person: str = "") -> dict[str, Any]:
         """Drop the live conversation thread (durable store is updated)."""
+        key = (person or "").lower()
         with self._lock:
-            self._chat = []
-            self._chat_seq = 0
+            self._threads[key] = []
+            self._seqs[key] = 0
             self._last_summarized_len = None
             self._persist_chat()
         return {"cleared": True}
@@ -1560,7 +1616,12 @@ class Handler(BaseHTTPRequestHandler):
                 after = int(self.path.split("after=")[-1].split("&")[0])
             except Exception:  # noqa: BLE001
                 after = 0
-            self._json(self.server.novi.chat(after))
+            person = ""
+            if "person=" in self.path:
+                from urllib.parse import parse_qs, urlparse
+
+                person = parse_qs(urlparse(self.path).query).get("person", [""])[0]
+            self._json(self.server.novi.chat(after, person))
             return
         if path.startswith("/api/events"):
             after = 0
@@ -1684,7 +1745,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not text:
                     self._json({"error": "empty text"})
                     return
-                self._json({"result": novi.chat_send(text, confidence=float(data.get("confidence", 0.9)))})
+                self._json({"result": novi.chat_send(text, confidence=float(data.get("confidence", 0.9)), person=str(data.get("person", "") or ""))})
             elif path == "/api/audio":
                 self._json({"result": novi.hear_audio(event_hint=data.get("event_hint"), rms=data.get("rms", 0.6), novelty=data.get("novelty", 0.0), speech=bool(data.get("speech", False)), confidence=float(data.get("confidence", 0.0)))})
             elif path == "/api/listen":
