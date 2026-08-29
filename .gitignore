@@ -46,3 +46,6 @@ novi/data/*
 novi/web/ui/node_modules/
 novi/web/ui/dist/
 novi/web/ui/tsconfig*.tsbuildinfo
+
+# Graphify
+graphify-out/*
