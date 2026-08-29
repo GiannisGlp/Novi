@@ -283,6 +283,9 @@ class MacBrain(ChatMixin):
         self._persisted_terminal: set[str] = set()
         self.planner = planner or Planner()
         self._plans: dict[str, Plan] = {}
+        # Phase 3c: violation-driven plan revisions are throttled per goal
+        # (at most one revision per cycle) so a noisy predictor cannot churn.
+        self._replan_throttle: dict[str, int] = {}
         if isinstance(self.memory, DurableMemoryStore):
             for snap in self.memory.load_plans():
                 try:
@@ -870,6 +873,9 @@ class MacBrain(ChatMixin):
                 "cycle": self._cycle, "source": p.source, "target": p.target,
                 "kind": "sequence_violation", "confidence": round(p.confidence, 3),
             })
+            # Phase 3c: a violation may invalidate the active plan's
+            # assumptions -> fail and regenerate the plan (close the loop).
+            self._maybe_replan_for_violation(p.target, "sequence_violated")
             # Investigate the missing target when idle (surprise-driven curiosity).
             self._spawn_surprise_goal(p.target)
         for p in seq_new:
@@ -882,6 +888,8 @@ class MacBrain(ChatMixin):
         violations = self.expectations.drain_violations()
         for v in violations:
             self._emit("cognition.expectation_violation", {"cycle": self._cycle, "entity": v.entity, "kind": v.kind, "confidence": v.expectation_confidence})
+            # Phase 3c: an expectation violation revises the active plan.
+            self._maybe_replan_for_violation(v.entity, "expectation_violated")
         if violations:
             self._emit("cognition.predicted", {"cycle": self._cycle, "violations": [v.snapshot() for v in violations]})
 
@@ -1487,6 +1495,36 @@ class MacBrain(ChatMixin):
         self._emit("goal.adopted", {"goal_id": goal.goal_id, "kind": goal.kind, "target": str(goal.target), "max_steps": goal.max_steps})
         self._persist_goal(state)
         return state
+
+    def _maybe_replan_for_violation(self, target: str, kind: str) -> Plan | None | str:
+        """Phase 3c: close the prediction-error -> plan-revision loop.
+
+        When a prediction/expectation violation invalidates the active plan's
+        assumptions, the plan is marked FAILED and a fresh plan is generated
+        for the same goal (the north star's revise step). Idle brains are a
+        no-op; revisions are throttled to one per goal per cycle and audited.
+        """
+        active = self.goals.active if self.goals.has_active else None
+        if active is None:
+            return "no_active_goal"
+        goal_id = active.goal.goal_id
+        plan = self._plans.get(goal_id)
+        if plan is None or plan.status != "running":
+            return "no_running_plan"
+        if self._replan_throttle.get(goal_id, -999) >= self._cycle:
+            return "throttled"
+        self._replan_throttle[goal_id] = self._cycle
+        self.planner.fail(plan, reason=f"{kind}:{target}")
+        self._emit("plan.failed", {"goal_id": goal_id, "plan_id": plan.plan_id, "reason": f"{kind}:{target}"})
+        revised = self.replan_goal(goal_id)
+        self._emit("plan.revised", {
+            "goal_id": goal_id,
+            "failed_plan_id": plan.plan_id,
+            "new_plan_id": (revised.plan_id if revised else None),
+            "trigger": kind,
+            "target": str(target),
+        })
+        return revised
 
     def replan_goal(self, goal_id: str, *, cycle: int | None = None) -> Plan | None:
         """Rebuild a fresh plan for a goal when assumptions are invalidated."""
