@@ -16,7 +16,13 @@ DEFAULT_OLLAMA_MODEL = "qwen3:4b"
 
 
 def _summary_prompt(entity: str, records: list[Any]) -> str:
-    episodes = "\n".join(f"- {r.content if isinstance(r.content, str) else str(r.content)}" for r in records)
+    # Prompt-boundary cap: an entity can accumulate hundreds of episodic
+    # records; feeding them all verbatim made this prompt ~40K chars (~10K
+    # tokens). The most recent 20 records, 200 chars each, carries the gist.
+    recent = records[-20:]
+    episodes = "\n".join(
+        f"- {str(r.content)[:200]}" if not isinstance(r.content, str) else f"- {r.content[:200]}" for r in recent
+    )
     return (
         f"You are Novi's memory consolidator. Distill these episodic memories about '{entity}' "
         "into ONE concise, higher-level summary (2-3 sentences). Preserve the key facts and "
@@ -69,15 +75,17 @@ class LLMSummarizer:
         self.max_tokens = max_tokens
 
     def __call__(self, entity: str, records: list[Any]) -> str | None:
+        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+
         body: dict[str, Any] = {
             "model": self.model,
             "system": "You are Novi's memory consolidator. Respond ONLY with the requested JSON.",
             "prompt": _summary_prompt(entity, records),
             "format": "json",
             "stream": False,
-            "options": {"num_predict": self.max_tokens},
+            "options": {"num_predict": num_predict_for(self.model, self.max_tokens)},
         }
-        if "nemotron" in self.model.lower():
+        if disable_thinking_for(self.model):
             body["think"] = False
         request = urllib.request.Request(
             f"{self.base_url}/api/generate",

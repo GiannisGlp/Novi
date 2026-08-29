@@ -166,9 +166,10 @@ class DeliberationShrinkTests(unittest.TestCase):
             llm = s._reasoning_provider.llm
             self.assertEqual(s.deliberation_rounds, 1)
             self.assertEqual(llm.max_rounds, 1)
-            # 600 tokens (provider default) so the deliberation JSON is not
-            # truncated into a silent default `observe` (M4).
-            self.assertEqual(llm.max_tokens, 600)
+            # 300 tokens with thinking disabled on fast tiers: the
+            # analysis/options/decision JSON fits in ~220 tokens; 600 let the
+            # model ramble at ~30 tok/s (~20s per chat turn).
+            self.assertEqual(llm.max_tokens, 300)
             self.assertEqual(llm.timeout, 30)
         finally:
             s.stop()

@@ -136,8 +136,12 @@ class SummaryConsolidator:
     def _summarize(entity: str, records: list[Any]) -> str:
         seen: set[str] = set()
         parts: list[str] = []
-        for record in sorted(records, key=lambda r: r.created_at):
+        # Deterministic summaries must stay bounded: the 39K-char blobs in the
+        # live store came from concatenating EVERY record verbatim. Keep the
+        # most recent 10 records, 300 chars each.
+        for record in sorted(records, key=lambda r: r.created_at)[-10:]:
             content = record.content if isinstance(record.content, str) else str(record.content)
+            content = content[:300]
             if content in seen:
                 continue
             seen.add(content)

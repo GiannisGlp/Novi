@@ -150,6 +150,8 @@ class DeliberativeLLMReasoningProvider:
         return ActionIntent(action=action, parameters=parameters, rationale=rationale)
 
     def _invoke(self, user_prompt: str) -> str:
+        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+
         system = "You are Novi's bounded deliberative reasoner. Respond ONLY with the requested JSON."
         body: dict[str, Any] = {
             "model": self.model,
@@ -157,9 +159,9 @@ class DeliberativeLLMReasoningProvider:
             "prompt": user_prompt,
             "format": "json",
             "stream": False,
-            "options": {"num_predict": self.max_tokens},
+            "options": {"num_predict": num_predict_for(self.model, self.max_tokens)},
         }
-        if "nemotron" in self.model.lower():
+        if disable_thinking_for(self.model):
             body["think"] = False
         request = urllib.request.Request(
             f"{self.base_url}/api/generate",

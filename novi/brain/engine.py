@@ -103,7 +103,11 @@ class MacBrainConfig:
     llm_triples_enabled: bool = False
     skill_dirs: tuple[str, ...] = ()  # extra user skill directories (~/.novi/skills)
     consolidation_enabled: bool = True
-    consolidation_every: int = 1
+    # Consolidation is a maturation pass, not a per-cycle event: with the web
+    # server's 0.8s auto-step, every=1 fired a ~40K-char LLM summarizer prompt
+    # EVERY cycle (permanent GPU saturation, 500s, wedged endpoints). 50 cycles
+    # (~40s) keeps memory maturing while leaving the LLM free for chat/reasoning.
+    consolidation_every: int = 50
     consolidation_config: ConsolidationConfig = field(default_factory=ConsolidationConfig)
     initiative_enabled: bool = False
     initiative_neglect_threshold: int = 30

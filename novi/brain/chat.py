@@ -17,6 +17,11 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+# Prompt-budget cap for the in-prompt skill listing (see _compose_reply_impl).
+# Deterministic skill matching sees the full catalog; only the LLM-facing
+# listing is trimmed so replies don't prefill ~1K tokens of skill descriptions.
+MAX_SKILL_LISTING = 10
+
 from .context_assembler import ContextRequest
 from .dialogue import (
     _extract_self_name,
@@ -226,7 +231,7 @@ class ChatMixin:
         memories = [
             {
                 "memory_type": record.memory_type,
-                "content": record.content,
+                "content": str(record.content)[:300],
                 "confidence": record.confidence,
                 "entity_refs": list(record.entity_refs),
             }
@@ -261,7 +266,9 @@ class ChatMixin:
         """Reconstruct a short narrative from recent episodic memories (Memory 2.0).
 
         When an LLM narrator is available it writes a natural "what happened"
-        recap; otherwise a deterministic concatenation is used.
+        recap; otherwise a deterministic concatenation is used. The narrator is
+        an LLM call, so it is CACHED until new episodes arrive — with the web
+        server's 0.8s auto-step it must not fire on every cycle.
         """
         try:
             rows = self.memory.active_rows()
@@ -271,6 +278,9 @@ class ChatMixin:
         episodic.sort(key=lambda r: r.created_at)
         recent = episodic[-limit:]
         if self.narrator is not None and recent:
+            newest_id = getattr(recent[-1], "memory_id", None)
+            if getattr(self, "_narrative_cache", None) is not None and getattr(self, "_narrative_sig", None) == newest_id:
+                return self._narrative_cache
             episodes = [
                 {"memory_type": r.memory_type, "content": r.content if isinstance(r.content, str) else str(r.content)}
                 for r in recent
@@ -278,10 +288,12 @@ class ChatMixin:
             try:
                 narrative = self.narrator(episodes)
                 if narrative:
-                    return [narrative]
+                    self._narrative_cache = [narrative]
+                    self._narrative_sig = newest_id
+                    return self._narrative_cache
             except Exception:  # noqa: BLE001 - narrator is best-effort
                 pass
-        return [f"{r.memory_type}: {r.content if isinstance(r.content, str) else str(r.content)}" for r in recent]
+        return [f"{r.memory_type}: {str(r.content)[:300]}" for r in recent]
 
     def speak(self, text: str, *, person: str = "") -> None:
         tone = self.soul.tone()
@@ -323,14 +335,21 @@ class ChatMixin:
             return []
 
     def _chat_memory_summaries(self, limit: int = 3) -> list[str]:
-        """Recent consolidated summary memories for chat grounding (summary recall)."""
+        """Recent consolidated summary memories for chat grounding (summary recall).
+
+        Content is capped at 400 chars per summary at the PROMPT boundary:
+        consolidated summaries can run tens of thousands of characters (the
+        sleep cycle concatenates), which previously ballooned every LLM call to
+        ~4K tokens of prefill (~10s). Storage keeps the full text; the model
+        only needs the gist.
+        """
         try:
             rows = self.memory.active_rows()
         except Exception:  # noqa: BLE001
             return []
         summaries = [r["record"] for r in rows if r["record"].memory_type in {"summary", "conversation_summary"}]
         summaries.sort(key=lambda r: r.created_at, reverse=True)
-        return [s.content for s in summaries[:limit]]
+        return [str(s.content)[:400] for s in summaries[:limit]]
 
     def _learn_from_chat(self, text: str, person: str = "") -> list[tuple[str, str]]:
         """Learn durable preferences from what the user says (pattern learning).
@@ -953,7 +972,7 @@ class ChatMixin:
                 facts.append(triple)
         if topic_hint:
             facts.append(f"(Continuing the conversation about: {topic_hint})")
-        pkg_summaries = [str((m.get("data") or {}).get("content") or "") for m in memory_items]
+        pkg_summaries = [str((m.get("data") or {}).get("content") or "")[:400] for m in memory_items]
         pkg_summaries = [s for s in pkg_summaries if s]
         facts.extend(pkg_summaries[:3] if pkg_summaries else self._chat_memory_summaries())
         narrative = self._episodic_narrative()
@@ -987,7 +1006,12 @@ class ChatMixin:
         # line, which the engine parses and executes deterministically.
         runnable_skills = [c for c in self.skills.catalog() if c["kind"] in ("script", "hybrid")] if getattr(self, "skills", None) else []
         if runnable_skills:
-            listing = "; ".join(f"{c['name']} — {c['description'][:70]}" for c in runnable_skills)
+            # Prompt-budget cap: the full catalog can be 60+ skills (~1K tokens of
+            # prefill per reply). Deterministic matching still sees everything;
+            # only the in-prompt listing is trimmed. @skill parsing below still
+            # validates against the FULL catalog.
+            listed = runnable_skills[:MAX_SKILL_LISTING]
+            listing = "; ".join(f"{c['name']} — {c['description'][:70]}" for c in listed)
             system += (
                 " Exact-computation skills you can run: " + listing + ". "
                 "If running one would answer the user precisely (math, unit conversion, symbolic work), "

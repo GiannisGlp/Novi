@@ -444,14 +444,14 @@ class NoviWebServer(IntegrationMixin):
 
             # Single-round deliberation for the web path: one /api/generate call
             # (30s cap) instead of the multi-round critique loop, so a chat turn
-            # never blocks the server for minutes. max_tokens=600 (the provider
-            # default) so the analysis/options/decision JSON is not truncated —
-            # a truncated response silently degrades to the default `observe` (M4).
+            # never blocks the server for minutes. max_tokens=300 with thinking
+            # disabled on fast tiers: the analysis/options/decision JSON fits in
+            # ~220 tokens; 600 let the model ramble at ~30 tok/s (~20s/turn).
             llm = DeliberativeLLMReasoningProvider(
                 model=self.llm_model,
                 base_url=self.llm_url,
                 max_rounds=self.deliberation_rounds,
-                max_tokens=600,
+                max_tokens=300,
                 timeout=30,
             )
             if mode == "router":
@@ -546,8 +546,11 @@ class NoviWebServer(IntegrationMixin):
         so Novi doesn't think the user addressed 'the system' or a 'heard' marker."""
         return re.sub(r"^\s*\[heard\]\s*", "", text)
 
-    def _build_history(self, limit: int = 12) -> list[dict[str, Any]]:
-        return [{"role": c["role"], "text": self._clean_chat_text(c["text"])} for c in self._chat[-limit:]]
+    def _build_history(self, limit: int = 6) -> list[dict[str, Any]]:
+        # Capped turns AND per-turn text: history rides inside the LLM prompt
+        # (user_payload.conversation_so_far), so unbounded turns inflate prefill
+        # time on every reply. 6 turns × 240 chars keeps context without the cost.
+        return [{"role": c["role"], "text": self._clean_chat_text(c["text"])[:240]} for c in self._chat[-limit:]]
 
     def _recent_novi(self, limit: int = 4) -> list[str]:
         return [self._clean_chat_text(c["text"]) for c in reversed(self._chat) if c.get("role") == "novi"][:limit]
@@ -621,7 +624,7 @@ class NoviWebServer(IntegrationMixin):
             # supplies conversation history and the LLM transport; the brain's
             # respond() detects the addressee, learns from the message, and
             # composes the reply (or the deterministic fallback) in one call.
-            history = self._build_history(12)
+            history = self._build_history(6)
             recent_novi = self._recent_novi(4)
             last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
             transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
@@ -686,7 +689,7 @@ class NoviWebServer(IntegrationMixin):
             # resolves the addressee, learns from the message, and composes the
             # natural reply (or the deterministic fallback) in one call. The web
             # layer only supplies conversation history and the LLM transport.
-            history = self._build_history(12)
+            history = self._build_history(6)
             recent_novi = self._recent_novi(4)
             last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
             transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
@@ -782,17 +785,19 @@ class NoviWebServer(IntegrationMixin):
                 fast.model = self.llm_model  # type: ignore[attr-defined]
 
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
-        options: dict[str, Any] = {"temperature": temperature, "num_predict": 512}
+        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+
+        options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 160)}
         payload: dict[str, Any] = {
             "model": self.llm_model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "stream": False,
             "options": options,
         }
-        if "nemotron" in self.llm_model.lower():
-            # NVIDIA Nemotron 3.5 Lightning is a chain-of-thought model; set the
-            # top-level `think:false` so chat replies are instant instead of
-            # exhausting the token budget mid-thought (empty content field).
+        if disable_thinking_for(self.llm_model):
+            # Fast tiers (qwen3:4b/8b, nemotron) answer directly instead of
+            # exhausting the token budget mid-thought; the heavy-thinking tier
+            # (qwen3.8:27b) keeps its chain-of-thought (user tiering).
             payload["think"] = False
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
@@ -811,14 +816,16 @@ class NoviWebServer(IntegrationMixin):
 
     def _llm_chat_stream(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120):
         """Yield token deltas from Ollama with stream=True (SSE-like)."""
-        options: dict[str, Any] = {"temperature": temperature, "num_predict": 512}
+        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+
+        options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 160)}
         payload: dict[str, Any] = {
             "model": self.llm_model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "stream": True,
             "options": options,
         }
-        if "nemotron" in self.llm_model.lower():
+        if disable_thinking_for(self.llm_model):
             payload["think"] = False
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
@@ -888,7 +895,7 @@ class NoviWebServer(IntegrationMixin):
                 heard_conf = r["confidence"]
                 step = self.brain.step()
                 trace = dict(self.brain._last_reasoning_trace)
-            history = self._build_history(12)
+            history = self._build_history(6)
             addressee = self.brain.resolve_addressee(text)
             discourse_hint = self.brain.note_user_message(text)["resolved_topic"]
             self.brain._learn_from_chat(text, addressee)
@@ -1504,6 +1511,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/model":
             self._json(self.server.novi.model())
+            return
+        if path == "/api/health":
+            self._json({"result": self.server.novi.health()})
             return
         if path == "/api/attention":
             self._json(self.server.novi.attention())

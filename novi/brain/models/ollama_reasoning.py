@@ -11,6 +11,27 @@ DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "qwen3:4b"
 
 
+def disable_thinking_for(model: str) -> bool:
+    """True when the model's chain-of-thought should be disabled.
+
+    Fast tiers (qwen3:4b, qwen3:8b, nemotron-3.5-lightning) answer directly;
+    qwen3.8:27b is the heavy-thinking tier and keeps its reasoning (user
+    tiering, 2026-08-29).
+    """
+    m = (model or "").lower()
+    return (m.startswith("qwen3:") or "nemotron" in m) and not m.startswith("qwen3.8")
+
+
+def num_predict_for(model: str, fast_budget: int) -> int:
+    """Completion token budget: 3x (min 1200) for the heavy-thinking tier.
+
+    qwen3.8:27b needs room to think AND answer; fast tiers keep their budget.
+    """
+    if (model or "").lower().startswith("qwen3.8"):
+        return max(int(fast_budget) * 3, 1200)
+    return int(fast_budget)
+
+
 def _ollama_backend_fn(*, base_url: str, model: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
     """Return a callable that runs a single-shot JSON completion via Ollama."""
 
@@ -28,12 +49,11 @@ def _ollama_backend_fn(*, base_url: str, model: str) -> Callable[[dict[str, Any]
             "prompt": user,
             "format": "json",
             "stream": False,
-            "options": {"num_predict": 400},
+            "options": {"num_predict": num_predict_for(model, 400)},
         }
-        if "nemotron" in model.lower():
-            # Nemotron 3.5 Lightning is a chain-of-thought model; disable thinking
-            # (top-level) so the structured decision is returned directly instead of
-            # sitting in the `thinking` field.
+        if disable_thinking_for(model):
+            # Fast tiers (qwen3:4b/8b, nemotron) answer directly; the
+            # heavy-thinking tier (qwen3.8:27b) keeps its chain-of-thought.
             body["think"] = False
         request = urllib.request.Request(f"{base_url}/api/generate", data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(request, timeout=60) as response:
