@@ -18,7 +18,7 @@ import pytest
 from novi.brain.agent import BrainDriver
 from novi.brain.io import CameraFrame
 from novi.integration.multimodal import MultimodalRuntime
-from novi.integration.recognition_store import RecognitionStore
+from novi.integration.recognition_store import RecognitionKind, RecognitionStore
 from novi.perception.detection import DeterministicObjectDetector
 from novi.perception.faces import FaceIdentifier
 
@@ -57,6 +57,38 @@ def _runtime(
 
 def _of_kind(events, kind):
     return [e for e in events if e["kind"] == kind]
+
+
+class TestDurableFaceRecall:
+    """Issue 5: durable face recall must reuse placeholders across sessions.
+
+    The SFace embedder scores same-person cosine ~0.40-0.80, so the durable
+    store's 0.90 default never matched → every restart minted a fresh
+    new-person-N and conversational naming never stuck. The recall threshold
+    must follow the in-memory matcher's calibrated tau.
+    """
+
+    def test_placeholder_recalled_after_restart_at_calibrated_threshold(self, tmp_path):
+        store = RecognitionStore(tmp_path / "rec.db")
+        faces = FaceIdentifier(tau_match=0.5, tau_ambig=0.30)
+        rt = MultimodalRuntime(
+            driver=BrainDriver(), detector=DeterministicObjectDetector(scripted={}),
+            face_identifier=faces, recognition=store,
+        )
+        rt.process_camera_frame(_frame("f1"), face_embedding=[1.0, 0.0])
+        assert rt.current_person == "new-person-1"
+
+        # "Restart": fresh in-memory matcher, SAME durable store. The same face
+        # (noisy, cosine 0.6 with [1,0]) must recall the placeholder.
+        faces2 = FaceIdentifier(tau_match=0.5, tau_ambig=0.30)
+        rt2 = MultimodalRuntime(
+            driver=BrainDriver(), detector=DeterministicObjectDetector(scripted={}),
+            face_identifier=faces2, recognition=store,
+        )
+        rt2.process_camera_frame(_frame("f2"), face_embedding=[0.6, 0.8])
+        assert rt2.current_person == "new-person-1", "durable recall must reuse the placeholder"
+        labels = [e["label"] for e in store.all(RecognitionKind.FACE)]
+        assert sum(l == "new-person-1" for l in labels) == 1, "no duplicate placeholder"
 
 
 class TestPresenceTransitions:

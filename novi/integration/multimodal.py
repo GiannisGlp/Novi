@@ -361,7 +361,16 @@ class MultimodalRuntime:
         and that ref triggers the conversational "what's your name?" ask.
         """
         if self.recognition is not None:
-            m = self.recognition.match(RecognitionKind.FACE, embedding)
+            # Durable recall must use the SAME threshold as the in-memory
+            # matcher (issue 5): the SFace embedder scores same-person cosine
+            # ~0.40-0.80, so the store's 0.90 default never matched → every
+            # session re-enrolled a fresh new-person-N and learned names
+            # "forgot" the person. self.faces.tau_match is the calibrated tau
+            # (0.42 real SFace pipeline / 0.90 deterministic fallback).
+            m = self.recognition.match(
+                RecognitionKind.FACE, embedding,
+                min_similarity=getattr(self.faces, "tau_match", 0.90),
+            )
             if m is not None:
                 if self.faces is not None:
                     internal_pid = self.faces.enroll(m.label, embedding, frame_id=frame_id or "recall")

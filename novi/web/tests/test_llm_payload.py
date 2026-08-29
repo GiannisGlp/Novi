@@ -92,6 +92,13 @@ class HealthHttpGetTests(unittest.TestCase):
             payload = json.loads(resp.read())
         self.assertIn("status", payload["result"])
 
+    def test_get_recognition_proposals_returns_200(self) -> None:
+        """Issue 9: the React Perception page polls this via GET (was 404)."""
+        with urllib.request.urlopen(f"http://127.0.0.1:{self._port}/api/recognition/proposals", timeout=10) as resp:
+            self.assertEqual(resp.status, 200)
+            payload = json.loads(resp.read())
+        self.assertIn("proposals", payload["result"])
+
 
 if __name__ == "__main__":
     unittest.main()

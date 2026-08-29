@@ -1651,6 +1651,12 @@ class Handler(BaseHTTPRequestHandler):
                 kind = qs.get("kind", [None])[0]
             self._json(novi.recognition_list(kind) if novi.mm_runtime else {"error": "integration unavailable"})
             return
+        if path == "/api/recognition/proposals":
+            # The React UI polls this via GET (issue 9: it was POST-only →
+            # 404 → the Perception page's proposal poll errored and broke the
+            # page). POST remains supported for symmetry.
+            self._json({"result": novi.proposal_list()} if novi.mm_runtime else {"error": "integration unavailable"})
+            return
         if path == "/api/preview":
             self._json(novi.preview_frame() if novi.mm_runtime else {"error": "integration unavailable"})
             return
