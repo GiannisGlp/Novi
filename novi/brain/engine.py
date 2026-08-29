@@ -14,6 +14,7 @@ from novi.brain.b2_perception import PerceptionEvidence, SpecialistPerception
 from novi.brain.runtime import ActionProposal as RuntimeActionProposal
 from novi.brain.runtime import BrainSupervisor, Lifecycle
 
+from .actuator_boundary import ActuatorBoundary
 from .attention import AttentionRanker
 from .audio import AudioFrame, Hearing
 from .autonomy import BoundedGoalController, Goal, GoalState, GoalStatus
@@ -178,6 +179,7 @@ class MacBrain(ChatMixin):
         perception_pipeline: Any | None = None,
         safety_policy: Any | None = None,
         safety_monitor: Any | None = None,
+        actuator_boundary: Any | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -228,6 +230,10 @@ class MacBrain(ChatMixin):
         # approved action can be interrupted when the world turns unsafe.
         self.safety_policy = safety_policy or SafetyPolicy(default_engine_safety_invariants())
         self.safety_monitor = safety_monitor or RuntimeSafetyMonitor(default_engine_safety_invariants())
+        # Phase 2c: the physical authority boundary — the engine never calls
+        # body.execute() except through a compiled, expiring actuator command
+        # (allow-list + parameter bounds + one command per cycle + TTL).
+        self.actuator_boundary = actuator_boundary or ActuatorBoundary()
         self.multi_speed = MultiSpeedRuntime()
         self.closed_loop = ClosedLoopRuntime()
         self._last_attention_candidates: list[dict[str, Any]] = []
@@ -646,6 +652,10 @@ class MacBrain(ChatMixin):
         if self.camera is None:
             raise RuntimeError("camera provider is not configured")
         self._cycle += 1
+        # Phase 2c: watchdog pass — expire stale actuator commands so nothing
+        # stays "authorized" invisibly (each expiry is auditable).
+        for _expired in self.actuator_boundary.watch(cycle=self._cycle):
+            self._emit("actuator.expired", {"cycle": self._cycle, **_expired})
         # Unified input architecture (north star §4.3): drain queued inputs
         # FIRST so every source — chat, voice, presence events, CLI — flows
         # through this one cognition loop. Speech/interrupt inputs are ingested
@@ -1166,6 +1176,64 @@ class MacBrain(ChatMixin):
                 self._apply_resource_adaptation()
 
         if authorized:
+            # Phase 2c: physical authority boundary — the raw proposal never
+            # reaches the body. It is compiled into a bounded, expiring
+            # actuator command (allow-list, parameter bounds, one command per
+            # cycle); a refusal here is final for this cycle.
+            compiled = self.actuator_boundary.compile(
+                action=action,
+                parameters=parameters,
+                risk_class=risk_class,
+                source="deterministic",
+                cycle=self._cycle,
+                correlation_id=proposal.correlation_id,
+            )
+            if compiled.command is None:
+                authorized = False
+                actuator_command = None
+                actuator_rejection = compiled.rejection or "UNKNOWN"
+                self._emit("actuator.rejected", {
+                    "cycle": self._cycle,
+                    "action": action,
+                    "rejection": actuator_rejection,
+                    "reason": compiled.reason,
+                    "parameters": dict(parameters),
+                })
+                self.audit_trail.record(
+                    correlation_id=self._cycle_correlation_id,
+                    action=action,
+                    decision_reason=f"actuator_boundary: {compiled.reason}",
+                    policy_result=f"REJECTED:{actuator_rejection}",
+                    safety_result="blocked_by_actuator_boundary",
+                    outcome="not_executed",
+                    goal_id=self.goals.active.goal.goal_id if self.goals.has_active else "",
+                    action_id=proposal.correlation_id,
+                    actor="actuator_boundary",
+                    version="mac-brain",
+                )
+            else:
+                actuator_command = compiled.command
+                actuator_rejection = None
+                self._emit("actuator.compiled", {
+                    "cycle": self._cycle,
+                    "command_id": actuator_command.command_id,
+                    "action": actuator_command.action,
+                    "expires_cycle": actuator_command.expires_cycle,
+                })
+                # Expiry gate: an authorization that outlived its ttl cannot
+                # reach the actuator (watchdog semantics at the chokepoint).
+                if not self.actuator_boundary.is_live(actuator_command, cycle=self._cycle):
+                    authorized = False
+                    actuator_command = None
+                    actuator_rejection = "EXPIRED"
+                    self._emit("actuator.rejected", {
+                        "cycle": self._cycle, "action": action,
+                        "rejection": "EXPIRED", "reason": "command validity window elapsed",
+                    })
+        else:
+            actuator_command = None
+            actuator_rejection = None
+        if authorized:
             outcome = self.brain.execute(proposal, decision)
             virtual_state = self.body.execute(action, **parameters)
             # Phase 2a: RuntimeSafetyMonitor — safety CONTINUES while the
@@ -1355,6 +1423,12 @@ class MacBrain(ChatMixin):
             "initiative": initiative,
             "autonomous": autonomous,
             "grounding": grounding,
+            "actuator": {
+                "command_id": actuator_command.command_id if actuator_command else None,
+                "expires_cycle": actuator_command.expires_cycle if actuator_command else None,
+                "rejection": actuator_rejection,
+                "boundary": self.actuator_boundary.snapshot(),
+            },
             "safety": {
                 "decision": safety_decision.decision,
                 "allowed": safety_allowed,
@@ -2201,7 +2275,39 @@ class MacBrain(ChatMixin):
             "action": pending["action"],
             "reason": "confirmed_by_user_or_operator",
         })
-        # Execute the confirmed action through the same brain + body path.
+        # Execute the confirmed action through the same brain + body path —
+        # still compiled through the physical authority boundary (Phase 2c):
+        # a grant that expired or commands an out-of-envelope action dies here.
+        compiled = self.actuator_boundary.compile(
+            action=str(pending["action"]),
+            parameters=dict(pending.get("parameters") or {}),
+            risk_class=str(pending.get("risk_class") or "R1"),
+            source="confirmed",
+            cycle=self._cycle,
+            correlation_id=str(pending.get("proposal_id") or ""),
+        )
+        if compiled.command is None:
+            self._emit("actuator.rejected", {
+                "cycle": self._cycle,
+                "action": pending["action"],
+                "rejection": compiled.rejection,
+                "reason": compiled.reason,
+                "stage": "confirmation",
+            })
+            return False
+        if not self.actuator_boundary.is_live(compiled.command, cycle=self._cycle):
+            self._emit("actuator.rejected", {
+                "cycle": self._cycle, "action": pending["action"],
+                "rejection": "EXPIRED", "reason": "confirmed command issued past its validity window",
+            })
+            return False
+        self._emit("actuator.compiled", {
+            "cycle": self._cycle,
+            "command_id": compiled.command.command_id,
+            "action": compiled.command.action,
+            "expires_cycle": compiled.command.expires_cycle,
+            "stage": "confirmation",
+        })
         outcome = self.brain.execute(pending["proposal"], pending["decision"])
         virtual_state = self.body.execute(pending["action"], **pending["parameters"])
         self._emit("action.completed", {
@@ -2211,6 +2317,9 @@ class MacBrain(ChatMixin):
             "governance_allowed": True,
             "governance_decision": "ALLOW",
             "awaiting_confirmation": False,
+            "safety": {"decision": "ALLOW", "allowed": True, "reason": "confirmed", "violated": [], "interrupted": False},
+            "safety_interrupted": False,
+            "actuator": {"command_id": compiled.command.command_id, "rejection": None},
             "skill_passed": True,
             "skill_invoked": False,
             "outcome": outcome.detail,

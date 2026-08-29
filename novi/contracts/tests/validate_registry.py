@@ -28,9 +28,10 @@ def main() -> int:
 
     # 18 system/memory/autonomy/safety/execution/brain/hardware/deployment
     # + 7 cognition contracts (gap-analysis Step 1)
-    # + 10 autonomy contracts (06_AUTONOMY doc 01 contract freeze) = 35.
-    if len(contracts) != 35:
-        failures.append(f"registry contains {len(contracts)} contracts; expected 35")
+    # + 10 autonomy contracts (06_AUTONOMY doc 01 contract freeze)
+    # + 1 actuator-command (Phase 2c physical authority boundary) = 36.
+    if len(contracts) != 36:
+        failures.append(f"registry contains {len(contracts)} contracts; expected 36")
 
     seen_ids: set[str] = set()
     seen_names: set[str] = set()

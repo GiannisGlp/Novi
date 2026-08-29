@@ -38,8 +38,8 @@ def main() -> int:
         failures.append("compatibility matrix must declare a global 'policy'")
         expected_policy = "major-stable"
 
-    if len(entries) != 35:
-        failures.append(f"expected 35 registered contracts, found {len(entries)}")
+    if len(entries) != 36:
+        failures.append(f"expected 36 registered contracts, found {len(entries)}")
 
     # Declared 1.x -> 1.x compatible and 1.x -> 2.x breaking rules from the matrix.
     rules = {tuple([int(r.get("from_major")), int(r.get("to_major"))]): r.get("compatible")
