@@ -61,6 +61,11 @@ from .planner import Plan, Planner
 from .privacy import _PERSON_LABELS, COMMON_ENTITY_LABELS, PrivacyGovernance
 from .reflection import ReflectionEngine
 from .resource_telemetry import ResourceTelemetry, combine_resource_modes
+from .safety_policy import (
+    RuntimeSafetyMonitor,
+    SafetyPolicy,
+    default_engine_safety_invariants,
+)
 from .salience import EventSaliencePolicy, SurgeSalienceEvaluator
 from .self_model import build_self_model
 from .situation_model import SituationModel
@@ -169,6 +174,8 @@ class MacBrain(ChatMixin):
         telemetry: ResourceTelemetry | None = None,
         embedder: Any | None = None,
         perception_pipeline: Any | None = None,
+        safety_policy: Any | None = None,
+        safety_monitor: Any | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -203,6 +210,13 @@ class MacBrain(ChatMixin):
         self.context_assembler = ContextAssembler()
         self.attention_ranker = AttentionRanker()
         self.governance_guard = governance_guard or GovernanceGuard()
+        # Phase 2a (north-star gap analysis): the deterministic safety gate
+        # (doc 08) is now part of the production action path — proposals are
+        # evaluated by SafetyPolicy before skill invocation/execution, and
+        # RuntimeSafetyMonitor surrounds body.execute() so a previously
+        # approved action can be interrupted when the world turns unsafe.
+        self.safety_policy = safety_policy or SafetyPolicy(default_engine_safety_invariants())
+        self.safety_monitor = safety_monitor or RuntimeSafetyMonitor(default_engine_safety_invariants())
         self.multi_speed = MultiSpeedRuntime()
         self.closed_loop = ClosedLoopRuntime()
         self._last_attention_candidates: list[dict[str, Any]] = []
@@ -1042,14 +1056,74 @@ class MacBrain(ChatMixin):
                 "reason": gov_grant.reason,
             })
 
-        # Action executes only if BOTH the brain authorizes AND the governance guard allows.
-        authorized = decision.authorized and governance_allowed
+        # Phase 2a: deterministic safety gate (doc 08) — the model and the
+        # governance guard have spoken; the safety authority still evaluates
+        # invariants + risk from world state before anything executes. Its
+        # decision is computed here, never from model output (A-SAFE-01).
+        safety_state = self._safety_world_state()
+        safety_decision = self.safety_policy.evaluate(
+            {"action": action, "risk_class": risk_class},
+            safety_state,
+        )
+        safety_allowed = safety_decision.allowed and safety_decision.decision != "STOP"
+        self._emit("safety.evaluated", {
+            "cycle": self._cycle,
+            "action": action,
+            "decision": safety_decision.decision,
+            "allowed": safety_allowed,
+            "reason": safety_decision.reason,
+            "risk_class": safety_decision.risk_class or risk_class,
+            "violated": list(safety_decision.violated_invariants),
+        })
+        awaiting_safety_approval = False
+        if safety_decision.decision == "STOP":
+            # A STOP verdict is the e-stop form: latch the machine and hold.
+            authorized = False
+            t_stop = self.autonomy_sm.emergency_stop(timestamp=datetime.now(timezone.utc).isoformat())
+            self._emit("autonomy.transition", {"cycle": self._cycle, **t_stop.snapshot()})
+        elif not safety_decision.allowed:
+            authorized = False
+            self._emit("safety.blocked", {
+                "cycle": self._cycle,
+                "action": action,
+                "reason": safety_decision.reason,
+                "violated": list(safety_decision.violated_invariants),
+            })
+        elif safety_decision.decision == "MODIFY" and "approval" in safety_decision.reason:
+            # MODIFY-with-approval-required routes into the same hold-for-
+            # confirmation flow the governance guard uses (never silently
+            # treated as a denial, never executed without the grant).
+            awaiting_safety_approval = True
+            authorized = False
+            self._pending_confirmations[safety_decision.decision_id] = {
+                "grant_id": safety_decision.decision_id,
+                "proposal_id": proposal.correlation_id,
+                "action": action,
+                "parameters": dict(parameters),
+                "risk_class": risk_class,
+                "reason": safety_decision.reason,
+                "cycle": self._cycle,
+                "proposal": proposal,
+                "decision": decision,
+                "source": "safety_policy",
+            }
+            self._emit("safety.confirmation_required", {
+                "cycle": self._cycle,
+                "grant_id": safety_decision.decision_id,
+                "proposal_id": proposal.correlation_id,
+                "action": action,
+                "reason": safety_decision.reason,
+            })
+
+        # Action executes only if the brain authorizes AND the governance guard
+        # allows AND the safety authority permits.
+        authorized = decision.authorized and governance_allowed and safety_allowed
 
         # Skill contract: invoke the formal skill contract for this action.
         # If the skill's preconditions aren't met, the action is skipped.
-        # Actions held for confirmation are not invoked yet.
+        # Actions held for confirmation (governance or safety) are not invoked yet.
         skill_invocation = None
-        if not awaiting_confirmation:
+        if not (awaiting_confirmation or awaiting_safety_approval):
             skill_invocation = self._invoke_skill_for_action(action, parameters, goal_was_active)
         skill_passed = True
         if skill_invocation is not None:
@@ -1076,6 +1150,33 @@ class MacBrain(ChatMixin):
         if authorized:
             outcome = self.brain.execute(proposal, decision)
             virtual_state = self.body.execute(action, **parameters)
+            # Phase 2a: RuntimeSafetyMonitor — safety CONTINUES while the
+            # action executes (doc 08 §5): a previously approved action that
+            # became unsafe is interrupted (fail closed) and the machine
+            # latches to emergency stop.
+            monitor_safe, monitor_reason = self.safety_monitor.check(
+                {"action": action}, self._safety_world_state(), cycle=self._cycle,
+            )
+            safety_interrupted = not monitor_safe
+            if safety_interrupted:
+                t_int = self.autonomy_sm.emergency_stop(timestamp=datetime.now(timezone.utc).isoformat())
+                self._emit("autonomy.transition", {"cycle": self._cycle, **t_int.snapshot()})
+                self._emit("safety.interrupted", {
+                    "cycle": self._cycle,
+                    "action": action,
+                    "reason": monitor_reason,
+                })
+                self.failure_handler.report_failure(
+                    PERCEPTION_UNCERTAINTY,
+                    severity="critical",
+                    component="safety_monitor",
+                    message=f"execution_interrupted: {monitor_reason}",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                )
+                self._emit("failure.detected", {
+                    "cycle": self._cycle, "component": "safety_monitor",
+                    "message": f"execution_interrupted: {monitor_reason}", "severity": "critical",
+                })
             # Autonomy state machine: → EXECUTING.
             now_sm3 = datetime.now(timezone.utc).isoformat()
             if self.autonomy_sm.state in (ASMState.PLANNING, ASMState.AWARE):
@@ -1083,6 +1184,7 @@ class MacBrain(ChatMixin):
                 self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         else:
             outcome = None
+            safety_interrupted = False
             virtual_state = self.body.snapshot()
         self._emit("action.completed", {
             "action": action,
@@ -1090,12 +1192,14 @@ class MacBrain(ChatMixin):
             "brain_authorized": decision.authorized,
             "governance_allowed": governance_allowed,
             "governance_decision": gov_grant.decision,
-            "awaiting_confirmation": awaiting_confirmation,
+            "awaiting_confirmation": awaiting_confirmation or awaiting_safety_approval,
+            "safety": safety_decision.snapshot(),
+            "safety_interrupted": safety_interrupted,
             "skill_passed": skill_passed,
             "skill_invoked": skill_invocation is not None,
             "outcome": (outcome.detail if outcome else
-                        ("awaiting_confirmation" if awaiting_confirmation else
-                         (decision.reason if not decision.authorized else gov_grant.reason))),
+                        ("awaiting_confirmation" if (awaiting_confirmation or awaiting_safety_approval) else
+                         (decision.reason if not decision.authorized else (gov_grant.reason if not gov_grant.is_allowed else safety_decision.reason)))),
             "virtual_body": virtual_state,
         })
         # Persistent decision audit trace (doc 13): record the consequential
@@ -1106,8 +1210,12 @@ class MacBrain(ChatMixin):
             action=action,
             decision_reason=reason,
             policy_result=gov_grant.decision if not gov_grant.is_allowed else f"ALLOW:{risk_class}",
-            safety_result="executed" if authorized else ("held" if awaiting_confirmation else "blocked"),
-            outcome=outcome.detail if outcome else ("held" if awaiting_confirmation else "not_executed"),
+            safety_result=(
+                "executed" if authorized else
+                ("held" if (awaiting_confirmation or awaiting_safety_approval) else
+                 ("blocked_by_safety:" + safety_decision.reason if not safety_allowed else "blocked"))
+            ),
+            outcome=outcome.detail if outcome else ("held" if (awaiting_confirmation or awaiting_safety_approval) else "not_executed"),
             goal_id=self.goals.active.goal.goal_id if self.goals.has_active else "",
             action_id=proposal.correlation_id,
             actor="runtime",
@@ -1229,6 +1337,14 @@ class MacBrain(ChatMixin):
             "initiative": initiative,
             "autonomous": autonomous,
             "grounding": grounding,
+            "safety": {
+                "decision": safety_decision.decision,
+                "allowed": safety_allowed,
+                "reason": safety_decision.reason,
+                "risk_class": safety_decision.risk_class or risk_class,
+                "violated": list(safety_decision.violated_invariants),
+                "interrupted": safety_interrupted,
+            },
             "temporal": {"expected": temporal_expected, "top_links": [link.snapshot() for link in self.temporal.top_links(limit=3)]},
             "fusion": fused_reported,
             "knowledge": self.knowledge.counts(),
@@ -1824,6 +1940,29 @@ class MacBrain(ChatMixin):
     # movement actions are R1 (reversible digital) not R3 (physical movement).
     _R0_ACTIONS = frozenset({"wait", "observe", "stop", "idle"})
     _R1_ACTIONS = frozenset({"speak", "move_forward", "turn_left", "turn_right"})
+
+    def _safety_world_state(self) -> dict[str, Any]:
+        """Compose the safety gate's self-reported world state (doc 08 §2).
+
+        Only state the runtime genuinely knows is reported; keys that are not
+        modeled yet stay absent so the invariant's fail-open default applies
+        (fabricated violations are as dishonest as fabricated safety).
+        """
+        body_now = self.body.snapshot()
+        sm_state = self.autonomy_sm.state
+        return {
+            # The latched emergency states from the canonical state machine.
+            "estop_active": sm_state in (ASMState.EMERGENCY_STOP, ASMState.FAULT_RECOVERY),
+            # Local odometry is always fresh in the Mac phase: the VirtualBody
+            # owns its pose (no external localization to go stale). Perception
+            # degradation must NOT couple into pose staleness — it gates its
+            # own path (PERCEPTION_UNCERTAINTY handling).
+            "pose_fresh": True,
+            # No forbidden zones are modeled yet (the spatial map lacks zone
+            # metadata) — the absent key defaults to False (safe).
+            "speed_mps": abs(float(body_now.get("velocity_mps", 0.0))),
+            "max_speed_mps": 1.0,
+        }
 
     def _risk_class_for_action(self, action: str) -> str:
         """Map an action to its risk class for governance evaluation."""

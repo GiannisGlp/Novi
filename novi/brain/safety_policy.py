@@ -243,3 +243,42 @@ class SafetyPolicy:
     def _record(self, decision: SafetyDecision) -> SafetyDecision:
         self.decisions.append(decision)
         return decision
+
+
+def default_engine_safety_invariants() -> SafetyInvariantSet:
+    """Production baseline invariants for the MacBrain execution path (doc 08 §2).
+
+    Flags absent from a brain's self-report default to SAFE (the doc-08
+    convention: an invariant holds unless its named state key reports
+    otherwise), so the gate enforces exactly what the runtime genuinely
+    knows, never a fabricated violation. With the current Mac virtual body
+    the stateful inputs are: e-stop (autonomy state machine), pre-action
+    velocity, degraded-mode pose staleness, and modeled forbidden zones.
+    """
+    return SafetyInvariantSet([
+        SafetyInvariant(
+            "no_motion_during_estop",
+            lambda s: (not s.get("estop_active", False), "e-stop is active"),
+            "never move while emergency stop is active (doc 08 Step 2)",
+        ),
+        SafetyInvariant(
+            "pose_freshness",
+            lambda s: (s.get("pose_fresh", True), f"stale pose (ttl {s.get('pose_ttl')})"),
+            "never execute with a stale pose beyond its TTL",
+        ),
+        SafetyInvariant(
+            "no_forbidden_zone",
+            lambda s: (not s.get("in_forbidden_zone", False), "inside forbidden zone"),
+            "never enter forbidden zones",
+        ),
+        SafetyInvariant(
+            "velocity_limit",
+            lambda s: (s.get("speed_mps", 0.0) <= s.get("max_speed_mps", 1.0), "velocity limit exceeded"),
+            "never exceed velocity/force limits",
+        ),
+        SafetyInvariant(
+            "sensor_health",
+            lambda s: (s.get("sensors_healthy", True), "required sensor unhealthy"),
+            "never operate without required sensor health",
+        ),
+    ])
