@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import time
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -123,10 +124,24 @@ class MacBrainConfig:
     initiative_enabled: bool = False
     initiative_neglect_threshold: int = 30
     initiative_cooldown: int = 60
+    # Phase 5 (plan 19): neural perception cadence — run the (expensive)
+    # perception backend every N cycles instead of every cycle, for Jetson
+    # power budgets. 1 = every cycle (default, unchanged). The loop still steps
+    # every cycle; only the perception backend is throttled.
+    perception_every_n_cycles: int = 1
     # Plan 20: event-driven autonomous speech (GAP-A/B/C). When enabled, drained
     # non-text events (presence/scene/identity/hearing) can seed a proactive
     # utterance, gated by the same speaking-lease and initiative budget.
     event_autonomy_enabled: bool = False
+    # Phase 3e (north-star): the brain OWNS its default LLM transport —
+    # surfaces may still override for model tiering (web/CLI), but with the
+    # flag on, respond() complies its own Ollama-backed transport from this
+    # config and no injected callable is needed to get grounded replies.
+    # Default off (CI stays transport-free: text=None fallback paths).
+    brain_llm_enabled: bool = False
+    brain_llm_url: str = "http://localhost:11434"
+    brain_llm_model: str = ""
+    brain_llm_probe_cooldown_s: float = 60.0
     # Phase P1 (sleep cycle): memory-maturation cadence in cycles (0 disables).
     sleep_every_n_cycles: int = 500
     # Phase 5 (plan 19): neural perception cadence — run the (expensive)
@@ -184,6 +199,7 @@ class MacBrain(ChatMixin):
         safety_policy: Any | None = None,
         safety_monitor: Any | None = None,
         actuator_boundary: Any | None = None,
+        llm_chat: Any | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -206,6 +222,13 @@ class MacBrain(ChatMixin):
         self.perception_pipeline = perception_pipeline
         self._last_frame: Any | None = None
         self._last_world_observation: Any | None = None
+        # Phase 3e: the brain's OWN default LLM transport. An injected callable
+        # is a tiering override; without one, the brain builds (lazily) its own
+        # Ollama-backed transport when enabled, so surfaces pass only the
+        # message. Unreachable endpoints degrade to deterministic fallbacks.
+        self._override_llm_chat = llm_chat
+        self._brain_llm_chat: Any | None = None
+        self._llm_unreachable_until: float = 0.0
         # Phase 3a (north-star gap analysis): grounded reasoning is the default
         # — the engine routes through ReasoningRouter (cost-aware: the LLM is
         # only paid when the input class or confidence warrants it; an absent
@@ -2111,6 +2134,80 @@ class MacBrain(ChatMixin):
     # movement actions are R1 (reversible digital) not R3 (physical movement).
     _R0_ACTIONS = frozenset({"wait", "observe", "stop", "idle"})
     _R1_ACTIONS = frozenset({"speak", "move_forward", "turn_left", "turn_right"})
+
+    def default_llm_chat(self, *, force: bool = False) -> Any:
+        """Phase 3e: the brain's OWN default LLM transport (brain owns the reply).
+
+        Resolution order:
+          1. an injected callable (tiering override by a surface) wins;
+          2. the brain-built Ollama transport, when ``brain_llm_enabled``;
+          3. None (no transport -> deterministic fallback paths).
+
+        Unreachable endpoints degrade to None with a cooldown so a downed
+        model neither raises nor gets hammered per message. Claims: the
+        no-assistant/no-repetition guardrails in the reply pipeline still
+        apply to every brain-default reply.
+        """
+        if self._override_llm_chat is not None:
+            return self._override_llm_chat
+        if not self.config.brain_llm_enabled:
+            return None
+        if not force and time.monotonic() < self._llm_unreachable_until:
+            return None
+        if self._brain_llm_chat is None:
+            if not self._brain_llm_reachable():
+                # Downed endpoint: back off instead of hammering per message.
+                self._llm_unreachable_until = time.monotonic() + float(self.config.brain_llm_probe_cooldown_s)
+                self._emit("llm.unreachable", {
+                    "url": self.config.brain_llm_url, "cooldown_s": float(self.config.brain_llm_probe_cooldown_s),
+                })
+                return None
+            self._brain_llm_chat = self._build_brain_llm_chat()
+        return self._brain_llm_chat
+
+    def _brain_llm_reachable(self) -> bool:
+        import urllib.request
+
+        try:
+            req = urllib.request.Request(f"{self.config.brain_llm_url}/api/tags", method="GET")
+            with urllib.request.urlopen(req, timeout=2) as response:
+                return response.status == 200
+        except Exception:
+            return False
+
+    def _brain_llm_call(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
+        """One Ollama chat call through the brain's own transport.
+
+        Returns None on any failure — the reply pipeline's deterministic
+        fallback applies (never raises into cognition).
+        """
+        import json
+        import urllib.request
+
+        model = self.config.brain_llm_model or "brain-default"
+        payload = {
+            "model": model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "stream": False,
+            "options": {"temperature": temperature},
+        }
+        try:
+            req = urllib.request.Request(
+                f"{self.config.brain_llm_url}/api/chat",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            return (data.get("message") or {}).get("content")
+        except Exception:
+            return None
+
+    def _build_brain_llm_chat(self) -> Any:
+        """Build the brain-owned chat callable once (endpoint already probed)."""
+        return lambda *, system, user, temperature=0.5, timeout=120: self._brain_llm_call(
+            system=system, user=user, temperature=temperature, timeout=timeout,
+        )
 
     def _sync_robot_world_state(self) -> None:
         """Phase 1c: maintain the ROBOT self-entity in the unified world model.

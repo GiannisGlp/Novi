@@ -23,7 +23,6 @@ from typing import Any
 MAX_SKILL_LISTING = 10
 
 from .context_assembler import ContextRequest
-from .models.ollama_reasoning import disable_thinking_for
 from .dialogue import (
     _extract_self_name,
     _extract_topic,
@@ -82,6 +81,7 @@ from .dialogue import (
     thanks_reply,
     time_greeting_reply,
 )
+from .models.ollama_reasoning import disable_thinking_for
 from .social import TIER_EXPRESSION
 from .soul_acceptance import affect_expression
 
@@ -928,6 +928,12 @@ class ChatMixin:
                     "reason": f"You asked something my {manifest.name} skill computes exactly.",
                     "grounding": {"route": "skill", "skill": manifest.name, "result": run.data},
                 }
+        # Phase 3e: the brain OWNS the default transport — a surface that passes
+        # no callable still gets grounded replies through the brain's own
+        # transport (when enabled); None here means "the brain decided there is
+        # no transport" and the deterministic fallback applies.
+        if llm_chat is None:
+            llm_chat = self.default_llm_chat()
         if llm_chat is None:
             return {"text": None, "fallback": False, "grounding": {}}
         # CommunicationDecision: decide whether, when, and how to communicate.
@@ -970,6 +976,8 @@ class ChatMixin:
             ir = introduction_reply(text, cycle=self._cycle)
             if ir:
                 return {"text": ir, "fallback": False, "reason": "You told me your name, so I acknowledged it and said I'd remember it.", "grounding": {"route": "introduction"}}
+        if llm_chat is None:
+            llm_chat = self.default_llm_chat()  # Phase 3e: brain-owned default
         if llm_chat is None:
             det = self._det_social_reply(text)
             if det is not None:
