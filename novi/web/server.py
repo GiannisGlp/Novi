@@ -327,6 +327,10 @@ class NoviWebServer(IntegrationMixin):
         def fast_conv_summarizer(turns):  # type: ignore[no-untyped-def]
             if not self.chat_llm or not self._llm_up():
                 return None
+            from novi.brain.models.ollama_reasoning import disable_thinking_for
+
+            if not disable_thinking_for(self.llm_model):
+                return None  # heavy-thinking tier: deterministic summary
             return inner(turns)
 
         fast_conv_summarizer.model = inner.model  # type: ignore[attr-defined]
@@ -447,6 +451,12 @@ class NoviWebServer(IntegrationMixin):
             # When chat LLM is disabled or Ollama is offline, fail fast instead of 5s LLM timeout.
             if not self.chat_llm or not self._llm_up():
                 return None
+            from novi.brain.models.ollama_reasoning import disable_thinking_for
+
+            if not disable_thinking_for(self.llm_model):
+                # Heavy-thinking tier (~3 tok/s): never serve 5s-timeout
+                # background calls — the brain uses the deterministic recap.
+                return None
             return inner(episodes)
 
         # Attach inner for introspection, but expose fast wrapper as callable
@@ -466,6 +476,10 @@ class NoviWebServer(IntegrationMixin):
         def fast_summarizer(entity, records):  # type: ignore[no-untyped-def]
             if not self.chat_llm or not self._llm_up():
                 return None
+            from novi.brain.models.ollama_reasoning import disable_thinking_for
+
+            if not disable_thinking_for(self.llm_model):
+                return None  # heavy-thinking tier: deterministic summary
             return inner(entity, records)
 
         fast_summarizer.model = inner.model  # type: ignore[attr-defined]
@@ -851,6 +865,10 @@ class NoviWebServer(IntegrationMixin):
             # exhausting the token budget mid-thought; the heavy-thinking tier
             # (qwen3.8:27b) keeps its chain-of-thought (user tiering).
             payload["think"] = False
+        else:
+            # Heavy-thinking tier: deep replies take minutes at ~3 tok/s —
+            # give the call room to finish (the UI streams/waits async).
+            timeout = max(timeout, 420)
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -879,6 +897,8 @@ class NoviWebServer(IntegrationMixin):
         }
         if disable_thinking_for(self.llm_model):
             payload["think"] = False
+        else:
+            timeout = max(timeout, 420)  # heavy-thinking tier needs minutes
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
         # Stream-parse NDJSON lines from Ollama.

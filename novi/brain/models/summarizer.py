@@ -85,8 +85,9 @@ class LLMSummarizer:
             "stream": False,
             "options": {"num_predict": num_predict_for(self.model, self.max_tokens)},
         }
-        if disable_thinking_for(self.model):
-            body["think"] = False
+        # Structured JSON summary — always think:false (chain-of-thought is
+        # wasted on a bounded summary; the slow tier would blow the timeout).
+        body["think"] = False
         request = urllib.request.Request(
             f"{self.base_url}/api/generate",
             data=json.dumps(body).encode("utf-8"),

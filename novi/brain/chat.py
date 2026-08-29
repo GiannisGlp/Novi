@@ -23,6 +23,7 @@ from typing import Any
 MAX_SKILL_LISTING = 10
 
 from .context_assembler import ContextRequest
+from .models.ollama_reasoning import disable_thinking_for
 from .dialogue import (
     _extract_self_name,
     _extract_topic,
@@ -278,21 +279,28 @@ class ChatMixin:
         episodic.sort(key=lambda r: r.created_at)
         recent = episodic[-limit:]
         if self.narrator is not None and recent:
-            newest_id = getattr(recent[-1], "memory_id", None)
-            if getattr(self, "_narrative_cache", None) is not None and getattr(self, "_narrative_sig", None) == newest_id:
-                return self._narrative_cache
-            episodes = [
-                {"memory_type": r.memory_type, "content": r.content if isinstance(r.content, str) else str(r.content)}
-                for r in recent
-            ]
-            try:
-                narrative = self.narrator(episodes)
-                if narrative:
-                    self._narrative_cache = [narrative]
-                    self._narrative_sig = newest_id
+            # The heavy-thinking tier (~3 tok/s, thinking on) can never serve
+            # the 5s-timeout narrator — a miss leaves the cache unset and the
+            # loop retries (500s, starved slot). Use the deterministic recap
+            # there instead; heavy thinking belongs to user-facing replies.
+            narrator_model = str(getattr(self.narrator, "model", "") or "")
+            # Unknown model (stub/mock) → allow; explicit heavy-thinking tier → skip.
+            if not narrator_model or disable_thinking_for(narrator_model):
+                newest_id = getattr(recent[-1], "memory_id", None)
+                if getattr(self, "_narrative_cache", None) is not None and getattr(self, "_narrative_sig", None) == newest_id:
                     return self._narrative_cache
-            except Exception:  # noqa: BLE001 - narrator is best-effort
-                pass
+                episodes = [
+                    {"memory_type": r.memory_type, "content": r.content if isinstance(r.content, str) else str(r.content)}
+                    for r in recent
+                ]
+                try:
+                    narrative = self.narrator(episodes)
+                    if narrative:
+                        self._narrative_cache = [narrative]
+                        self._narrative_sig = newest_id
+                        return self._narrative_cache
+                except Exception:  # noqa: BLE001 - narrator is best-effort
+                    pass
         return [f"{r.memory_type}: {str(r.content)[:300]}" for r in recent]
 
     def speak(self, text: str, *, person: str = "") -> None:

@@ -55,7 +55,7 @@ class LLMPayloadThinkTests(unittest.TestCase):
         try:
             body = _capture_chat_payload(s, "qwen3.8:27b")
             self.assertNotIn("think", body)
-            self.assertEqual(body["options"]["num_predict"], 1200)
+            self.assertEqual(body["options"]["num_predict"], 640)
         finally:
             s.stop()
 

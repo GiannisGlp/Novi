@@ -79,8 +79,10 @@ class LLMNarrator:
             "stream": False,
             "options": {"num_predict": num_predict_for(self.model, self.max_tokens)},
         }
-        if disable_thinking_for(self.model):
-            body["think"] = False
+        # Structured JSON recap — always think:false (the heavy-thinking tier
+        # must never serve the 5s-timeout narrator; _episodic_narrative skips
+        # it there entirely).
+        body["think"] = False
         request = urllib.request.Request(
             f"{self.base_url}/api/generate",
             data=json.dumps(body).encode("utf-8"),

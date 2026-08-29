@@ -80,6 +80,7 @@ class PromptBoundTests(unittest.TestCase):
                 _Record("perception", "cup moved", memory_id="m2", created_at="2026-08-29T00:00:02Z")]
         brain = self._brain(rows)
         brain.narrator = mock.Mock(return_value="A cup appeared and moved.")
+        brain.narrator.model = "nemotron-3.5-lightning"  # fast tier → LLM narrator serves
         first = brain._episodic_narrative()
         second = brain._episodic_narrative()
         self.assertEqual(first, second)
@@ -88,6 +89,18 @@ class PromptBoundTests(unittest.TestCase):
         brain.memory._rows.append(_Record("perception", "cup gone", memory_id="m3", created_at="2026-08-29T00:00:03Z"))
         brain._episodic_narrative()
         self.assertEqual(brain.narrator.call_count, 2)
+
+
+    def test_narrator_skipped_on_heavy_thinking_tier(self) -> None:
+        """The 3 tok/s thinking tier must never serve the 5s-timeout narrator."""
+        rows = [_Record("perception", "saw a cup", memory_id="m1", created_at="2026-08-29T00:00:01Z"),
+                _Record("perception", "cup moved", memory_id="m2", created_at="2026-08-29T00:00:02Z")]
+        brain = self._brain(rows)
+        brain.narrator = mock.Mock(return_value="A cup appeared and moved.")
+        brain.narrator.model = "qwen3.8:27b"
+        out = brain._episodic_narrative()
+        self.assertEqual(brain.narrator.call_count, 0, "slow tier must not serve the narrator")
+        self.assertTrue(out, "deterministic recap must still be produced")
 
 
 if __name__ == "__main__":

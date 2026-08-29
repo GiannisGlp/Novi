@@ -25,9 +25,10 @@ class ThinkPolicyTests(unittest.TestCase):
         self.assertEqual(num_predict_for("qwen3:8b", 400), 400)
 
     def test_budget_grows_for_thinking_tier(self) -> None:
-        # The 27b tier needs room to think AND answer (3x, min 1200).
-        self.assertEqual(num_predict_for("qwen3.8:27b", 512), 1536)
-        self.assertEqual(num_predict_for("qwen3.8:27b", 400), 1200)
+        # The 27b tier needs room to think AND answer (2x, min 600 — 3x/min-1200
+        # took 6+ minutes at ~3 tok/s on MPS).
+        self.assertEqual(num_predict_for("qwen3.8:27b", 512), 1024)
+        self.assertEqual(num_predict_for("qwen3.8:27b", 400), 800)
 
 
 if __name__ == "__main__":

@@ -161,8 +161,9 @@ class DeliberativeLLMReasoningProvider:
             "stream": False,
             "options": {"num_predict": num_predict_for(self.model, self.max_tokens)},
         }
-        if disable_thinking_for(self.model):
-            body["think"] = False
+        # Deliberation is a structured JSON decision — always think:false (the
+        # heavy-thinking tier would otherwise blow the 30s cap mid-thought).
+        body["think"] = False
         request = urllib.request.Request(
             f"{self.base_url}/api/generate",
             data=json.dumps(body).encode("utf-8"),

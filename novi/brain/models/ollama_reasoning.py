@@ -23,12 +23,14 @@ def disable_thinking_for(model: str) -> bool:
 
 
 def num_predict_for(model: str, fast_budget: int) -> int:
-    """Completion token budget: 3x (min 1200) for the heavy-thinking tier.
+    """Completion token budget: 2x (min 600) for the heavy-thinking tier.
 
-    qwen3.8:27b needs room to think AND answer; fast tiers keep their budget.
+    qwen3.8:27b thinks THEN answers (~250 + ~250 tokens typical); at ~3 tok/s
+    on MPS a 1200-token budget would take 6+ minutes. 2x/min-600 keeps a deep
+    reply under ~3.5 min worst case while still fitting thought + answer.
     """
     if (model or "").lower().startswith("qwen3.8"):
-        return max(int(fast_budget) * 3, 1200)
+        return max(int(fast_budget) * 2, 600)
     return int(fast_budget)
 
 
@@ -51,10 +53,11 @@ def _ollama_backend_fn(*, base_url: str, model: str) -> Callable[[dict[str, Any]
             "stream": False,
             "options": {"num_predict": num_predict_for(model, 400)},
         }
-        if disable_thinking_for(model):
-            # Fast tiers (qwen3:4b/8b, nemotron) answer directly; the
-            # heavy-thinking tier (qwen3.8:27b) keeps its chain-of-thought.
-            body["think"] = False
+        # Structured action decisions ALWAYS run think:false — chain-of-thought
+        # is wasted on a bounded JSON decision (and on the heavy-thinking tier
+        # it would blow every timeout). Heavy thinking belongs to the user
+        # facing reply (_llm_chat), not the internal decision.
+        body["think"] = False
         request = urllib.request.Request(f"{base_url}/api/generate", data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(request, timeout=60) as response:
             data = json.loads(response.read().decode("utf-8"))
