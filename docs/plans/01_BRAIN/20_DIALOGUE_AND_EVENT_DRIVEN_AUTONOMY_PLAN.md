@@ -23,7 +23,7 @@ The unified input + single-response spine is **already implemented and passing**
 | Verified cross-modal identity | closed plan 19 P4 | ✅ shipped |
 | Word/fast reasoning, spoken reply path | reasoning router, deliberation, `speak()` via TTS | ✅ shipped |
 
-**Model default today:** `DEFAULT_OLLAMA_MODEL = "qwen3:4b"` in `novi/brain/models/ollama_reasoning.py`, and mirrored in `narrator.py`, `summarizer.py`, `conversation_summarizer`, `dialogue.py`, `cli.py`. Web `available_models = ("qwen3:32b","qwen3:8b","qwen3:4b","nemotron-3.5-lightning")`. **Default flipped to qwen3:4b on 2026-08-28 (GAP-D closed).**
+**Model default today:** `DEFAULT_OLLAMA_MODEL = "qwen3:4b"` in `novi/brain/models/ollama_reasoning.py`, and mirrored in `narrator.py`, `summarizer.py`, `conversation_summarizer`, `dialogue.py`, `cli.py`. Web `available_models = ("qwen3.8:27b","qwen3:8b","qwen3:4b","nemotron-3.5-lightning")`. **Default flipped to qwen3:4b on 2026-08-28 (GAP-D closed).**
 
 ---
 
@@ -110,7 +110,7 @@ The policy reuses the `SocialInitiative` config pattern (`max_per_session`, `coo
 
 ### D) Default model → qwen3:4b
 - Change `DEFAULT_OLLAMA_MODEL` to `"qwen3:4b"` in `novi/brain/models/ollama_reasoning.py` (and the mirrored defaults in `narrator.py`, `summarizer.py`, `conversation_summarizer`, `dialogue.py`, `cli.py` where they call fall back to default).
-- Keep `qwen3:32b / qwen3:8b / nemotron-3.5-lightning` in `available_models`; update web test expectations (`test_web.py` default assertions) to the new default; document the switch (`--ollama-model` still overrides, and the web model switcher still works).
+- Keep `qwen3.8:27b / qwen3:8b / nemotron-3.5-lightning` in `available_models`; update web test expectations (`test_web.py` default assertions) to the new default; document the switch (`--ollama-model` still overrides, and the web model switcher still works).
 
 ---
 
@@ -158,4 +158,4 @@ Synthetic providers (scripted frames/events, scripted STT/TTS, deterministic LLM
 `DEFAULT_OLLAMA_MODEL`:
 - `novi/brain/models/ollama_reasoning.py:11` — **source of truth for reasoning** (`"qwen3:4b"` as of 2026-08-28)
 - mirrored: `models/narrator.py:16`, `models/summarizer.py:15`, `dialogue.py:32`, `brain/cli.py` (fallback), and `novi/brain/models/conversation_summarizer` (via its own default)
-- web default: `server.py` uses `DEFAULT_OLLAMA_MODEL`; `available_models=(qwen3:32b,qwen3:8b,qwen3:4b,nemotron-3.5-lightning)`; `test_web.py` asserts availability/switchability (not the default value).
+- web default: `server.py` uses `DEFAULT_OLLAMA_MODEL`; `available_models=(qwen3.8:27b,qwen3:8b,qwen3:4b,nemotron-3.5-lightning)`; `test_web.py` asserts availability/switchability (not the default value).

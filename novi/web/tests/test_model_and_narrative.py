@@ -46,8 +46,8 @@ class ModelPropagationTests(unittest.TestCase):
     def test_switch_model_ollama_mode_propagates_direct_provider(self) -> None:
         s = self._server(reasoning="ollama")
         try:
-            s.switch_model("qwen3:32b")
-            self.assertEqual(s._reasoning_provider.model, "qwen3:32b")
+            s.switch_model("qwen3.8:27b")
+            self.assertEqual(s._reasoning_provider.model, "qwen3.8:27b")
         finally:
             s.stop()
 
@@ -216,7 +216,7 @@ class ModelPersistenceTests(unittest.TestCase):
             store = str(Path(td) / "novi.db")
             s = NoviWebServer(port=0, store_path=store, auto_step=False, chat_llm=False)
             try:
-                s.switch_model("qwen3:32b")
+                s.switch_model("qwen3.8:27b")
             finally:
                 s.stop()
             self.assertIsNone(server_mod._load_model_choice(store))

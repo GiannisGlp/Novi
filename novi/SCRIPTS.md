@@ -70,7 +70,7 @@ name is passed through verbatim.
 ```bash
 ./scripts/brain.sh --cycles 5                      # deterministic, 5 cycles
 ./scripts/brain.sh --live --rounds 3               # live demo loop
-./scripts/brain.sh --reasoning ollama --ollama-model qwen3.8
+./scripts/brain.sh --reasoning ollama --ollama-model qwen3.8:27b
 ```
 
 ### CLI brain flags
@@ -91,7 +91,7 @@ name is passed through verbatim.
 | `--stt-device` | `cpu` | STT device (`cpu` or `mps`) |
 | `--reasoning deterministic\|ollama\|router` | `deterministic` | Reasoning backend |
 | `--route-threshold` | `0.6` | Router escalate threshold |
-| `--ollama-model` | `qwen3.8` | Ollama model for `ollama`/`router` reasoning |
+| `--ollama-model` | `qwen3.8:27b` | Ollama model for `ollama`/`router` reasoning |
 | `--goal-target X,Y` | – | Adopt a bounded reach goal to `(X, Y)` in meters |
 | `--goal-steps` | `100` | Step budget for the reach goal |
 | `--store PATH` | – | Persist memory + goals to a SQLite DB |
