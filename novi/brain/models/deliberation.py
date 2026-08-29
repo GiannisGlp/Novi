@@ -17,13 +17,70 @@ from __future__ import annotations
 
 import json
 import urllib.request
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Sequence
 
 from .reasoning import ActionIntent
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "nemotron-3.5-lightning"
 DEFAULT_ALLOWED = frozenset({"inspect", "observe", "wait", "stop", "move_forward", "turn_left", "turn_right"})
+
+
+@dataclass(frozen=True)
+class OptionScore:
+    """Phase 3b: explicit alternative evaluation on three dimensions.
+
+    - expected_success: probability (0..1) the option achieves its intent;
+    - cost: resource/time budget (0..1);
+    - risk: expected risk exposure (0..1).
+
+    ``total`` is the weighted decision rule: maximize success, punish cost
+    and risk. Deterministic and explainable.
+    """
+
+    action: str
+    expected_success: float
+    cost: float
+    risk: float
+
+    @staticmethod
+    def _c(v: float) -> float:
+        return max(0.0, min(1.0, float(v)))
+
+    def total(self, *, success_weight: float = 0.5, cost_weight: float = 0.25, risk_weight: float = 0.25) -> float:
+        raw = (
+            self._c(self.expected_success) * success_weight
+            - self._c(self.cost) * cost_weight
+            - self._c(self.risk) * risk_weight
+        )
+        return max(0.0, min(1.0, (raw + cost_weight + risk_weight) / (success_weight + cost_weight + risk_weight)))
+
+
+class AlternativeEvaluator:
+    """Phase 3b: explicit expected-success/cost/risk scoring of options.
+
+    One evaluator per provider keeps weights fixed and auditable; ``select``
+    returns ``(best_action, scores)`` with typed evidence for persistence.
+    """
+
+    def __init__(self, *, success_weight: float = 0.5, cost_weight: float = 0.25, risk_weight: float = 0.25) -> None:
+        self.success_weight = float(success_weight)
+        self.cost_weight = float(cost_weight)
+        self.risk_weight = float(risk_weight)
+
+    def select(self, options: Sequence[str], scores: dict[str, OptionScore], *, fallback: str = "observe") -> tuple[str, dict[str, OptionScore]]:
+        """Argmax over weighted totals; deterministic tie-break on action name."""
+        if not options:
+            return fallback, dict(scores)
+        known = {a: scores[a] for a in options if a in scores}
+        if not known:
+            return fallback, dict(scores)
+        best = max(
+            sorted(known),
+            key=lambda a: (known[a].total(success_weight=self.success_weight, cost_weight=self.cost_weight, risk_weight=self.risk_weight), a),
+        )
+        return best, {a: known[a] for a in sorted(known)}
 
 
 def _deliberation_prompt(situation: dict[str, Any], recall: Any, allowed: frozenset[str]) -> str:
@@ -150,7 +207,7 @@ class DeliberativeLLMReasoningProvider:
         return ActionIntent(action=action, parameters=parameters, rationale=rationale)
 
     def _invoke(self, user_prompt: str) -> str:
-        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+        from novi.brain.models.ollama_reasoning import num_predict_for
 
         system = "You are Novi's bounded deliberative reasoner. Respond ONLY with the requested JSON."
         body: dict[str, Any] = {

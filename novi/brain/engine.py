@@ -1000,6 +1000,24 @@ class MacBrain(ChatMixin):
             "hypotheses": list(cognitive.reasoning.hypotheses),
             "deliberation": deliberation,
             "prior_decisions": prior_decisions,
+            # Phase 3b: explicit alternative evaluation persisted with the
+            # decision so reasoning traces can cite scored comparisons. The
+            # default router delegates to its deterministic provider, so read
+            # the scores through it.
+            "option_scores": {
+                action: {
+                    "action": action,
+                    "expected_success": round(s.expected_success, 4),
+                    "cost": round(s.cost, 4),
+                    "risk": round(s.risk, 4),
+                    "total": round(s.total(), 4),
+                }
+                for action, s in (
+                    getattr(self.reasoning, "last_option_scores", None)
+                    or getattr(getattr(self.reasoning, "deterministic", None), "last_option_scores", {})
+                    or {}
+                ).items()
+            },
         }
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)

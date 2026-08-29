@@ -69,17 +69,62 @@ class DeliberativeReasoningProvider:
 
     def __init__(self, *, default_action: str = "observe") -> None:
         self.default_action = default_action
+        # Phase 3b: explicit alternative evaluation — success/cost/risk triples
+        # with one fixed, auditable evaluator per provider.
+        from .deliberation import AlternativeEvaluator
+        self.evaluator = AlternativeEvaluator()
+        self.last_option_scores: dict[str, Any] = {}
+        self.last_action: str = self.default_action
 
     def decide(self, *, conclusion: str, confidence: float, situation: dict[str, Any], recall: Any = ()) -> ActionIntent:
-        scores = self._score(conclusion, confidence, situation, recall)
-        # When no signal is present every score is 0.0; fall back to the
-        # configured safe default instead of picking the first action.
-        action = max(scores, key=scores.get) if any(scores.values()) else self.default_action
+        success = self._score(conclusion, confidence, situation, recall)
+        option_scores = self._option_scores(success, confidence, situation)
+        options = sorted(option_scores)
+        any_signal = any(s.expected_success > 0.0 for s in option_scores.values())
+        if any_signal:
+            action, self.last_option_scores = self.evaluator.select(options, option_scores, fallback=self.default_action)
+        else:
+            # When no signal is present every score is 0.0; fall back to the
+            # configured safe default instead of picking the first action.
+            action = self.default_action
+            self.last_option_scores = option_scores
+        self.last_action = action
+        best = self.last_option_scores.get(action)
+        evidence = f" success={best.expected_success:.2f} cost={best.cost:.2f} risk={best.risk:.2f}" if best else ""
         recalled = f" recalled={len(recall)}" if recall else ""
-        rationale = f"deliberative:{conclusion} best={action}{recalled}"
+        rationale = f"deliberative:{conclusion} best={action}{recalled}{evidence}"
         return ActionIntent(action=action, parameters={}, rationale=rationale)
 
-    def _score(self, conclusion: str, confidence: float, situation: dict[str, Any], recall: Any) -> dict[str, str]:
+    def _option_scores(self, success: dict[str, float], confidence: float, situation: dict[str, Any]) -> dict[str, Any]:
+        """Phase 3b: turn evidence into explicit success/cost/risk triples.
+
+        - expected_success: accumulated evidence, gated by cognitive
+          confidence (an uncertain world caps every option);
+        - cost: declared per-action budget; repeating a just-FAILED action
+          costs more (self-correction), and looking around is cheap;
+        - risk: base exposure per action class, scaled up by uncertainty.
+        """
+        from .deliberation import OptionScore
+        situation = situation or {}
+        base_cost = {"observe": 0.1, "wait": 0.05, "inspect": 0.15, "move_forward": 0.35, "turn_left": 0.25, "turn_right": 0.25}
+        base_risk = {"observe": 0.05, "wait": 0.02, "inspect": 0.1, "move_forward": 0.3, "turn_left": 0.2, "turn_right": 0.2}
+        reflection = situation.get("reflection")
+        c = max(0.0, min(1.0, float(confidence)))
+        scored: dict[str, Any] = {}
+        for action, evidence in success.items():
+            expected_success = max(0.0, min(1.0, evidence * (0.6 + 0.4 * c)))
+            cost = base_cost.get(action, 0.2)
+            risk = min(1.0, base_risk.get(action, 0.1) + (1.0 - c) * 0.2)
+            if reflection and not reflection.get("effective", True) and str(reflection.get("action", "")) == action:
+                # Phase 3b: repeating a just-failed action is expensive.
+                cost = min(1.0, cost + 0.5)
+                expected_success = max(0.0, expected_success - 0.2)
+            scored[action] = OptionScore(action=action, expected_success=expected_success, cost=cost, risk=risk)
+        return scored
+
+    def _score(self, conclusion: str, confidence: float, situation: dict[str, Any], recall: Any) -> dict[str, float]:
+        """Success-evidence accumulation over the full situation (unchanged
+        signal semantics; explicit cost/risk tables live in _option_scores)."""
         situation = situation or {}
         scores: dict[str, float] = {a: 0.0 for a in ("inspect", "observe", "wait", "move_forward", "turn_left", "turn_right")}
         inferences = situation.get("inferences") or []
@@ -111,11 +156,14 @@ class DeliberativeReasoningProvider:
         if conclusion == "no_high_salience_change_detected" and not relations and not goal:
             scores["wait"] += 1.0
         # Self-correction: if the last action was ineffective, avoid repeating it
-        # and prefer to look around instead.
+        # and prefer to look around instead (Phase 3b: the avoid signal stays in
+        # the evidence map; the explicit cost rise for the failed action lives
+        # in _option_scores).
         if reflection and not reflection.get("effective", True):
-            prev = reflection.get("action", "")
-            scores[prev] = scores.get(prev, 0.0) - 1.0
-            scores["observe"] = scores.get("observe", 0.0) + 0.5
+            prev = str(reflection.get("action", ""))
+            if prev in scores:
+                scores[prev] -= 1.0
+            scores["observe"] += 0.5
         return scores
 
 
