@@ -1,5 +1,6 @@
 # Local Python environment
 .venv/
+.venv-locateanything/
 *.egg-info/
 
 # Novi Mac test outputs

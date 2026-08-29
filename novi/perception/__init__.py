@@ -24,6 +24,32 @@ _LAZY = {
     "IdentityDecision": (".faces", "IdentityDecision"),
     "FaceIdentifier": (".faces", "FaceIdentifier"),
     "PerceptionPipeline": (".pipeline", "PerceptionPipeline"),
+    # Language-conditioned spatial grounding (LocateAnything workstream)
+    "BackendState": (".grounding", "BackendState"),
+    "SpatialInferenceMode": (".grounding", "SpatialInferenceMode"),
+    "SpatialInferencePolicy": (".grounding", "SpatialInferencePolicy"),
+    "SpatialQuery": (".grounding", "SpatialQuery"),
+    "GroundingObservation": (".grounding", "GroundingObservation"),
+    "PointObservation": (".grounding", "PointObservation"),
+    "GroundingResult": (".grounding", "GroundingResult"),
+    "SpatialBackendCapabilities": (".grounding", "SpatialBackendCapabilities"),
+    "SpatialPerceptionBackend": (".grounding", "SpatialPerceptionBackend"),
+    "parse_locate_anything_output": (".locate_anything_parse", "parse_locate_anything_output"),
+    "LocateAnythingBackend": (".locate_anything", "LocateAnythingBackend"),
+    "DeterministicLocateAnythingBackend": (".locate_anything", "DeterministicLocateAnythingBackend"),
+    "LocateAnythingRuntime": (".locate_anything_runtime", "LocateAnythingRuntime"),
+    # Grounding benchmark (plan Phase 10)
+    "BenchmarkCorpus": (".benchmark_corpus", "BenchmarkCorpus"),
+    "run_grounding_benchmark": (".benchmark", "run_grounding_benchmark"),
+    "compare_baseline_vs_grounding": (".benchmark_compare", "compare_baseline_vs_grounding"),
+    # Re-observation verification (plan Step 9.2)
+    "VerificationOutcome": (".grounding_verification", "VerificationOutcome"),
+    "verify_grounding_agreement": (".grounding_verification", "verify_grounding_agreement"),
+    # Brain-zone seams (plan steps 18/21/22/24 — perception side)
+    "admit_grounding_outcome": (".world_state_adapter", "admit_grounding_outcome"),
+    "verify_predicted_presence": (".prediction_verification", "verify_predicted_presence"),
+    "build_deliberation_record": (".deliberation_record", "build_deliberation_record"),
+    "promotion_candidate": (".spatial_memory_promotion", "promotion_candidate"),
 }
 
 __all__ = list(_LAZY)
