@@ -96,6 +96,17 @@ Verified by source inspection + isolated install on the dev machine (2026-08-30)
 - The MLX API differs from CUDA: `generate(x, temperature=0, max_new_tokens=...)` takes a **token tensor** (no `top_k`), and the loader must pass `layer_shards_saving_path=` (not `shard_dir`), with `compression=None` (not `"none"`) for the disabled state. The Novi adapter (`novi/brain/inference/airllm/adapter.py`) and loader branch on the platform (`_is_mlx`, `_default_device`, `_airllm_compression`).
 - **Mac-viable AirLLM targets** (plain Llama-style, no QK-norm): `TinyLlama/TinyLlama-1.1B-Chat-v1.0` — **execution-verified end-to-end on the Mac** (prepare 20 s, cold generation 56.8 s/27 tokens, warm 28.2 s, unload ok; evidence `benchmarks/airllm-mac/tinyllama-1.1b.json`). Validation runner: `novi/brain/benchmarks/airllm_mac_validate.py`.
 
+### 4.4 AirLLM as a GENERIC backend (user directive 2026-08-30)
+
+AirLLM is no longer a 27B special case: it is a **generic resource-optimization backend** the router selects for ANY approved, compatible model — on Mac (MLX path) and CUDA alike.
+
+- `architecture_compatibility(arch, gpu_backend)` (in `airllm/compatibility.py`) is the evidence-backed per-platform pre-check: Mac/MLX `supported` = `LlamaForCausalLM` (executed); `unsupported` = `Qwen3ForCausalLM`/`Qwen3MoeForCausalLM`/`Qwen3_5ForConditionalGeneration` (execution-verified failures); everything else `unknown` — never promoted.
+- `AirLLMBackend.check_model_compatibility(spec)` feeds `validate_model` (early `ModelCompatibilityError` instead of a generation-time crash) and the runtime's `_airllm_validator` (router eligibility), so the router can pick AirLLM for any approved compatible model.
+- The CUDA-only VRAM gate is now platform-aware: on Mac/CPU the MLX/unified-memory path streams from disk, so RAM is the scheduler's concern; VRAM gating applies on CUDA only.
+- **Registry adoption:** `tinyllama-1.1b` (TinyLlama/TinyLlama-1.1B-Chat-v1.0, `LlamaForCausalLM`) is approved with `airllm` preference — the documented Mac-verified reference target (evidence in `resolved`).
+- **End-to-end proof on the Mac** (2026-08-30): a request routed through the full runtime selected `backend=airllm` (`reason: approved_available:tinyllama-1.1b; backend:airllm`) and completed a real MLX-streamed generation (ok=True, 0 failures, 0 fallbacks; evidence `route` block in `benchmarks/airllm-mac/tinyllama-1.1b.json`).
+- Qwen3.8-27B remains platform-blocked on the Mac for upstream reasons (MLX path cannot stream `Qwen3_5ForConditionalGeneration`; 112 GB disk need; transformers 5.8+ conflict) — on CUDA/Jetson hardware with adequate storage it becomes preparable via the same generic path.
+
 ## 5. Evidence log
 
 | Date | Evidence artifact | Claim |

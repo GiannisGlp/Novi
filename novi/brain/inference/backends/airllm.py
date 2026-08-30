@@ -14,11 +14,15 @@ import os
 from typing import Any, AsyncIterator
 
 from ..airllm.adapter import AirLLMAdapter
-from ..airllm.compatibility import probe_airllm_environment, require_airllm
+from ..airllm.compatibility import architecture_compatibility, probe_airllm_environment, require_airllm
 from ..airllm.loader import AirLLMLoader
 from ..capabilities import BackendCapabilities, CapabilityState
 from ..contracts import AbstractInferenceBackend
-from ..errors import BackendUnavailableError, InferenceConfigurationError
+from ..errors import (
+    BackendUnavailableError,
+    InferenceConfigurationError,
+    ModelCompatibilityError,
+)
 from ..request import InferenceRequest
 from ..response import InferenceResponse
 from .base import ModelBackendState
@@ -93,6 +97,24 @@ class AirLLMBackend(AbstractInferenceBackend):
             )
         require_airllm(self._compat)
 
+    def check_model_compatibility(self, model_spec: Any) -> CapabilityState:
+        """Per-platform architecture compatibility pre-check.
+
+        User directive (2026-08-30): AirLLM is a GENERIC resource-optimization
+        backend used everywhere, including Mac. This lets the router select
+        AirLLM for ANY approved, compatible model instead of treating it as a
+        27B special case. Answers are evidence-backed (Mac MLX: LlamaForCausalLM
+        verified; Qwen3/qwen3_5 verified incompatible).
+        """
+        if not self.enabled:
+            return CapabilityState.UNKNOWN
+        try:
+            artifact = model_spec.resolve_backend_artifact(_BACKEND_ID)
+            architecture = artifact.get("architecture") or ""
+        except Exception:
+            architecture = ""
+        return architecture_compatibility(architecture, self._compat.gpu_backend)
+
     def validate_model(self, model_spec: Any) -> None:
         self._ensure_enabled()
         artifact = model_spec.resolve_backend_artifact(_BACKEND_ID)
@@ -100,6 +122,14 @@ class AirLLMBackend(AbstractInferenceBackend):
             raise InferenceConfigurationError(
                 f"model {getattr(model_spec, 'id', '?')} has unresolved architecture for airllm",
                 context={"backend": _BACKEND_ID},
+            )
+        state = self.check_model_compatibility(model_spec)
+        if state is CapabilityState.UNSUPPORTED:
+            raise ModelCompatibilityError(
+                f"model {getattr(model_spec, 'id', '?')} architecture "
+                f"{artifact.get('architecture')} is not streamable by the AirLLM "
+                f"{self._compat.gpu_backend} path on this platform",
+                context={"backend": _BACKEND_ID, "architecture": artifact.get("architecture")},
             )
 
     def prepare(self, model_spec: Any) -> Any:

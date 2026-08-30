@@ -1,7 +1,7 @@
 # Novi AirLLM Adaptation and Inference Runtime Plan
 
 **Workstream:** 06_AUTONOMY / Brain Runtime
-**Status:** PROTOTYPE — inference runtime contract implemented; AirLLM backend implemented behind the contract (disabled by default) AND execution-verified on the actual Mac via the MLX path with a representative Llama-family model; the Qwen3.8-27B production target is platform-blocked on this machine (documented below)
+**Status:** PROTOTYPE — inference runtime contract implemented; AirLLM backend implemented behind the contract AND execution-verified on the actual Mac via the MLX path as a GENERIC resource-optimization backend (user directive 2026-08-30: AirLLM used everywhere, not a 27B special case); the Qwen3.8-27B production target is platform-blocked on this machine (documented below)
 **Priority:** P0 architecture / P1 initial optimization
 **Target branch:** `main`
 **Date:** 2026-08-30
@@ -11,7 +11,9 @@
 
 ## 0. Implementation progress
 
-Updated 2026-08-30 (rounds 1–3). Status vocabulary per §65: the inference runtime is `PROTOTYPE`, the AirLLM backend is `PROTOTYPE` (implemented + Mac-execution-verified via TinyLlama; the 27B production target is platform-blocked per §17 — "If AirLLM cannot run on the actual Mac, the backend remains an implemented but platform-blocked provider. The rest of Novi must remain fully functional.").
+Updated 2026-08-30 (rounds 1–4). Status vocabulary per §65: the inference runtime is `PROTOTYPE`; the AirLLM backend is `PROTOTYPE` and — per the 2026-08-30 user directive — a **generic, router-selected resource-optimization backend used everywhere (including Mac via the MLX path)**. Qwen3.8-27B remains platform-blocked per §17 ("If AirLLM cannot run on the actual Mac, the backend remains an implemented but platform-blocked provider").
+
+Round 4 (user directives): freed ~56 GB of disk (removed unused mlx-community models + stale Qwen3-4B test artifacts; 39 → 99 GiB free), added per-platform architecture compatibility pre-checks, registered `tinyllama-1.1b` as the documented Mac-verified AirLLM reference, made the VRAM gate platform-aware (CUDA-only), and **proved the generic path end-to-end on the Mac: the router selected `backend=airllm` for the approved compatible model and completed a real MLX-streamed generation** (evidence `route` block in `benchmarks/airllm-mac/tinyllama-1.1b.json`).
 
 | Step (§66) | Status | Evidence |
 |---|---|---|

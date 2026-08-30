@@ -136,13 +136,21 @@ class InferenceRuntime:
         self._fallback_used = False
 
     def _airllm_validator(self, spec: Any) -> bool:
-        """Eligibility gate (plan 12 Step 33-34): AirLLM is routable ONLY when
-        the backend is enabled AND the exact (model, compute backend)
-        combination carries execution validation evidence."""
+        """Eligibility gate (plan 12 Step 33-34 + user directive 2026-08-30):
+        AirLLM is a GENERIC backend — routable when enabled, artifact-resolved,
+        per-platform architecture-compatible (Mac MLX verified set), AND the
+        exact (model, compute backend) combination carries execution evidence."""
         if not self.config.airllm_enabled:
             return False
         if not spec.is_airllm_eligible():
             return False
+        from .capabilities import CapabilityState
+
+        backend = self.backends.get_or_none("airllm")
+        if backend is not None:
+            state = backend.check_model_compatibility(spec)
+            if state is CapabilityState.UNSUPPORTED:
+                return False
         combo = (spec.id, self.hardware.compute_backend.value)
         return combo in self.config.validated_airllm_combinations
 
@@ -382,6 +390,7 @@ class InferenceRuntime:
             latency_budget_ms=request.latency_budget_ms,
             available_ram_bytes=self.hardware.ram_available_bytes,
             available_vram_bytes=self.hardware.vram_available_bytes,
+            compute_backend=self.hardware.compute_backend.value,
             current_residency={
                 mid: self.health.get(mid).residency.value for mid in self._loaded_models if self.health.get(mid)
             },

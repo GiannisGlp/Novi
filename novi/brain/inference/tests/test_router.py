@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import unittest
 
-from novi.brain.inference.errors import ModelUnavailableError
 from novi.brain.inference.registry import ModelRegistry, ModelSpec
 from novi.brain.inference.router import ModelRouter, RoutingContext
 
@@ -29,10 +28,20 @@ class ModelRouterTests(unittest.TestCase):
             )
         )
 
-    def test_no_approved_model_raises(self) -> None:
-        # Step 10: no routing enabled automatically.
-        with self.assertRaises(ModelUnavailableError):
-            self.router.route(RoutingContext(reasoning_complexity="NORMAL"))
+    def test_default_registry_routes_only_to_documented_model(self) -> None:
+        # Step 10: none of the five original aliases is routable automatically;
+        # only tinyllama-1.1b (documented adoption + Mac execution evidence) is
+        # approved. FAST (cheap fallback role) routes to it.
+        decision = self.router.route(RoutingContext(reasoning_complexity="FAST"))
+        self.assertEqual(decision.model, "tinyllama-1.1b")
+
+    def test_unapproved_hypothesis_never_routed(self) -> None:
+        # qwen3-8b is the NORMAL hypothesis but is NOT approved -> the router
+        # must fall back to the only approved model instead of silently using
+        # an unapproved one.
+        decision = self.router.route(RoutingContext(reasoning_complexity="NORMAL"))
+        self.assertEqual(decision.model, "tinyllama-1.1b")
+        self.assertIn("approved_available:tinyllama-1.1b", decision.reason)
 
     def test_deliberation_hypothesis_maps_to_model(self) -> None:
         self._approve("qwen3-8b", ("existing",))

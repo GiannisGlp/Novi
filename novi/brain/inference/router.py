@@ -61,6 +61,7 @@ class RoutingContext:
     latency_budget_ms: float | None = None
     available_ram_bytes: int = 0
     available_vram_bytes: int = 0
+    compute_backend: str = "unknown"  # cuda | mps | cpu | unknown
     thermal_state: str = "normal"
     power_mode: str = "balanced"
     current_residency: dict[str, str] = field(default_factory=dict)  # model_id -> residency
@@ -166,12 +167,15 @@ class ModelRouter:
     def _select_backend(self, spec: ModelSpec, context: RoutingContext) -> str:
         for preference in spec.backend_preferences:
             if preference == "airllm":
-                # Step 33-34: AirLLM is selected ONLY when the model/hardware
-                # combination is explicitly validated (validator injected by the
-                # runtime) AND VRAM is known-constrained.
+                # Step 33-34 + user directive (2026-08-30): AirLLM is a GENERIC
+                # backend — selected when the model/hardware combination is
+                # validated (validator injected by the runtime). The VRAM gate
+                # is CUDA-specific: on CUDA, AirLLM exists for constrained VRAM
+                # so unknown VRAM is not selected; on Mac/CPU the MLX/unified-
+                # memory path streams from disk and RAM is the scheduler's job.
                 if not self._airllm_validator(spec):
                     continue
-                if context.available_vram_bytes <= 0:
+                if context.compute_backend == "cuda" and context.available_vram_bytes <= 0:
                     continue
             return preference
         return spec.backend_preferences[0]

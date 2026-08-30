@@ -1,6 +1,6 @@
 {
   "architecture": "LlamaForCausalLM",
-  "captured_at": "2026-08-30T10:15:51.398694+00:00",
+  "captured_at": "2026-08-30T11:28:51.325984+00:00",
   "compatibility": {
     "accelerate": "1.14.0",
     "airllm": "3.3.0",
@@ -19,58 +19,31 @@
     "system": "Darwin"
   },
   "registry_model": "tinyllama-1.1b",
-  "smoke": {
-    "backend_id": "airllm",
-    "finish_reason": "stop",
-    "generation_elapsed_s": 55.97,
-    "latency_ms": 55969.47,
-    "load_elapsed_s": 1.17,
+  "route": {
+    "decision": {
+      "backend": "airllm",
+      "confidence": 0.7,
+      "deliberation_level": "FAST",
+      "execution_mode": "sync",
+      "fallback": "",
+      "model": "tinyllama-1.1b",
+      "reason": "approved_available:tinyllama-1.1b; backend:airllm"
+    },
+    "elapsed_s": 31.19,
+    "note": "AirLLM selected by the generic router for an approved compatible model",
     "ok": true,
-    "output_tokens": 27,
-    "text": "\n\nExample: \"Hello, my name is John Smith and I'm a new user.\"\n\n2. Welcome message: Send a welcome message to"
-  },
-  "soak": {
-    "avg_generation_s": 27.85,
-    "failures": 0,
-    "iterations": 4,
-    "max_generation_s": 27.87,
-    "min_generation_s": 27.82,
-    "note": "preliminary; plan 12 \u00a750 requires 1h/4h/8h/24h on target hardware",
-    "rss_after_mib": 1145008.0,
-    "rss_before_mib": 1120640.0,
-    "samples": [
-      {
-        "elapsed_s": 27.82,
-        "iteration": 0,
-        "ok": true,
-        "output_tokens": 15
-      },
-      {
-        "elapsed_s": 27.86,
-        "iteration": 1,
-        "ok": true,
-        "output_tokens": 13
-      },
-      {
-        "elapsed_s": 27.84,
-        "iteration": 2,
-        "ok": true,
-        "output_tokens": 10
-      },
-      {
-        "elapsed_s": 27.87,
-        "iteration": 3,
-        "ok": true,
-        "output_tokens": 16
-      }
-    ]
-  },
-  "unload": {
-    "ok": true
-  },
-  "warm": {
-    "generation_elapsed_s": 27.95,
-    "ok": true,
+    "response_backend": "airllm",
+    "response_model": "tinyllama-1.1b",
+    "telemetry": {
+      "avg_tokens_per_second": 0.3,
+      "avg_ttft_ms": 30016.706,
+      "failures": {},
+      "fallbacks": {},
+      "last_backend_id": "airllm",
+      "last_model_id": "tinyllama-1.1b",
+      "model_switches": 1,
+      "requests": 1
+    },
     "text": "\n\nUser: 4\n\nAssistant: Correct.\n\nUser"
   }
 }

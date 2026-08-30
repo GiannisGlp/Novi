@@ -11,11 +11,14 @@ from novi.brain.inference.registry import ModelRegistry, ModelSpec
 
 
 class ModelRegistryTests(unittest.TestCase):
-    def test_contains_exactly_five_current_aliases(self) -> None:
+    def test_contains_five_current_aliases_plus_airllm_reference(self) -> None:
+        # The five approved aliases (plan 12 §9) PLUS the documented adoption
+        # (user directive 2026-08-30): tinyllama-1.1b as the Mac-verified
+        # generic AirLLM reference target.
         registry = ModelRegistry()
         self.assertEqual(
             set(registry.ids()),
-            {"qwen3-4b", "qwen3-8b", "nemotron-3.5-lightning", "qwen3.8-27b", "qwen3.8-latest"},
+            {"qwen3-4b", "qwen3-8b", "nemotron-3.5-lightning", "qwen3.8-27b", "qwen3.8-latest", "tinyllama-1.1b"},
         )
         aliases = {alias for spec in registry.all() for alias in spec.local_aliases}
         self.assertEqual(
@@ -35,10 +38,23 @@ class ModelRegistryTests(unittest.TestCase):
         with self.assertRaises(ModelNotFoundError):
             registry.get_by_alias("no-such-model:latest")
 
-    def test_no_unverified_model_is_routable(self) -> None:
-        # Step 10: register the five aliases WITHOUT enabling new routing.
+    def test_only_documented_airllm_model_is_routable(self) -> None:
+        # Step 10: none of the five original aliases is routable (unverified);
+        # only tinyllama-1.1b (documented adoption + Mac execution evidence)
+        # is approved and AirLLM-eligible.
         registry = ModelRegistry()
-        self.assertEqual(registry.routable(), ())
+        routable = [spec.id for spec in registry.routable()]
+        self.assertEqual(routable, ["tinyllama-1.1b"])
+        for model_id in ("qwen3-4b", "qwen3-8b", "nemotron-3.5-lightning", "qwen3.8-27b", "qwen3.8-latest"):
+            self.assertNotIn(model_id, routable)
+
+    def test_tinyllama_is_airllm_eligible_with_evidence(self) -> None:
+        spec = ModelRegistry().get("tinyllama-1.1b")
+        self.assertTrue(spec.is_airllm_eligible())
+        self.assertEqual(spec.resolved["architecture"], "LlamaForCausalLM")
+        self.assertTrue(spec.resolved["airllm_mac_mlx_verified"])
+        artifact = spec.resolve_backend_artifact("airllm")
+        self.assertEqual(artifact["source_id"], "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
 
     def test_approved_model_routable_after_resolution(self) -> None:
         registry = ModelRegistry()

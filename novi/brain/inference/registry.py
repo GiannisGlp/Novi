@@ -187,6 +187,37 @@ def _default_model_specs() -> tuple[ModelSpec, ...]:
             status="candidate",
             resolved={},  # identity unresolved: never routable until recorded (§9.5)
         ),
+        # Adoption decision (user directive 2026-08-30): AirLLM is a GENERIC
+        # resource-optimization backend used everywhere, including Mac. This is
+        # the Mac-verified AirLLM reference target: full pipeline executed on
+        # the actual dev machine (benchmarks/airllm-mac/tinyllama-1.1b.json) —
+        # prepare, integrity, cold/warm generation, unload, soak. Architecture
+        # LlamaForCausalLM is the only Mac MLX-verified architecture.
+        ModelSpec(
+            id="tinyllama-1.1b",
+            family="tinyllama",
+            role_candidates=("lightweight_reasoning", "cheap_fallback", "resource_optimized_inference"),
+            backend_preferences=("airllm", "existing"),
+            source_type="huggingface",
+            source_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+            local_aliases=(),
+            context_limit=2048,
+            capabilities={"text": True, "vision": False, "tool_calling": None, "structured_output": None},
+            status="approved",
+            backend_artifacts={
+                "airllm": {
+                    "source_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+                    "architecture": "LlamaForCausalLM",
+                }
+            },
+            resolved={
+                "model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+                "architecture": "LlamaForCausalLM",
+                "parameter_count": "1.1b",
+                "airllm_mac_mlx_verified": True,
+                "evidence": "benchmarks/airllm-mac/tinyllama-1.1b.json",
+            },
+        ),
     )
 
 

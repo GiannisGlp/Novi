@@ -12,6 +12,7 @@ from .cache import CacheKey, InferenceCache, build_cache_key, context_hash
 from .compatibility import (
     AirLLMCompatibility,
     CompatibilityRecord,
+    architecture_compatibility,
     matrix_cell,
     probe_airllm_environment,
     require_airllm,
@@ -43,6 +44,7 @@ __all__ = [
     "build_cache_key",
     "build_worker_command",
     "check_disk_capacity",
+    "architecture_compatibility",
     "context_hash",
     "matrix_cell",
     "model_dir",

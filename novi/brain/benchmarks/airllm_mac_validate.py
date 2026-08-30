@@ -81,6 +81,12 @@ def main() -> int:
     parser.add_argument("--prepare", action="store_true", help="run preparation (download + shard)")
     parser.add_argument("--smoke", action="store_true", help="run load + generate smoke")
     parser.add_argument("--soak", type=int, default=0, help="run N warm generations (soak, plan 12 §50)")
+    parser.add_argument(
+        "--route",
+        action="store_true",
+        help="route a request through the full runtime (router -> AirLLM backend) — "
+        "proves AirLLM is selected as a GENERIC backend for the approved model",
+    )
     args = parser.parse_args()
 
     compat = probe_airllm_environment()
@@ -205,6 +211,50 @@ def main() -> int:
             "samples": soak_samples,
             "note": "preliminary; plan 12 §50 requires 1h/4h/8h/24h on target hardware",
         }
+
+    if args.route:
+        # User directive (2026-08-30): AirLLM is a GENERIC backend. Route a
+        # request through the full runtime; the router must select AirLLM for
+        # the approved, compatible model (validated (model, mps) combination).
+        # The runtime's default routing context carries the probed hardware
+        # (compute_backend=mps, unified memory), so no VRAM gate applies.
+        from novi.brain.inference.runtime import InferenceRuntime, RuntimeConfig
+
+        runtime = InferenceRuntime(
+            backends=[backend],
+            registry=registry,
+            config=RuntimeConfig(
+                airllm_enabled=True,
+                validated_airllm_combinations=((args.registry_model, "mps"),),
+                deterministic_fallback=False,
+            ),
+        )
+        route_started = time.monotonic()
+        response = runtime.generate(
+            InferenceRequest(
+                messages=[{"role": "user", "content": "What is 2 plus 2? Answer with one number."}],
+                max_output_tokens=16,
+                temperature=0.0,
+                reasoning_budget="FAST",
+                caller="airllm-mac-validation",
+                purpose="route",
+            )
+        )
+        evidence["route"] = {
+            "elapsed_s": round(time.monotonic() - route_started, 2),
+            "decision": runtime._last_decision.as_dict() if runtime._last_decision else None,
+            "response_backend": response.backend_id,
+            "response_model": response.model_id,
+            "text": response.text,
+            "ok": response.ok,
+            "telemetry": runtime.telemetry.summary(),
+            "note": "AirLLM selected by the generic router for an approved compatible model",
+        }
+        print(
+            f"route: model={evidence['route']['decision']['model']} "
+            f"backend={evidence['route']['decision']['backend']} ok={response.ok} "
+            f"({evidence['route']['elapsed_s']:.2f}s)"
+        )
 
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     out = EVIDENCE_DIR / f"{args.registry_model}.json"

@@ -169,3 +169,71 @@ def matrix_cell(compat: AirLLMCompatibility | None = None, capability: str = "te
     if capability == "text_generation":
         return CapabilityState.SUPPORTED
     return CapabilityState.UNKNOWN
+
+
+# --------------------------------------------------------------------------
+# Per-platform architecture compatibility (user directive 2026-08-30: AirLLM
+# is a GENERIC resource-optimization backend used everywhere, including Mac).
+#
+# These sets are EVIDENCE-BACKED (execution results on the actual dev machine,
+# plan 12 §32: every ``supported`` must have evidence; ``unknown`` is never
+# promoted to ``supported``):
+#
+#   Mac MLX path (AirLLMLlamaMlx) — verified supported:
+#     LlamaForCausalLM  (TinyLlama-1.1B-Chat full pipeline executed)
+#   Mac MLX path — verified incompatible:
+#     Qwen3ForCausalLM  (QK-norm q_norm/k_norm missing from MLX TransformerBlock;
+#                        ValueError at generation — benchmarks/airllm-mac/qwen3-4b-finding.json)
+#     Qwen3_5ForConditionalGeneration (nested model.language_model layout, CUDA-only subclass)
+#   CUDA streaming path: airllm's generic AirLLMBaseModel + ARCH_OVERRIDES.
+# --------------------------------------------------------------------------
+
+#: Architectures execution-verified on the Mac MLX path.
+MLX_VERIFIED_ARCHITECTURES: frozenset[str] = frozenset({"LlamaForCausalLM"})
+
+#: Architectures execution-verified INCOMPATIBLE with the Mac MLX path.
+MLX_INCOMPATIBLE_ARCHITECTURES: frozenset[str] = frozenset(
+    {"Qwen3ForCausalLM", "Qwen3MoeForCausalLM", "Qwen3_5ForConditionalGeneration"}
+)
+
+#: CUDA-path architectures airllm 3.3.0 supports via dedicated subclasses
+#: (ARCH_OVERRIDES) or the generic base (any standard *ForCausalLM).
+CUDA_KNOWN_ARCHITECTURES: frozenset[str] = frozenset(
+    {
+        "LlamaForCausalLM",
+        "MistralForCausalLM",
+        "MixtralForCausalLM",
+        "ChatGLMModel",
+        "ChatGLMForConditionalGeneration",
+        "QWenLMHeadModel",
+        "BaichuanForCausalLM",
+        "BaiChuanForCausalLM",
+        "InternLMForCausalLM",
+        "KimiK3ForConditionalGeneration",
+        "Qwen3_5ForConditionalGeneration",
+        "Qwen4ExpForConditionalGeneration",
+    }
+)
+
+
+def architecture_compatibility(architecture: str, gpu_backend: str) -> CapabilityState:
+    """Tri-state model-architecture compatibility for the current platform.
+
+    ``gpu_backend`` is one of ``cuda`` / ``mps`` / ``cpu`` / ``unknown`` from
+    the environment probe. ``unknown`` backend or architecture is NEVER
+    promoted to ``supported`` (plan 12, §16).
+    """
+    arch = (architecture or "").strip()
+    if not arch:
+        return CapabilityState.UNKNOWN
+    if gpu_backend == "mps":
+        if arch in MLX_VERIFIED_ARCHITECTURES:
+            return CapabilityState.SUPPORTED
+        if arch in MLX_INCOMPATIBLE_ARCHITECTURES:
+            return CapabilityState.UNSUPPORTED
+        return CapabilityState.UNKNOWN
+    if gpu_backend == "cuda":
+        if arch in CUDA_KNOWN_ARCHITECTURES or arch.endswith("ForCausalLM"):
+            return CapabilityState.SUPPORTED
+        return CapabilityState.UNKNOWN
+    return CapabilityState.UNKNOWN
