@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-30T09:40:28.455553+00:00",
+  "captured_at": "2026-08-30T09:52:55.754723+00:00",
   "compute_backend": "mps",
   "cpu_cores": 12,
   "cpu_model": "",
@@ -10,7 +10,7 @@
   "profile_id": "baseline-mac",
   "ram_available_bytes": 0,
   "ram_total_bytes": 38654705664,
-  "storage_free_bytes": 61848969216,
+  "storage_free_bytes": 61865893888,
   "storage_type": "",
   "vram_available_bytes": 0,
   "vram_total_bytes": 0
