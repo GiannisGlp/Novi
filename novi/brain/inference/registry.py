@@ -72,7 +72,14 @@ class ModelSpec:
         return artifact
 
     def is_airllm_eligible(self) -> bool:
-        """A model is AirLLM-eligible only when its artifact identity is resolved."""
+        """A model is AirLLM-eligible only when its artifact identity is resolved.
+
+        An explicit ``airllm_eligible: False`` in ``resolved`` (recorded when a
+        compatibility blocker exists, e.g. an unsatisfiable Transformers version
+        requirement) is honored over the generic shape check.
+        """
+        if self.resolved.get("airllm_eligible") is False:
+            return False
         return bool(self.resolved.get("architecture")) and bool(self.resolved.get("parameter_count"))
 
 
@@ -149,7 +156,23 @@ def _default_model_specs() -> tuple[ModelSpec, ...]:
             capabilities={"text": True, "vision": True, "tool_calling": None, "structured_output": None},
             hardware_requirements={},
             status="candidate",
-            backend_artifacts={},  # resolved only after Step 17 (exact HF artifact)
+            backend_artifacts={},  # airllm mapping pending compatibility resolution (§10)
+            # Resolved identity (Step 17, 2026-08-30, HF Hub): config.json
+            # declares transformers_version 5.8.0.dev0, which conflicts with the
+            # validated AirLLM stack (transformers 4.57.1, cap <5.13). NOT
+            # AirLLM-eligible until that conflict is resolved — never silently
+            # substitute a different checkpoint.
+            resolved={
+                "model_id": "Qwen/Qwen3.8-27B",
+                "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+                "architecture": "Qwen3_5ForConditionalGeneration",
+                "model_type": "qwen3_5",
+                "modality": "multimodal",
+                "transformers_version_required": "5.8.0.dev0",
+                "license": "apache-2.0",
+                "airllm_eligible": False,
+                "airllm_blocker": "transformers 5.8.0.dev0 required by config; validated AirLLM stack caps at <5.13 without global upgrade (plan 12 §10)",
+            },
         ),
         ModelSpec(
             id="qwen3.8-latest",

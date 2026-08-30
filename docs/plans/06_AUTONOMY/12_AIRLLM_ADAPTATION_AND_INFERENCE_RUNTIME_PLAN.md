@@ -31,7 +31,8 @@ Updated 2026-08-30 (first implementation round). Status vocabulary per §65: the
 | 14. Telemetry | DONE | `novi/brain/inference/telemetry.py` |
 | 15. AirLLM optional dependency | DONE | `pyproject.toml` `novi[airllm]` extra (not in base install) |
 | 16. AirLLM compatibility adapter | DONE | `novi/brain/inference/airllm/`, `backends/airllm.py` (lazy imports, disabled default) |
-| 17–22. Artifact resolution, sharding, smoke, tokenizer, warm inference | PENDING | requires AirLLM install + target hardware (Step 17) |
+| 17. Resolve exact HF artifact for `qwen3.8:27b` | DONE (blocker recorded) | `Qwen/Qwen3.8-27B` sha `1d4bf0f2ff60…`; architecture `Qwen3_5ForConditionalGeneration`; config requires `transformers 5.8.0.dev0` which conflicts with the validated AirLLM stack (4.57.1, cap `<5.13`) — registry records `airllm_eligible=false`; no checkpoint substitution |
+| 18–22. Sharding, smoke, tokenizer, warm inference | PENDING | blocked on Step 17 compatibility resolution (Transformers 5.x vs AirLLM matrix) |
 | 23–37. Integration, regression, benchmarks, failure, soak, compression, prefetch, eligibility | PENDING | gated on Steps 17–22 |
 
 Docs: `docs/specs/brain/30_INFERENCE_RUNTIME_SPEC.md`, `31_MODEL_COMPATIBILITY_MATRIX.md`, `32_RUNTIME_BENCHMARK_SPEC.md`.

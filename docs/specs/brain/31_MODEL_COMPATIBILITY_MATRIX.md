@@ -67,12 +67,31 @@ Captured at runtime by `probe_airllm_environment()` in `novi/brain/inference/air
 | OS | macOS (dev) / NVIDIA Linux (target) | Mac/MPS and CUDA tested separately |
 | GPU backend | `cuda` / `mps` / `cpu` / `unknown` | `unknown` never promoted to `supported` |
 
+### 4.1 Validated environment (2026-08-30, `benchmarks/compatibility-matrix.json`)
+
+AirLLM 3.3.0 installed in an isolated environment; `import airllm` smoke test **PASSES on the Mac** (requires `mlx` on darwin). Recorded: Python 3.11.15, torch 2.13.0, transformers 4.57.1, accelerate 1.14.0, safetensors 0.8.0, OS Darwin/arm64, GPU backend `mps`. `require_airllm()` passes (transformers major 4 < 5).
+
+### 4.2 Step 17 artifact resolution — Qwen3.8-27B
+
+| Fact | Value |
+|---|---|
+| Exact model | `Qwen/Qwen3.8-27B` |
+| Revision | `1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0` |
+| Architecture | `Qwen3_5ForConditionalGeneration` (`model_type: qwen3_5`) |
+| Modality | multimodal |
+| License | apache-2.0 |
+| Config-required Transformers | `5.8.0.dev0` |
+| Installed (validated) Transformers | 4.57.1 |
+
+**Compatibility finding:** the model's `config.json` declares `transformers_version: 5.8.0.dev0`, which conflicts with the plan's rule (§10) *"Do not globally upgrade Transformers solely to satisfy AirLLM"* and the validated matrix cap (`<5.13`). Per plan §9.5 the registry records `airllm_eligible=false` and the blocker; the model is **not admitted to the AirLLM production pool** until the Transformers conflict is resolved on validated hardware. No checkpoint substitution is permitted.
+
 ## 5. Evidence log
 
 | Date | Evidence artifact | Claim |
 |---|---|---|
 | 2026-08-30 | `benchmarks/inference-audit.json` | 57 inference call sites inventoried; 24 classified migrate-to-runtime; all LLM inference is local Ollama with deterministic fallbacks |
 | 2026-08-30 | Brain suite: 1758 passed | Inference abstraction introduced without regressing the Mac Brain |
+| 2026-08-30 | `benchmarks/compatibility-matrix.json` | AirLLM 3.3.0 import smoke passes on Mac (mlx, MPS); Qwen3.8-27B artifact resolved — architecture `Qwen3_5ForConditionalGeneration`, config requires transformers 5.8.0.dev0, recorded `airllm_eligible=false` |
 | pending | Qwen3.8-27B AirLLM preparation + smoke | any `supported` capability claim for airllm backend |
 
 ## 6. Router hypotheses (provisional — benchmark-settable, plan 12 §23/§46)

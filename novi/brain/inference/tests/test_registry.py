@@ -66,6 +66,19 @@ class ModelRegistryTests(unittest.TestCase):
         with self.assertRaises(InferenceConfigurationError):
             spec.resolve_backend_artifact("airllm")
 
+    def test_qwen38_27b_resolved_identity_recorded(self) -> None:
+        # Step 17 (2026-08-30, HF Hub): exact artifact identity recorded —
+        # architecture Qwen3_5ForConditionalGeneration, revision sha, and the
+        # compatibility blocker (config requires transformers 5.8.0.dev0).
+        spec = ModelRegistry().get("qwen3.8-27b")
+        self.assertEqual(spec.resolved["architecture"], "Qwen3_5ForConditionalGeneration")
+        self.assertEqual(spec.resolved["revision"], "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0")
+        self.assertEqual(spec.resolved["model_id"], "Qwen/Qwen3.8-27B")
+        self.assertFalse(spec.resolved["airllm_eligible"])
+        self.assertIn("5.8.0.dev0", spec.resolved["airllm_blocker"])
+        # A compatibility blocker must never be promoted to eligibility.
+        self.assertFalse(spec.is_airllm_eligible())
+
     def test_qwen38_latest_is_not_routable_until_resolved(self) -> None:
         registry = ModelRegistry()
         spec = registry.get("qwen3.8-latest")
