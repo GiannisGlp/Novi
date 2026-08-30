@@ -192,7 +192,9 @@ def _recovery_checks(td: Path) -> list[dict[str, Any]]:
     raw.close()  # abrupt close without commit -> rollback
     s = DurableMemoryStore(db)
     rolled = s.get("mem-uncommitted") is None
-    record("uncommitted_rollback", rolled, "uncommitted row absent after reopen" if rolled else "uncommitted row leaked")
+    record(
+        "uncommitted_rollback", rolled, "uncommitted row absent after reopen" if rolled else "uncommitted row leaked"
+    )
     s.close()
 
     # 3. duplicate event submission -> idempotent (KEEP_EXISTING)
@@ -201,7 +203,9 @@ def _recovery_checks(td: Path) -> list[dict[str, Any]]:
     r1 = _admit(s, 1, "alice")
     before = s.active_count
     r2 = _admit(s, 1, "alice")
-    record("duplicate_idempotent", r2.accepted and r1.memory_id == r2.memory_id and s.active_count == before, r2.decision)
+    record(
+        "duplicate_idempotent", r2.accepted and r1.memory_id == r2.memory_id and s.active_count == before, r2.decision
+    )
     s.close()
 
     # 4. checkpoint -> reopen integrity

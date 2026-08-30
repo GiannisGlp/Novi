@@ -134,6 +134,28 @@ class ShardStorageTests(unittest.TestCase):
         with self.assertRaises(ShardIntegrityError):
             verify_shard_integrity(self.shards, manifest)
 
+    def test_integrity_verification_nested_layout(self) -> None:
+        # The Mac/MLX path writes shards under splitted_model/ — discovery must
+        # be recursive and checksum keys relative (plan 12 §15).
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            nested = root / "splitted_model"
+            nested.mkdir()
+            (nested / "model.layers.0.mlx.npz").write_bytes(b"layer-0-data")
+            (nested / "model.layers.1.mlx.npz").write_bytes(b"layer-1-data")
+            import hashlib
+
+            manifest = ShardManifest(
+                model_id="m",
+                shard_count=2,
+                checksums={
+                    "splitted_model/model.layers.0.mlx.npz": hashlib.sha256(b"layer-0-data").hexdigest(),
+                    "splitted_model/model.layers.1.mlx.npz": hashlib.sha256(b"layer-1-data").hexdigest(),
+                },
+            )
+            verified = verify_shard_integrity(root, manifest)
+            self.assertEqual(verified.status, "prepared")
+
     def test_insufficient_disk_refuses_with_typed_error(self) -> None:
         # plan 12, §14: refuse preparation, emit diagnostic, delete nothing.
         with self.assertRaises(StorageCapacityError):

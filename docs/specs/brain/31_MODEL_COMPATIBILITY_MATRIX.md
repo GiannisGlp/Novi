@@ -85,6 +85,17 @@ AirLLM 3.3.0 installed in an isolated environment; `import airllm` smoke test **
 
 **Compatibility finding:** the model's `config.json` declares `transformers_version: 5.8.0.dev0`, which conflicts with the plan's rule (§10) *"Do not globally upgrade Transformers solely to satisfy AirLLM"* and the validated matrix cap (`<5.13`). Per plan §9.5 the registry records `airllm_eligible=false` and the blocker; the model is **not admitted to the AirLLM production pool** until the Transformers conflict is resolved on validated hardware. No checkpoint substitution is permitted.
 
+### 4.3 Mac (Apple Silicon) path — AirLLM 3.3.0 MLX backend
+
+Verified by source inspection + isolated install on the dev machine (2026-08-30):
+
+- On macOS, `airllm.AutoModel.from_pretrained(...)` routes to **`AirLLMLlamaMlx`** (a pure-MLX reimplementation) for every architecture; the CUDA layer-streaming path (`AirLLMBaseModel`) is used on non-Mac only.
+- The MLX path only supports the **standard Llama-style layout** (`model.embed_tokens` / `model.layers.N` / `model.norm` / `lm_head`) with a compatible config (hidden_size, intermediate_size, num_attention_heads, num_key_value_heads, num_hidden_layers, vocab_size, rms_norm_eps, rope_theta).
+- **Qwen3.8-27B is NOT supported on the Mac path**: its `Qwen3_5ForConditionalGeneration` nests the decoder at `model.language_model.layers` (dedicated CUDA subclass `AirLLMQwen3_5`), which the MLX path cannot stream.
+- **Qwen3-4B/8B are also NOT supported on the Mac path** (execution-verified 2026-08-30): Qwen3 uses QK-norm (`q_norm`/`k_norm` per-head norms) and the MLX `TransformerBlock` has no such parameters → `ValueError: Module does not have parameter named "q_norm"` during generation. Evidence: `benchmarks/airllm-mac/qwen3-4b-finding.json`. This overturns the plan §9.1/§9.2 optional-evaluation hypothesis for Qwen3 on Mac.
+- The MLX API differs from CUDA: `generate(x, temperature=0, max_new_tokens=...)` takes a **token tensor** (no `top_k`), and the loader must pass `layer_shards_saving_path=` (not `shard_dir`), with `compression=None` (not `"none"`) for the disabled state. The Novi adapter (`novi/brain/inference/airllm/adapter.py`) and loader branch on the platform (`_is_mlx`, `_default_device`, `_airllm_compression`).
+- **Mac-viable AirLLM targets** (plain Llama-style, no QK-norm): `TinyLlama/TinyLlama-1.1B-Chat-v1.0` — **execution-verified end-to-end on the Mac** (prepare 20 s, cold generation 56.8 s/27 tokens, warm 28.2 s, unload ok; evidence `benchmarks/airllm-mac/tinyllama-1.1b.json`). Validation runner: `novi/brain/benchmarks/airllm_mac_validate.py`.
+
 ## 5. Evidence log
 
 | Date | Evidence artifact | Claim |

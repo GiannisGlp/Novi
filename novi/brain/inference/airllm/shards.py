@@ -117,9 +117,12 @@ def verify_shard_integrity(shards_dir: str | Path, manifest: ShardManifest) -> S
 
     A partially prepared model must never be selected by the router (plan 12,
     §15): any missing/extra/unverified file raises ``ShardIntegrityError``.
+
+    Shard layouts may nest (the Mac/MLX path writes under ``splitted_model/``),
+    so discovery is recursive and checksum keys are relative paths.
     """
     root = Path(shards_dir)
-    files = sorted(p for p in root.iterdir() if p.is_file())
+    files = sorted(p for p in root.rglob("*") if p.is_file())
     expected_count = manifest.shard_count
     if expected_count > 0 and len(files) != expected_count:
         raise ShardIntegrityError(

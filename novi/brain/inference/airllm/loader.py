@@ -133,11 +133,15 @@ class AirLLMLoader:
         source_id = artifact.get("source_id") or artifact.get("path")
         shards_dir.mkdir(parents=True, exist_ok=True)
         try:
+            # Real AirLLM API (verified against 3.3.0): layer_shards_saving_path
+            # (NOT shard_dir), and the Mac path (AirLLMLlamaMlx) ignores device.
+            # compression=None disables quantization — the string "none" would
+            # be treated as an enabled compression mode (bitsandbytes assert).
             model = AutoModel.from_pretrained(
                 str(source_id),
-                device="cuda",
-                shard_dir=str(shards_dir),
-                compression=compression,
+                device=_default_device(),
+                layer_shards_saving_path=str(shards_dir),
+                compression=_airllm_compression(compression),
                 prefetching=prefetching,
             )
         except Exception as exc:
@@ -146,8 +150,11 @@ class AirLLMLoader:
                 context={"model": model_id, "source": str(source_id)},
             ) from exc
 
-        shard_files = sorted(p for p in shards_dir.iterdir() if p.is_file())
+        # Shard layouts may nest (Mac/MLX path writes under ``splitted_model/``);
+        # collect recursively and record relative paths + hashes (plan 12 §15).
+        shard_files = sorted(p for p in shards_dir.rglob("*") if p.is_file())
         sizes = tuple(p.stat().st_size for p in shard_files)
+        checksums = {str(p.relative_to(shards_dir)): _sha256_file(p) for p in shard_files}
         manifest = ShardManifest(
             model_id=model_id,
             revision=artifact.get("revision", ""),
@@ -159,6 +166,7 @@ class AirLLMLoader:
             shard_count=len(shard_files),
             shard_sizes=sizes,
             total_bytes=sum(sizes),
+            checksums=checksums,
             validation_hardware=os.environ.get("NOVI_HARDWARE_PROFILE_ID", ""),
             compression_mode=compression,
             prefetch_mode=bool(prefetching),
@@ -194,9 +202,9 @@ class AirLLMLoader:
         try:
             model = AutoModel.from_pretrained(
                 str(source_id),
-                device="cuda",
-                shard_dir=str(target_dir / "shards"),
-                compression=manifest.compression_mode,
+                device=_default_device(),
+                layer_shards_saving_path=str(target_dir / "shards"),
+                compression=_airllm_compression(manifest.compression_mode),
                 prefetching=manifest.prefetch_mode,
             )
         except Exception as exc:
@@ -230,3 +238,35 @@ def _version_or(module_name: str) -> str:
         return str(getattr(importlib.import_module(module_name), "__version__", "unknown"))
     except Exception:
         return "unknown"
+
+
+def _sha256_file(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _default_device() -> str:
+    """Device hint for AirLLM AutoModel.
+
+    On macOS, AirLLM 3.3.0 routes to the MLX backend (``AirLLMLlamaMlx``) which
+    ignores ``device``; on CUDA hosts the streaming path expects ``cuda``.
+    """
+    import platform
+
+    return "mps" if platform.system() == "Darwin" else "cuda"
+
+
+def _airllm_compression(mode: str | None) -> str | None:
+    """Translate Novi config compression strings to AirLLM's expected values.
+
+    AirLLM treats any truthy ``compression`` as an enabled quantization mode
+    and asserts ``bitsandbytes`` is installed; ``None`` is the disabled state.
+    """
+    if mode in ("none", None, ""):
+        return None
+    return mode

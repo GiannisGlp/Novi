@@ -51,8 +51,8 @@ CAMERA_READ_REPS = 30
 
 MEMORIES_ADMIT = 200
 RECALL_QUERIES = 50
-MINILM_LOAD_TIMEOUT_S = 60.0     # spec: skip MiniLM timing if load exceeds 60 s
-MINILM_JOIN_TIMEOUT_S = 180.0    # outer leash so the harness can never hang
+MINILM_LOAD_TIMEOUT_S = 60.0  # spec: skip MiniLM timing if load exceeds 60 s
+MINILM_JOIN_TIMEOUT_S = 180.0  # outer leash so the harness can never hang
 
 SCENE_W, SCENE_H = 640, 480
 
@@ -66,6 +66,7 @@ def log(msg: str) -> None:
 # statistics helpers (same linear-interpolation percentile style as
 # novi/brain/benchmarks/arch_close_003_gate.py)
 # --------------------------------------------------------------------------- #
+
 
 def _pctl(samples: list[float], q: float) -> float:
     s = sorted(samples)
@@ -103,6 +104,7 @@ def timed_calls(fn: Callable[[], Any], reps: int, warmup: int = 0) -> list[float
 # synthetic scene + fake camera (stand-ins for MacCamera)
 # --------------------------------------------------------------------------- #
 
+
 def build_scene() -> tuple[Any, str]:
     """BGR uint8 640x480x3 synthetic living-room-ish scene for SSDLite."""
     try:
@@ -120,9 +122,9 @@ def build_scene() -> tuple[Any, str]:
         cv2.rectangle(img, (100, 270), (120, 340), (0, 80, 120), thickness=-1)
         cv2.rectangle(img, (260, 270), (280, 340), (0, 80, 120), thickness=-1)
         # objects on/near the table (circles)
-        cv2.circle(img, (140, 235), 22, (60, 60, 230), thickness=-1)   # red ball
+        cv2.circle(img, (140, 235), 22, (60, 60, 230), thickness=-1)  # red ball
         cv2.circle(img, (210, 232), 16, (230, 200, 60), thickness=-1)  # cyan ball
-        cv2.circle(img, (500, 260), 30, (80, 170, 90), thickness=-1)   # green ball
+        cv2.circle(img, (500, 260), 30, (80, 170, 90), thickness=-1)  # green ball
         # person-like figure (rectangles + circle)
         cv2.circle(img, (380, 210), 26, (140, 150, 200), thickness=-1)
         cv2.rectangle(img, (360, 236), (400, 320), (150, 160, 210), thickness=-1)
@@ -135,7 +137,7 @@ def build_scene() -> tuple[Any, str]:
         except Exception:
             raise RuntimeError(f"SKIP scene: neither cv2 nor numpy usable ({exc})") from None
         img = np.zeros((SCENE_H, SCENE_W, 3), dtype=np.uint8)
-        img[:240, :, 0] = 120          # crude blocks so detectors see *something*
+        img[:240, :, 0] = 120  # crude blocks so detectors see *something*
         img[240:, :, 1] = 90
         img[100:200, 100:260, 2] = 200
         log(f"WARN: cv2 unavailable ({exc}); numpy fallback scene")
@@ -171,6 +173,7 @@ def make_fake_camera(payload: Any):
 # --------------------------------------------------------------------------- #
 # brain profiles
 # --------------------------------------------------------------------------- #
+
 
 def build_deterministic_perception():
     from novi.brain.b2_perception import SpecialistPerception
@@ -210,12 +213,11 @@ def brain_profile(perception, payload: Any, label: str) -> dict[str, Any]:
         camera_read_ms = timed_calls(camera.read, CAMERA_READ_REPS)
 
         def _process(n: int) -> None:
-            perception.process(
-                sensor_id="probe", frame_id=f"p{n}", timestamp="t", frame=payload
-            )
+            perception.process(sensor_id="probe", frame_id=f"p{n}", timestamp="t", frame=payload)
 
         perception_ms = timed_calls(
-            lambda: _process(perception_ms_counter()), PERCEPTION_REPS,
+            lambda: _process(perception_ms_counter()),
+            PERCEPTION_REPS,
             warmup=PERCEPTION_WARMUP_REPS,
         )
     finally:
@@ -306,9 +308,7 @@ def embed_minilm_profile() -> dict[str, Any]:
             load_s = time.perf_counter() - t0
             if load_s > MINILM_LOAD_TIMEOUT_S:
                 result["status"] = "skipped"
-                result["reason"] = (
-                    f"MiniLM load took {load_s:.1f}s (> {MINILM_LOAD_TIMEOUT_S:.0f}s budget)"
-                )
+                result["reason"] = f"MiniLM load took {load_s:.1f}s (> {MINILM_LOAD_TIMEOUT_S:.0f}s budget)"
                 with contextlib.suppress(Exception):
                     store.close()
                 return
@@ -330,8 +330,7 @@ def embed_minilm_profile() -> dict[str, Any]:
         return {
             "status": "skipped",
             "reason": (
-                f"no result within {MINILM_JOIN_TIMEOUT_S:.0f}s join leash "
-                "(model load/download presumed stalled)"
+                f"no result within {MINILM_JOIN_TIMEOUT_S:.0f}s join leash (model load/download presumed stalled)"
             ),
         }
     return result
@@ -340,6 +339,7 @@ def embed_minilm_profile() -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # environment manifest
 # --------------------------------------------------------------------------- #
+
 
 def env_manifest(neural_device: str | None) -> dict[str, Any]:
     u = platform.uname()
@@ -368,6 +368,7 @@ def env_manifest(neural_device: str | None) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # main
 # --------------------------------------------------------------------------- #
+
 
 def run_probe() -> dict[str, Any]:
     summary: dict[str, Any] = {
@@ -458,9 +459,7 @@ def run_probe() -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="PERF-PROBE: wall-clock per-step cost profile of the Novi Mac Brain"
-    )
+    parser = argparse.ArgumentParser(description="PERF-PROBE: wall-clock per-step cost profile of the Novi Mac Brain")
     parser.add_argument(
         "--json-out",
         type=Path,

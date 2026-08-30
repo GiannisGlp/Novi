@@ -50,3 +50,5 @@ novi/web/ui/tsconfig*.tsbuildinfo
 
 # Graphify
 graphify-out/*
+.hf-cache/
+.airllm-models/

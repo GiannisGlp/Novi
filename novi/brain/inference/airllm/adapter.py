@@ -59,7 +59,7 @@ class AirLLMAdapter:
 
         start = time.monotonic()
         try:
-            output = self.model.generate(prompt, max_new_tokens=request.max_output_tokens, top_k=request.top_k or 1)
+            output = self._call_model(prompt, request)
         except InferenceError:
             raise
         except Exception as exc:
@@ -94,6 +94,44 @@ class AirLLMAdapter:
         )
 
     # ---------------------------------------------------------------- helpers
+    def _call_model(self, prompt: str, request: InferenceRequest) -> Any:
+        """Call the loaded AirLLM model with the platform-appropriate API.
+
+        - CUDA/streaming path (``AirLLMBaseModel`` subclasses): ``generate``
+          accepts the prompt string plus transformers sampling kwargs.
+        - Mac path (``AirLLMLlamaMlx``, verified against AirLLM 3.3.0):
+          ``generate(x, temperature=0, max_new_tokens=...)`` takes a token
+          tensor; ``top_k`` is not a parameter.
+        """
+        if self._is_mlx(self.model):
+            return self._call_mlx(prompt, request)
+        return self.model.generate(
+            prompt,
+            max_new_tokens=request.max_output_tokens,
+            top_k=request.top_k or 1,
+            temperature=request.temperature,
+        )
+
+    @staticmethod
+    def _is_mlx(model: Any) -> bool:
+        # The Mac MLX backend exposes model_generate and its own tokenizer;
+        # the CUDA streaming path delegates generate() to the transformers model.
+        return hasattr(model, "model_generate") and hasattr(model, "tokenizer")
+
+    def _call_mlx(self, prompt: str, request: InferenceRequest) -> Any:
+        import mlx.core as mx  # Mac-only; airllm already requires mlx there
+
+        tokenizer = self.model.tokenizer
+        ids = tokenizer(prompt)["input_ids"]
+        if isinstance(ids, list) and ids and isinstance(ids[0], list):
+            ids = ids[0]
+        x = mx.array([list(ids)])
+        return self.model.generate(
+            x,
+            temperature=request.temperature,
+            max_new_tokens=request.max_output_tokens,
+        )
+
     @staticmethod
     def _compose_prompt(request: InferenceRequest) -> str:
         parts: list[str] = []

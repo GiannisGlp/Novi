@@ -27,7 +27,7 @@ class _FakeAirllmModel:
     def __init__(self, output: str) -> None:
         self.output = output
 
-    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1) -> str:
+    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1, temperature: float = 0.0) -> str:
         return self.output
 
 

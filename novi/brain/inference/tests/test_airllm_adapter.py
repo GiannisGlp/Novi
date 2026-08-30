@@ -26,7 +26,7 @@ class FakeAirLLMModel:
         self.output = output
         self.error = error
 
-    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1) -> object:
+    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1, temperature: float = 0.0) -> object:
         if self.error is not None:
             raise self.error
         return self.output

@@ -50,7 +50,7 @@ class _ExplodingModel:
     def __init__(self, error: Exception) -> None:
         self.error = error
 
-    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1):
+    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1, temperature: float = 0.0):
         raise self.error
 
 
@@ -68,7 +68,7 @@ class _FakeModel:
     def __init__(self, output: object) -> None:
         self.output = output
 
-    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1):
+    def generate(self, prompt: str, max_new_tokens: int = 128, top_k: int = 1, temperature: float = 0.0):
         return self.output
 
 
