@@ -124,6 +124,9 @@ class MacBrainConfig:
     initiative_enabled: bool = False
     initiative_neglect_threshold: int = 30
     initiative_cooldown: int = 60
+    #: cycles of no user interaction before a spontaneous remark may fire —
+    #: protects mid-dialogue pauses (0.8s tick: 180 cycles ~ 2.4 minutes).
+    initiative_conversation_guard_cycles: int = 180
     # Phase 5 (plan 19): neural perception cadence — run the (expensive)
     # perception backend every N cycles instead of every cycle, for Jetson
     # power budgets. 1 = every cycle (default, unchanged). The loop still steps
@@ -1810,6 +1813,10 @@ class MacBrain(ChatMixin):
     def ingest_transcript(self, transcription: TranscriptionResult) -> dict[str, Any]:
         """Feed a transcript into memory (durable) and cognition (transient speech event)."""
         self.social_initiative.note_addressed(self._cycle)
+        # Conversation-activity guard: any real user utterance (chat or voice)
+        # resets the mid-dialogue initiative window so spontaneous "it's quiet
+        # around here." remarks never interrupt an active conversation.
+        self._last_user_utterance_cycle = self._cycle
         entity_refs = self._entities_in_text(transcription.text)
         # Only a speech self-introduction ("i am Maya", "my name is Maya") binds
         # the speaker's name — mentioning a third party does not invent an

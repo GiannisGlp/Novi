@@ -110,6 +110,42 @@ class ReasoningAcceptanceTests(unittest.TestCase):
 
     """Rule 4 + Rule 5: autonomous and initiates when neglected."""
 
+    def test_does_not_initiate_mid_dialogue(self):
+        # Mid-dialogue guard (2026-08-30): a spontaneous "it's quiet around
+        # here." must NEVER interrupt an active conversation. After a user
+        # utterance the initiative is suppressed for the conversation-guard
+        # window even when the neglect threshold is already exceeded.
+        brain = _brain(initiative_enabled=True, initiative_neglect_threshold=2, initiative_cooldown=100)
+        brain.start()
+        try:
+            # Simulate an active conversation: a recent user utterance.
+            brain._last_user_utterance_cycle = brain._cycle
+            for _ in range(5):
+                brain.step()
+            fired = [e for e in brain.events if e.get("event_type") == "speech.initiated"]
+            suppressed = [e for e in brain.events if e.get("event_type") == "speech.initiative_suppressed"]
+            self.assertEqual(fired, [], "initiative must not fire mid-dialogue")
+            self.assertTrue(
+                any(e.get("payload", {}).get("reason") == "conversation_active" for e in suppressed),
+                "suppression should cite conversation_active",
+            )
+        finally:
+            brain.stop()
+
+    def test_initiates_after_conversation_goes_quiet(self):
+        # Once the conversation has genuinely gone quiet past the guard window,
+        # neglect-driven initiative may fire again.
+        brain = _brain(initiative_enabled=True, initiative_neglect_threshold=2, initiative_cooldown=100)
+        brain.start()
+        try:
+            brain._last_user_utterance_cycle = -10**9  # no conversation at all
+            for _ in range(6):
+                brain.step()
+            fired = [e for e in brain.events if e.get("event_type") == "speech.initiated"]
+            self.assertTrue(fired, "initiative should fire after a quiet period")
+        finally:
+            brain.stop()
+
     def test_initiates_when_neglected_but_not_during_goals(self):
         brain = _brain(initiative_enabled=True, initiative_neglect_threshold=5, initiative_cooldown=100)
         brain.start()

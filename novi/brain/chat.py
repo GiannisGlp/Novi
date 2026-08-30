@@ -835,13 +835,16 @@ class ChatMixin:
                     pass
             if reply is None:
                 fb = self.natural_reply_fallback(text=text, cycle=cycle)
+                # Honest label: distinguish "no transport at all" from "a
+                # transport existed but the LLM reply was rejected/empty".
+                transport_reason = "llm_reply_rejected" if llm_chat is not None else "llm_unavailable"
                 return {
                     "text": fb.get("text"),
                     "reply_source": "fallback",
                     "addressee": addressee,
                     "reason": fb.get("reason") or "No LLM reply available; used a natural acknowledgement.",
                     "grounding": reply_obj.get("grounding", {}),
-                    "trace": {"conclusion": None, "route": "deterministic", "route_reason": "no_llm_transport"},
+                    "trace": {"conclusion": None, "route": "deterministic", "route_reason": transport_reason},
                 }
             return {
                 "text": reply,
@@ -1380,6 +1383,16 @@ class ChatMixin:
         ticking (SCENARIO-V1) and the lease alone gates outbound spontaneity.
         """
         if not self.config.initiative_enabled:
+            return None
+        # Mid-dialogue guard: never interrupt an ACTIVE conversation with an
+        # idle/neglect remark. The neglect threshold alone (30 cycles ~ 24 s)
+        # fires during ordinary pauses between chat turns; only initiate after
+        # the conversation has genuinely gone quiet for a sustained window.
+        conversation_guard = getattr(self.config, "initiative_conversation_guard_cycles", 180)
+        if self._cycle - getattr(self, "_last_user_utterance_cycle", -10**9) < conversation_guard:
+            self._emit("speech.initiative_suppressed", {
+                "cycle": self._cycle, "reason": "conversation_active",
+            })
             return None
         if self.speaking_lease_for(person):
             self._emit("speech.initiative_suppressed", {

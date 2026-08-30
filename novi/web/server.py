@@ -753,7 +753,9 @@ class NoviWebServer(IntegrationMixin):
                 trace["confidence"] = 0.85
             else:
                 trace["route"] = "deterministic"
-                trace["route_reason"] = "no_llm_transport"
+                # Honest label: transport existed but the reply was rejected/
+                # empty (or a designed fallback path) vs. no transport at all.
+                trace["route_reason"] = "llm_reply_rejected" if (self.chat_llm and self._llm_up()) else "llm_unavailable"
                 trace["confidence"] = heard_conf
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
             self._append_chat({"role": "user", "text": text}, person)
@@ -829,7 +831,7 @@ class NoviWebServer(IntegrationMixin):
                 trace["confidence"] = 0.85
             else:
                 trace["route"] = "deterministic"
-                trace["route_reason"] = "no_llm_transport"
+                trace["route_reason"] = "llm_reply_rejected" if (self.chat_llm and self._llm_up()) else "llm_unavailable"
                 trace["confidence"] = result.get("confidence", 0.8)
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
             self._append_chat({"role": "user", "text": f"[heard] {text}"}, addressee)
@@ -950,6 +952,8 @@ class NoviWebServer(IntegrationMixin):
         message = data.get("message", {}) or {}
         reply = (message.get("content") or "").strip()
         if reply:
+            import sys as _sys
+            print(f"[llm-debug] reply[{self.llm_model}] first80={reply[:80]!r}", file=_sys.stderr, flush=True)
             return reply
         # Reasoning models (e.g. NVIDIA Nemotron 3.5 Lightning) may emit only a
         # chain-of-thought; surface its final line as a fallback.
@@ -1070,7 +1074,7 @@ class NoviWebServer(IntegrationMixin):
                 trace["action"] = "respond"
                 trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
                 trace["route"] = "deterministic"
-                trace["route_reason"] = "no_llm_transport"
+                trace["route_reason"] = "llm_unavailable"
                 trace["confidence"] = heard_conf
                 novi_text = fb["text"]
                 # Stream the fallback as one chunk for uniform UI handling.
@@ -1108,7 +1112,7 @@ class NoviWebServer(IntegrationMixin):
                 trace["action"] = "respond"
                 trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
                 trace["route"] = "deterministic"
-                trace["route_reason"] = "no_llm_transport"
+                trace["route_reason"] = "llm_reply_rejected"
                 trace["confidence"] = heard_conf
                 novi_text = fb["text"]
                 for ch in [novi_text[i : i + 16] for i in range(0, len(novi_text), 16)]:
