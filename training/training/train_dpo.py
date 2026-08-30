@@ -53,7 +53,7 @@ def _smoke_report(cfg) -> dict:
     }
 
 
-def _real_report(cfg) -> dict:
+def _real_report(cfg, quantize_ref: bool = False) -> dict:
     try:
         from trl import DPOConfig, DPOTrainer  # noqa: PLC0415
     except ImportError:
@@ -65,6 +65,23 @@ def _real_report(cfg) -> dict:
     tokenizer = AutoTokenizer.from_pretrained(cfg.hf_model_id or cfg.base_model)
     model = AutoModelForCausalLM.from_pretrained(cfg.sft_adapter or cfg.hf_model_id or cfg.base_model)
     ref_model = AutoModelForCausalLM.from_pretrained(cfg.hf_model_id or cfg.base_model)
+    if quantize_ref:
+        # The reference model only runs forward passes; int8 weight-only cuts
+        # it from 16GB to ~8GB so 2x 8B DPO fits in 36GB unified memory.
+        try:
+            from torchao.quantization import quantize_  # noqa: PLC0415
+
+            try:  # torchao >= 0.18 API
+                from torchao.quantization import Int8WeightOnlyConfig  # noqa: PLC0415
+
+                quantize_(ref_model, Int8WeightOnlyConfig())
+            except ImportError:  # older torchao API
+                from torchao.quantization import int8_weight_only  # noqa: PLC0415
+
+                quantize_(ref_model, int8_weight_only())
+        except ImportError:
+            print("ERROR: --quantize-ref requires torchao (`pip install torchao`).", file=sys.stderr)
+            raise SystemExit(2) from None
 
     def _format(pair: dict) -> dict:
         prompt = situation_to_prompt({"situation": pair.get("situation", {})})
@@ -108,9 +125,11 @@ def _real_report(cfg) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     add_common_args(parser)
+    parser.add_argument("--quantize-ref", action="store_true",
+                        help="int8-quantize the reference model (fits 2x 8B in 36GB)")
     args = parser.parse_args(argv)
     cfg = load_config(args.config)
-    report = _smoke_report(cfg) if args.dry_run else _real_report(cfg)
+    report = _smoke_report(cfg) if args.dry_run else _real_report(cfg, quantize_ref=args.quantize_ref)
     return emit_report(report, args.out_json)
 
 
