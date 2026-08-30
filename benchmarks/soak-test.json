@@ -1,0 +1,30 @@
+{
+  "avg_latency_ms": 0.336,
+  "captured_at": "2026-08-30T10:01:57.705067+00:00",
+  "duration_s": 3.03,
+  "error_rate": 0.0,
+  "failures": 0,
+  "final_queue_depth": {
+    "BACKGROUND": 0,
+    "CRITICAL": 0,
+    "HIGH": 0,
+    "LOW": 0,
+    "NORMAL": 0
+  },
+  "final_rss_mib": 38464.0,
+  "max_latency_ms": 0.569,
+  "min_latency_ms": 0.151,
+  "note": "short soak; full 1h/4h/8h/24h durations require target hardware (plan 12 \u00a750)",
+  "requests": 3,
+  "samples": [],
+  "telemetry": {
+    "avg_tokens_per_second": 8000.0,
+    "avg_ttft_ms": null,
+    "failures": {},
+    "fallbacks": {},
+    "last_backend_id": "mock",
+    "last_model_id": "qwen3-8b",
+    "model_switches": 1,
+    "requests": 3
+  }
+}

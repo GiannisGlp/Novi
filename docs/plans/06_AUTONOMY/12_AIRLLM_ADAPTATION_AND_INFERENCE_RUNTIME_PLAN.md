@@ -35,7 +35,11 @@ Updated 2026-08-30 (first implementation round). Status vocabulary per §65: the
 | 18. Prepare Qwen3.8-27B into AirLLM shards | BLOCKED (environment) | checkpoint is 55.6 GB (HF tree); source + shards + reserve ≈ 112 GB required vs 58 GiB free — `check_disk_capacity` refuses with typed `StorageCapacityError` (verified). Also blocked on the Step 17 Transformers conflict (AirLLM `airllm_qwen3_5.py` documents "Needs transformers 5.8+"). Backend remains an implemented, platform-blocked provider (§17) |
 | 19–22. Shard integrity, smoke, tokenizer, warm inference | PENDING | gated on Step 18 |
 | 23. Integrate AirLLM backend through reasoning seam | DONE (stub-verified) | `test_airllm_seam.py`: runtime backed by AirLLMBackend serves `MacBrain`-compatible `decide()` end-to-end; routing selects airllm only with a validated (model, hardware) combination |
-| 24. Complete Brain regression suite | DONE | 1762 brain tests green (round 1) + 106 inference tests (round 2) |
+| 24. Complete Brain regression suite | DONE | 1762 brain + 113 inference tests green (rounds 1–2) |
+| 25. Run Novi cognitive benchmark suite | DONE (existing backend) | baseline harness scores deterministic quality per prompt (§36): all 4 running models 8/8 prompts + 8/8 quality checks, 0% error |
+| 26. Compare AirLLM against baseline | PENDING | gated on Step 18; baseline comparison data ready in `benchmarks/baseline/` |
+| 29. Test offline operation | DONE (runtime level) | `test_offline_operation.py`: mock + local-transport existing backends complete generation with zero network calls |
+| 30. Long-duration soak tests | HARNESS DONE, durations gated | `novi/brain/benchmarks/soak.py` (CI-safe verified); 1h/4h/8h/24h require target hardware |
 | 27. Failure recovery | DONE (mock-level) | `test_failure_injection.py`: all 20 cases of §26 exercised (import failure → cancellation, OOM, hang, crash, storage full…) with typed classification |
 | 28. Model unload/reload | DONE | `UnloadReloadTests`: switch A→B→A with correct per-response metadata, idempotent unload |
 | 33. Router eligibility rules | DONE | `RuntimeConfig.airllm_enabled` + `validated_airllm_combinations`; runtime validator gate: AirLLM routable ONLY for enabled + (model, compute-backend) pairs with execution evidence |
