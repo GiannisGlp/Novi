@@ -133,7 +133,7 @@ _META_REFERENTIAL = [
         r"\bthat'?s (?:concise|warm|friendly|direct|appropriate|good)\b",
         r"\baddresses their request\b",
         r"\bno invented (?:physical|emotional|experience)\b",
-        r"\b(?:i|we) (?:can'?t|can not|don'?t) (?:claim|invent|pretend|have)\b",
+        r"\b(?:i|we) (?:can'?t|can not) (?:claim|invent|pretend)\b",
         r"\b(?:this|it) (?:is|seems) (?:a|an) (?:good|natural|appropriate) (?:way|response|reply)\b",
         r"\b(?:i|we) (?:should|need to) (?:keep|stay|avoid)\b",
         r"\b(?:keeps?|stay) (?:it )?(?:grounded|natural|brief)\b",
@@ -986,7 +986,9 @@ def _is_repeat_question(text: str) -> bool:
 # listening?") deserve a warm, present acknowledgment, not a program-y meta reply.
 _ENGAGEMENT_RE = re.compile(
     r"\b(?:are you there\b|can you hear me\b|are you listening\b|are you still (?:with me|there)\b|"
-    r"are you with me\b|are you awake\b|are you around\b|do you understand me\b)\b",
+    r"are you with me\b|are you awake\b|are you around\b|do you understand me\b|"
+    r"you there\b|any(?:body|one) (?:there|around)\b|hey you there\b|you around\b|"
+    r"are you (?:online|here)\b)\b",
     re.IGNORECASE,
 )
 
@@ -1044,7 +1046,9 @@ _IDENTITY_RE = re.compile(
     r"are you (?:real|alive|sentient|conscious)\b|do you have (?:a )?(?:body|hand|hands|foot|feet|face|family)\b|"
     r"can you (?:feel|get|fall in|have) (?:emotions|feelings|pain|love|sad)\b|do you (?:feel|have|get) (?:emotions|feelings)\b|"
     r"when were you born\b|who (?:made|created|built) you\b|where do you (?:live|stay)\b|"
-    r"are you a real person\b|what are you exactly\b)\b",
+    r"are you a real person\b|what are you exactly\b|"
+    r"tell me about (?:yourself|you)\b|describe yourself\b|"
+    r"introduce yourself\b|what (?:are|can) you do for me\b)\b",
     re.IGNORECASE,
 )
 
@@ -1152,6 +1156,7 @@ _CHECK_IN_REPLIES = [
 
 def _is_check_in(text: str) -> bool:
     return bool(text) and bool(_CHECK_IN_RE.search(text))
+
 
 
 def check_in_reply(cycle: int = 0) -> str:
