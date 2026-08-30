@@ -288,3 +288,29 @@ class RegressionMemory:
 
     def lessons(self) -> tuple[Lesson, ...]:
         return tuple(self._lessons.values())
+
+    def snapshot(self) -> dict[str, Any]:
+        """Phase 4c: persist lessons/attempts/rollbacks (learning survives restart)."""
+        return {
+            "lessons": [lesson.snapshot() for lesson in self._lessons.values()],
+            "promotion_attempts": list(self._promotion_attempts),
+            "rollbacks": list(self._rollbacks),
+        }
+
+    def from_snapshot(self, data: dict[str, Any]) -> "RegressionMemory":
+        for s in data.get("lessons", []):
+            try:
+                lesson = Lesson(
+                    lesson_id=str(s.get("lesson_id", "")),
+                    title=str(s.get("title", "")),
+                    evidence_refs=tuple(str(e) for e in s.get("evidence_refs", [])),
+                    verified=bool(s.get("verified", False)),
+                    regression_scenarios=[str(r) for r in s.get("regression_scenarios", [])],
+                )
+            except (TypeError, ValueError):
+                continue  # malformed lesson: skip, never crash the brain
+            if lesson.lesson_id:
+                self._lessons[lesson.lesson_id] = lesson
+        self._promotion_attempts = [a for a in data.get("promotion_attempts", []) if isinstance(a, dict)]
+        self._rollbacks = [str(r) for r in data.get("rollbacks", [])]
+        return self

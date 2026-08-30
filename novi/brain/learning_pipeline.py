@@ -175,6 +175,28 @@ class KnowledgePromotionPipeline:
             "promoted_keys": sorted(self._promoted_keys),
         }
 
+    def from_snapshot(self, snapshot: dict[str, Any]) -> "KnowledgePromotionPipeline":
+        """Phase 4c: restore promotion candidates/history after restart."""
+        for c in snapshot.get("candidates", []):
+            try:
+                candidate = PromotionCandidate(
+                    subject=str(c.get("subject", "")),
+                    predicate=str(c.get("predicate", "")),
+                    object=str(c.get("object", "")),
+                    confidence=_clamp01(c.get("confidence", 0.0)),
+                    evidence_count=int(c.get("evidence_count", 0)),
+                    epistemic=str(c.get("epistemic", OBSERVED)),
+                    sources=tuple(str(s) for s in c.get("sources", [])),
+                    first_cycle=int(c.get("first_cycle", 0)),
+                )
+            except (TypeError, ValueError):
+                continue
+            key = (candidate.subject, candidate.predicate, candidate.object)
+            self._candidates[key] = candidate
+        self._promotions = list(snapshot.get("promotions", []))
+        self._promoted_keys.update(str(k) for k in snapshot.get("promoted_keys", []))
+        return self
+
 
 def _merge_epistemic(a: str, b: str) -> str:
     """Merged epistemic status: strongest wins; simulation never claims real."""
@@ -249,6 +271,24 @@ class UserCorrectionLog:
     def snapshot(self) -> list[dict[str, Any]]:
         return [r.snapshot() for r in self._records]
 
+    def restore(self, records: list[dict[str, Any]]) -> "UserCorrectionLog":
+        """Phase 4c: reload persisted corrections (learning survives restart)."""
+        for r in records or []:
+            try:
+                self._records.append(CorrectionRecord(
+                    subject=str(r.get("subject", "")),
+                    predicate=str(r.get("predicate", "")),
+                    old_object=r.get("old_object"),
+                    new_object=str(r.get("new_object", "")),
+                    person=str(r.get("corrected_by", "")),
+                    source=str(r.get("source", "")),
+                    cycle=int(r.get("cycle", 0)),
+                    timestamp=str(r.get("timestamp", "")),
+                ))
+            except (TypeError, ValueError):
+                continue  # malformed record: skip, never crash the brain
+        return self
+
 
 # ---------------------------------------------------------------------------
 # Routine detection
@@ -322,6 +362,21 @@ class RoutineDetector:
             "routines": [r.snapshot() for r in self.routines()],
         }
 
+    def from_snapshot(self, snapshot: dict[str, Any]) -> "RoutineDetector":
+        """Phase 4c: restore learned routines so learning survives restart."""
+        self.window = int(snapshot.get("window", self.window))
+        for r in snapshot.get("routines", []):
+            pattern = tuple(sorted(str(p) for p in r.get("pattern", [])))
+            if not pattern:
+                continue
+            self._routines[pattern] = RoutineHypothesis(
+                pattern=pattern,
+                occurrences=int(r.get("occurrences", self.min_occurrences)),
+                confidence=_clamp01(r.get("confidence", 0.4)),
+                window_cycles=int(r.get("window_cycles", self.window)),
+            )
+        return self
+
 
 # ---------------------------------------------------------------------------
 # Counterfactual engine
@@ -360,6 +415,13 @@ class CounterfactualEngine:
 
     def queries(self) -> tuple[dict[str, Any], ...]:
         return tuple(self._queries)
+
+    def from_snapshot(self, data: dict[str, Any]) -> "CounterfactualEngine":
+        """Phase 4c: restore persisted counterfactual queries."""
+        for q in data.get("queries", []):
+            if isinstance(q, dict) and q:
+                self._queries.append(q)
+        return self
 
     def snapshot(self) -> dict[str, Any]:
         return {"query_count": len(self._queries), "queries": list(self._queries)}

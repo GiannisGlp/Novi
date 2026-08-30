@@ -110,6 +110,16 @@ class DeliberativeReasoningProvider:
         base_risk = {"observe": 0.05, "wait": 0.02, "inspect": 0.1, "move_forward": 0.3, "turn_left": 0.2, "turn_right": 0.2}
         reflection = situation.get("reflection")
         c = max(0.0, min(1.0, float(confidence)))
+        # Phase 4c (behavior link): a LEARNED routine whose pattern overlaps the
+        # current situation raises the success evidence of the attention
+        # options — learned habits shape action selection (and survive restart
+        # via the persisted learning blob).
+        salient = {str(e).lower() for e in (situation.get("salient_entities") or [])}
+        routine_boost = 0.0
+        for pattern in situation.get("routines") or []:
+            members = {str(m).lower() for m in (pattern or [])}
+            if members & salient:
+                routine_boost = max(routine_boost, 0.4)
         scored: dict[str, Any] = {}
         for action, evidence in success.items():
             expected_success = max(0.0, min(1.0, evidence * (0.6 + 0.4 * c)))
@@ -119,6 +129,11 @@ class DeliberativeReasoningProvider:
                 # Phase 3b: repeating a just-failed action is expensive.
                 cost = min(1.0, cost + 0.5)
                 expected_success = max(0.0, expected_success - 0.2)
+            if routine_boost and action in ("observe", "inspect"):
+                # Learning changes behavior: a persisted routine gives its
+                # follow-up attention action a success bump ( observable even
+                # after restart, since routines are restored from the store).
+                expected_success = min(1.0, expected_success + routine_boost)
             scored[action] = OptionScore(action=action, expected_success=expected_success, cost=cost, risk=risk)
         return scored
 

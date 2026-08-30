@@ -143,6 +143,13 @@ CREATE TABLE IF NOT EXISTS fusion (
 );
 """
 
+SCHEMA_LEARNING = """
+CREATE TABLE IF NOT EXISTS learning (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
 SCHEMA_VECTORS = """
 CREATE TABLE IF NOT EXISTS vectors (
     memory_id   TEXT PRIMARY KEY,
@@ -254,6 +261,7 @@ class DurableMemoryStore:
         self._conn.executescript(SCHEMA_EXPECTATIONS)
         self._conn.executescript(SCHEMA_TEMPORAL)
         self._conn.executescript(SCHEMA_FUSION)
+        self._conn.executescript(SCHEMA_LEARNING)
         self._conn.executescript(SCHEMA_VECTORS)
         self._conn.executescript(SCHEMA_BODY)
         self._conn.executescript(SCHEMA_IDENTITY)
@@ -1062,6 +1070,17 @@ class DurableMemoryStore:
 
     def load_fusion(self) -> dict[str, Any]:
         row = self._conn.execute("SELECT value FROM fusion WHERE key='state'").fetchone()
+        if row is None:
+            return {}
+        return _unjson(row["value"], {})
+
+    # ---- learning subsystems (Phase 4c) ----
+    def save_learning(self, data: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO learning (key, value) VALUES ('state', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_learning(self) -> dict[str, Any]:
+        row = self._conn.execute("SELECT value FROM learning WHERE key='state'").fetchone()
         if row is None:
             return {}
         return _unjson(row["value"], {})

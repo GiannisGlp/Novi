@@ -466,6 +466,12 @@ class MacBrain(ChatMixin):
         self.corrections = UserCorrectionLog()
         self.routines = RoutineDetector()
         self.counterfactuals = CounterfactualEngine()
+        # Phase 4c: lessons/regressions join the learning subsystems, and ALL
+        # of them are persisted with the durable store so learning survives
+        # restart and keeps shaping behavior (the north star's revise loop).
+        from .recovery import RegressionMemory
+        self.lessons = RegressionMemory()
+        self._restore_learning()
         # Memory-class decision (roadmap item 16) + L0–L6 schema-evolution hooks.
         from .memory_classes import MemoryClassDecisionRegistry, SchemaEvolutionGate
         self.memory_classes = MemoryClassDecisionRegistry()
@@ -957,6 +963,9 @@ class MacBrain(ChatMixin):
         if plan_ctx is not None:
             situation["plan"] = plan_ctx
         situation["narrative"] = self._episodic_narrative()
+        # Phase 4c: learned routines shape action selection — persisted
+        # routines survive restart and feed the deliberator's evidence.
+        situation["routines"] = [list(routine.pattern) for routine in self.routines.routines()]
         last_reflection = self.reflection.last()
         if last_reflection is not None:
             situation["reflection"] = last_reflection.snapshot()
@@ -1534,6 +1543,58 @@ class MacBrain(ChatMixin):
             summary = self.summary_consolidator.consolidate()
             if summary.created:
                 self._emit("memory.summarized", {"cycle": self._cycle, "created": summary.created, "groups": summary.groups})
+        # Phase 4c: maturation passes also checkpoint the learning subsystems
+        # (routines/corrections/reflections/lessons) so they survive kill -9.
+        self.persist_learning()
+
+    def _restore_learning(self) -> None:
+        """Phase 4c: reload learned state from the durable store at startup."""
+        if not isinstance(self.memory, DurableMemoryStore):
+            return
+        try:
+            snapshot = self.memory.load_learning()
+        except Exception:
+            return  # corrupt blob: fail closed (fresh learning), never crash
+        if not isinstance(snapshot, dict) or not snapshot:
+            return  # empty or unparseable payload: fresh learning
+        routines = snapshot.get("routines")
+        if isinstance(routines, dict):
+            self.routines.from_snapshot(routines)
+        corrections = snapshot.get("corrections")
+        if isinstance(corrections, list):
+            self.corrections.restore(corrections)
+        reflections = snapshot.get("reflections")
+        if isinstance(reflections, list) and reflections:
+            restored_reflection = ReflectionEngine.from_snapshot(reflections)
+            self.reflection = restored_reflection
+        lessons = snapshot.get("lessons")
+        if isinstance(lessons, dict) and lessons:
+            self.lessons.from_snapshot(lessons)
+        promotions = snapshot.get("promotions")
+        if isinstance(promotions, dict) and promotions:
+            self.learning.from_snapshot(promotions)
+        counterfactuals = snapshot.get("counterfactuals")
+        if isinstance(counterfactuals, dict) and counterfactuals:
+            self.counterfactuals.from_snapshot(counterfactuals)
+        if getattr(self, "event_bus", None) is not None:  # startup: bus not ready yet
+            self._emit("learning.restored", {
+                "routines": len(self.routines.routines()),
+                "corrections": len(self.corrections.records()),
+            })
+
+    def persist_learning(self) -> None:
+        """Phase 4c: write the learning subsystems' snapshots to the store."""
+        if not isinstance(self.memory, DurableMemoryStore):
+            return
+        self.memory.save_learning({
+            "cycle": self._cycle,
+            "routines": self.routines.snapshot(),
+            "corrections": self.corrections.snapshot(),
+            "reflections": self.reflection.snapshot(),
+            "lessons": self.lessons.snapshot(),
+            "promotions": self.learning.snapshot(),
+            "counterfactuals": self.counterfactuals.snapshot(),
+        })
 
     def set_goal(self, goal: Goal, *, cycle: int | None = None) -> GoalState:
         """Adopt a bounded goal for the autonomy layer to pursue."""
