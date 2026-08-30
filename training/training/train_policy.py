@@ -26,7 +26,7 @@ from training.training.common import add_common_args, emit_report, load_jsonl  #
 
 _STATE_FEATURES = (
     "user_speaking", "known_person", "new_event", "event_salience", "open_thread",
-    "interruption_cost", "person_available", "social_opportunity", "last_proactive_s",
+    "interruption_cost", "person_available", "social_opportunity", "proactive_elapsed_norm",
 )
 
 
@@ -81,8 +81,8 @@ def _real_report(cfg) -> dict:
             lr=float(cfg.hyperparams.get("learning_rate", 1e-2)),
             seed=cfg.seed,
         )
-        act_weights[act] = weights
-        act_biases[act] = 0.0
+        act_weights[act] = {k: v for k, v in weights.items() if k != "bias"}
+        act_biases[act] = float(weights.get("bias", 0.0))
     out_dir = Path(cfg.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifact = out_dir / "policy_scorer_v1.json"

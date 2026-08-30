@@ -115,8 +115,8 @@ def _apply_guardrails(state: dict[str, Any], ranked: list[tuple[str, float]],
         notes.append(GUARDRAIL_NOTES["no_evidence_warn"])
         fallback = [a for a, _s in ranked if a != "WARN"] or ["SILENCE"]
         return fallback[0], ranked[0][1], notes
-    last_proactive = float(state.get("last_proactive_s", 999.0))
-    if ranked[0][0] in _PROACTIVE and last_proactive < 10.0:
+    last_proactive = float(state.get("proactive_elapsed_norm", 1.0))
+    if ranked[0][0] in _PROACTIVE and last_proactive < 0.01:
         notes.append(GUARDRAIL_NOTES["recent_proactive"])
         return ranked[1][0] if len(ranked) > 1 else "SILENCE", ranked[0][1], notes
     return ranked[0][0], ranked[0][1], notes

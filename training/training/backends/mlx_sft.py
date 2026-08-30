@@ -27,7 +27,8 @@ def run_mlx_sft(cfg: Any) -> dict[str, Any]:
             "`pip install mlx mlx-lm` (mlx has no 3.14 wheels yet)."
         ) from exc
     model, tokenizer = load(cfg.hf_model_id or cfg.base_model)
-    dataset_path = str(Path(cfg.source).resolve().parents[1] / cfg.dataset)
+    repo_root = Path(cfg.source).resolve().parents[2]
+    dataset_path = str(repo_root / cfg.dataset)
 
     # mlx-lm LoRA: text -> 'train'/'valid' jsonl with {"text": ...} rows.
     # The canonical examples are converted to SFT text beforehand by the

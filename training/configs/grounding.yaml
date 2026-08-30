@@ -13,5 +13,5 @@ hyperparams:
   model: linear
   features: [language_similarity, gaze_match, pointing_match, gesture_match, recency, confidence]
   learning_rate: 1.0e-2
-  epochs: 10
+  epochs: 50
   batch_size: 32

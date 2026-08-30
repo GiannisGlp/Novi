@@ -14,6 +14,6 @@ hyperparams:
   model: linear                    # linear ranker first (interpretable, cheap)
   features: [semantic, temporal, person, situation, goal, causal, importance, confidence, provenance, spatial, novelty]
   learning_rate: 1.0e-2
-  epochs: 10
+  epochs: 50
   batch_size: 32
   top_k: 10                        # re-rank top-k candidates

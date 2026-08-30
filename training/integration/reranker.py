@@ -75,13 +75,20 @@ class LearnedReranker:
 
     def __init__(self, artifact_path: str | Path) -> None:
         self._weights: list[float] | None = None
+        self._bias: float = 0.0
         artifact = Path(artifact_path)
         if artifact.exists():
             try:
                 data = json.loads(artifact.read_text())
-                w = data.get("weights", {})
-                self._weights = [float(w[k]) for k in sorted(w)]
-                self._feature_order = sorted(w)
+                w = {k: v for k, v in (data.get("weights", {}) or {}).items() if k.startswith("w_")}
+                sorted_keys = sorted(w, key=lambda k: int(k.split("_")[1]))
+                # Feature order comes from the artifact's `features` list
+                # (names); the w_* keys are only a fallback for old artifacts.
+                feature_order = list(data.get("features") or sorted_keys)
+                if w and feature_order and len(w) == len(feature_order):
+                    self._weights = [float(w[k]) for k in sorted_keys]
+                    self._feature_order = feature_order
+                    self._bias = float(data.get("bias", 0.0))
             except (json.JSONDecodeError, ValueError, TypeError):
                 self._weights = None
 
@@ -91,7 +98,7 @@ class LearnedReranker:
         scored = []
         for i, c in enumerate(candidates):
             vec = [float(c.get(f, 0.0)) for f in self._feature_order]
-            learned = sum(w * v for w, v in zip(self._weights, vec, strict=True))
+            learned = self._bias + sum(w * v for w, v in zip(self._weights, vec, strict=True))
             lexical = min(len(_norm_tokens(query) & _norm_tokens(c.get("summary", ""))) * _LEXICAL_BOOST, _LEXICAL_CAP)
             scored.append({
                 "id": c.get("id", f"cand-{i}"),

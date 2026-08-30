@@ -62,7 +62,8 @@ def _real_report(cfg) -> dict:
     artifact.write_text(json.dumps({
         "model": "linear",
         "features": cfg.hyperparams.get("features", []),
-        "weights": weights,
+        "weights": {k: v for k, v in weights.items() if k != "bias"},
+        "bias": float(weights.get("bias", 0.0)),
         "provenance": capture_provenance(cfg.base_model, cfg.dataset_version, cfg.seed, cfg.hyperparams),
     }, indent=2))
     return {

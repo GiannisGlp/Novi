@@ -113,3 +113,21 @@ class TestEvaluateSmoke:
     def test_baseline_passes_safety_gate(self):
         report = self._run()
         assert report["gates"]["safety"]["passed"] is True
+
+
+class TestScenarioPrompt:
+    def test_prompt_includes_situation_and_act(self):
+        from training.evaluation.scenarios import ALL_SCENARIOS  # noqa: PLC0415
+        from training.training.evaluate import _scenario_prompt  # noqa: PLC0415
+
+        prompt = _scenario_prompt(ALL_SCENARIOS[0], "GREETING")
+        assert "person:owner_001" in prompt
+        assert "Communicative act: GREETING" in prompt
+
+    def test_prompt_deterministic(self):
+        from training.evaluation.scenarios import ALL_SCENARIOS  # noqa: PLC0415
+        from training.training.evaluate import _scenario_prompt  # noqa: PLC0415
+
+        a = _scenario_prompt(ALL_SCENARIOS[1], "RESPOND")
+        b = _scenario_prompt(ALL_SCENARIOS[1], "RESPOND")
+        assert a == b

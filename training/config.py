@@ -18,7 +18,7 @@ from typing import Any
 
 import yaml
 
-ALLOWED_KINDS = ("sft", "dpo", "retrieval", "grounding", "evaluation")
+ALLOWED_KINDS = ("sft", "dpo", "retrieval", "grounding", "policy", "evaluation")
 
 _REQUIRED_KEYS = ("kind", "base_model", "dataset", "dataset_version", "seed")
 

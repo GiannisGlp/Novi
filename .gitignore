@@ -66,6 +66,8 @@ training/datasets/dpo/*
 !training/datasets/dpo/.gitkeep
 training/datasets/retrieval/*
 !training/datasets/retrieval/.gitkeep
+training/datasets/policy/*
+!training/datasets/policy/.gitkeep
 training/datasets/grounding/*
 !training/datasets/grounding/.gitkeep
 training/datasets/evaluation/*

@@ -1,0 +1,15 @@
+# Dialogue policy scorer configuration (plan 23 §35, steps 19-21)
+# Learns to RANK deterministic policy candidates, never to control directly.
+kind: policy
+base_model: none                    # independent linear scorer, not an LLM fine-tune
+dataset: training/datasets/policy/policy_v1.jsonl
+dataset_version: v1
+output_dir: training/models/adapters
+seed: 20260830
+min_examples: 200
+eval_after: true
+hyperparams:
+  model: linear-ovr                 # one-vs-rest per dialogue act
+  learning_rate: 1.0e-2
+  epochs: 50
+  batch_size: 32

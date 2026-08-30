@@ -3,15 +3,15 @@
 kind: sft
 base_model: qwen3:8b
 hf_model_id: Qwen/Qwen3-8B
-dataset: training/datasets/curated/seed_dialogue_v1.jsonl
-dataset_version: v1
+dataset: training/datasets/sft/sft_v1.jsonl
+dataset_version: sft_v1
 output_dir: training/models/adapters
 seed: 20260830
 min_examples: 200            # experiment target per plan §32 (500-2000 curated)
 max_seq_len: 2048
 eval_after: true
 hyperparams:
-  batch_size: 4
+  batch_size: 2
   learning_rate: 2.0e-4
   epochs: 3
   lora_r: 16

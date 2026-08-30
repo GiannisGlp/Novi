@@ -203,6 +203,11 @@ def _expand(templates: list[dict], rng: random.Random) -> list[dict]:
     return out
 
 
+def templates() -> list[dict]:
+    """Public access to the hand-curated template corpus."""
+    return _templates()
+
+
 def build() -> list[dict]:
     rng = random.Random(SEED)
     examples = _expand(_templates(), rng)

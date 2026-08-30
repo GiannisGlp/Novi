@@ -44,7 +44,7 @@ class TestLearnedReranker:
         artifact = tmp_path / "reranker.json"
         artifact.write_text(json.dumps({
             "model": "linear", "features": ["semantic", "recency"],
-            "weights": {"w_0": 1.0, "w_1": 0.0},
+            "weights": {"w_0": 1.0, "w_1": 0.0}, "bias": 0.0,
         }))
         r = LearnedReranker(str(artifact))
         candidates = [
