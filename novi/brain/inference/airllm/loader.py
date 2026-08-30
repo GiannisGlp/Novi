@@ -32,13 +32,20 @@ from .shards import (
 DEFAULT_LOAD_TIMEOUT_S = 300.0
 
 
-@dataclass(frozen=True)
+@dataclass
 class AirLLMModelHandle:
+    """Runtime handle to a loaded AirLLM model.
+
+    Mutable (not frozen) by design: the loader attaches the live model object
+    after construction (``handle.model = ...``).
+    """
+
     model_id: str
     revision: str
     artifact_path: str
     shards_dir: Path
     manifest: ShardManifest | None = None
+    model: Any = None
 
 
 class AirLLMLoader:

@@ -1,0 +1,17 @@
+{
+  "captured_at": "2026-08-30T09:40:28.455553+00:00",
+  "compute_backend": "mps",
+  "cpu_cores": 12,
+  "cpu_model": "",
+  "gpu_model": "",
+  "gpu_vendor": "",
+  "os": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "platform": "Darwin",
+  "profile_id": "baseline-mac",
+  "ram_available_bytes": 0,
+  "ram_total_bytes": 38654705664,
+  "storage_free_bytes": 61848969216,
+  "storage_type": "",
+  "vram_available_bytes": 0,
+  "vram_total_bytes": 0
+}

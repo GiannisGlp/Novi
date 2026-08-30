@@ -39,6 +39,8 @@ class AirLLMBackend(AbstractInferenceBackend):
         delete_original: bool = False,
         preparation_allowed: bool = False,
         max_concurrent_requests: int = 1,
+        compat: Any | None = None,
+        loader: AirLLMLoader | None = None,
     ) -> None:
         if compression not in ("none", "8bit", "4bit"):
             raise InferenceConfigurationError(
@@ -58,11 +60,11 @@ class AirLLMBackend(AbstractInferenceBackend):
         self.max_concurrent_requests = max(1, int(max_concurrent_requests))
         self.model_root = str(model_root) or os.environ.get("NOVI_DATA", "") or "brain_data"
         self._state = ModelBackendState()
-        self._loader: AirLLMLoader | None = None
+        self._loader: AirLLMLoader | None = loader
         self._adapter: AirLLMAdapter | None = None
         self._current_model_id: str = ""
         self._shutdown = False
-        self._compat = probe_airllm_environment()
+        self._compat = compat if compat is not None else probe_airllm_environment()
 
     @property
     def backend_id(self) -> str:

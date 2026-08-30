@@ -16,7 +16,7 @@ Updated 2026-08-30 (first implementation round). Status vocabulary per §65: the
 | Step (§66) | Status | Evidence |
 |---|---|---|
 | 1. Audit inference/model calls | DONE | `benchmarks/inference-audit.json` (57 sites; 24 migrate-to-runtime) |
-| 2. Capture baseline benchmarks | STARTED | procedure in `docs/specs/brain/32_RUNTIME_BENCHMARK_SPEC.md`; capture pending executable model path |
+| 2. Capture baseline benchmarks | DONE | `benchmarks/baseline/*.json` — real measurements for 4 running Ollama models (qwen3.8:27b TTFT 14.5s/6.7 tps, qwen3:8b 15.8s/25.4 tps, qwen3:4b 16.5s/46.5 tps, nemotron 10.8s/44.6 tps; 0% error, 8/8 prompts ok) |
 | 3. Define `InferenceRequest`/`InferenceResponse` | DONE | `novi/brain/inference/request.py`, `response.py` (+ tests) |
 | 4. Error taxonomy | DONE | `novi/brain/inference/errors.py` (16 categories) |
 | 5. Define `InferenceBackend` | DONE | `novi/brain/inference/contracts.py` (+ lifecycle in `lifecycle.py`) |
@@ -32,7 +32,15 @@ Updated 2026-08-30 (first implementation round). Status vocabulary per §65: the
 | 15. AirLLM optional dependency | DONE | `pyproject.toml` `novi[airllm]` extra (not in base install) |
 | 16. AirLLM compatibility adapter | DONE | `novi/brain/inference/airllm/`, `backends/airllm.py` (lazy imports, disabled default) |
 | 17. Resolve exact HF artifact for `qwen3.8:27b` | DONE (blocker recorded) | `Qwen/Qwen3.8-27B` sha `1d4bf0f2ff60…`; architecture `Qwen3_5ForConditionalGeneration`; config requires `transformers 5.8.0.dev0` which conflicts with the validated AirLLM stack (4.57.1, cap `<5.13`) — registry records `airllm_eligible=false`; no checkpoint substitution |
-| 18–22. Sharding, smoke, tokenizer, warm inference | PENDING | blocked on Step 17 compatibility resolution (Transformers 5.x vs AirLLM matrix) |
+| 18. Prepare Qwen3.8-27B into AirLLM shards | BLOCKED (environment) | checkpoint is 55.6 GB (HF tree); source + shards + reserve ≈ 112 GB required vs 58 GiB free — `check_disk_capacity` refuses with typed `StorageCapacityError` (verified). Also blocked on the Step 17 Transformers conflict (AirLLM `airllm_qwen3_5.py` documents "Needs transformers 5.8+"). Backend remains an implemented, platform-blocked provider (§17) |
+| 19–22. Shard integrity, smoke, tokenizer, warm inference | PENDING | gated on Step 18 |
+| 23. Integrate AirLLM backend through reasoning seam | DONE (stub-verified) | `test_airllm_seam.py`: runtime backed by AirLLMBackend serves `MacBrain`-compatible `decide()` end-to-end; routing selects airllm only with a validated (model, hardware) combination |
+| 24. Complete Brain regression suite | DONE | 1762 brain tests green (round 1) + 106 inference tests (round 2) |
+| 27. Failure recovery | DONE (mock-level) | `test_failure_injection.py`: all 20 cases of §26 exercised (import failure → cancellation, OOM, hang, crash, storage full…) with typed classification |
+| 28. Model unload/reload | DONE | `UnloadReloadTests`: switch A→B→A with correct per-response metadata, idempotent unload |
+| 33. Router eligibility rules | DONE | `RuntimeConfig.airllm_enabled` + `validated_airllm_combinations`; runtime validator gate: AirLLM routable ONLY for enabled + (model, compute-backend) pairs with execution evidence |
+| 34. Enable AirLLM only for validated combos | DONE | empty validated set by default → router never selects AirLLM until evidence exists |
+| 35. Fallback and rollback configuration | DONE | `RuntimeConfig.rollback_to_existing()` — one config change disables AirLLM, contract unchanged (§55) |
 | 23–37. Integration, regression, benchmarks, failure, soak, compression, prefetch, eligibility | PENDING | gated on Steps 17–22 |
 
 Docs: `docs/specs/brain/30_INFERENCE_RUNTIME_SPEC.md`, `31_MODEL_COMPATIBILITY_MATRIX.md`, `32_RUNTIME_BENCHMARK_SPEC.md`.

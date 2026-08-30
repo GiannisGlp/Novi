@@ -23,7 +23,7 @@ from typing import Any, AsyncIterator, Iterable
 
 from .capabilities import probe_hardware
 from .contracts import InferenceBackend
-from .errors import BackendUnavailableError, InferenceError, classify_backend_exception
+from .errors import BackendUnavailableError, DeadlineExceededError, InferenceError, classify_backend_exception
 from .health import InferenceHealth, ModelHealthEntry
 from .lifecycle import ModelLifecycle, ModelResidency
 from .registry import ModelRegistry
@@ -79,6 +79,29 @@ class RuntimeConfig:
     max_concurrent: int = 1
     arrival_policy: str = "queue"
     hardware_profile_id: str = "default"
+    # Plan 12 §34/Step 34: AirLLM is enabled ONLY for explicitly validated
+    # model/hardware combinations. ``validated_airllm_combinations`` holds
+    # (model_id, compute_backend) pairs proven by execution evidence; empty by
+    # default, so the router never selects AirLLM until a combo is validated.
+    airllm_enabled: bool = False
+    validated_airllm_combinations: tuple[tuple[str, str], ...] = ()
+
+    @classmethod
+    def rollback_to_existing(cls, **overrides: Any) -> "RuntimeConfig":
+        """Rollback configuration (plan 12, §55): one config change disables
+        AirLLM while preserving the same inference contract.
+
+        ``backend = existing`` + ``airllm_enabled = False`` — no source rewrite
+        required to disable the AirLLM backend.
+        """
+        base: dict[str, Any] = {
+            "default_backend": "existing",
+            "fallback_backend": "existing",
+            "airllm_enabled": False,
+            "validated_airllm_combinations": (),
+        }
+        base.update(overrides)
+        return cls(**base)
 
 
 class InferenceRuntime:
@@ -97,20 +120,31 @@ class InferenceRuntime:
     ) -> None:
         self.registry = registry or ModelRegistry()
         self.backends = BackendManager(backends)
-        self.router = router or ModelRouter(self.registry)
+        self.config = config or RuntimeConfig()
+        self.router = router or ModelRouter(self.registry, airllm_validator=self._airllm_validator)
         self.scheduler = scheduler or InferenceScheduler(
-            max_concurrent=config.max_concurrent if config else 1,
-            arrival_policy=config.arrival_policy if config else "queue",
+            max_concurrent=self.config.max_concurrent,
+            arrival_policy=self.config.arrival_policy,
         )
         self.telemetry = telemetry or InferenceTelemetry()
         self.health = health or InferenceHealth()
-        self.config = config or RuntimeConfig()
         self.hardware = probe_hardware(self.config.hardware_profile_id)
         #: model_id -> backend_id for currently loaded models
         self._loaded_models: dict[str, str] = {}
         self._last_decision: RoutingDecision | None = None
         self._last_error: str = ""
         self._fallback_used = False
+
+    def _airllm_validator(self, spec: Any) -> bool:
+        """Eligibility gate (plan 12 Step 33-34): AirLLM is routable ONLY when
+        the backend is enabled AND the exact (model, compute backend)
+        combination carries execution validation evidence."""
+        if not self.config.airllm_enabled:
+            return False
+        if not spec.is_airllm_eligible():
+            return False
+        combo = (spec.id, self.hardware.compute_backend.value)
+        return combo in self.config.validated_airllm_combinations
 
     # ---------------------------------------------------------------- requests
     def generate(
@@ -186,11 +220,26 @@ class InferenceRuntime:
     def _execute(
         self, decision: RoutingDecision, request: InferenceRequest, sched: ScheduledRequest
     ) -> InferenceResponse:
+        if request.is_expired:
+            raise DeadlineExceededError(
+                "request expired before dispatch",
+                context={"request_id": request.request_id},
+            )
         backend = self._ensure_model(request, decision)
         sched.backend_id = decision.backend
         response = backend.generate(request)
         if response.model_id != decision.model:
             response = InferenceResponse(**{**response.__dict__, "model_id": decision.model})
+        # Plan 12 §21: a deadline miss is represented explicitly, never treated
+        # as silent success.
+        if request.is_expired:
+            response = InferenceResponse(
+                **{
+                    **response.__dict__,
+                    "finish_reason": FinishReason.DEADLINE,
+                    "warnings": list(response.warnings) + ["deadline_missed"],
+                }
+            )
         return response
 
     def _ensure_model(self, request: InferenceRequest, decision: RoutingDecision) -> InferenceBackend:

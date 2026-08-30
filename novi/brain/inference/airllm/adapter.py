@@ -151,6 +151,6 @@ class AirLLMAdapter:
             return TokenizationError(message, context=context)
         if "architecture" in lowered or "not supported" in lowered:
             return ModelCompatibilityError(message, context=context)
-        if "initialization" in lowered or "load" in lowered:
+        if "initializ" in lowered or "load" in lowered or "device" in lowered:
             return BackendInitializationError(message, context=context)
         return classify_backend_exception(exc)

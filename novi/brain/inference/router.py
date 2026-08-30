@@ -70,8 +70,13 @@ class RoutingContext:
 class ModelRouter:
     """Selects model/backend from routing context, always recording a reason."""
 
-    def __init__(self, registry: ModelRegistry) -> None:
+    def __init__(self, registry: ModelRegistry, *, airllm_validator: Any | None = None) -> None:
         self.registry = registry
+        #: eligibility predicate for the AirLLM backend; the runtime injects the
+        #: validated-combination policy (plan 12 Step 33-34: AirLLM only for
+        #: explicitly validated model/hardware combinations). Default = registry
+        #: artifact-resolution eligibility.
+        self._airllm_validator = airllm_validator or (lambda spec: spec.is_airllm_eligible())
         self._decision_log: list[RoutingDecision] = []
         #: deliberation level -> model hypothesis (provisional, benchmark-driven)
         self.deliberation_hypotheses: dict[str, str] = dict(_DELIBERATION_HYPOTHESIS)
@@ -160,12 +165,14 @@ class ModelRouter:
 
     def _select_backend(self, spec: ModelSpec, context: RoutingContext) -> str:
         for preference in spec.backend_preferences:
-            if preference == "airllm" and not spec.is_airllm_eligible():
-                continue
-            if preference == "airllm" and context.available_vram_bytes <= 0:
-                # AirLLM exists for constrained VRAM; only select when VRAM is
-                # known-constrained and the artifact is resolved.
-                continue
+            if preference == "airllm":
+                # Step 33-34: AirLLM is selected ONLY when the model/hardware
+                # combination is explicitly validated (validator injected by the
+                # runtime) AND VRAM is known-constrained.
+                if not self._airllm_validator(spec):
+                    continue
+                if context.available_vram_bytes <= 0:
+                    continue
             return preference
         return spec.backend_preferences[0]
 

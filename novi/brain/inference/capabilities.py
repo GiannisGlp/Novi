@@ -47,9 +47,13 @@ class HardwareProfile:
     gpu_model: str = ""
     vram_total_bytes: int = 0
     vram_available_bytes: int = 0
-    compute_backend: ComputeBackend = ComputeBackend.UNKNOWN
+    compute_backend: ComputeBackend | str = ComputeBackend.UNKNOWN
     storage_type: str = ""
     storage_free_bytes: int = 0
+
+    def __post_init__(self) -> None:
+        if isinstance(self.compute_backend, str):
+            object.__setattr__(self, "compute_backend", ComputeBackend(self.compute_backend))
 
     def state_for(self, capability: str) -> CapabilityState:
         """Tri-state answer for a named hardware capability."""

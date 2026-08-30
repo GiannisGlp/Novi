@@ -16,7 +16,7 @@ from novi.brain.inference.registry import ModelRegistry, ModelSpec
 from novi.brain.inference.request import InferenceRequest
 from novi.brain.inference.response import FinishReason, InferenceResponse
 from novi.brain.inference.router import RoutingContext
-from novi.brain.inference.runtime import InferenceRuntime
+from novi.brain.inference.runtime import InferenceRuntime, RuntimeConfig
 
 
 class InferenceRuntimeTests(unittest.TestCase):
@@ -123,6 +123,41 @@ class InferenceRuntimeTests(unittest.TestCase):
         runtime = self._runtime()
         with self.assertRaises(BackendUnavailableError):
             runtime.backends.get("nope")
+
+    def test_airllm_not_routed_until_validated_combination(self) -> None:
+        # Plan 12 Step 33-34: AirLLM is routable ONLY when the backend is
+        # enabled AND the exact (model, compute backend) combination carries
+        # validation evidence. qwen3.8-27b prefers airllm but no combination
+        # is validated yet.
+        registry = ModelRegistry()
+        self._approve(registry, "qwen3.8-27b", backend_preferences=("airllm", "existing"))
+        self._approve(registry, "qwen3-8b")
+        runtime = InferenceRuntime(
+            backends=[MockBackend(), ExistingBackend(transport=lambda p: "ok")],
+            registry=registry,
+            config=RuntimeConfig(airllm_enabled=True),  # enabled, but no validated combos
+        )
+        decision = runtime.router.route(RoutingContext(reasoning_complexity="DEEP"))
+        self.assertEqual(decision.backend, "existing")
+        # Even with a validated combination for a DIFFERENT hardware backend
+        # (cuda), mps (this machine) is not in the validated set.
+        runtime2 = InferenceRuntime(
+            backends=[MockBackend(), ExistingBackend(transport=lambda p: "ok")],
+            registry=registry,
+            config=RuntimeConfig(
+                airllm_enabled=True,
+                validated_airllm_combinations=(("qwen3.8-27b", "cuda"),),
+            ),
+        )
+        decision2 = runtime2.router.route(RoutingContext(reasoning_complexity="DEEP"))
+        self.assertEqual(decision2.backend, "existing")
+
+    def test_rollback_config_disables_airllm(self) -> None:
+        # Plan 12 §55: rollback is one configuration change, not a rewrite.
+        config = RuntimeConfig.rollback_to_existing()
+        self.assertEqual(config.default_backend, "existing")
+        self.assertFalse(config.airllm_enabled)
+        self.assertEqual(config.validated_airllm_combinations, ())
 
 
 class ReasoningAdapterTests(unittest.TestCase):
