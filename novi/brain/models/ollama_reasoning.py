@@ -22,14 +22,30 @@ def disable_thinking_for(model: str) -> bool:
     return (m.startswith("qwen3:") or "nemotron" in m) and not m.startswith("qwen3.8")
 
 
-def num_predict_for(model: str, fast_budget: int) -> int:
-    """Completion token budget: 2x (min 600) for the heavy-thinking tier.
+def can_disable_thinking(model: str) -> bool:
+    """True only when ``think:false`` is actually honored for this model on the
+    installed Ollama build (verified 0.33.1).
 
-    qwen3.8:27b thinks THEN answers (~250 + ~250 tokens typical); at ~3 tok/s
-    on MPS a 1200-token budget would take 6+ minutes. 2x/min-600 keeps a deep
-    reply under ~3.5 min worst case while still fitting thought + answer.
+    Nemotron 3.5 Lightning honors ``think:false`` (direct answer). Qwen3
+    (4b/8b) does NOT on this build: the chain-of-thought leaks into
+    ``content`` and no ``thinking`` field is returned, which breaks the
+    dialogue quality filters and the structured-JSON summarizers. Those models
+    must be given enough token budget to finish thinking so the real answer
+    lands in ``content`` (verified with a 600-token budget).
     """
-    if (model or "").lower().startswith("qwen3.8"):
+    return "nemotron" in (model or "").lower()
+
+
+def num_predict_for(model: str, fast_budget: int) -> int:
+    """Completion token budget: 2x (min 600) for thinking models.
+
+    qwen3.8:27b thinks THEN answers (~250 + ~250 tokens typical); qwen3:4b/8b
+    also cannot have thinking disabled on the installed Ollama build, so they
+    need the same room — with the old 320-token budget their thinking was cut
+    off mid-thought and ``content`` came back empty (deterministic fallback).
+    2x/min-600 fits thought + answer.
+    """
+    if (model or "").lower().startswith("qwen3"):
         return max(int(fast_budget) * 2, 600)
     return int(fast_budget)
 
@@ -58,7 +74,11 @@ def _ollama_backend_fn(*, base_url: str, model: str) -> Callable[[dict[str, Any]
         # it would blow every timeout). Heavy thinking belongs to the user
         # facing reply (_llm_chat), not the internal decision.
         body["think"] = False
-        request = urllib.request.Request(f"{base_url}/api/generate", data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})
+        request = urllib.request.Request(
+            f"{base_url}/api/generate",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
         with urllib.request.urlopen(request, timeout=60) as response:
             data = json.loads(response.read().decode("utf-8"))
         raw = data.get("response", "{}")
@@ -104,7 +124,9 @@ class OllamaReasoningProvider:
         *,
         model: str = DEFAULT_OLLAMA_MODEL,
         base_url: str = DEFAULT_OLLAMA_URL,
-        allowed_actions: frozenset[str] = frozenset({"inspect", "observe", "wait", "stop", "move_forward", "turn_left", "turn_right"}),
+        allowed_actions: frozenset[str] = frozenset(
+            {"inspect", "observe", "wait", "stop", "move_forward", "turn_left", "turn_right"}
+        ),
         default_action: str = "observe",
     ) -> None:
         spec = MacModelSpec(
@@ -139,7 +161,9 @@ class OllamaReasoningProvider:
         )
         backend = _ollama_backend_fn(base_url=self.base_url, model=name)
         provider = MacModelProvider(spec, backend)
-        self._llm = LLMReasoningProvider(provider, allowed_actions=self._llm.allowed_actions, default_action=self._llm.default_action)
+        self._llm = LLMReasoningProvider(
+            provider, allowed_actions=self._llm.allowed_actions, default_action=self._llm.default_action
+        )
         self.model_id = spec.model_id
         self.model = name
 

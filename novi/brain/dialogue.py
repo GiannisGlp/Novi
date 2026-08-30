@@ -166,6 +166,7 @@ def _strip_meta_framing(text: str) -> str:
         remaining = rest.strip()
     return remaining
 
+
 _SENTENCE_END = re.compile(r"[.!?]\s")
 
 
@@ -173,7 +174,7 @@ def _split_first_sentence(text: str) -> tuple[str, str]:
     m = _SENTENCE_END.search(text)
     if m is None:
         return text, ""
-    return text[: m.start() + 1], text[m.end():]
+    return text[: m.start() + 1], text[m.end() :]
 
 
 def _is_forbidden(text: str) -> bool:
@@ -215,16 +216,89 @@ def _is_repetitive(text: str, last_novi_text: str) -> bool:
 
 
 _STOPWORDS = {
-    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
-    "do", "does", "did", "i", "you", "me", "my", "we", "our", "us", "it",
-    "that", "this", "these", "those", "what", "why", "how", "who", "when",
-    "to", "for", "of", "in", "on", "with", "and", "or", "but", "not", "no",
-    "have", "has", "had", "about", "can", "could", "would", "should", "will",
-    "just", "really", "like", "so", "if", "then", "there", "here", "now",
-    "anything", "something", "everything", "nothing", "someone", "anyone",
-    "somebody", "anybody", "everybody", "nobody", "whoever", "whatever",
-    "whenever", "somewhere", "anywhere", "anytime", "still", "also",
-    "always", "never", "often", "sometimes", "actually", "maybe",
+    "a",
+    "an",
+    "the",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "do",
+    "does",
+    "did",
+    "i",
+    "you",
+    "me",
+    "my",
+    "we",
+    "our",
+    "us",
+    "it",
+    "that",
+    "this",
+    "these",
+    "those",
+    "what",
+    "why",
+    "how",
+    "who",
+    "when",
+    "to",
+    "for",
+    "of",
+    "in",
+    "on",
+    "with",
+    "and",
+    "or",
+    "but",
+    "not",
+    "no",
+    "have",
+    "has",
+    "had",
+    "about",
+    "can",
+    "could",
+    "would",
+    "should",
+    "will",
+    "just",
+    "really",
+    "like",
+    "so",
+    "if",
+    "then",
+    "there",
+    "here",
+    "now",
+    "anything",
+    "something",
+    "everything",
+    "nothing",
+    "someone",
+    "anyone",
+    "somebody",
+    "anybody",
+    "everybody",
+    "nobody",
+    "whoever",
+    "whatever",
+    "whenever",
+    "somewhere",
+    "anywhere",
+    "anytime",
+    "still",
+    "also",
+    "always",
+    "never",
+    "often",
+    "sometimes",
+    "actually",
+    "maybe",
 }
 
 
@@ -303,10 +377,24 @@ def _is_clarification(text: str) -> bool:
     if not t:
         return False
     _EXACT = {
-        "what", "what do you mean", "what does that mean", "what was that",
-        "come again", "huh", "sorry", "repeat", "pardon", "excuse me",
-        "say that again", "i don't get it", "i don't follow", "explain",
-        "explain that", "rephrase", "what's that", "what is that",
+        "what",
+        "what do you mean",
+        "what does that mean",
+        "what was that",
+        "come again",
+        "huh",
+        "sorry",
+        "repeat",
+        "pardon",
+        "excuse me",
+        "say that again",
+        "i don't get it",
+        "i don't follow",
+        "explain",
+        "explain that",
+        "rephrase",
+        "what's that",
+        "what is that",
     }
     if t in _EXACT:
         return True
@@ -338,26 +426,149 @@ _INTRO_REPLIES = [
 # Words that follow "i'm"/"i am" but signal a state/action, not a name —
 # "i'm tired", "i'm not sure", "i'm sorry", "i'm here" are not introductions.
 _STATE_WORDS = {
-    "tired", "hungry", "thirsty", "sad", "happy", "fine", "good", "well", "ok",
-    "okay", "sorry", "not", "just", "really", "very", "so", "pretty", "quite",
-    "here", "back", "home", "bored", "excited", "scared", "cold", "hot", "done",
-    "feeling", "trying", "looking", "getting", "going", "being", "a", "the",
-    "and", "today", "tonight", "now", "sure", "serious", "curious", "upset",
-    "angry", "busy", "stressed", "anxious", "exhausted", "overwhelmed", "lonely",
-    "depressed", "down", "nervous", "worried", "sick", "unwell", "frustrated",
-    "calm", "confused", "proud", "content", "guilty", "relieved", "hopeful",
-    "sleepy", "awake", "ready", "still", "alone", "amazed", "awkward",
-    "in", "up", "off", "around", "leaving", "on", "about", "into", "starving", "coming", "working", "dying", "waiting", "running",
-    "heading", "starting", "thinking", "wondering", "learning", "reading",
-    "driving", "walking", "writing", "listening", "watching", "planning",
-    "hoping", "doing", "making", "having", "kidding",
-    "joking", "seriously", "almost", "totally", "completely",
-    "failing", "losing", "struggling",
-    "there", "quitting", "moving", "ending", "betting", "saying",
-    "asking", "telling", "lying", "sitting", "standing",
-    "great", "new", "annoyed", "thrilled", "delighted", "surprised", "shocked",
-    "grateful", "distracted", "free", "mad", "amused", "cheerful", "glad", "pleased", "relaxed",
-    "certain", "unsure", "uncertain", "lost", "stuck", "all",
+    "tired",
+    "hungry",
+    "thirsty",
+    "sad",
+    "happy",
+    "fine",
+    "good",
+    "well",
+    "ok",
+    "okay",
+    "sorry",
+    "not",
+    "just",
+    "really",
+    "very",
+    "so",
+    "pretty",
+    "quite",
+    "here",
+    "back",
+    "home",
+    "bored",
+    "excited",
+    "scared",
+    "cold",
+    "hot",
+    "done",
+    "feeling",
+    "trying",
+    "looking",
+    "getting",
+    "going",
+    "being",
+    "a",
+    "the",
+    "and",
+    "today",
+    "tonight",
+    "now",
+    "sure",
+    "serious",
+    "curious",
+    "upset",
+    "angry",
+    "busy",
+    "stressed",
+    "anxious",
+    "exhausted",
+    "overwhelmed",
+    "lonely",
+    "depressed",
+    "down",
+    "nervous",
+    "worried",
+    "sick",
+    "unwell",
+    "frustrated",
+    "calm",
+    "confused",
+    "proud",
+    "content",
+    "guilty",
+    "relieved",
+    "hopeful",
+    "sleepy",
+    "awake",
+    "ready",
+    "still",
+    "alone",
+    "amazed",
+    "awkward",
+    "in",
+    "up",
+    "off",
+    "around",
+    "leaving",
+    "on",
+    "about",
+    "into",
+    "starving",
+    "coming",
+    "working",
+    "dying",
+    "waiting",
+    "running",
+    "heading",
+    "starting",
+    "thinking",
+    "wondering",
+    "learning",
+    "reading",
+    "driving",
+    "walking",
+    "writing",
+    "listening",
+    "watching",
+    "planning",
+    "hoping",
+    "doing",
+    "making",
+    "having",
+    "kidding",
+    "joking",
+    "seriously",
+    "almost",
+    "totally",
+    "completely",
+    "failing",
+    "losing",
+    "struggling",
+    "there",
+    "quitting",
+    "moving",
+    "ending",
+    "betting",
+    "saying",
+    "asking",
+    "telling",
+    "lying",
+    "sitting",
+    "standing",
+    "great",
+    "new",
+    "annoyed",
+    "thrilled",
+    "delighted",
+    "surprised",
+    "shocked",
+    "grateful",
+    "distracted",
+    "free",
+    "mad",
+    "amused",
+    "cheerful",
+    "glad",
+    "pleased",
+    "relaxed",
+    "certain",
+    "unsure",
+    "uncertain",
+    "lost",
+    "stuck",
+    "all",
 }
 
 
@@ -477,8 +688,10 @@ def _is_physical_action_request(text: str) -> bool:
 
 
 def physical_action_honest_reply() -> str:
-    return ("I can't physically do that — I've got no hands or body for it. "
-            "But I can keep track of it or talk it through with you. What's the situation?")
+    return (
+        "I can't physically do that — I've got no hands or body for it. "
+        "But I can keep track of it or talk it through with you. What's the situation?"
+    )
 
 
 # Real-time data Novi cannot verify offline (live prices, weather, news, scores).
@@ -493,12 +706,33 @@ _REALTIME_RE = [
         re.IGNORECASE,
     ),
     re.compile(r"\b(?:weather|forecast|temperature|raining|snowing|degrees)\b", re.IGNORECASE),
-    re.compile(r"\b(?:breaking news|headlines|latest news|top stories|what'?s happening|current news)\b", re.IGNORECASE),
-    re.compile(r"\b(?:score|who won|final score|result)\b.*?\b(?:today|last night|yesterday|right now|now|this (?:week|season|game)|live|current)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:breaking news|headlines|latest news|top stories|what'?s happening|current news)\b", re.IGNORECASE
+    ),
+    re.compile(
+        r"\b(?:score|who won|final score|result)\b.*?\b(?:today|last night|yesterday|right now|now|this (?:week|season|game)|live|current)\b",
+        re.IGNORECASE,
+    ),
 ]
 
-_REALTIME_HINT_WORDS = {"bitcoin", "crypto", "cryptocurrency", "ether", "ethereum", "btc", "stock", "shares", "gold",
-                        "oil", "weather", "forecast", "temperature", "breaking", "headlines", "latest news"}
+_REALTIME_HINT_WORDS = {
+    "bitcoin",
+    "crypto",
+    "cryptocurrency",
+    "ether",
+    "ethereum",
+    "btc",
+    "stock",
+    "shares",
+    "gold",
+    "oil",
+    "weather",
+    "forecast",
+    "temperature",
+    "breaking",
+    "headlines",
+    "latest news",
+}
 
 
 def _is_realtime_data_question(text: str) -> bool:
@@ -508,28 +742,45 @@ def _is_realtime_data_question(text: str) -> bool:
     if any(p.search(t) for p in _REALTIME_RE):
         return True
     # "how much is bitcoin right now?"-style without the exact pattern.
-    return bool(re.search(r"\b(how much is|what's the (?:current )?price of)\b", t) and any(
-        w in t for w in ("bitcoin", "crypto", "stock", "gold", "oil", "eth", "btc", "shares")
-    ))
+    return bool(
+        re.search(r"\b(how much is|what's the (?:current )?price of)\b", t)
+        and any(w in t for w in ("bitcoin", "crypto", "stock", "gold", "oil", "eth", "btc", "shares"))
+    )
 
 
 def realtime_honest_reply() -> str:
-    return ("I'm offline, so I can't pull live prices, weather, or news — I'd rather not "
-            "guess and hand you a wrong number. Tell me more about what you're after and I'll help with it.")
+    return (
+        "I'm offline, so I can't pull live prices, weather, or news — I'd rather not "
+        "guess and hand you a wrong number. Tell me more about what you're after and I'll help with it."
+    )
 
 
 # Emotional/situational statements ("i'm feeling down", "i had a rough day", "i'm
 # stressed") deserve an empathetic reply, never a topic follow-up ("I don't have a
 # good answer on feeling yet").
 _EMOTIONAL_RE = [
-    re.compile(r"\bi(?:'m| am)?\s*(?:have been |'ve been |am |'m )?(?:feeling|been feeling|feel|feel so)\s+", re.IGNORECASE),
-    re.compile(r"\bi(?:'m| am)?\s+(?:really |so |feeling )?(?:sad|down|depressed|stressed|anxious|tired|exhausted|overwhelmed|lonely|scared|nervous|hopeless|ok|fine|happy|great|good|bored)\b", re.IGNORECASE),
-    re.compile(r"\bi(?:'m|'ve )?\s*(?:had|been having) (?:a |a really )?(?:rough|long|hard|terrible|awful|bad) (?:day|week|time)\b", re.IGNORECASE),
+    re.compile(
+        r"\bi(?:'m| am)?\s*(?:have been |'ve been |am |'m )?(?:feeling|been feeling|feel|feel so)\s+", re.IGNORECASE
+    ),
+    re.compile(
+        r"\bi(?:'m| am)?\s+(?:really |so |feeling )?(?:sad|down|depressed|stressed|anxious|tired|exhausted|overwhelmed|lonely|scared|nervous|hopeless|ok|fine|happy|great|good|bored)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bi(?:'m|'ve )?\s*(?:had|been having) (?:a |a really )?(?:rough|long|hard|terrible|awful|bad) (?:day|week|time)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\bi(?:'m| am)?\s+(?:struggling|not doing well|having a hard time)\b", re.IGNORECASE),
     re.compile(r"\bi (?:really |so )?miss (?:my |our |the |them |him |her |you\b)", re.IGNORECASE),
-    re.compile(r"\b(?:my |a )?(?:head|stomach|back|neck|knee|leg|arm|throat|tooth)\s*(?:is )?(?:hurts|aches|aching|killing me|sore)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:my |a )?(?:head|stomach|back|neck|knee|leg|arm|throat|tooth)\s*(?:is )?(?:hurts|aches|aching|killing me|sore)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\bi can'?t (?:get to |fall )?(?:to )?sleep\b|i couldn'?t sleep\b", re.IGNORECASE),
-    re.compile(r"\b(?:today|tonight|this week|the day) (?:was|is|has been) (?:really |so )?(?:rough|hard|awful|brutal|long|tough)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:today|tonight|this week|the day) (?:was|is|has been) (?:really |so )?(?:rough|hard|awful|brutal|long|tough)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\b(?:a )?(?:long|rough|hard|tough|bad) (?:day|week|night)\b", re.IGNORECASE),
 ]
 
@@ -553,7 +804,10 @@ def emotional_reply(cycle: int = 0) -> str:
     return _EMOTIONAL_REPLIES[cycle % len(_EMOTIONAL_REPLIES)]
 
 
-_THANKS = re.compile(r"^(thanks|thank you|thx|cheers|ty|appreciate it|thanks a lot|thank you so much|thank you for that)[.!?]*$", re.IGNORECASE)
+_THANKS = re.compile(
+    r"^(thanks|thank you|thx|cheers|ty|appreciate it|thanks a lot|thank you so much|thank you for that)[.!?]*$",
+    re.IGNORECASE,
+)
 
 _THANKS_REPLIES = [
     "anytime.",
@@ -638,8 +892,10 @@ def _is_future_question(text: str) -> bool:
 
 
 def future_reply() -> str:
-    return ("Hard to say for sure — I can't see the future. But if I had to guess, "
-            "I'd say a lot depends on what you do next. What are you hoping happens?")
+    return (
+        "Hard to say for sure — I can't see the future. But if I had to guess, "
+        "I'd say a lot depends on what you do next. What are you hoping happens?"
+    )
 
 
 # Assurance/trust questions ("can you keep a secret?", "promise you won't tell?")
@@ -907,9 +1163,13 @@ _REMINDER_RE = re.compile(
 
 def _is_reminder_request(text: str) -> bool:
     return bool(text) and bool(_REMINDER_RE.search(text))
+
+
 def reminder_reply() -> str:
-    return ("Got it — I'll keep that in mind. I can't ping you at a set time in this build, "
-            "but I'll remember it and bring it up when we talk.")
+    return (
+        "Got it — I'll keep that in mind. I can't ping you at a set time in this build, "
+        "but I'll remember it and bring it up when we talk."
+    )
 
 
 # Short acknowledgments ("okay", "sure", "got it", "sounds good", "yeah") are
@@ -1028,6 +1288,7 @@ def _reduce_name_repetition(text: str, name: str) -> str:
         return text
     return re.sub(r"\s{2,}", " ", "".join(out)).strip()
 
+
 # ---- deterministic natural fallback (used when the LLM is silent/unreachable) ----
 _FALLBACK_CURIOUS = ["oh? tell me more.", "hmm — go on.", "that's interesting, keep going."]
 _FALLBACK_WARM = ["hey, i'm here.", "yeah, i'm listening.", "go ahead."]
@@ -1042,10 +1303,10 @@ def natural_fallback(self_state: dict[str, Any], surroundings: dict[str, Any], *
     an assistant opener and never names the user.
     """
     tone = (self_state or {}).get("tone", "warm")
-    bank = _FALLBACK_SERIOUS if tone in {"cautious", "recovering"} else (
-        _FALLBACK_CURIOUS if tone == "curious" else (
-            _FALLBACK_NEUTRAL if tone in {"calm"} else _FALLBACK_WARM
-        )
+    bank = (
+        _FALLBACK_SERIOUS
+        if tone in {"cautious", "recovering"}
+        else (_FALLBACK_CURIOUS if tone == "curious" else (_FALLBACK_NEUTRAL if tone in {"calm"} else _FALLBACK_WARM))
     )
     return bank[cycle % len(bank)]
 
@@ -1057,7 +1318,9 @@ class DialogueEngine:
     the local model call and enforces the communication rules on the output.
     """
 
-    def __init__(self, *, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL, timeout: int = 120) -> None:
+    def __init__(
+        self, *, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL, timeout: int = 120
+    ) -> None:
         self.model = model
         self.base_url = base_url
         self.timeout = timeout
@@ -1114,16 +1377,23 @@ class DialogueEngine:
 
     def _chat(self, system: str, user: str) -> str | None:
         """Single-shot Ollama /api/chat call; best-effort, returns None on failure."""
+        from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
+
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "stream": False,
-            "options": {"temperature": 0.6, "num_predict": 320},
+            "options": {"temperature": 0.6, "num_predict": num_predict_for(self.model, 320)},
         }
-        if "nemotron" in self.model.lower():
+        if can_disable_thinking(self.model):
+            # `think:false` is honored only for nemotron on the installed Ollama
+            # build; qwen3 must be given budget to finish thinking so the real
+            # answer lands in `content` (num_predict_for provides it).
             payload["think"] = False
         body = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(f"{self.base_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(
+            f"{self.base_url}/api/chat", data=body, headers={"Content-Type": "application/json"}
+        )
         with urllib.request.urlopen(req, timeout=self.timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         message = data.get("message", {}) or {}

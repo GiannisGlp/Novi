@@ -131,9 +131,7 @@ class _GroundingWithFallback:
     keeps answering scripted results if the model service is down)."""
 
     def __init__(self, service_url: str | None = None) -> None:
-        self._client = GroundingClient(
-            service_url or os.environ.get("NOVI_GROUNDING_URL", "http://127.0.0.1:8721")
-        )
+        self._client = GroundingClient(service_url or os.environ.get("NOVI_GROUNDING_URL", "http://127.0.0.1:8721"))
         self._fallback = DeterministicLocateAnythingBackend(scripted={})
 
     def capabilities(self) -> Any:
@@ -559,7 +557,7 @@ class NoviWebServer(IntegrationMixin):
     def _drain(self) -> None:
         """Pull newly emitted brain events into the bounded event log."""
         with self._lock:
-            new = list(self.brain.events[self._seen:])
+            new = list(self.brain.events[self._seen :])
             self._seen = len(self.brain.events)
             for ev in new:
                 self._seq += 1
@@ -570,7 +568,22 @@ class NoviWebServer(IntegrationMixin):
                     # summarizer here) to avoid a model call under the runtime lock.
                     p = ev.get("payload", {})
                     self._chat_seq += 1
-                    self._chat.append({"seq": self._chat_seq, "role": "novi", "text": str(p.get("text", "")), "trace": {"action": "initiate", "route": "initiative", "conclusion": str(p.get("text", "")), "rationale": str(p.get("reason", "")), "cycle": ev.get("cycle")}, "cycle": ev.get("cycle"), "llm": False})
+                    self._chat.append(
+                        {
+                            "seq": self._chat_seq,
+                            "role": "novi",
+                            "text": str(p.get("text", "")),
+                            "trace": {
+                                "action": "initiate",
+                                "route": "initiative",
+                                "conclusion": str(p.get("text", "")),
+                                "rationale": str(p.get("reason", "")),
+                                "cycle": ev.get("cycle"),
+                            },
+                            "cycle": ev.get("cycle"),
+                            "llm": False,
+                        }
+                    )
                     if len(self._chat) > 200:
                         self._chat = self._chat[-200:]
                     self._persist_chat()
@@ -587,9 +600,23 @@ class NoviWebServer(IntegrationMixin):
         # respond() with the LLM outside the lock (§4.4).
         self.brain.submit("web", "chat", {"text": self._clean_chat_text(text)})
         with self._lock:
-            r = self.brain.ingest_transcript(TranscriptionResult(text=self._clean_chat_text(text), language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
+            r = self.brain.ingest_transcript(
+                TranscriptionResult(
+                    text=self._clean_chat_text(text),
+                    language="en",
+                    confidence=confidence,
+                    audio_path="",
+                    provider="web",
+                    model_id="web",
+                )
+            )
         adm = r["admission"]
-        return {"accepted": adm.accepted, "memory_id": adm.memory_id, "reasoning": r["reasoning"], "confidence": r["confidence"]}
+        return {
+            "accepted": adm.accepted,
+            "memory_id": adm.memory_id,
+            "reasoning": r["reasoning"],
+            "confidence": r["confidence"],
+        }
 
     def _clean_chat_text(self, text: str) -> str:
         """Strip the '[heard] ' display marker before text reaches the LLM/history,
@@ -645,15 +672,22 @@ class NoviWebServer(IntegrationMixin):
         # Deduplication: reject duplicate sends within the dedup window.
         # This prevents double-sends from double-clicks or Enter key races.
         import time as _time
+
         now = _time.time()
         with self._lock:
-            if (text == self._last_sent_text
-                    and (now - self._last_sent_time) < self._dedup_window_seconds):
+            if text == self._last_sent_text and (now - self._last_sent_time) < self._dedup_window_seconds:
                 # Return the last novi if available; otherwise a bare dedup marker.
                 # Do not create new rows — the previous turn is still in-flight.
                 for c in reversed(self._chat_thread(person)):
                     if c.get("role") == "novi":
-                        return {"novi": c, "accepted": True, "memory_id": None, "llm": c.get("llm", False), "deduplicated": True, "after": self._seq_for(person)}
+                        return {
+                            "novi": c,
+                            "accepted": True,
+                            "memory_id": None,
+                            "llm": c.get("llm", False),
+                            "deduplicated": True,
+                            "after": self._seq_for(person),
+                        }
                 return {"accepted": False, "deduplicated": True, "after": self._seq_for(person)}
             self._last_sent_text = text
             self._last_sent_time = now
@@ -671,7 +705,11 @@ class NoviWebServer(IntegrationMixin):
         self.brain.acquire_speaking_lease(addressee)
         try:
             with self._lock:
-                r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
+                r = self.brain.ingest_transcript(
+                    TranscriptionResult(
+                        text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"
+                    )
+                )
                 adm = r["admission"]
                 conclusion = r["reasoning"]
                 heard_conf = r["confidence"]
@@ -689,8 +727,13 @@ class NoviWebServer(IntegrationMixin):
             last_novi = self._last_novi_text(person)
             transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
             resp = self.brain.respond(
-                text, person=addressee, history=history, llm_chat=transport,
-                last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
+                text,
+                person=addressee,
+                history=history,
+                llm_chat=transport,
+                last_novi_text=last_novi,
+                recent_novi=recent_novi,
+                learn=True,
             )
             self._bind_introduced_name(text)
             novi_text = resp.get("text")
@@ -701,7 +744,9 @@ class NoviWebServer(IntegrationMixin):
             # is the reply; for a deterministic fallback it stays the cognition label.
             trace["conclusion"] = novi_text if llm else conclusion
             trace["action"] = "respond"
-            trace["rationale"] = resp.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            trace["rationale"] = (
+                resp.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            )
             if llm:
                 trace["route"] = f"ollama:{self.llm_model}"
                 trace["route_reason"] = "local LLM"
@@ -759,8 +804,13 @@ class NoviWebServer(IntegrationMixin):
             last_novi = self._last_novi_text(addressee)
             transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
             resp = self.brain.respond(
-                text, person=addressee, history=history, llm_chat=transport,
-                last_novi_text=last_novi, recent_novi=recent_novi, learn=True,
+                text,
+                person=addressee,
+                history=history,
+                llm_chat=transport,
+                last_novi_text=last_novi,
+                recent_novi=recent_novi,
+                learn=True,
             )
             self._bind_introduced_name(text)
             novi_text = resp.get("text")
@@ -770,7 +820,9 @@ class NoviWebServer(IntegrationMixin):
             # spoken text is rendered naturally.
             trace["conclusion"] = novi_text if llm else result["reasoning"]
             trace["action"] = "respond"
-            trace["rationale"] = resp.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            trace["rationale"] = (
+                resp.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            )
             if llm:
                 trace["route"] = f"ollama:{self.llm_model}"
                 trace["route_reason"] = "local LLM"
@@ -851,7 +903,7 @@ class NoviWebServer(IntegrationMixin):
                 fast.model = self.llm_model  # type: ignore[attr-defined]
 
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
-        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+        from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
 
         options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 320)}
         payload: dict[str, Any] = {
@@ -860,17 +912,21 @@ class NoviWebServer(IntegrationMixin):
             "stream": False,
             "options": options,
         }
-        if disable_thinking_for(self.llm_model):
-            # Fast tiers (qwen3:4b/8b, nemotron) answer directly instead of
-            # exhausting the token budget mid-thought; the heavy-thinking tier
-            # (qwen3.8:27b) keeps its chain-of-thought (user tiering).
+        if can_disable_thinking(self.llm_model):
+            # Only models the installed Ollama build actually honors
+            # `think:false` for (verified: nemotron). Qwen3 still emits its
+            # chain-of-thought as `content` when it is sent, which the dialogue
+            # filters reject -> deterministic fallback.
             payload["think"] = False
         else:
-            # Heavy-thinking tier: deep replies take minutes at ~3 tok/s —
-            # give the call room to finish (the UI streams/waits async).
-            timeout = max(timeout, 420)
+            # Thinking models (qwen3): the CoT cannot be disabled here, so give
+            # the call room to finish thinking; num_predict_for() provides the
+            # budget for thought + answer (the answer lands in `content`).
+            timeout = max(timeout, 300)
         body = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(
+            f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"}
+        )
         with urllib.request.urlopen(req, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         message = data.get("message", {}) or {}
@@ -886,7 +942,7 @@ class NoviWebServer(IntegrationMixin):
 
     def _llm_chat_stream(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120):
         """Yield token deltas from Ollama with stream=True (SSE-like)."""
-        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+        from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
 
         options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 320)}
         payload: dict[str, Any] = {
@@ -895,12 +951,14 @@ class NoviWebServer(IntegrationMixin):
             "stream": True,
             "options": options,
         }
-        if disable_thinking_for(self.llm_model):
-            payload["think"] = False
+        if can_disable_thinking(self.llm_model):
+            payload["think"] = False  # honored only by nemotron on this Ollama
         else:
-            timeout = max(timeout, 420)  # heavy-thinking tier needs minutes
+            timeout = max(timeout, 300)  # qwen3 thinking needs room
         body = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(
+            f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"}
+        )
         # Stream-parse NDJSON lines from Ollama.
         with urllib.request.urlopen(req, timeout=timeout) as response:
             buf = b""
@@ -937,9 +995,10 @@ class NoviWebServer(IntegrationMixin):
         """Streaming variant of chat_send: yields {'token': str} then {'done': novi}."""
         text = self._clean_chat_text(text)
         import time as _time
+
         now = _time.time()
         with self._lock:
-            if (text == self._last_sent_text and (now - self._last_sent_time) < self._dedup_window_seconds):
+            if text == self._last_sent_text and (now - self._last_sent_time) < self._dedup_window_seconds:
                 # Deduplicated: do NOT create new chat rows. This handles double-click
                 # races where the second request arrives while the first is still
                 # in-flight and hasn't yet appended to _chat (so checking last role
@@ -951,7 +1010,14 @@ class NoviWebServer(IntegrationMixin):
                         last_novi = c
                         break
                 if last_novi is not None:
-                    yield {"deduplicated": True, "novi": last_novi, "after": self._seq_for(person), "accepted": True, "memory_id": None, "llm": last_novi.get("llm", False)}
+                    yield {
+                        "deduplicated": True,
+                        "novi": last_novi,
+                        "after": self._seq_for(person),
+                        "accepted": True,
+                        "memory_id": None,
+                        "llm": last_novi.get("llm", False),
+                    }
                 else:
                     yield {"deduplicated": True, "after": self._seq_for(person), "accepted": False}
                 return
@@ -963,7 +1029,11 @@ class NoviWebServer(IntegrationMixin):
         self.brain.acquire_speaking_lease(addressee)
         try:
             with self._lock:
-                r = self.brain.ingest_transcript(TranscriptionResult(text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"))
+                r = self.brain.ingest_transcript(
+                    TranscriptionResult(
+                        text=text, language="en", confidence=confidence, audio_path="", provider="web", model_id="web"
+                    )
+                )
                 adm = r["admission"]
                 conclusion = r["reasoning"]
                 heard_conf = r["confidence"]
@@ -986,18 +1056,31 @@ class NoviWebServer(IntegrationMixin):
                 trace["confidence"] = heard_conf
                 novi_text = fb["text"]
                 # Stream the fallback as one chunk for uniform UI handling.
-                for ch in [novi_text[i:i+12] for i in range(0, len(novi_text), 12)]:
+                for ch in [novi_text[i : i + 12] for i in range(0, len(novi_text), 12)]:
                     yield {"token": ch}
                 novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": False}
                 user_stored = self._append_chat({"role": "user", "text": text}, person)
                 novi_stored = self._append_chat(novi, person)
-                yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False, "after": self._seq_for(person)}
+                yield {
+                    "done": True,
+                    "user": user_stored,
+                    "novi": novi_stored,
+                    "accepted": bool(adm.accepted),
+                    "memory_id": adm.memory_id,
+                    "llm": False,
+                    "after": self._seq_for(person),
+                }
                 return
             # Streaming path: compose_reply non-streaming, then stream the full reply
             # token-chunked (feels streaming without NDJSON complexity).
             full_reply_obj = self.brain.compose_reply(
-                text, person=addressee, history=history, llm_chat=self._llm_chat,
-                last_novi_text=last_novi, addressee_name=addressee, recent_novi=recent_novi,
+                text,
+                person=addressee,
+                history=history,
+                llm_chat=self._llm_chat,
+                last_novi_text=last_novi,
+                addressee_name=addressee,
+                recent_novi=recent_novi,
                 topic_hint=discourse_hint,
             )
             full_reply = full_reply_obj.get("text") if full_reply_obj else None
@@ -1010,30 +1093,49 @@ class NoviWebServer(IntegrationMixin):
                 trace["route_reason"] = "no_llm_transport"
                 trace["confidence"] = heard_conf
                 novi_text = fb["text"]
-                for ch in [novi_text[i:i+16] for i in range(0, len(novi_text), 16)]:
+                for ch in [novi_text[i : i + 16] for i in range(0, len(novi_text), 16)]:
                     yield {"token": ch}
                 novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": False}
                 user_stored = self._append_chat({"role": "user", "text": text}, person)
                 novi_stored = self._append_chat(novi, person)
-                yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": False, "after": self._seq_for(person)}
+                yield {
+                    "done": True,
+                    "user": user_stored,
+                    "novi": novi_stored,
+                    "accepted": bool(adm.accepted),
+                    "memory_id": adm.memory_id,
+                    "llm": False,
+                    "after": self._seq_for(person),
+                }
                 return
             # We have a full reply; stream it in small chunks to simulate token streaming
             # (true NDJSON streaming would require deeper brain integration; this chunked
             # approach delivers the same perceived latency improvement without fragility).
             trace["conclusion"] = full_reply
             trace["action"] = "respond"
-            trace["rationale"] = full_reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            trace["rationale"] = (
+                full_reply_obj.get("reason")
+                or "Natural reply grounded in recalled knowledge, relationships and self-state."
+            )
             trace["route"] = f"ollama:{self.llm_model}"
             trace["route_reason"] = "fallback" if full_reply_obj.get("fallback") else "local LLM"
             trace["confidence"] = 0.8 if full_reply_obj.get("fallback") else 0.85
             # Stream the reply in ~18-char chunks with no artificial delay (network is the bottleneck)
             chunk_size = 14
             for i in range(0, len(full_reply), chunk_size):
-                yield {"token": full_reply[i:i+chunk_size]}
+                yield {"token": full_reply[i : i + chunk_size]}
             novi = {"role": "novi", "text": full_reply, "trace": trace, "cycle": step.get("cycle"), "llm": True}
             user_stored = self._append_chat({"role": "user", "text": text}, person)
             novi_stored = self._append_chat(novi, person)
-            yield {"done": True, "user": user_stored, "novi": novi_stored, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": True, "after": self._seq_for(person)}
+            yield {
+                "done": True,
+                "user": user_stored,
+                "novi": novi_stored,
+                "accepted": bool(adm.accepted),
+                "memory_id": adm.memory_id,
+                "llm": True,
+                "after": self._seq_for(person),
+            }
         finally:
             self.brain.release_speaking_lease(addressee)
 
@@ -1070,7 +1172,6 @@ class NoviWebServer(IntegrationMixin):
         with contextlib.suppress(Exception):
             store.save_chat(snapshot)
 
-
     def _maybe_summarize_chat(self, threshold: int = 30, keep_recent: int = 8) -> None:
         """When the thread grows long, distill the older turns into a durable summary.
 
@@ -1080,8 +1181,7 @@ class NoviWebServer(IntegrationMixin):
         """
         if len(self._chat) <= threshold:
             return
-        if (self._last_summarized_len is not None
-                and len(self._chat) - self._last_summarized_len < keep_recent):
+        if self._last_summarized_len is not None and len(self._chat) - self._last_summarized_len < keep_recent:
             return
         older = self._chat[:-keep_recent]
         recent = self._chat[-keep_recent:]
@@ -1131,8 +1231,16 @@ class NoviWebServer(IntegrationMixin):
             self._persist_chat()
         return {"cleared": True}
 
-    def hear_audio(self, *, event_hint: str | None, rms: float, novelty: float = 0.0, speech: bool = False, confidence: float = 0.0) -> dict[str, Any]:
-        frame = AudioFrame(rms=float(rms), speech=speech, event_hint=event_hint, hint_confidence=float(confidence) if confidence else 0.0, novelty=float(novelty))
+    def hear_audio(
+        self, *, event_hint: str | None, rms: float, novelty: float = 0.0, speech: bool = False, confidence: float = 0.0
+    ) -> dict[str, Any]:
+        frame = AudioFrame(
+            rms=float(rms),
+            speech=speech,
+            event_hint=event_hint,
+            hint_confidence=float(confidence) if confidence else 0.0,
+            novelty=float(novelty),
+        )
         with self._lock:
             return self.brain.ingest_audio_frame(frame)
 
@@ -1145,7 +1253,12 @@ class NoviWebServer(IntegrationMixin):
     def set_goal(self, *, x: float, y: float, max_steps: int = 60) -> dict[str, Any]:
         with self._lock:
             state = self.brain.set_goal(Goal.reach(float(x), float(y), max_steps=int(max_steps)))
-            return {"goal_id": state.goal.goal_id, "kind": state.goal.kind, "target": [state.goal.target[0], state.goal.target[1]], "status": state.status.value}
+            return {
+                "goal_id": state.goal.goal_id,
+                "kind": state.goal.kind,
+                "target": [state.goal.target[0], state.goal.target[1]],
+                "status": state.status.value,
+            }
 
     def health(self) -> dict[str, Any]:
         with self._lock:
@@ -1160,7 +1273,15 @@ class NoviWebServer(IntegrationMixin):
     def state(self) -> dict[str, Any]:
         with self._lock:
             step = self._last_step
-            body = self.brain.body.snapshot() if hasattr(self.brain.body, "snapshot") else {"x_m": self.brain.body.x_m, "y_m": self.brain.body.y_m, "heading_deg": self.brain.body.heading_deg}
+            body = (
+                self.brain.body.snapshot()
+                if hasattr(self.brain.body, "snapshot")
+                else {
+                    "x_m": self.brain.body.x_m,
+                    "y_m": self.brain.body.y_m,
+                    "heading_deg": self.brain.body.heading_deg,
+                }
+            )
             active_goal = self.brain.goals.active
             goals = [
                 {"goal_id": s.goal.goal_id, "kind": s.goal.kind, "status": s.status.value, "steps_taken": s.steps_taken}
@@ -1191,12 +1312,25 @@ class NoviWebServer(IntegrationMixin):
                     "values": dict(self.brain.soul.personality.values),
                     "affect": dict(self.brain.soul.affect.dimensions),
                 },
-                "active_goal": {"goal_id": active_goal.goal.goal_id, "kind": active_goal.goal.kind, "target": str(active_goal.goal.target), "steps_taken": active_goal.steps_taken, "status": active_goal.status.value, "distance_to_goal": distance} if active_goal is not None else None,
+                "active_goal": {
+                    "goal_id": active_goal.goal.goal_id,
+                    "kind": active_goal.goal.kind,
+                    "target": str(active_goal.goal.target),
+                    "steps_taken": active_goal.steps_taken,
+                    "status": active_goal.status.value,
+                    "distance_to_goal": distance,
+                }
+                if active_goal is not None
+                else None,
                 "plan": plan,
                 "goals_history": goals,
                 "knowledge": self.brain.knowledge.counts(),
                 "hearing": self.brain._last_audio_events,
-                "memory": {"active": getattr(self.brain.memory, "active_count", None), "summaries": self._memory_summaries(), "embedder": self._embedding_info()},
+                "memory": {
+                    "active": getattr(self.brain.memory, "active_count", None),
+                    "summaries": self._memory_summaries(),
+                    "embedder": self._embedding_info(),
+                },
                 "narrative": self._cached_narrative(),
                 # Phase P1/P2 observability: sleep-cycle health + per-class routing.
                 "sleep_cycle": self._sleep_cycle_info(),
@@ -1225,7 +1359,13 @@ class NoviWebServer(IntegrationMixin):
             else:
                 available = True
             err = getattr(emb, "load_error", None)
-            return {"provider": provider, "dimension": dim, "available": available, "error": err, "mode": getattr(self, "embedder_mode", "auto")}
+            return {
+                "provider": provider,
+                "dimension": dim,
+                "available": available,
+                "error": err,
+                "mode": getattr(self, "embedder_mode", "auto"),
+            }
         except Exception:
             return {"provider": "unknown", "dimension": None}
 
@@ -1262,7 +1402,9 @@ class NoviWebServer(IntegrationMixin):
             rec = feed.poll()
             if rec is not None:
                 f = rec.frame
-                return CameraFrame(frame_id=f.frame_id, captured_at=f.captured_at, width=f.width, height=f.height, payload=f.payload)
+                return CameraFrame(
+                    frame_id=f.frame_id, captured_at=f.captured_at, width=f.width, height=f.height, payload=f.payload
+                )
         return DemoCamera().read()
 
     def _pipeline_for_grounding(self) -> PerceptionPipeline:
@@ -1331,9 +1473,7 @@ class NoviWebServer(IntegrationMixin):
             rows = self.brain.memory.active_rows()
         except Exception:  # noqa: BLE001 - a memory hiccup degrades to no narrative
             return []
-        episodic = [
-            item["record"] for item in rows if item["record"].memory_type in {"utterance", "perception"}
-        ]
+        episodic = [item["record"] for item in rows if item["record"].memory_type in {"utterance", "perception"}]
         episodic.sort(key=lambda r: r.created_at)
         sig = tuple(r.memory_id for r in episodic[-5:])
         if sig == self._narrative_sig and self._narrative_cache is not None:
@@ -1448,14 +1588,16 @@ class NoviWebServer(IntegrationMixin):
                 rows = list(retrieve(query, limit=limit))
                 out = []
                 for r in rows:
-                    out.append({
-                        "memory_id": r.memory_id,
-                        "memory_type": r.memory_type,
-                        "content": r.content if isinstance(r.content, str) else str(r.content),
-                        "confidence": r.confidence,
-                        "entity_refs": list(r.entity_refs),
-                        "created_at": r.created_at,
-                    })
+                    out.append(
+                        {
+                            "memory_id": r.memory_id,
+                            "memory_type": r.memory_type,
+                            "content": r.content if isinstance(r.content, str) else str(r.content),
+                            "confidence": r.confidence,
+                            "entity_refs": list(r.entity_refs),
+                            "created_at": r.created_at,
+                        }
+                    )
             except Exception:
                 out = []
             retrieval_state = None
@@ -1530,6 +1672,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/events/stream":
             # Server-Sent Events: push brain events as they appear (replaces polling)
             from urllib.parse import parse_qs, urlparse
+
             try:
                 after = int(parse_qs(urlparse(self.path).query).get("after", ["0"])[0])
             except Exception:
@@ -1610,6 +1753,7 @@ class Handler(BaseHTTPRequestHandler):
             limit = 8
             if "?" in self.path:
                 from urllib.parse import parse_qs, urlparse
+
                 qs = parse_qs(urlparse(self.path).query)
                 query = qs.get("query", [""])[0]
                 try:
@@ -1623,6 +1767,7 @@ class Handler(BaseHTTPRequestHandler):
             limit = 10
             if "?" in self.path:
                 from urllib.parse import parse_qs, urlparse
+
                 qs = parse_qs(urlparse(self.path).query)
                 entity = qs.get("entity", [""])[0]
                 try:
@@ -1682,11 +1827,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         # ---- real I/O (doc 17) ----
         if path == "/api/real/status":
-            self._json({
-                "enabled": novi.real_io_enabled,
-                "devices": dict(novi.real_io),
-                "speak_back": novi.speak_back_enabled,
-            })
+            self._json(
+                {
+                    "enabled": novi.real_io_enabled,
+                    "devices": dict(novi.real_io),
+                    "speak_back": novi.speak_back_enabled,
+                }
+            )
             return
         if path == "/api/real/speakback":
             pass  # handled in POST below; GET returns current state only
@@ -1771,9 +1918,27 @@ class Handler(BaseHTTPRequestHandler):
                 if not text:
                     self._json({"error": "empty text"})
                     return
-                self._json({"result": novi.chat_send(text, confidence=float(data.get("confidence", 0.9)), person=str(data.get("person", "") or ""))})
+                self._json(
+                    {
+                        "result": novi.chat_send(
+                            text,
+                            confidence=float(data.get("confidence", 0.9)),
+                            person=str(data.get("person", "") or ""),
+                        )
+                    }
+                )
             elif path == "/api/audio":
-                self._json({"result": novi.hear_audio(event_hint=data.get("event_hint"), rms=data.get("rms", 0.6), novelty=data.get("novelty", 0.0), speech=bool(data.get("speech", False)), confidence=float(data.get("confidence", 0.0)))})
+                self._json(
+                    {
+                        "result": novi.hear_audio(
+                            event_hint=data.get("event_hint"),
+                            rms=data.get("rms", 0.6),
+                            novelty=data.get("novelty", 0.0),
+                            speech=bool(data.get("speech", False)),
+                            confidence=float(data.get("confidence", 0.0)),
+                        )
+                    }
+                )
             elif path == "/api/listen":
                 self._json({"result": novi.listen(float(data.get("seconds") or 0) or None)})
             elif path == "/api/model":
@@ -1787,7 +1952,13 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/step":
                 self._json({"result": novi.step()})
             elif path == "/api/goal":
-                self._json({"result": novi.set_goal(x=data.get("x", 1.0), y=data.get("y", 1.0), max_steps=int(data.get("max_steps", 60)))})
+                self._json(
+                    {
+                        "result": novi.set_goal(
+                            x=data.get("x", 1.0), y=data.get("y", 1.0), max_steps=int(data.get("max_steps", 60))
+                        )
+                    }
+                )
             elif path == "/api/health":
                 self._json({"result": novi.health()})
             elif path == "/api/episode/start":
@@ -1805,20 +1976,50 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     fmt = str(data.get("format", "novi_native"))
                     exported = novi.brain.export_episode(episode, format=fmt)
-                    self._json({"result": {"episode_id": episode.episode_id, "step_count": len(episode.steps), "format": fmt, "export": exported}})
+                    self._json(
+                        {
+                            "result": {
+                                "episode_id": episode.episode_id,
+                                "step_count": len(episode.steps),
+                                "format": fmt,
+                                "export": exported,
+                            }
+                        }
+                    )
             elif path == "/api/episode/status":
                 with novi._lock:
-                    self._json({"result": {"recording": novi.brain.is_recording, "step_count": novi.brain.recording_step_count}})
+                    self._json(
+                        {
+                            "result": {
+                                "recording": novi.brain.is_recording,
+                                "step_count": novi.brain.recording_step_count,
+                            }
+                        }
+                    )
             elif path == "/api/perception/frame":
-                self._json({"result": novi.perception_frame(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.perception_frame(data)} if novi.mm_runtime else {"error": "integration unavailable"}
+                )
             elif path == "/api/voice/turn":
-                self._json({"result": novi.voice_turn(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.voice_turn(data)} if novi.mm_runtime else {"error": "integration unavailable"}
+                )
             elif path == "/api/recognition/person":
-                self._json({"result": novi.recognize_person(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.recognize_person(data)} if novi.mm_runtime else {"error": "integration unavailable"}
+                )
             elif path == "/api/recognition/enroll":
-                self._json({"result": novi.enroll_place_or_noise(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.enroll_place_or_noise(data)}
+                    if novi.mm_runtime
+                    else {"error": "integration unavailable"}
+                )
             elif path == "/api/recognition/privacy":
-                self._json({"result": novi.recognition_privacy(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.recognition_privacy(data)}
+                    if novi.mm_runtime
+                    else {"error": "integration unavailable"}
+                )
             elif path == "/api/real/enable":
                 res = novi.real_enable(
                     camera=bool(data.get("camera", False)),
@@ -1853,21 +2054,41 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"error": str(exc)}, status=400)
             elif path == "/api/recognition/object":
                 # Enroll an object instance from a supplied embedding.
-                self._json({"result": novi.recognize_object(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.recognize_object(data)} if novi.mm_runtime else {"error": "integration unavailable"}
+                )
             elif path == "/api/recognition/enroll-object":
                 # Enroll an object from the CURRENT live camera frame: server
                 # embeds the largest non-person crop with ResNet18 and stores it.
                 self._json({"result": novi.enroll_object_from_camera(str(data.get("name", "")))})
             elif path == "/api/observation/last-sighting":
-                self._json({"result": novi.observation_last_sighting(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.observation_last_sighting(data)}
+                    if novi.mm_runtime
+                    else {"error": "integration unavailable"}
+                )
             elif path == "/api/observation/in-place":
-                self._json({"result": novi.observation_in_place(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.observation_in_place(data)}
+                    if novi.mm_runtime
+                    else {"error": "integration unavailable"}
+                )
             elif path == "/api/observation/search":
-                self._json({"result": novi.observation_search(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.observation_search(data)}
+                    if novi.mm_runtime
+                    else {"error": "integration unavailable"}
+                )
             elif path == "/api/recognition/proposals":
-                self._json({"result": novi.proposal_list()} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.proposal_list()} if novi.mm_runtime else {"error": "integration unavailable"}
+                )
             elif path == "/api/recognition/name-object":
-                self._json({"result": novi.name_proposal_object(data)} if novi.mm_runtime else {"error": "integration unavailable"})
+                self._json(
+                    {"result": novi.name_proposal_object(data)}
+                    if novi.mm_runtime
+                    else {"error": "integration unavailable"}
+                )
             else:
                 self._json({"error": "unknown endpoint"}, 404)
         except Exception as exc:  # noqa: BLE001
@@ -1899,17 +2120,62 @@ def main() -> None:
     parser.add_argument("--store", default=None, help="durable SQLite DB path")
     parser.add_argument("--tick", type=float, default=0.8, help="seconds per auto-step")
     parser.add_argument("--no-auto-step", action="store_true", help="advance only on manual 'step'")
-    parser.add_argument("--camera", choices=["demo", "real"], default="demo", help="'demo' = no-hardware camera; 'real' = live webcam + real speech-to-text")
-    parser.add_argument("--reasoning", choices=["deterministic", "ollama", "router"], default="router", help="brain decision backend; 'router' escalates uncertain steps to the local LLM (default: router — falls back to deterministic when Ollama is offline)")
-    parser.add_argument("--route-threshold", type=float, default=0.6, help="confidence below which the router escalates to the local LLM")
-    parser.add_argument("--ollama-model", type=str, default=None, help="Ollama model for reasoning + chat replies (default: nemotron-3.5-lightning, or the last UI-selected model)")
-    parser.add_argument("--model", dest="model", type=str, default=None, help="default chat model; falls back to the persisted UI selection, then nemotron-3.5-lightning (switch at runtime via the UI)")
-    parser.add_argument("--stt-model", type=str, default="base", help="faster-whisper model size for real microphone STT (tiny/base/small)")
+    parser.add_argument(
+        "--camera",
+        choices=["demo", "real"],
+        default="demo",
+        help="'demo' = no-hardware camera; 'real' = live webcam + real speech-to-text",
+    )
+    parser.add_argument(
+        "--reasoning",
+        choices=["deterministic", "ollama", "router"],
+        default="router",
+        help="brain decision backend; 'router' escalates uncertain steps to the local LLM (default: router — falls back to deterministic when Ollama is offline)",
+    )
+    parser.add_argument(
+        "--route-threshold",
+        type=float,
+        default=0.6,
+        help="confidence below which the router escalates to the local LLM",
+    )
+    parser.add_argument(
+        "--ollama-model",
+        type=str,
+        default=None,
+        help="Ollama model for reasoning + chat replies (default: nemotron-3.5-lightning, or the last UI-selected model)",
+    )
+    parser.add_argument(
+        "--model",
+        dest="model",
+        type=str,
+        default=None,
+        help="default chat model; falls back to the persisted UI selection, then nemotron-3.5-lightning (switch at runtime via the UI)",
+    )
+    parser.add_argument(
+        "--stt-model",
+        type=str,
+        default="base",
+        help="faster-whisper model size for real microphone STT (tiny/base/small)",
+    )
     parser.add_argument("--stt-device", type=str, default="cpu", help="STT device (cpu or mps)")
-    parser.add_argument("--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button")
-    parser.add_argument("--no-event-autonomy", action="store_true", help="disable proactive speech from camera/presence events")
-    parser.add_argument("--sleep-every", type=int, default=500, help="run the memory sleep-cycle (consolidate/decay/strengthen) every N brain cycles (0 disables)")
-    parser.add_argument("--embedder", choices=["auto", "hash", "minilm"], default="auto", help="embedding provider for memory recall: 'auto' tries MiniLM (MPS, 384d) then falls back to hashing; 'hash' forces deterministic hashing (256d)")
+    parser.add_argument(
+        "--listen-seconds", type=float, default=3.0, help="microphone recording length for the Listen button"
+    )
+    parser.add_argument(
+        "--no-event-autonomy", action="store_true", help="disable proactive speech from camera/presence events"
+    )
+    parser.add_argument(
+        "--sleep-every",
+        type=int,
+        default=500,
+        help="run the memory sleep-cycle (consolidate/decay/strengthen) every N brain cycles (0 disables)",
+    )
+    parser.add_argument(
+        "--embedder",
+        choices=["auto", "hash", "minilm"],
+        default="auto",
+        help="embedding provider for memory recall: 'auto' tries MiniLM (MPS, 384d) then falls back to hashing; 'hash' forces deterministic hashing (256d)",
+    )
     args = parser.parse_args()
 
     novi = NoviWebServer(

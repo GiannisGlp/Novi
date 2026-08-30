@@ -75,7 +75,7 @@ class LLMSummarizer:
         self.max_tokens = max_tokens
 
     def __call__(self, entity: str, records: list[Any]) -> str | None:
-        from novi.brain.models.ollama_reasoning import disable_thinking_for, num_predict_for
+        from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
 
         body: dict[str, Any] = {
             "model": self.model,
@@ -87,14 +87,21 @@ class LLMSummarizer:
         }
         # Structured JSON summary — always think:false (chain-of-thought is
         # wasted on a bounded summary; the slow tier would blow the timeout).
-        body["think"] = False
+        request_timeout = 5 if can_disable_thinking(self.model) else 60
+        if can_disable_thinking(self.model):
+            # Only models the installed Ollama build honors `think:false` for
+            # (verified: nemotron). Qwen3 emits its CoT as content otherwise
+            # and returns no `thinking` field, breaking JSON extraction.
+            body["think"] = False
+        # else: qwen3 must finish thinking first (60s) and num_predict_for()
+        # gives it the budget for thought + JSON.
         request = urllib.request.Request(
             f"{self.base_url}/api/generate",
             data=json.dumps(body).encode("utf-8"),
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=5) as response:
+            with urllib.request.urlopen(request, timeout=request_timeout) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except Exception:
             return None
