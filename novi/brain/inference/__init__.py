@@ -1,15 +1,15 @@
-"""Novi inference runtime (plan 12 — AirLLM adaptation).
+"""Novi inference runtime (plan 12).
 
 The inference subsystem is Novi-owned and backend-neutral. Cognition and
-autonomy modules import ONLY from this package (or the runtime adapter) and
-never import AirLLM. Dependency direction:
+autonomy modules import ONLY from this package (or the runtime adapter).
+Dependency direction:
 
     Novi cognition/autonomy -> inference contract -> runtime -> backends
 """
 
 from __future__ import annotations
 
-from .backends import AirLLMBackend, ExistingBackend, MockBackend
+from .backends import ExistingBackend, MockBackend
 from .capabilities import BackendCapabilities, CapabilityState, HardwareProfile, probe_hardware
 from .contracts import AbstractInferenceBackend, InferenceBackend
 from .errors import (
@@ -40,7 +40,6 @@ from .telemetry import InferenceTelemetry
 
 __all__ = [
     "AbstractInferenceBackend",
-    "AirLLMBackend",
     "BackendCapabilities",
     "BackendInitializationError",
     "BackendManager",

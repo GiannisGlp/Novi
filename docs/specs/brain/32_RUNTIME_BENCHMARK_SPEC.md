@@ -1,15 +1,15 @@
 # Runtime Benchmark Specification
 
-**Status:** EVALUATING — baseline capture procedure defined; no AirLLM performance claim may be made without comparison to the captured baseline (plan `12_AIRLLM_ADAPTATION_AND_INFERENCE_RUNTIME_PLAN.md` §5.3, §29, §35).
+**Status:** EVALUATING — baseline capture for the existing (Ollama) backend; AirLLM was removed by user decision (2026-08-30) after execution-verifying it provides no performance value on the Mac MLX path (plan `12_AIRLLM_ADAPTATION_AND_INFERENCE_RUNTIME_PLAN.md` §5.3, §29).
 **Owner:** Novi project
 
 ## 1. Purpose
 
-All performance claims must be backed by machine-readable execution evidence, not screenshots or manual claims. This spec defines the benchmark suite, the evidence schema, and the acceptance rule: **no AirLLM performance claim may later be made without comparison to the baseline.**
+All performance claims must be backed by machine-readable execution evidence, not screenshots or manual claims. This spec defines the benchmark suite and the evidence schema for the existing (Ollama) backend; any future backend claim must be compared to this baseline.
 
 ## 2. Baseline capture (plan 12 §5.3)
 
-Before AirLLM is installed, record for each currently executable model/backend:
+For each currently executable model/backend, record:
 
 ```text
 startup time
@@ -45,23 +45,6 @@ Evidence lives under `benchmarks/` as JSON with timestamps and software/model ve
 ## 4. Novi cognitive benchmarks (plan 12 §29)
 
 Dialogue, instruction following, scene interpretation (text/structured input), spatial reasoning, task decomposition, planning, replanning, tool selection, tool argument generation, uncertainty expression, memory-grounded answers, contradiction handling, refusal of unauthorized actions, recovery after failed tool execution.
-
-## 5. AirLLM vs baseline comparison (plan 12 §35)
-
-For Qwen3.8-27B, compare existing/native backend vs AirLLM using **exactly the same** model revision, prompt suite, tokenizer, generation settings, hardware, temperature, and max output tokens. Report:
-
-```text
-quality delta
-TTFT delta
-throughput delta
-peak VRAM delta
-peak RAM delta
-disk IO delta
-startup delta
-failure rate delta
-```
-
-**No adoption decision may be made from VRAM alone** (plan 12 §35, §59 weighted decision).
 
 ## 6. Evidence schema
 
@@ -103,12 +86,11 @@ Failure injection: remove shard, corrupt shard, fill disk, kill worker, interrup
 | `benchmarks/baseline/qwen3_8b.json` | **baseline captured** — TTFT 15.81 s, 25.43 tok/s, 0% error, 8/8 prompts |
 | `benchmarks/baseline/qwen3_4b.json` | **baseline captured** — TTFT 16.47 s, 46.45 tok/s, 0% error, 8/8 prompts |
 | `benchmarks/baseline/nemotron-3.5-lightning_latest.json` | **baseline captured** — TTFT 10.76 s, 44.62 tok/s, 0% error, 8/8 prompts |
-| `benchmarks/airllm-mac/tinyllama-1.1b.json` | **AirLLM Mac execution** — full pipeline (prepare 20 s, cold 56.8 s, warm 28.2 s, unload) + raw soak (27.85 s avg, 0 failures) + **routed soak through the full runtime** (4/4 requests → `backend=airllm`, 31.3 s avg, 0 failures, all_airllm=true) |
-| qwen3.8-27b airllm | blocked (Step 18): 55.6 GB checkpoint + shards ≈ 112 GB > 99 GiB free after cleanup; Transformers 5.8+ requirement; Mac MLX path cannot stream `Qwen3_5ForConditionalGeneration`. The GENERIC AirLLM path runs compatible models (e.g. TinyLlama) on this Mac |
+
 | soak / failure-injection | failure injection covered by `test_failure_injection.py` (20/20 cases); soak harness `novi/brain/benchmarks/soak.py` (CI-safe `--ci` verified, 0% error; 1h/4h/8h/24h runs documented for target hardware) |
 
 Harness: `novi/brain/benchmarks/inference_baseline.py` (stdlib-only, `python novi/brain/benchmarks/inference_baseline.py`).
 
 ## 10. Status vocabulary
 
-`DESIGNED → PROPOSED → EVALUATING → PROTOTYPE → IMPLEMENTED → TESTED → INTEGRATED`. The inference runtime contract is `PROTOTYPE`; the AirLLM backend is `PROTOTYPE` (implemented behind the contract, hardware validation pending — documented as a platform-blocked provider until the Step 17/18 blockers are resolved on hardware with sufficient storage).
+`DESIGNED → PROPOSED → EVALUATING → PROTOTYPE → IMPLEMENTED → TESTED → INTEGRATED`. The inference runtime contract is `PROTOTYPE` (implemented and tested against the existing backend).

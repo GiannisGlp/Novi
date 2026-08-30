@@ -1,13 +1,12 @@
 """Model registry (plan 12, §8 Phase 3 and §9 Phase 4).
 
-The registry is independent of AirLLM. Each model spec records the local alias,
-the canonical model ID, and backend artifacts via an explicit mapping layer:
+Each model spec records the local alias, the canonical model ID, and backend
+artifacts via an explicit mapping layer:
 
     local alias -> canonical model ID -> backend artifact
 
 Never silently substitute a different checkpoint: backend artifacts must be
-resolved explicitly (``resolve_backend_artifact``) and ``qwen3.8:latest`` is
-not admitted to the AirLLM pool until its exact artifact identity is recorded.
+resolved explicitly (``resolve_backend_artifact``).
 """
 
 from __future__ import annotations
@@ -71,23 +70,10 @@ class ModelSpec:
             )
         return artifact
 
-    def is_airllm_eligible(self) -> bool:
-        """A model is AirLLM-eligible only when its artifact identity is resolved.
-
-        An explicit ``airllm_eligible: False`` in ``resolved`` (recorded when a
-        compatibility blocker exists, e.g. an unsatisfiable Transformers version
-        requirement) is honored over the generic shape check.
-        """
-        if self.resolved.get("airllm_eligible") is False:
-            return False
-        return bool(self.resolved.get("architecture")) and bool(self.resolved.get("parameter_count"))
-
 
 #: Initial registry contents — exactly the five currently approved aliases
 #: (plan 12, §9). No additional model becomes a dependency without a documented
-#: adoption decision. AirLLM artifacts are intentionally NOT mapped yet: they
-#: must be resolved against the exact Hugging Face checkpoint (Step 17) before
-#: eligibility.
+#: adoption decision.
 def _default_model_specs() -> tuple[ModelSpec, ...]:
     return (
         ModelSpec(
@@ -148,7 +134,7 @@ def _default_model_specs() -> tuple[ModelSpec, ...]:
             id="qwen3.8-27b",
             family="qwen3.8",
             role_candidates=("deep_reasoning", "multimodal_reasoning"),
-            backend_preferences=("airllm", "existing"),
+            backend_preferences=("existing",),
             source_type="huggingface",
             source_id="Qwen/Qwen3.8-27B",
             local_aliases=("qwen3.8:27b",),
@@ -156,23 +142,7 @@ def _default_model_specs() -> tuple[ModelSpec, ...]:
             capabilities={"text": True, "vision": True, "tool_calling": None, "structured_output": None},
             hardware_requirements={},
             status="candidate",
-            backend_artifacts={},  # airllm mapping pending compatibility resolution (§10)
-            # Resolved identity (Step 17, 2026-08-30, HF Hub): config.json
-            # declares transformers_version 5.8.0.dev0, which conflicts with the
-            # validated AirLLM stack (transformers 4.57.1, cap <5.13). NOT
-            # AirLLM-eligible until that conflict is resolved — never silently
-            # substitute a different checkpoint.
-            resolved={
-                "model_id": "Qwen/Qwen3.8-27B",
-                "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
-                "architecture": "Qwen3_5ForConditionalGeneration",
-                "model_type": "qwen3_5",
-                "modality": "multimodal",
-                "transformers_version_required": "5.8.0.dev0",
-                "license": "apache-2.0",
-                "airllm_eligible": False,
-                "airllm_blocker": "transformers 5.8.0.dev0 required by config; validated AirLLM stack caps at <5.13 without global upgrade (plan 12 §10)",
-            },
+            resolved={},  # identity unresolved: never routable until recorded (§9.5)
         ),
         ModelSpec(
             id="qwen3.8-latest",
@@ -186,37 +156,6 @@ def _default_model_specs() -> tuple[ModelSpec, ...]:
             capabilities={"text": True, "vision": None, "tool_calling": None, "structured_output": None},
             status="candidate",
             resolved={},  # identity unresolved: never routable until recorded (§9.5)
-        ),
-        # Adoption decision (user directive 2026-08-30): AirLLM is a GENERIC
-        # resource-optimization backend used everywhere, including Mac. This is
-        # the Mac-verified AirLLM reference target: full pipeline executed on
-        # the actual dev machine (benchmarks/airllm-mac/tinyllama-1.1b.json) —
-        # prepare, integrity, cold/warm generation, unload, soak. Architecture
-        # LlamaForCausalLM is the only Mac MLX-verified architecture.
-        ModelSpec(
-            id="tinyllama-1.1b",
-            family="tinyllama",
-            role_candidates=("lightweight_reasoning", "cheap_fallback", "resource_optimized_inference"),
-            backend_preferences=("airllm", "existing"),
-            source_type="huggingface",
-            source_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-            local_aliases=(),
-            context_limit=2048,
-            capabilities={"text": True, "vision": False, "tool_calling": None, "structured_output": None},
-            status="approved",
-            backend_artifacts={
-                "airllm": {
-                    "source_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                    "architecture": "LlamaForCausalLM",
-                }
-            },
-            resolved={
-                "model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                "architecture": "LlamaForCausalLM",
-                "parameter_count": "1.1b",
-                "airllm_mac_mlx_verified": True,
-                "evidence": "benchmarks/airllm-mac/tinyllama-1.1b.json",
-            },
         ),
     )
 
@@ -262,15 +201,13 @@ class ModelRegistry:
     def routable(self) -> tuple[ModelSpec, ...]:
         """Models the router may select.
 
-        A model is routable only when its status is approved AND (for AirLLM)
-        its artifact identity is resolved. ``qwen3.8:latest`` remains unroutable
-        until its exact artifact identity/capabilities are recorded (§9.5).
+        A model is routable only when its status is approved. ``qwen3.8:latest``
+        remains unroutable until its exact artifact identity/capabilities are
+        recorded (§9.5).
         """
         out = []
         for spec in self._specs.values():
             if spec.status != "approved":
-                continue
-            if "airllm" in spec.backend_preferences and not spec.is_airllm_eligible():
                 continue
             out.append(spec)
         return tuple(out)

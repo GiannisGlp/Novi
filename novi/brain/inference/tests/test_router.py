@@ -28,20 +28,12 @@ class ModelRouterTests(unittest.TestCase):
             )
         )
 
-    def test_default_registry_routes_only_to_documented_model(self) -> None:
-        # Step 10: none of the five original aliases is routable automatically;
-        # only tinyllama-1.1b (documented adoption + Mac execution evidence) is
-        # approved. FAST (cheap fallback role) routes to it.
-        decision = self.router.route(RoutingContext(reasoning_complexity="FAST"))
-        self.assertEqual(decision.model, "tinyllama-1.1b")
+    def test_no_approved_model_raises(self) -> None:
+        # Step 10: no routing enabled automatically.
+        from novi.brain.inference.errors import ModelUnavailableError
 
-    def test_unapproved_hypothesis_never_routed(self) -> None:
-        # qwen3-8b is the NORMAL hypothesis but is NOT approved -> the router
-        # must fall back to the only approved model instead of silently using
-        # an unapproved one.
-        decision = self.router.route(RoutingContext(reasoning_complexity="NORMAL"))
-        self.assertEqual(decision.model, "tinyllama-1.1b")
-        self.assertIn("approved_available:tinyllama-1.1b", decision.reason)
+        with self.assertRaises(ModelUnavailableError):
+            self.router.route(RoutingContext(reasoning_complexity="NORMAL"))
 
     def test_deliberation_hypothesis_maps_to_model(self) -> None:
         self._approve("qwen3-8b", ("existing",))
@@ -57,14 +49,6 @@ class ModelRouterTests(unittest.TestCase):
         self.assertEqual(decision.model, "qwen3.8-27b")
         self.assertEqual(decision.execution_mode, "background")
         self.assertEqual(decision.deliberation_level, "DEEP")
-
-    def test_airllm_backend_not_selected_until_artifact_resolved(self) -> None:
-        # qwen3.8-27b prefers airllm but has no resolved artifact: the router
-        # must not select airllm (Step 33 eligibility rules).
-        self._approve("qwen3.8-27b", ("airllm", "existing"))
-        self._approve("qwen3-8b", ("existing",))
-        decision = self.router.route(RoutingContext(reasoning_complexity="DEEP"))
-        self.assertEqual(decision.backend, "existing")
 
     def test_decision_is_observable(self) -> None:
         self._approve("qwen3-8b", ("existing",))

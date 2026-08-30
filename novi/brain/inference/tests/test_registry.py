@@ -1,4 +1,4 @@
-"""Registry tests (plan 12, §8 Phase 3, §9 Phase 4, §9.5)."""
+"""Registry tests (plan 12, §8 Phase 3, §9 Phase 4)."""
 
 from __future__ import annotations
 
@@ -11,14 +11,11 @@ from novi.brain.inference.registry import ModelRegistry, ModelSpec
 
 
 class ModelRegistryTests(unittest.TestCase):
-    def test_contains_five_current_aliases_plus_airllm_reference(self) -> None:
-        # The five approved aliases (plan 12 §9) PLUS the documented adoption
-        # (user directive 2026-08-30): tinyllama-1.1b as the Mac-verified
-        # generic AirLLM reference target.
+    def test_contains_exactly_five_current_aliases(self) -> None:
         registry = ModelRegistry()
         self.assertEqual(
             set(registry.ids()),
-            {"qwen3-4b", "qwen3-8b", "nemotron-3.5-lightning", "qwen3.8-27b", "qwen3.8-latest", "tinyllama-1.1b"},
+            {"qwen3-4b", "qwen3-8b", "nemotron-3.5-lightning", "qwen3.8-27b", "qwen3.8-latest"},
         )
         aliases = {alias for spec in registry.all() for alias in spec.local_aliases}
         self.assertEqual(
@@ -38,23 +35,10 @@ class ModelRegistryTests(unittest.TestCase):
         with self.assertRaises(ModelNotFoundError):
             registry.get_by_alias("no-such-model:latest")
 
-    def test_only_documented_airllm_model_is_routable(self) -> None:
-        # Step 10: none of the five original aliases is routable (unverified);
-        # only tinyllama-1.1b (documented adoption + Mac execution evidence)
-        # is approved and AirLLM-eligible.
+    def test_no_unverified_model_is_routable(self) -> None:
+        # Step 10: register the five aliases WITHOUT enabling new routing.
         registry = ModelRegistry()
-        routable = [spec.id for spec in registry.routable()]
-        self.assertEqual(routable, ["tinyllama-1.1b"])
-        for model_id in ("qwen3-4b", "qwen3-8b", "nemotron-3.5-lightning", "qwen3.8-27b", "qwen3.8-latest"):
-            self.assertNotIn(model_id, routable)
-
-    def test_tinyllama_is_airllm_eligible_with_evidence(self) -> None:
-        spec = ModelRegistry().get("tinyllama-1.1b")
-        self.assertTrue(spec.is_airllm_eligible())
-        self.assertEqual(spec.resolved["architecture"], "LlamaForCausalLM")
-        self.assertTrue(spec.resolved["airllm_mac_mlx_verified"])
-        artifact = spec.resolve_backend_artifact("airllm")
-        self.assertEqual(artifact["source_id"], "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+        self.assertEqual(registry.routable(), ())
 
     def test_approved_model_routable_after_resolution(self) -> None:
         registry = ModelRegistry()
@@ -72,28 +56,6 @@ class ModelRegistryTests(unittest.TestCase):
         registry.register(approved)
         routable = [s.id for s in registry.routable()]
         self.assertIn("qwen3-8b", routable)
-
-    def test_airllm_requires_resolved_identity(self) -> None:
-        # §9.5: qwen3.8:27b is NOT AirLLM-eligible until exact artifact
-        # identity (architecture/parameter count) is recorded (Step 17).
-        registry = ModelRegistry()
-        spec = registry.get("qwen3.8-27b")
-        self.assertFalse(spec.is_airllm_eligible())
-        with self.assertRaises(InferenceConfigurationError):
-            spec.resolve_backend_artifact("airllm")
-
-    def test_qwen38_27b_resolved_identity_recorded(self) -> None:
-        # Step 17 (2026-08-30, HF Hub): exact artifact identity recorded —
-        # architecture Qwen3_5ForConditionalGeneration, revision sha, and the
-        # compatibility blocker (config requires transformers 5.8.0.dev0).
-        spec = ModelRegistry().get("qwen3.8-27b")
-        self.assertEqual(spec.resolved["architecture"], "Qwen3_5ForConditionalGeneration")
-        self.assertEqual(spec.resolved["revision"], "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0")
-        self.assertEqual(spec.resolved["model_id"], "Qwen/Qwen3.8-27B")
-        self.assertFalse(spec.resolved["airllm_eligible"])
-        self.assertIn("5.8.0.dev0", spec.resolved["airllm_blocker"])
-        # A compatibility blocker must never be promoted to eligibility.
-        self.assertFalse(spec.is_airllm_eligible())
 
     def test_qwen38_latest_is_not_routable_until_resolved(self) -> None:
         registry = ModelRegistry()
@@ -118,17 +80,15 @@ class ModelSpecTests(unittest.TestCase):
     def test_backend_artifact_mapping_is_explicit(self) -> None:
         spec = ModelSpec(
             id="test-model",
-            backend_artifacts={"airllm": {"path": "/models/test", "architecture": "qwen3.8", "revision": "abc"}},
-            resolved={"architecture": "qwen3.8", "parameter_count": 27},
+            backend_artifacts={"existing": {"path": "/models/test", "revision": "abc"}},
         )
-        artifact = spec.resolve_backend_artifact("airllm")
+        artifact = spec.resolve_backend_artifact("existing")
         self.assertEqual(artifact["path"], "/models/test")
-        self.assertTrue(spec.is_airllm_eligible())
 
     def test_never_silently_substitute_checkpoint(self) -> None:
         spec = ModelSpec(id="test-model")
         with self.assertRaises(InferenceConfigurationError):
-            spec.resolve_backend_artifact("airllm")
+            spec.resolve_backend_artifact("existing")
 
 
 if __name__ == "__main__":

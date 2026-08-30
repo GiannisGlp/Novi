@@ -106,6 +106,6 @@ For inference specifically, implement the Novi-owned inference contract and pres
 
 | Plan | Status | Notes |
 |---|---|---|
-| `12_AIRLLM_ADAPTATION_AND_INFERENCE_RUNTIME_PLAN.md` | **PROTOTYPE** | Inference runtime contract implemented (`novi/brain/inference/`), 81 inference tests + 1758 Brain tests green, five aliases registered (none routable by default), AirLLM optional extra + backend behind the contract (disabled by default). Hardware validation/benchmarking pending. Specs: `docs/specs/brain/30_INFERENCE_RUNTIME_SPEC.md`, `31_MODEL_COMPATIBILITY_MATRIX.md`, `32_RUNTIME_BENCHMARK_SPEC.md`. |
+| `12_AIRLLM_ADAPTATION_AND_INFERENCE_RUNTIME_PLAN.md` | **AIRLLM REMOVED** (2026-08-30) | Inference runtime contract retained (`novi/brain/inference/` — router, scheduler, telemetry, fallback, registry; 70 inference + 1762 Brain tests green). AirLLM backend removed by user decision: execution-verified no performance value on the Mac MLX path (~100× slower than Ollama; only Llama-3-style models streamable). Spec: `docs/specs/brain/30_INFERENCE_RUNTIME_SPEC.md`, `32_RUNTIME_BENCHMARK_SPEC.md`. |
 
 Status vocabulary: `DESIGNED → PROPOSED → EVALUATING → PROTOTYPE → IMPLEMENTED → TESTED → INTEGRATED → SIMULATED → DEFERRED → BLOCKED → DEPRECATED`.

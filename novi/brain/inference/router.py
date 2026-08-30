@@ -61,7 +61,6 @@ class RoutingContext:
     latency_budget_ms: float | None = None
     available_ram_bytes: int = 0
     available_vram_bytes: int = 0
-    compute_backend: str = "unknown"  # cuda | mps | cpu | unknown
     thermal_state: str = "normal"
     power_mode: str = "balanced"
     current_residency: dict[str, str] = field(default_factory=dict)  # model_id -> residency
@@ -71,13 +70,8 @@ class RoutingContext:
 class ModelRouter:
     """Selects model/backend from routing context, always recording a reason."""
 
-    def __init__(self, registry: ModelRegistry, *, airllm_validator: Any | None = None) -> None:
+    def __init__(self, registry: ModelRegistry) -> None:
         self.registry = registry
-        #: eligibility predicate for the AirLLM backend; the runtime injects the
-        #: validated-combination policy (plan 12 Step 33-34: AirLLM only for
-        #: explicitly validated model/hardware combinations). Default = registry
-        #: artifact-resolution eligibility.
-        self._airllm_validator = airllm_validator or (lambda spec: spec.is_airllm_eligible())
         self._decision_log: list[RoutingDecision] = []
         #: deliberation level -> model hypothesis (provisional, benchmark-driven)
         self.deliberation_hypotheses: dict[str, str] = dict(_DELIBERATION_HYPOTHESIS)
@@ -165,19 +159,8 @@ class ModelRouter:
         return candidates[0]
 
     def _select_backend(self, spec: ModelSpec, context: RoutingContext) -> str:
-        for preference in spec.backend_preferences:
-            if preference == "airllm":
-                # Step 33-34 + user directive (2026-08-30): AirLLM is a GENERIC
-                # backend — selected when the model/hardware combination is
-                # validated (validator injected by the runtime). The VRAM gate
-                # is CUDA-specific: on CUDA, AirLLM exists for constrained VRAM
-                # so unknown VRAM is not selected; on Mac/CPU the MLX/unified-
-                # memory path streams from disk and RAM is the scheduler's job.
-                if not self._airllm_validator(spec):
-                    continue
-                if context.compute_backend == "cuda" and context.available_vram_bytes <= 0:
-                    continue
-            return preference
+        # First usable backend preference (backend-neutral; AirLLM removed
+        # 2026-08-30 by user decision).
         return spec.backend_preferences[0]
 
     def _fallback_for(self, spec: ModelSpec, deliberation: str) -> str:

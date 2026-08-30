@@ -1,7 +1,7 @@
 # Novi AirLLM Adaptation and Inference Runtime Plan
 
 **Workstream:** 06_AUTONOMY / Brain Runtime
-**Status:** PROTOTYPE — inference runtime contract implemented; AirLLM backend implemented behind the contract AND execution-verified on the actual Mac via the MLX path as a GENERIC resource-optimization backend (user directive 2026-08-30: AirLLM used everywhere, not a 27B special case); the Qwen3.8-27B production target is platform-blocked on this machine (documented below)
+**Status:** AIRLLM REMOVED (2026-08-30, user decision) — see the removal note below. The Novi-owned inference runtime (contracts, router, scheduler, telemetry, fallback, registry) is retained and serves the existing backend.
 **Priority:** P0 architecture / P1 initial optimization
 **Target branch:** `main`
 **Date:** 2026-08-30
@@ -11,7 +11,19 @@
 
 ## 0. Implementation progress
 
-Updated 2026-08-30 (rounds 1–4). Status vocabulary per §65: the inference runtime is `PROTOTYPE`; the AirLLM backend is `PROTOTYPE` and — per the 2026-08-30 user directive — a **generic, router-selected resource-optimization backend used everywhere (including Mac via the MLX path)**. Qwen3.8-27B remains platform-blocked per §17 ("If AirLLM cannot run on the actual Mac, the backend remains an implemented but platform-blocked provider").
+Updated 2026-08-30 (rounds 1–4).
+
+## 0.1 AirLLM removal note (2026-08-30, user decision)
+
+AirLLM was removed after execution-verifying that its Mac (MLX) path provides no performance value on this machine:
+
+- The MLX path streams every layer from disk per token: measured **0.5 tok/s** (TinyLlama-1.1B) vs **46.5 tok/s** (Ollama qwen3:4b) — roughly **100× slower**.
+- It only runs Llama-3-style models: TinyLlama verified; **Llama-2** (`rotary_emb`), **Qwen2** (`bias`), **Qwen3** (QK-norm), **Qwen3.5** (nested layout) all execution-failed — so the models that would *benefit* from memory savings cannot run, and the models it *can* run fit in RAM anyway (no memory benefit on 36 GB).
+- AirLLM's real value is constrained-VRAM CUDA hardware (Jetson): Qwen3.5-27B in ~3.3 GB VRAM. The runtime contract is backend-neutral and remains ready for that path.
+
+Removed: `novi/brain/inference/airllm/`, `backends/airllm.py`, AirLLM tests/evidence, the `novi[airllm]` extra, TinyLlama/Qwen3.8-27B AirLLM registry entries. Retained: the inference runtime (70 inference + 1762 brain tests green).
+
+ Status vocabulary per §65: the inference runtime is `PROTOTYPE`; the AirLLM backend is `PROTOTYPE` and — per the 2026-08-30 user directive — a **generic, router-selected resource-optimization backend used everywhere (including Mac via the MLX path)**. Qwen3.8-27B remains platform-blocked per §17 ("If AirLLM cannot run on the actual Mac, the backend remains an implemented but platform-blocked provider").
 
 Round 4 (user directives): freed ~56 GB of disk (removed unused mlx-community models + stale Qwen3-4B test artifacts; 39 → 99 GiB free), added per-platform architecture compatibility pre-checks, registered `tinyllama-1.1b` as the documented Mac-verified AirLLM reference, made the VRAM gate platform-aware (CUDA-only), and **proved the generic path end-to-end on the Mac: the router selected `backend=airllm` for the approved compatible model and completed a real MLX-streamed generation** (evidence `route` block in `benchmarks/airllm-mac/tinyllama-1.1b.json`).
 

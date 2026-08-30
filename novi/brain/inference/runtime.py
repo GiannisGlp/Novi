@@ -23,7 +23,13 @@ from typing import Any, AsyncIterator, Iterable
 
 from .capabilities import probe_hardware
 from .contracts import InferenceBackend
-from .errors import BackendUnavailableError, DeadlineExceededError, InferenceError, classify_backend_exception
+from .errors import (
+    BackendUnavailableError,
+    ContextLimitError,
+    DeadlineExceededError,
+    InferenceError,
+    classify_backend_exception,
+)
 from .health import InferenceHealth, ModelHealthEntry
 from .lifecycle import ModelLifecycle, ModelResidency
 from .registry import ModelRegistry
@@ -79,29 +85,6 @@ class RuntimeConfig:
     max_concurrent: int = 1
     arrival_policy: str = "queue"
     hardware_profile_id: str = "default"
-    # Plan 12 §34/Step 34: AirLLM is enabled ONLY for explicitly validated
-    # model/hardware combinations. ``validated_airllm_combinations`` holds
-    # (model_id, compute_backend) pairs proven by execution evidence; empty by
-    # default, so the router never selects AirLLM until a combo is validated.
-    airllm_enabled: bool = False
-    validated_airllm_combinations: tuple[tuple[str, str], ...] = ()
-
-    @classmethod
-    def rollback_to_existing(cls, **overrides: Any) -> "RuntimeConfig":
-        """Rollback configuration (plan 12, §55): one config change disables
-        AirLLM while preserving the same inference contract.
-
-        ``backend = existing`` + ``airllm_enabled = False`` — no source rewrite
-        required to disable the AirLLM backend.
-        """
-        base: dict[str, Any] = {
-            "default_backend": "existing",
-            "fallback_backend": "existing",
-            "airllm_enabled": False,
-            "validated_airllm_combinations": (),
-        }
-        base.update(overrides)
-        return cls(**base)
 
 
 class InferenceRuntime:
@@ -121,7 +104,7 @@ class InferenceRuntime:
         self.registry = registry or ModelRegistry()
         self.backends = BackendManager(backends)
         self.config = config or RuntimeConfig()
-        self.router = router or ModelRouter(self.registry, airllm_validator=self._airllm_validator)
+        self.router = router or ModelRouter(self.registry)
         self.scheduler = scheduler or InferenceScheduler(
             max_concurrent=self.config.max_concurrent,
             arrival_policy=self.config.arrival_policy,
@@ -134,25 +117,6 @@ class InferenceRuntime:
         self._last_decision: RoutingDecision | None = None
         self._last_error: str = ""
         self._fallback_used = False
-
-    def _airllm_validator(self, spec: Any) -> bool:
-        """Eligibility gate (plan 12 Step 33-34 + user directive 2026-08-30):
-        AirLLM is a GENERIC backend — routable when enabled, artifact-resolved,
-        per-platform architecture-compatible (Mac MLX verified set), AND the
-        exact (model, compute backend) combination carries execution evidence."""
-        if not self.config.airllm_enabled:
-            return False
-        if not spec.is_airllm_eligible():
-            return False
-        from .capabilities import CapabilityState
-
-        backend = self.backends.get_or_none("airllm")
-        if backend is not None:
-            state = backend.check_model_compatibility(spec)
-            if state is CapabilityState.UNSUPPORTED:
-                return False
-        combo = (spec.id, self.hardware.compute_backend.value)
-        return combo in self.config.validated_airllm_combinations
 
     # ---------------------------------------------------------------- requests
     def generate(
@@ -232,6 +196,15 @@ class InferenceRuntime:
             raise DeadlineExceededError(
                 "request expired before dispatch",
                 context={"request_id": request.request_id},
+            )
+        # Plan 12 §25 Phase 20: reject context overflow BEFORE dispatch when the
+        # registry records a validated context limit for the model.
+        spec = self.registry.get(decision.model)
+        if spec.context_limit and request.max_input_tokens > spec.context_limit:
+            raise ContextLimitError(
+                f"requested {request.max_input_tokens} input tokens exceeds {spec.id} "
+                f"context limit {spec.context_limit}",
+                context={"model": spec.id, "context_limit": spec.context_limit, "requested": request.max_input_tokens},
             )
         backend = self._ensure_model(request, decision)
         sched.backend_id = decision.backend
@@ -390,7 +363,6 @@ class InferenceRuntime:
             latency_budget_ms=request.latency_budget_ms,
             available_ram_bytes=self.hardware.ram_available_bytes,
             available_vram_bytes=self.hardware.vram_available_bytes,
-            compute_backend=self.hardware.compute_backend.value,
             current_residency={
                 mid: self.health.get(mid).residency.value for mid in self._loaded_models if self.health.get(mid)
             },
