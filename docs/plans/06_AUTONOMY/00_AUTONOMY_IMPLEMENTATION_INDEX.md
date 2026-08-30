@@ -39,7 +39,7 @@ Autonomy is successful only when this loop can run repeatedly, remain bounded, r
 
 ## Existing starting point
 
-Novi already has a planned autonomy boundary covering decision-making, goals, behavior selection, planning orchestration, memory use, bounded behavior, interruption handling and eventual simulation validation. fileciteturn37file0 The current repository also has the perception, tracking, memory, knowledge, prediction, reasoning, BrainDriver and response infrastructure developed in earlier work.
+Novi already has a planned autonomy boundary covering decision-making, goals, behavior selection, planning orchestration, memory use, bounded behavior, interruption handling and eventual simulation validation. The current repository also has the perception, tracking, memory, knowledge, prediction, reasoning, BrainDriver and response infrastructure developed in earlier work.
 
 ## Plan documents
 
@@ -56,6 +56,7 @@ Novi already has a planned autonomy boundary covering decision-making, goals, be
 | `09_SIMULATION_EVALUATION_EVIDENCE.md` | simulation-first validation, scenarios, metrics, evidence and regression | P0 |
 | `10_RUNTIME_DEPLOYMENT_AND_HARDWARE.md` | Mac development, NVIDIA/Jetson transition, ROS2 and runtime architecture | P1 |
 | `11_IMPLEMENTATION_SEQUENCE.md` | exact dependency-ordered execution sequence and acceptance gates | P0 |
+| `12_AIRLLM_ADAPTATION_AND_INFERENCE_RUNTIME_PLAN.md` | Novi-owned inference runtime, AirLLM backend adaptation, model routing, scheduling, compatibility, benchmarking and future large-model readiness | P0/P1 |
 
 ## Priority model
 
@@ -72,9 +73,11 @@ Novi already has a planned autonomy boundary covering decision-making, goals, be
 5. **Autonomy must be interruptible at every stage.**
 6. **Memory must distinguish observation, belief, inference, intention, action and verified outcome.**
 7. **Perception is active.** Novi should spend expensive computation only when additional information can change a decision.
-8. **Simulation precedes risky physical execution.** NVIDIA's current Isaac Sim workflow explicitly supports software-in-the-loop, synthetic data and hardware-in-the-loop validation. citeturn0search0turn0search4
+8. **Simulation precedes risky physical execution.**
 9. **Hardware-specific systems stay behind interfaces.** Mac/MPS is the development platform; NVIDIA/Jetson/ROS2 is a future deployment backend.
 10. **Every milestone must have machine-readable evidence.**
+11. **Inference infrastructure stays behind a Novi-owned contract.** AirLLM, Transformers, vLLM, TensorRT-LLM or any future backend must not become a cognitive dependency.
+12. **Model choice is evidence-driven.** Current model roles are hypotheses until Novi benchmarks establish quality, latency, resource and reliability characteristics.
 
 ## Definition of done for autonomy
 
@@ -96,3 +99,5 @@ Novi must eventually demonstrate a long-running scenario in which it:
 ## Recommended order
 
 Do **not** implement autonomy as one giant agent loop. Implement the contracts first, then the deterministic control loop, then perception/planning integration, then learning and exploration, and only then increase autonomy duration and physical authority.
+
+For inference specifically, implement the Novi-owned inference contract and preserve the current Mac Brain path before enabling AirLLM. The AirLLM workstream's first concrete target is Qwen3.8-27B, with AirLLM remaining an optional backend rather than a cognitive layer. The current approved model set is `qwen3.8:27b`, `qwen3:8b`, `nemotron-3.5-lightning:latest`, `qwen3.8:latest`, and `qwen3:4b`; future larger models must enter through the same registry, compatibility, benchmark and acceptance gates.
