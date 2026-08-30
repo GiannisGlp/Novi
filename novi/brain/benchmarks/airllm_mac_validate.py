@@ -80,6 +80,7 @@ def main() -> int:
     parser.add_argument("--architecture", default="Qwen3ForCausalLM")
     parser.add_argument("--prepare", action="store_true", help="run preparation (download + shard)")
     parser.add_argument("--smoke", action="store_true", help="run load + generate smoke")
+    parser.add_argument("--soak", type=int, default=0, help="run N warm generations (soak, plan 12 §50)")
     args = parser.parse_args()
 
     compat = probe_airllm_environment()
@@ -163,6 +164,47 @@ def main() -> int:
         }
         backend.unload(spec)
         evidence["unload"] = {"ok": True}
+
+    if args.soak > 0 and (args.smoke or args.prepare):
+        # Soak (plan 12 §50): repeated warm generations on the REAL backend,
+        # tracking latency + RSS growth. Preliminary data — full 1h/4h/8h/24h
+        # durations require dedicated hardware runs.
+        if backend._adapter is None:
+            backend.load(spec)
+        import resource as _resource
+
+        def _rss_mib() -> float:
+            return _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss / 1024.0
+
+        soak_samples = []
+        rss_before = _rss_mib()
+        for i in range(args.soak):
+            started = time.monotonic()
+            result = backend.generate(
+                InferenceRequest(
+                    messages=[{"role": "user", "content": f"Soak iteration {i}: summarize in one sentence."}],
+                    max_output_tokens=16,
+                    temperature=0.0,
+                    caller="airllm-mac-validation",
+                    purpose="soak",
+                )
+            )
+            elapsed = time.monotonic() - started
+            soak_samples.append(
+                {"iteration": i, "elapsed_s": round(elapsed, 2), "ok": result.ok, "output_tokens": result.output_tokens}
+            )
+            print(f"soak[{i}] {elapsed:.2f}s ok={result.ok}")
+        evidence["soak"] = {
+            "iterations": args.soak,
+            "rss_before_mib": round(rss_before, 1),
+            "rss_after_mib": round(_rss_mib(), 1),
+            "avg_generation_s": round(sum(s["elapsed_s"] for s in soak_samples) / len(soak_samples), 2),
+            "min_generation_s": round(min(s["elapsed_s"] for s in soak_samples), 2),
+            "max_generation_s": round(max(s["elapsed_s"] for s in soak_samples), 2),
+            "failures": sum(1 for s in soak_samples if not s["ok"]),
+            "samples": soak_samples,
+            "note": "preliminary; plan 12 §50 requires 1h/4h/8h/24h on target hardware",
+        }
 
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     out = EVIDENCE_DIR / f"{args.registry_model}.json"
