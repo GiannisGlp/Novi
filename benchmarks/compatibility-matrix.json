@@ -1,0 +1,19 @@
+{
+  "capability_cells": {
+    "qwen3.8-27b/airllm/mps": "unknown",
+    "qwen3.8-27b/airllm/text_generation": "supported"
+  },
+  "captured_at": "2026-08-30T09:25:37.737789+00:00",
+  "compatibility": {
+    "accelerate": "1.14.0",
+    "airllm": "3.3.0",
+    "airllm_installed": true,
+    "architecture": "arm64",
+    "gpu_backend": "mps",
+    "os": "Darwin",
+    "python": "3.11.15",
+    "safetensors": "0.8.0",
+    "torch": "2.13.0",
+    "transformers": "4.57.1"
+  }
+}

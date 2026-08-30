@@ -1,11 +1,40 @@
 # Novi AirLLM Adaptation and Inference Runtime Plan
 
 **Workstream:** 06_AUTONOMY / Brain Runtime
-**Status:** PLANNED — implementation not yet started
+**Status:** PROTOTYPE — inference runtime contract implemented; AirLLM backend implemented behind the contract (disabled by default); hardware validation and benchmarking pending
 **Priority:** P0 architecture / P1 initial optimization
 **Target branch:** `main`
 **Date:** 2026-08-30
 **Owner:** Novi project
+
+---
+
+## 0. Implementation progress
+
+Updated 2026-08-30 (first implementation round). Status vocabulary per §65: the inference runtime is `PROTOTYPE`, the AirLLM backend is `PROTOTYPE` (implemented behind the contract; not `TESTED`/`INTEGRATED` until hardware evidence exists).
+
+| Step (§66) | Status | Evidence |
+|---|---|---|
+| 1. Audit inference/model calls | DONE | `benchmarks/inference-audit.json` (57 sites; 24 migrate-to-runtime) |
+| 2. Capture baseline benchmarks | STARTED | procedure in `docs/specs/brain/32_RUNTIME_BENCHMARK_SPEC.md`; capture pending executable model path |
+| 3. Define `InferenceRequest`/`InferenceResponse` | DONE | `novi/brain/inference/request.py`, `response.py` (+ tests) |
+| 4. Error taxonomy | DONE | `novi/brain/inference/errors.py` (16 categories) |
+| 5. Define `InferenceBackend` | DONE | `novi/brain/inference/contracts.py` (+ lifecycle in `lifecycle.py`) |
+| 6. Mock backend | DONE | `novi/brain/inference/backends/mock.py` |
+| 7. Existing reasoning provider behind runtime | DONE | `novi/brain/inference/adapter.py` (`RuntimeBackedReasoningProvider`), `backends/existing.py` |
+| 8. Complete existing Brain test suite | DONE | 1758 passed |
+| 9. Model registry | DONE | `novi/brain/inference/registry.py` |
+| 10. Register five aliases without enabling routing | DONE | registry contains exactly the five; `routable()==()` by default |
+| 11. Hardware capability detection | DONE | `novi/brain/inference/capabilities.py` (`probe_hardware`) |
+| 12. Runtime lifecycle | DONE | `novi/brain/inference/runtime.py`, `lifecycle.py` |
+| 13. Scheduler + cancellation | DONE | `novi/brain/inference/scheduler.py`, `cancellation.py` |
+| 14. Telemetry | DONE | `novi/brain/inference/telemetry.py` |
+| 15. AirLLM optional dependency | DONE | `pyproject.toml` `novi[airllm]` extra (not in base install) |
+| 16. AirLLM compatibility adapter | DONE | `novi/brain/inference/airllm/`, `backends/airllm.py` (lazy imports, disabled default) |
+| 17–22. Artifact resolution, sharding, smoke, tokenizer, warm inference | PENDING | requires AirLLM install + target hardware (Step 17) |
+| 23–37. Integration, regression, benchmarks, failure, soak, compression, prefetch, eligibility | PENDING | gated on Steps 17–22 |
+
+Docs: `docs/specs/brain/30_INFERENCE_RUNTIME_SPEC.md`, `31_MODEL_COMPATIBILITY_MATRIX.md`, `32_RUNTIME_BENCHMARK_SPEC.md`.
 
 ---
 

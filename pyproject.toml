@@ -109,6 +109,24 @@ mac = [
     "novi[brain]",
 ]
 
+# AirLLM optional inference backend (plan 12, §10 Phase 5). NOT part of the
+# core install: core Novi must never require AirLLM. The AirLLM dependency set
+# is an isolated compatibility surface — installing this extra must not be
+# taken as license to upgrade project-wide Transformers beyond the validated
+# matrix (plan 12, §10). Constraints verified against PyPI airllm 3.3.0
+# (2026-08-30): torch>=2.4, transformers<5.13,>=4.49, accelerate>=1.0.
+airllm = [
+    "airllm>=3.3.0",
+    "torch>=2.4",
+    "transformers>=4.49,<5.13",
+    "accelerate>=1.0",
+    "safetensors>=0.4",
+    "huggingface-hub>=0.23",
+    "scipy",
+    "sentencepiece>=0.2",
+    "tqdm",
+]
+
 [project.scripts]
 novi-brain = "novi.brain.cli:main"
 novi-web = "novi.web.server:main"
@@ -140,6 +158,6 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["novi/brain/tests", "novi/web/tests", "novi/contracts/tests", "novi/cognition/tests"]
+testpaths = ["novi/brain/tests", "novi/brain/inference/tests", "novi/web/tests", "novi/contracts/tests", "novi/cognition/tests"]
 pythonpath = ["."]
 addopts = "-v --tb=short"

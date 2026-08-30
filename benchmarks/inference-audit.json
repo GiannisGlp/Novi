@@ -1,0 +1,600 @@
+{
+  "audit_date": "2026-08-30T09:14:13Z",
+  "repo_version": "7b645c9966fa1a684fbd5dba2229df61d53ed856",
+  "call_sites": [
+    {
+      "caller": "novi/brain/models/ollama_reasoning.py:61",
+      "purpose": "OllamaReasoningProvider._ollama_backend_fn: single-shot JSON completion (POST /api/generate) that maps a cognition conclusion to a bounded {action, parameters} decision; wrapped by MacModelProvider and re-validated by LLMReasoningProvider against the allowlist",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "urlopen/HTTP/JSON errors propagate to LLMReasoningProvider.decide; ReasoningRouter catches all exceptions and degrades to DeterministicReasoningProvider; malformed JSON returns {} which fails validation and yields the default action",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Localhost:11434 /api/generate with stream:false, think:false, format:json, num_predict per model tier (qwen3.8:27b gets 2x budget). Direct HTTP coupling from the models layer; this is the core reasoning decision path that the InferenceRuntime should serve."
+    },
+    {
+      "caller": "novi/brain/models/deliberation.py:224",
+      "purpose": "DeliberativeLLMReasoningProvider._invoke: POST /api/generate for structured ANALYSIS->OPTIONS->DECISION deliberation JSON, plus optional self-critique rounds (up to max_rounds)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "urlopen/HTTP errors propagate to decide(); callers (web server) treat an erroring provider as no-LLM and fall back to deterministic reasoning; non-JSON output is best-effort parsed (_extract_json) or falls to default action",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "30s timeout in the web path, 60s default; think:false always. Multi-round loop = N /api/generate calls per decision. Direct Ollama URL coupling duplicated from ollama_reasoning.py."
+    },
+    {
+      "caller": "novi/brain/models/narrator.py:86",
+      "purpose": "LLMNarrator.__call__: POST /api/generate writing a natural 'what happened' episodic recap (JSON {narrative}) for memory narration",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any exception swallowed -> returns None; caller falls back to deterministic concatenated narrative",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "5s timeout; think:false; skipped entirely for the heavy-thinking tier (qwen3.8:27b) by _episodic_narrative via disable_thinking_for."
+    },
+    {
+      "caller": "novi/brain/models/summarizer.py:91",
+      "purpose": "LLMSummarizer.__call__: POST /api/generate producing a semantic gist JSON {summary} for memory consolidation",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any exception swallowed -> returns None; SummaryConsolidator falls back to deterministic summary",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "5s timeout; think:false; prompt capped to last 20 records x 200 chars (~10K tokens bound)."
+    },
+    {
+      "caller": "novi/brain/models/conversation_summarizer.py:83",
+      "purpose": "ConversationSummarizer.__call__: POST /api/generate distilling a chat thread into a durable JSON {summary} stored as memory",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any exception swallowed -> returns None; chat history is simply not summarized",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "5s timeout; think:false; gated by _llm_up and disable_thinking_for in the web server wrapper."
+    },
+    {
+      "caller": "novi/brain/dialogue.py:1126",
+      "purpose": "DialogueEngine._chat: single-shot Ollama /api/chat call (messages format) for user-facing replies when no llm_chat transport is injected",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "urlopen/HTTP errors propagate to reply(); the engine's reply pipeline treats a raised/None result as no-LLM and uses natural deterministic fallbacks; never raises into cognition",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "DEFAULT_OLLAMA_URL=http://localhost:11434; think:false set when 'nemotron' in model name (hardcoded per-model logic); num_predict=320."
+    },
+    {
+      "caller": "novi/brain/engine.py:2233",
+      "purpose": "MacBrain._brain_llm_reachable: GET /api/tags availability probe for the brain-owned default LLM transport (cooldown-gated)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any exception swallowed -> returns False; sets _llm_unreachable_until cooldown (default 60s) and emits llm.unreachable event",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Probe is the runtime health-check equivalent; brain_llm_url default http://localhost:11434. Transport-free by default (brain_llm_enabled=False keeps CI deterministic)."
+    },
+    {
+      "caller": "novi/brain/engine.py:2256",
+      "purpose": "MacBrain._brain_llm_call: one Ollama /api/chat call (messages, stream:false) through the brain's own transport for grounded replies when brain_llm_enabled",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any exception swallowed -> returns None; reply pipeline applies deterministic fallback (never raises into cognition)",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Wrapped as a callable by _build_brain_llm_chat; resolution order in default_llm_chat: injected override -> brain-owned transport -> None."
+    },
+    {
+      "caller": "novi/web/server.py:796",
+      "purpose": "NoviWebServer._llm_up: GET /api/tags availability probe (3s TTL) requiring the CURRENT model to be pulled (':latest' normalized)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any exception swallowed -> _llm_available=False (offline fallback)",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Same probe pattern as engine._brain_llm_reachable but model-aware; gates every narrator/summarizer/chat transport in the web server."
+    },
+    {
+      "caller": "novi/web/server.py:873",
+      "purpose": "NoviWebServer._llm_chat: Ollama /api/chat (stream:false) producing user-facing replies; thinking-tier fallback returns last line of 'thinking'",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "urlopen/HTTP errors propagate to the caller (compose path normalizes a 404 mid-reply via _normalize_ollama_404); timeout raised to 420s for the heavy-thinking tier; caller falls back to natural reply when None",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Model tiering applied via disable_thinking_for/num_predict_for from ollama_reasoning.py; used by chat_send (non-streaming path) and chat_send_stream fallback."
+    },
+    {
+      "caller": "novi/web/server.py:903",
+      "purpose": "NoviWebServer._llm_chat_stream: Ollama /api/chat with stream:true, NDJSON line-parse yielding token deltas for the UI SSE stream",
+      "sync": true,
+      "streaming": "yes",
+      "error_behavior": "urlopen/HTTP errors propagate to chat_send_stream generator; UI useChat falls back to non-streaming POST /api/chat, then to a failure notice; generator finally releases the speaking lease",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "The ONLY streaming inference call site in the repo. Synchronous generator (thread-based server), not asyncio. 'done' frame flushes a trailing thinking-line fallback."
+    },
+    {
+      "caller": "novi/brain/models/reasoning.py:22",
+      "purpose": "ReasoningProvider Protocol: capability boundary (decide(*, conclusion, confidence, situation, recall) -> ActionIntent) for the reasoning/behavioral layer",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Interface only; implementers define behavior",
+      "current_backend": "deterministic",
+      "classification": "retain_temporarily",
+      "notes": "The plan's primary seam: MacBrain receives a ReasoningProvider; a runtime-backed provider adapter must implement this protocol (Phase 43/44)."
+    },
+    {
+      "caller": "novi/brain/models/reasoning.py:36",
+      "purpose": "DeterministicReasoningProvider: symbolic conclusion->action map; CI-safe default",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "None (pure function)",
+      "current_backend": "deterministic",
+      "classification": "retain_temporarily",
+      "notes": "No model call; retained as the deterministic tier/fallback of the router and runtime."
+    },
+    {
+      "caller": "novi/brain/models/reasoning.py:61",
+      "purpose": "DeliberativeReasoningProvider: situation-aware deterministic scoring (success/cost/risk) of candidate actions",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "None (pure function)",
+      "current_backend": "deterministic",
+      "classification": "retain_temporarily",
+      "notes": "No model call; the engine default deterministic tier (engine.py:238)."
+    },
+    {
+      "caller": "novi/brain/models/reasoning.py:185",
+      "purpose": "LLMReasoningProvider.decide (invoke at :205): delegates the conclusion->action decision through MacModelProvider; JSON output re-validated via StructuredOutputValidator against the allowed-action schema",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "ModelResult status != completed_on_time yields {} -> validation fails -> safe default action; invalid/out-of-allowlist output replaced with default_action",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "The validation boundary is the important part to keep; the provider invocation should be re-pointed at InferenceRuntime.generate."
+    },
+    {
+      "caller": "novi/brain/models/router.py:52",
+      "purpose": "ReasoningRouter: confidence/input-class-based routing between DeterministicReasoningProvider and an injected LLM provider (escalations at :80, :182, :193); bounded route cache",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any LLM exception caught -> route='deterministic' with llm_error reason; no-LLM construction degrades to deterministic only",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Router is backend-neutral already (llm injected); its llm slot should accept a runtime-backed provider. Model name appears in docstring ('Ollama/qwen')."
+    },
+    {
+      "caller": "novi/brain/models/ollama_reasoning.py:94",
+      "purpose": "OllamaReasoningProvider: constructs MacModelSpec(ollama) + _ollama_backend_fn + MacModelProvider + LLMReasoningProvider; set_model() rebuilds the closure on runtime model switch",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Construction is eager (MacModelProvider loads/registers immediately); decide() delegates to LLMReasoningProvider",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "The Ollama-specific provider; its backend closure is exactly what the runtime 'existing' backend should own."
+    },
+    {
+      "caller": "novi/brain/models/deliberation.py:126",
+      "purpose": "DeliberativeLLMReasoningProvider: multi-step deliberation (analysis->options->decision + self-critique rounds) via direct Ollama calls; drop-in for OllamaReasoningProvider",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Invoke errors propagate to decide(); invalid decisions fall back to default_action; loop bounded by max_rounds",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Web server default reasoning provider (server.py:500); bypasses MacModelProvider/ModelRuntime (direct urllib)."
+    },
+    {
+      "caller": "novi/brain/engine.py:238",
+      "purpose": "MacBrain default wiring: self.reasoning = reasoning or ReasoningRouter(deterministic=DeliberativeReasoningProvider(), llm=llm_reasoning)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "DI: surfaces may inject full override (reasoning=) or LLM provider (llm_reasoning=); absent LLM degrades to deterministic",
+      "current_backend": "ollama",
+      "classification": "retain_temporarily",
+      "notes": "Already dependency-injected; Phase 43 target is to also accept a runtime-backed provider (or InferenceRuntime) without MacBrain knowing the backend."
+    },
+    {
+      "caller": "novi/brain/cli.py:67",
+      "purpose": "CLI _build_reasoning: --reasoning ollama constructs OllamaReasoningProvider (:71); --reasoning router wraps it in ReasoningRouter (:76-77)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "None at construction; runtime errors handled by providers/router",
+      "current_backend": "ollama",
+      "classification": "retain_temporarily",
+      "notes": "Surface wiring (operator choice), not a cognition module; should consume the runtime's provider adapter in the future."
+    },
+    {
+      "caller": "novi/web/server.py:490",
+      "purpose": "Web _build_reasoning: mode 'ollama'/'router' constructs DeliberativeLLMReasoningProvider (:500) optionally wrapped in ReasoningRouter (:510); used for every chat turn",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "None at construction; provider/router fall back on LLM errors",
+      "current_backend": "ollama",
+      "classification": "retain_temporarily",
+      "notes": "Single-round deliberation (max_rounds from server flag, timeout=30) so a chat turn never blocks the server for minutes."
+    },
+    {
+      "caller": "novi/brain/b2_model_runtime.py:137",
+      "purpose": "ModelRuntime: backend-neutral B2.1 execution boundary (register/load/unload/health/invoke at :165) with contract validation (novi.model-invocation schema), version/digest/schema checks, latency + provenance capture",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "ModelAdmissionError/ModelInvocationError on registration/mismatch/unknown model; backend.invoke exceptions captured into ModelResult(status='failed', error_class=...)",
+      "current_backend": "deterministic",
+      "classification": "retain_temporarily",
+      "notes": "The existing runtime seam that the untracked novi/brain/inference/backends/existing.py already adapts behind the InferenceBackend contract. Default backend DeterministicModelBackend is a test backend."
+    },
+    {
+      "caller": "novi/brain/b2_real_inference.py:24",
+      "purpose": "RealModelInvoker: runs a real backend through ModelRuntime with InferencePolicy (deadline_ms=5000, structured-output requirement); timeout/invalid-output become typed ModelResult statuses",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Deadline exceeded -> status='timeout' (InferenceDeadlineExceeded); non-dict/list output -> 'invalid_output'; exceptions -> status='failed' with error class; never raises",
+      "current_backend": "deterministic",
+      "classification": "retain_temporarily",
+      "notes": "Deadline + structured-output policy logic worth folding into the new runtime's error taxonomy (DeadlineExceededError, GenerationError)."
+    },
+    {
+      "caller": "novi/brain/models/provider.py:54",
+      "purpose": "MacModelProvider: builds CallableMacBackend + ModelRuntime + RealModelInvoker for a capability spec; invoke(:80) wraps payload in ModelInvocationRequest and calls the invoker",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Eager register+load at construction (raises ModelAdmissionError on digest/duplicate problems); invoke returns ModelResult",
+      "current_backend": "ollama",
+      "classification": "retain_temporarily",
+      "notes": "Bridge between capability providers (reasoning/vision) and ModelRuntime; used by OllamaReasoningProvider and LLMReasoningProvider tests."
+    },
+    {
+      "caller": "novi/brain/models/provider.py:28",
+      "purpose": "CallableMacBackend: adapter turning a plain callable into the ModelBackend protocol (load/unload/health/invoke)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Raises RuntimeError('model_not_loaded') if invoked before load; ValueError on model_id mismatch",
+      "current_backend": "deterministic",
+      "classification": "retain_temporarily",
+      "notes": "Generic glue; the existing transport adapter for the runtime's 'existing' backend."
+    },
+    {
+      "caller": "novi/brain/b2_nemotron.py:46",
+      "purpose": "NemotronAdapter: normalizes multimodal Nemotron 3 Nano Omni input (nvidia/nemotron-3-nano-omni-30b-a3b) into ModelInvocationRequest through ModelRuntime; DeterministicNemotronBackend (:89) is the CI backend",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Backend exceptions -> ModelResult(status='failed'); payload shape validated (Mapping required)",
+      "current_backend": "deterministic",
+      "classification": "retain_temporarily",
+      "notes": "Adapter is production-shaped but only a deterministic backend exists today; the real NVIDIA runtime is future work. Only exercised by tests."
+    },
+    {
+      "caller": "novi/brain/b2_cosmos_reason.py:22",
+      "purpose": "CosmosReason2Adapter: backend-neutral adapter for Cosmos Reason2 physical-reasoning video Q&A (MODEL_ID cosmos-reason2) through ModelRuntime; to_evidence() converts results into world evidence",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Backend exceptions -> ModelResult(status='failed'); non-Mapping output raises TypeError caught into failed result; to_evidence raises on non-completed status",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "No real backend implemented; tests use fake CosmosReasonBackend. Future model-runtime backend candidate."
+    },
+    {
+      "caller": "novi/perception/locate_anything_runtime.py:229",
+      "purpose": "_RealLocateAnythingBundle: transformers.AutoTokenizer/AutoProcessor/AutoModel.from_pretrained(nvidia/LocateAnything-3B@c32291ca, trust_remote_code=True, torch_dtype=bfloat16) on mps/cpu; generation at :267 (model.generate, max_new_tokens=8192, generation_mode=mode)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Load/infer failures surface as capability-tagged RuntimeError via LocateAnythingRuntime.load/probe; LocateAnythingBackend turns any runtime failure into a fail-closed GroundingResult (never guesses); mps.empty_cache + gc.collect after each generation (jetsam mitigation)",
+      "current_backend": "none",
+      "classification": "migrate_to_runtime",
+      "notes": "The ONLY Hugging Face transformers import site in the repo (function-scoped imports only). AutoTokenizer/AutoProcessor/AutoModel + tokenizer loading + .to(mps). A natural AirLLM-relevant/transformers backend candidate; currently served out-of-process via the grounding service."
+    },
+    {
+      "caller": "novi/brain/vector.py:93",
+      "purpose": "MiniLMEmbedding: sentence-transformers SentenceTransformer(sentence-transformers/all-MiniLM-L6-v2) on mps/cpu; encode(:108) with L2 normalization for semantic memory embedding",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Optional dependency/model unavailable -> falls back to HashingEmbedding (384d); encode failure likewise falls back; never raises",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Embedding model (not LLM generation); lazy load, device auto-detect (mps). Out of scope for the LLM inference runtime but a future model-service consumer."
+    },
+    {
+      "caller": "novi/brain/models/torchvision_detector.py:26",
+      "purpose": "TorchvisionSSDLiteDetector: torchvision ssdlite320_mobilenet_v3_large (COCO) on mps/cpu; _infer(:57) runs detection with inference_mode, threshold-filtered boxes",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Raises RuntimeError at construction if torch/torchvision missing (caller degrades to deterministic perception); per-frame inference failures propagate",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Vision model; wrapped by NeuralPerceptionBackend and selected by CLI --neural / web camera=real. Out of scope for LLM runtime."
+    },
+    {
+      "caller": "novi/integration/real_io_detection.py:64",
+      "purpose": "RealObjectDetector: torchvision SSDLite320 MobileNetV3 loaded lazily on first detect(:72); COCO label mapping; used by web real-I/O preview path",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Undecodable frames -> []; missing torchvision -> import error at load time (degraded by caller); inference runs under no_grad",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Vision model, lazy-load pattern mirroring real_backends.py; device default cpu."
+    },
+    {
+      "caller": "novi/perception/real_backends.py:277",
+      "purpose": "TorchvisionObjectEmbedder: torchvision resnet18 (weights=DEFAULT, fc dropped -> 512-d) on mps/cpu; embed(:305) returns one L2-normalized vector per bbox",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any failure marks _failed=True and returns None vectors (honest degrade); core injectable for CI",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Vision embedding model, lazy load, optional torch/torchvision."
+    },
+    {
+      "caller": "novi/brain/models/stt.py:58",
+      "purpose": "WhisperSTTProvider: faster-whisper WhisperModel(base, cpu/int8, download_root=git-ignored cache); transcribe(:64) runs local speech-to-text",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Raises RuntimeError if faster-whisper missing; FileNotFoundError if audio path missing; transcription errors propagate to caller (web/listen degrade to deterministic STT)",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Speech model (CTranslate2-based), offline after one-time download into novi/mac_test_results/STT/models. Out of scope for LLM runtime."
+    },
+    {
+      "caller": "novi/integration/real_io_voice.py:25",
+      "purpose": "RealVoiceEmbedder: resemblyzer VoiceEncoder -> 256-d L2-normalized voiceprint; RealSpeakerRecognizer enroll/match for speaker ID",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Import/embedding errors propagate; recognizer returns None on no-match (identity evidence stays absent)",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Voice biometric model; wired through web _build_speaker_id. Out of scope for LLM runtime."
+    },
+    {
+      "caller": "novi/brain/face_id.py:160",
+      "purpose": "InsightFaceFaceID: insightface FaceAnalysis(buffalo_l, CPUExecutionProvider) optional stronger face embedding; falls back to deterministic OpenCV faceprints",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Import/model init failure swallowed -> _model=None -> OpenCV fallback",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Face model; optional heavy dep stays optional."
+    },
+    {
+      "caller": "novi/perception/grounding_client.py:85",
+      "purpose": "GroundingClient._get: HTTP GET {base}/health and /capabilities against the local grounding service (default http://127.0.0.1:8721)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "urllib.error.URLError -> raises ConnectionError; callers (web _GroundingWithFallback) fall back to DeterministicLocateAnythingBackend",
+      "current_backend": "none",
+      "classification": "migrate_to_runtime",
+      "notes": "HTTP client to a local inference server (LocateAnything service); the web server, CLI and future body all use it. Service unreachable -> deterministic fallback (never-crash rule)."
+    },
+    {
+      "caller": "novi/perception/grounding_client.py:107",
+      "purpose": "GroundingClient._ground: HTTP POST {base}/ground with base64 frame + query for language-conditioned spatial grounding",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "URLError -> ConnectionError -> caller falls back to deterministic backend; 120s timeout",
+      "current_backend": "none",
+      "classification": "migrate_to_runtime",
+      "notes": "The heavy LocateAnything model runs in an isolated venv service; this client is the transport. Runtime/backend abstraction candidate."
+    },
+    {
+      "caller": "novi/perception/grounding_service.py:109",
+      "purpose": "GroundingServer: ThreadingHTTPServer serving any SpatialPerceptionBackend over localhost HTTP (serve_forever at :114 in a daemon thread); the model-serving process boundary for LocateAnything",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Backend errors -> JSON error responses; server lifecycle managed by start/stop; consumers see ConnectionError when down",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Model-serving infrastructure (not a coupling from cognition). This is the pattern the plan's isolated Inference Worker (Phase 27) mirrors."
+    },
+    {
+      "caller": "novi/perception/locate_anything.py:182",
+      "purpose": "LocateAnythingBackend: thin Novi adapter over a LocateAnythingRuntime; ground(:281) -> runtime.infer -> parse_locate_anything_output -> observations with provenance",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Capability probe not usable -> fail-closed GroundingResult (backend_status reflects state); runtime inference exception -> GroundingResult(success=False, validation_errors=...)",
+      "current_backend": "none",
+      "classification": "migrate_to_runtime",
+      "notes": "Adapter already decouples Novi contracts from the transformers model; the runtime.infer call is the model execution to route through the inference runtime."
+    },
+    {
+      "caller": "scripts/mac-locateanything-service.py:30",
+      "purpose": "Operator launcher: attaches LocateAnythingRuntime to LocateAnythingBackend and starts GroundingServer on 127.0.0.1:8721 (run in the heavy venv)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Model not usable -> serves fail-closed; consumers fall back",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "Manual service startup script (scripts/mac-locateanything-service.py); documented runbook, not a runtime-owned lifecycle."
+    },
+    {
+      "caller": "novi/brain/engine.py:2199",
+      "purpose": "MacBrain.default_llm_chat: resolution order injected override -> brain-built Ollama transport (when brain_llm_enabled) -> None; probe + 60s cooldown on unreachable endpoints",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Returns None (with cooldown) instead of raising; deterministic fallback paths apply",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "The brain-owned transport factory; should return a runtime-generated chat callable rather than building urllib itself."
+    },
+    {
+      "caller": "novi/brain/chat.py:935",
+      "purpose": "ChatMixin._compose_reply_impl: if no llm_chat injected, uses brain default_llm_chat(); None -> deterministic social reply fallback; otherwise dialogue.reply with the transport",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Transport errors handled inside dialogue.reply (None -> fallback); deterministic canned replies for greetings/farewells regardless of transport",
+      "current_backend": "ollama",
+      "classification": "retain_temporarily",
+      "notes": "Reply orchestration is transport-injectable by design; the injection point (llm_chat callable) is the existing seam for a runtime-backed chat transport."
+    },
+    {
+      "caller": "novi/brain/knowledge_extraction.py:110",
+      "purpose": "LLMTripleExtractor.extract: calls the injected llm_chat transport for constrained-JSON triple extraction (FORBIDDEN-guard + strict validation; deterministic regex fallback)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Transport exceptions -> [] (regex fallback); None/forbidden output -> []; grounding rule: at least one endpoint must be a known entity",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Knowledge learning through the LLM transport; enabled only when llm_triples_enabled config flag is set (default False)."
+    },
+    {
+      "caller": "novi/brain/engine.py:2476",
+      "purpose": "MacBrain._learn_triples: when llm_triples_enabled, uses dialogue._chat as the llm_chat transport for LLMTripleExtractor (line 2476), with deterministic extract always running as fallback",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Any exception -> llm_triples=[] (best-effort); knowledge never depends on the model",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Cognitive module reaching for the raw dialogue transport directly; should consume the runtime's structured-output capability instead."
+    },
+    {
+      "caller": "novi/brain/agent.py:212",
+      "purpose": "BrainDriver: passes its llm_chat (:135 stored, :212 passed to brain.respond) through for reply composition on text/voice inputs",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Exception in respond -> natural_reply_fallback; transport errors degrade inside dialogue",
+      "current_backend": "ollama",
+      "classification": "retain_temporarily",
+      "notes": "Source-agnostic driver; transport is optional and injectable."
+    },
+    {
+      "caller": "novi/web/integration_api.py:83",
+      "purpose": "IntegrationAPI: builds llm_transport = self._llm_chat when chat_llm enabled and wires it into BrainDriver",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Transport absent -> None (deterministic replies)",
+      "current_backend": "ollama",
+      "classification": "retain_temporarily",
+      "notes": "Web-side wiring of the brain driver; uses the server's _llm_chat transport."
+    },
+    {
+      "caller": "novi/brain/sleep_cycle.py:182",
+      "purpose": "SleepCycle.maybe_sleep: calls the injected narrator callable to re-narrate the oldest summary during sleep consolidation (best-effort)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Narrator exceptions contained by outer wrapper -> logged as sleep cycle error; None/empty narrator result leaves summary unchanged",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Background cognitive work calling the LLM narrator transport; should request through the runtime (background/reflection class)."
+    },
+    {
+      "caller": "novi/brain/consolidation.py:121",
+      "purpose": "SummaryConsolidator: calls the optional summarizer callable (LLMSummarizer when available) for semantic memory summaries; deterministic fallback otherwise",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Summarizer exceptions swallowed -> deterministic summary used",
+      "current_backend": "ollama",
+      "classification": "migrate_to_runtime",
+      "notes": "Memory consolidation through the LLM summarizer transport."
+    },
+    {
+      "caller": "novi/voice/tts.py:69",
+      "purpose": "SayTTSProvider.synthesize: subprocess.run(['/usr/bin/say', ...]) for macOS text-to-speech",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Raises RuntimeError if binary unavailable; subprocess errors/timeout propagate",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "TTS (macOS say stub), not LLM inference; included for completeness. Future neural TTS providers implement the same TTSProvider protocol."
+    },
+    {
+      "caller": "novi/brain/io.py:143",
+      "purpose": "MacSpeaker.speak: subprocess.run(['say', ...]) for the brain's audible replies",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Raises RuntimeError if `say` unavailable; subprocess errors propagate",
+      "current_backend": "none",
+      "classification": "retain_temporarily",
+      "notes": "TTS subprocess; not model serving. Subprocess is never used to launch an inference server anywhere in the repo."
+    },
+    {
+      "caller": "novi/brain/tests/test_brain_owned_llm.py:58",
+      "purpose": "_FakeOllama fixture: minimal stand-in for Ollama's /api/chat and /api/tags endpoints (stdlib HTTP server) to test the brain-owned transport",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Scripted responses; unreachable-endpoint test asserts cooldown behavior",
+      "current_backend": "ollama",
+      "classification": "test_only_fixture",
+      "notes": "Test-only fake server; keeps CI offline but exercises the real transport code path."
+    },
+    {
+      "caller": "novi/web/tests/test_llm_payload.py:21",
+      "purpose": "_capture_chat_payload: calls server._llm_chat with urllib.request.urlopen stubbed to capture the sent JSON body (payload-shape tests for qwen3:4b vs qwen3.8:27b tiers)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Stub urlopen returns scripted responses; assertions on body shape",
+      "current_backend": "ollama",
+      "classification": "test_only_fixture",
+      "notes": "Test-only urlopen stub."
+    },
+    {
+      "caller": "novi/brain/tests/test_reasoning.py:69",
+      "purpose": "LLMReasoningProvider tests: MacModelProvider built over a fake backend_fn to verify allowlist validation and default-action fallback",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Fake backend raises/succeeds per test; validates structured-output rejection",
+      "current_backend": "deterministic",
+      "classification": "test_only_fixture",
+      "notes": "Test-only fake backend through the real ModelRuntime/MacModelProvider stack."
+    },
+    {
+      "caller": "novi/perception/tests/test_locate_anything_runtime.py:107",
+      "purpose": "LocateAnythingRuntime tests: injected fake bundle (loader=...) verifying load lifecycle, capability probe and infer orchestration without torch/transformers",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Fake bundles raise capability-tagged errors; asserts fail-closed behavior",
+      "current_backend": "none",
+      "classification": "test_only_fixture",
+      "notes": "Test-only fake loader; module import is verified safe without heavy deps."
+    },
+    {
+      "caller": "novi/brain/tests/test_b2_model_runtime.py:48",
+      "purpose": "ModelRuntime contract tests (register/load/invoke/version-mismatch/unknown-model) over DeterministicModelBackend",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Asserts ModelAdmissionError/ModelInvocationError paths and model-invocation contract payload",
+      "current_backend": "deterministic",
+      "classification": "test_only_fixture",
+      "notes": "Test-only; also test_b2_real_inference.py, test_b2_nemotron.py, test_b2_cosmos_reason.py use the same fake-backend pattern."
+    },
+    {
+      "caller": "novi/integration/tests/test_real_detection.py:34",
+      "purpose": "RealObjectDetector tests: injected fake core standing in for the torchvision model (fixed raw output) to test COCO label mapping and confidence floor",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Fake core emits fixed tensors; asserts label/bbox/confidence mapping",
+      "current_backend": "none",
+      "classification": "test_only_fixture",
+      "notes": "Test-only injected core; mirrors the CI injection pattern used across perception/voice tests."
+    },
+    {
+      "caller": "novi/web/tests/test_web.py:252",
+      "purpose": "Web tests monkeypatch urllib.request.urlopen with a fake to simulate Ollama down/up and stale availability cache; also llm_chat lambda stubs (:186, :202) and model-switch assertions (qwen3.8:27b/qwen3:4b/qwen3:8b at :154-173)",
+      "sync": true,
+      "streaming": "no",
+      "error_behavior": "Scripted fake urlopen; asserts offline fallback and 404 normalization paths",
+      "current_backend": "ollama",
+      "classification": "test_only_fixture",
+      "notes": "Test-only urlopen monkeypatch + transport stubs; test_web.py:319-322 exercises qwen3.8:latest via _llm_chat."
+    }
+  ],
+  "direct_coupling_summary": {
+    "total": 57,
+    "retain_temporarily": 26,
+    "migrate_to_runtime": 24,
+    "remove": 0,
+    "test_only_fixture": 7
+  },
+  "observations": [
+    "Zero asyncio anywhere in novi/: every model call is synchronous (urllib or direct torch/transformers), executed on the brain-loop thread or web-server threads. There is no asyncio model execution to migrate.",
+    "All LLM inference is Ollama over urllib to http://localhost:11434: 11 production transport sites across novi/brain/models/, novi/brain/engine.py, novi/brain/dialogue.py, and novi/web/server.py (5x /api/generate, 4x /api/chat, 2x /api/tags probes). No requests/httpx/aiohttp, no cloud inference.",
+    "A second local inference server exists: the LocateAnything grounding service (ThreadingHTTPServer on 127.0.0.1:8721) running the transformers model nvidia/LocateAnything-3B in an isolated venv; consumers use GroundingClient over urllib with a deterministic fallback (novi/web/server.py:128 _GroundingWithFallback, NOVI_GROUNDING_URL env).",
+    "Streaming exists in exactly one site: novi/web/server.py:903 _llm_chat_stream (Ollama /api/chat stream:true, synchronous NDJSON generator feeding the UI SSE). Brain reply composition is non-streaming; the UI chunked playback at server.py:996-1021 simulates streaming.",
+    "Every Ollama call site is best-effort with a deterministic fallback (None -> canned/deterministic reply), so CI is transport-free (brain_llm_enabled=False default, chat_llm off in tests). Failures never propagate into cognition.",
+    "novi/perception/locate_anything_runtime.py is the ONLY Hugging Face transformers import site (AutoTokenizer/AutoProcessor/AutoModel.from_pretrained with trust_remote_code, function-scoped imports). It also performs the only torch.mps.empty_cache call. No torch.load/torch.save, no CUDA (mps/cpu only) anywhere.",
+    "torch/torchvision usage beyond LocateAnything is lazy-loading perception models: SSDLite320 MobileNetV3 (novi/brain/models/torchvision_detector.py, novi/integration/real_io_detection.py), ResNet18 object embedder (novi/perception/real_backends.py), MiniLM sentence embedder (novi/brain/vector.py); plus optional faster-whisper STT, resemblyzer voice ID, insightface face ID.",
+    "Subprocess is never used to launch or serve a model: it appears only for macOS `say` TTS (novi/brain/io.py:143, novi/voice/tts.py:69), script-skill execution (novi/brain/skills.py:234), and test runners. Model isolation is done with the grounding-service process boundary instead.",
+    "Model-tier behavior is hardcoded by literal model name strings across files: disable_thinking_for/num_predict_for in novi/brain/models/ollama_reasoning.py (qwen3:4b/qwen3:8b/nemotron -> think off, qwen3.8:27b -> think on, 2x budget), dialogue.py:1123 ('nemotron' -> think:false), web server _llm_chat/_llm_chat_stream tiering. This is exactly the per-model capability data the plan's registry/capability matrix (Phases 3/32) should absorb.",
+    "The candidate model set is consistent with the plan: nemotron-3.5-lightning (default), qwen3:8b, qwen3.8:27b, qwen3:4b registered in novi/web/server.py:221; qwen3.8:latest is exercised only in tests (test_web.py:319-322) and its identity remains unresolved per plan section 9.5. b2_nemotron references a different model (nvidia/nemotron-3-nano-omni-30b-a3b), unrelated to the Ollama nemotron-3.5-lightning tag.",
+    "The existing backend-neutral seam is real and healthy: novi/brain/b2_model_runtime.py ModelRuntime + b2_real_inference.py RealModelInvoker + models/provider.py MacModelProvider form a register/load/invoke boundary with deadline, structured-output policy, contract validation and provenance. An untracked work-in-progress already adapts it: novi/brain/inference/ (contracts, request/response, errors, capabilities, registry, router, scheduler, lifecycle, cancellation, telemetry, health, backends/base|existing|mock) — backends/existing.py wraps MacModelProvider/ModelRuntime/Ollama transports behind the plan's InferenceBackend contract. git status shows '?? novi/brain/inference/' (not committed; no runtime.py or airllm backend yet).",
+    "Latency expectations at call sites: reasoning/chat calls 60-120s timeouts (420s for the heavy-thinking tier), narrator/summarizer 5s, deliberation 30s (web) / 60s (default), grounding RPC 120s, availability probes 2s.",
+    "No call site was classified 'remove': every production site is either live-coupled to Ollama (migrate_to_runtime), part of the existing runtime/contract layer to retain while wrapping (retain_temporarily), or a test fixture. The migrate_to_runtime set is the direct-coupling list the plan's Phase 0/5.2 gate applies to.",
+    "The web UI (novi/web/ui/src) is a pure HTTP/SSE consumer of the Novi web server (fetch to /api/chat, /api/chat/stream, /api/model); it never talks to Ollama or any model directly — only server.py:873/:903 do.",
+    "Scripts under scripts/mac-locateanything-* (service, experiment, benchmark, camera-acceptance) drive the real LocateAnything transformers model for Mac feasibility evidence; they are operator/experiment tools (test_only_fixture/retain_temporarily), not cognitive-module call sites."
+  ]
+}

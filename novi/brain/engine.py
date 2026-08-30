@@ -200,6 +200,7 @@ class MacBrain(ChatMixin):
         safety_monitor: Any | None = None,
         actuator_boundary: Any | None = None,
         llm_chat: Any | None = None,
+        inference_runtime: Any | None = None,
     ) -> None:
         self.config = config or MacBrainConfig()
         self.run_id = self.config.run_id or str(uuid4())
@@ -235,10 +236,19 @@ class MacBrain(ChatMixin):
         # or erroring LLM degrades to the deterministic provider). Surfaces may
         # inject an LLM reasoning provider (llm_reasoning) or fully override
         # the provider (reasoning=), preserving test/CI behavior.
-        self.reasoning = reasoning or ReasoningRouter(
-            deterministic=DeliberativeReasoningProvider(),
-            llm=llm_reasoning,
-        )
+        # Plan 12 (inference runtime): an injected InferenceRuntime backs the
+        # reasoning provider through the runtime-backed adapter; the brain
+        # never constructs a backend directly and stays model/backend agnostic.
+        self.inference_runtime = inference_runtime
+        if reasoning is None and inference_runtime is not None:
+            from .inference.adapter import RuntimeBackedReasoningProvider
+
+            self.reasoning = RuntimeBackedReasoningProvider(inference_runtime)
+        else:
+            self.reasoning = reasoning or ReasoningRouter(
+                deterministic=DeliberativeReasoningProvider(),
+                llm=llm_reasoning,
+            )
         self.reflection = ReflectionEngine()
         self.stt = stt or DeterministicSTTProvider()
         self.unified_world = UnifiedWorldModel()

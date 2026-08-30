@@ -101,3 +101,11 @@ Novi must eventually demonstrate a long-running scenario in which it:
 Do **not** implement autonomy as one giant agent loop. Implement the contracts first, then the deterministic control loop, then perception/planning integration, then learning and exploration, and only then increase autonomy duration and physical authority.
 
 For inference specifically, implement the Novi-owned inference contract and preserve the current Mac Brain path before enabling AirLLM. The AirLLM workstream's first concrete target is Qwen3.8-27B, with AirLLM remaining an optional backend rather than a cognitive layer. The current approved model set is `qwen3.8:27b`, `qwen3:8b`, `nemotron-3.5-lightning:latest`, `qwen3.8:latest`, and `qwen3:4b`; future larger models must enter through the same registry, compatibility, benchmark and acceptance gates.
+
+## Workstream status (2026-08-30)
+
+| Plan | Status | Notes |
+|---|---|---|
+| `12_AIRLLM_ADAPTATION_AND_INFERENCE_RUNTIME_PLAN.md` | **PROTOTYPE** | Inference runtime contract implemented (`novi/brain/inference/`), 81 inference tests + 1758 Brain tests green, five aliases registered (none routable by default), AirLLM optional extra + backend behind the contract (disabled by default). Hardware validation/benchmarking pending. Specs: `docs/specs/brain/30_INFERENCE_RUNTIME_SPEC.md`, `31_MODEL_COMPATIBILITY_MATRIX.md`, `32_RUNTIME_BENCHMARK_SPEC.md`. |
+
+Status vocabulary: `DESIGNED → PROPOSED → EVALUATING → PROTOTYPE → IMPLEMENTED → TESTED → INTEGRATED → SIMULATED → DEFERRED → BLOCKED → DEPRECATED`.
