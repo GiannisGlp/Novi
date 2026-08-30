@@ -854,8 +854,16 @@ class NoviWebServer(IntegrationMixin):
                     # so 'nemotron-3.5-lightning' matches the '…:latest' tag.
                     models = {str(m.get("name", "")).removesuffix(":latest") for m in data.get("models", [])}
                     self._llm_available = self.llm_model in models
-            except Exception:  # noqa: BLE001 - offline fallback
+            except Exception as exc:  # noqa: BLE001 - offline fallback
                 self._llm_available = False
+                import sys as _sys
+
+                print(
+                    f"[llm] availability probe failed for {self.llm_model} @ {self.llm_url}: "
+                    f"{type(exc).__name__}: {exc}",
+                    file=_sys.stderr,
+                    flush=True,
+                )
             self._llm_probed_at = now
         return self._llm_available
 
@@ -927,8 +935,18 @@ class NoviWebServer(IntegrationMixin):
         req = urllib.request.Request(
             f"{self.llm_url}/api/chat", data=body, headers={"Content-Type": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            data = json.loads(response.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            import sys as _sys
+
+            print(
+                f"[llm] chat call failed for {self.llm_model}: {type(exc).__name__}: {exc}",
+                file=_sys.stderr,
+                flush=True,
+            )
+            return None
         message = data.get("message", {}) or {}
         reply = (message.get("content") or "").strip()
         if reply:
