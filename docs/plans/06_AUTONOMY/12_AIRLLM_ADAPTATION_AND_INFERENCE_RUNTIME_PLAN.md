@@ -1,7 +1,7 @@
 # Novi AirLLM Adaptation and Inference Runtime Plan
 
 **Workstream:** 06_AUTONOMY / Brain Runtime
-**Status:** PROTOTYPE — inference runtime contract implemented; AirLLM backend implemented behind the contract (disabled by default); hardware validation and benchmarking pending
+**Status:** PROTOTYPE — inference runtime contract implemented; AirLLM backend implemented behind the contract (disabled by default) AND execution-verified on the actual Mac via the MLX path with a representative Llama-family model; the Qwen3.8-27B production target is platform-blocked on this machine (documented below)
 **Priority:** P0 architecture / P1 initial optimization
 **Target branch:** `main`
 **Date:** 2026-08-30
@@ -11,7 +11,7 @@
 
 ## 0. Implementation progress
 
-Updated 2026-08-30 (first implementation round). Status vocabulary per §65: the inference runtime is `PROTOTYPE`, the AirLLM backend is `PROTOTYPE` (implemented behind the contract; not `TESTED`/`INTEGRATED` until hardware evidence exists).
+Updated 2026-08-30 (rounds 1–3). Status vocabulary per §65: the inference runtime is `PROTOTYPE`, the AirLLM backend is `PROTOTYPE` (implemented + Mac-execution-verified via TinyLlama; the 27B production target is platform-blocked per §17 — "If AirLLM cannot run on the actual Mac, the backend remains an implemented but platform-blocked provider. The rest of Novi must remain fully functional.").
 
 | Step (§66) | Status | Evidence |
 |---|---|---|
@@ -34,12 +34,12 @@ Updated 2026-08-30 (first implementation round). Status vocabulary per §65: the
 | 17. Resolve exact HF artifact for `qwen3.8:27b` | DONE (blocker recorded) | `Qwen/Qwen3.8-27B` sha `1d4bf0f2ff60…`; architecture `Qwen3_5ForConditionalGeneration`; config requires `transformers 5.8.0.dev0` which conflicts with the validated AirLLM stack (4.57.1, cap `<5.13`) — registry records `airllm_eligible=false`; no checkpoint substitution |
 | 18. Prepare Qwen3.8-27B into AirLLM shards | BLOCKED (environment) | checkpoint is 55.6 GB (HF tree); source + shards + reserve ≈ 112 GB required vs 58 GiB free — `check_disk_capacity` refuses with typed `StorageCapacityError` (verified). Also blocked on the Step 17 Transformers conflict + Mac MLX path architecture limits. Backend remains an implemented, platform-blocked provider (§17) |
 | 19–22. Shard integrity, smoke, tokenizer, warm inference | PIPELINE PROVEN on Mac via TinyLlama | Execution-verified end-to-end on the actual Mac (AirLLM 3.3.0 MLX path): prepare → manifest (recursive shard discovery + sha256) → integrity → load → single-prompt generation (56.8 s/27 tokens) → warm inference (28.2 s) → unload. Evidence: `benchmarks/airllm-mac/tinyllama-1.1b.json`. Qwen3.8-27B-specific execution still gated on Step 18 |
+| 30. Long-duration soak tests | HARNESS + PRELIMINARY REAL SOAK DONE | `soak.py` (CI-safe) + real AirLLM soak on Mac: 4 warm generations at 27.85 s avg (σ≈0.02 s, no drift), 0 failures, RSS before/after in `tinyllama-1.1b.json`; 1h/4h/8h/24h require target hardware |
 | 23. Integrate AirLLM backend through reasoning seam | DONE (stub-verified) | `test_airllm_seam.py`: runtime backed by AirLLMBackend serves `MacBrain`-compatible `decide()` end-to-end; routing selects airllm only with a validated (model, hardware) combination |
 | 24. Complete Brain regression suite | DONE | 1762 brain + 113 inference tests green (rounds 1–2) |
 | 25. Run Novi cognitive benchmark suite | DONE (existing backend) | baseline harness scores deterministic quality per prompt (§36): all 4 running models 8/8 prompts + 8/8 quality checks, 0% error |
 | 26. Compare AirLLM against baseline | PENDING | gated on Step 18; baseline comparison data ready in `benchmarks/baseline/` |
 | 29. Test offline operation | DONE (runtime level) | `test_offline_operation.py`: mock + local-transport existing backends complete generation with zero network calls |
-| 30. Long-duration soak tests | HARNESS DONE, durations gated | `novi/brain/benchmarks/soak.py` (CI-safe verified); 1h/4h/8h/24h require target hardware |
 | 27. Failure recovery | DONE (mock-level) | `test_failure_injection.py`: all 20 cases of §26 exercised (import failure → cancellation, OOM, hang, crash, storage full…) with typed classification |
 | 28. Model unload/reload | DONE | `UnloadReloadTests`: switch A→B→A with correct per-response metadata, idempotent unload |
 | 33. Router eligibility rules | DONE | `RuntimeConfig.airllm_enabled` + `validated_airllm_combinations`; runtime validator gate: AirLLM routable ONLY for enabled + (model, compute-backend) pairs with execution evidence |
