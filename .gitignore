@@ -52,3 +52,23 @@ novi/web/ui/tsconfig*.tsbuildinfo
 graphify-out/*
 .hf-cache/
 .airllm-models/
+
+# Trained Novi adapters + generated datasets (artifacts, not source)
+training/models/adapters/*
+!training/models/adapters/.gitkeep
+training/datasets/raw/*
+!training/datasets/raw/.gitkeep
+training/datasets/cleaned/*
+!training/datasets/cleaned/.gitkeep
+training/datasets/sft/*
+!training/datasets/sft/.gitkeep
+training/datasets/dpo/*
+!training/datasets/dpo/.gitkeep
+training/datasets/retrieval/*
+!training/datasets/retrieval/.gitkeep
+training/datasets/grounding/*
+!training/datasets/grounding/.gitkeep
+training/datasets/evaluation/*
+!training/datasets/evaluation/.gitkeep
+training/experiments/*
+!training/experiments/.gitkeep

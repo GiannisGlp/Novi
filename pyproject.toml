@@ -141,6 +141,6 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["novi/brain/tests", "novi/brain/inference/tests", "novi/web/tests", "novi/contracts/tests", "novi/cognition/tests"]
+testpaths = ["novi/brain/tests", "novi/brain/inference/tests", "novi/web/tests", "novi/contracts/tests", "novi/cognition/tests", "training/tests"]
 pythonpath = ["."]
 addopts = "-v --tb=short"
