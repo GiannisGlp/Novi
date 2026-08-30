@@ -1,0 +1,17 @@
+# Grounding ranking configuration (plan 23 §14, §36)
+# Ranks candidate (object, destination) groundings from language + cues.
+# Physical action still passes deterministic validation/governance.
+kind: grounding
+base_model: none
+dataset: training/datasets/grounding/grounding_v1.jsonl
+dataset_version: v1
+output_dir: training/models/adapters
+seed: 20260830
+min_examples: 200
+eval_after: true
+hyperparams:
+  model: linear
+  features: [language_similarity, gaze_match, pointing_match, gesture_match, recency, confidence]
+  learning_rate: 1.0e-2
+  epochs: 10
+  batch_size: 32

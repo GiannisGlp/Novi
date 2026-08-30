@@ -1,0 +1,21 @@
+# DPO configuration — second experiment (plan 23 §33)
+# Preference pairs (datasets/dpo/) after SFT is stable.
+kind: dpo
+base_model: qwen3:8b
+hf_model_id: Qwen/Qwen3-8B
+sft_adapter: training/models/adapters/novi-qwen3-8b-dialogue-v1
+dataset: training/datasets/dpo/preference_pairs_v1.jsonl
+dataset_version: v1
+output_dir: training/models/adapters
+seed: 20260830
+min_examples: 1000           # plan §33: 1,000+ preference pairs
+eval_after: true
+hyperparams:
+  beta: 0.1
+  batch_size: 4
+  learning_rate: 1.0e-5
+  epochs: 2
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]

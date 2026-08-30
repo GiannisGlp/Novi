@@ -1,0 +1,19 @@
+# Retrieval reranker configuration — third experiment (plan 23 §34)
+# Small independent reranker over the composite retrieval features
+# (novi/brain/retrieval_policy.py). Candidate generation stays vector/FTS;
+# the learned ranker re-ranks top candidates.
+kind: retrieval
+base_model: none                    # independent scorer, not an LLM fine-tune
+dataset: training/datasets/retrieval/retrieval_v1.jsonl
+dataset_version: v1
+output_dir: training/models/adapters
+seed: 20260830
+min_examples: 200
+eval_after: true
+hyperparams:
+  model: linear                    # linear ranker first (interpretable, cheap)
+  features: [semantic, temporal, person, situation, goal, causal, importance, confidence, provenance, spatial, novelty]
+  learning_rate: 1.0e-2
+  epochs: 10
+  batch_size: 32
+  top_k: 10                        # re-rank top-k candidates

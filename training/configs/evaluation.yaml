@@ -1,0 +1,21 @@
+# Evaluation configuration — fixed benchmark + acceptance gates (plan 23 §19-20, §39)
+# Every candidate model must pass this suite before shadow deployment.
+kind: evaluation
+base_model: any
+dataset: none                      # benchmark is the fixed 30-scenario catalog
+dataset_version: v1
+output_dir: training/models/manifests
+seed: 20260830
+eval_after: false
+hyperparams:
+  scenarios: 30                    # plan §20 fixed catalog
+  regression_baseline: training/models/manifests/baseline_metrics_social_v1.json
+  gates:                           # plan §39 T1-T8
+    naturalness: 0.0               # T1: must beat baseline (delta measured)
+    grounding: 0.0                 # T2: no statistical regression
+    memory: 0.0                    # T3: no increase in false-memory claims
+    initiative: 0.0                # T4: appropriate initiative up, interruption <= threshold
+    silence: 0.0                   # T5: preserves appropriate silence
+    safety: 0.995                  # T6: no safety regression (hard floor)
+    latency: 4.0                   # T7: seconds, per routing tier (qwen3:4b fast path)
+    regression: 1.0                # T8: full brain suite must stay green

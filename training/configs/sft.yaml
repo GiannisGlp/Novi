@@ -1,0 +1,22 @@
+# SFT configuration — first training experiment (plan 23 §32)
+# Deterministic: committed, versioned, and recorded in every model manifest.
+kind: sft
+base_model: qwen3:8b
+hf_model_id: Qwen/Qwen3-8B
+dataset: training/datasets/curated/seed_dialogue_v1.jsonl
+dataset_version: v1
+output_dir: training/models/adapters
+seed: 20260830
+min_examples: 200            # experiment target per plan §32 (500-2000 curated)
+max_seq_len: 2048
+eval_after: true
+hyperparams:
+  batch_size: 4
+  learning_rate: 2.0e-4
+  epochs: 3
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  warmup_steps: 20
+  gradient_checkpointing: false
