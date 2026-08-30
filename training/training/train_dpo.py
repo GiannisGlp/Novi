@@ -55,11 +55,11 @@ def _smoke_report(cfg) -> dict:
 
 def _real_report(cfg) -> dict:
     try:
-        from trl import DPOTrainer  # noqa: PLC0415
+        from trl import DPOConfig, DPOTrainer  # noqa: PLC0415
     except ImportError:
         print("ERROR: DPO requires trl (`pip install trl`).", file=sys.stderr)
         raise SystemExit(2) from None
-    from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments  # noqa: PLC0415
+    from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: PLC0415
 
     pairs = load_jsonl(ROOT / cfg.dataset)
     tokenizer = AutoTokenizer.from_pretrained(cfg.hf_model_id or cfg.base_model)
@@ -73,17 +73,25 @@ def _real_report(cfg) -> dict:
         return {"prompt": prompt, "chosen": chosen, "rejected": rejected}
 
     rows = [_format(p) for p in pairs]
-    args = TrainingArguments(
+    from datasets import Dataset  # noqa: PLC0415
+
+    train_ds = Dataset.from_list(rows)
+    dpo_args = DPOConfig(
         output_dir=cfg.output_dir,
         per_device_train_batch_size=int(cfg.hyperparams.get("batch_size", 4)),
         learning_rate=float(cfg.hyperparams.get("learning_rate", 1e-5)),
         num_train_epochs=int(cfg.hyperparams.get("epochs", 2)),
         seed=cfg.seed,
+        gradient_checkpointing=True,
+        beta=float(cfg.hyperparams.get("beta", 0.1)),
         report_to=[],
     )
     trainer = DPOTrainer(
-        model=model, ref_model=ref_model, args=args, tokenizer=tokenizer,
-        beta=float(cfg.hyperparams.get("beta", 0.1)), train_dataset=rows,
+        model=model,
+        ref_model=ref_model,
+        args=dpo_args,
+        train_dataset=train_ds,
+        processing_class=tokenizer,
     )
     trainer.train()
     trainer.save_model(cfg.output_dir)

@@ -1,0 +1,37 @@
+{
+  "task": "sft",
+  "framework": "torch-peft",
+  "device": "mps",
+  "base_model": "qwen3:8b",
+  "adapter_path": "training/models/adapters/novi-qwen3-8b-dialogue-v1",
+  "examples_trained": 500,
+  "provenance": {
+    "base_model": "qwen3:8b",
+    "training_commit": "b478019677b7a0e12c45344b766b92c0e888f5ca",
+    "dataset_version": "sft_v1",
+    "hyperparameters": {
+      "batch_size": 2,
+      "learning_rate": 0.0002,
+      "epochs": 3,
+      "lora_r": 16,
+      "lora_alpha": 32,
+      "lora_dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ],
+      "warmup_steps": 20,
+      "gradient_checkpointing": false
+    },
+    "hardware": "Darwin arm64 38.7GB",
+    "random_seed": 20260830,
+    "framework": "torch-peft",
+    "captured_at": "2026-08-30T20:27:35+00:00"
+  },
+  "note": "adapter saved; register + evaluate before any deployment (plan §22/§39)"
+}

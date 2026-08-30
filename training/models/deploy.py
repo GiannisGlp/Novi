@@ -71,8 +71,9 @@ def run_deployment(
     training_config: str,
     commit: str,
     evaluation_suite: str = "social-v1",
+    shadow_report: dict[str, Any] | None = None,
 ) -> DeploymentReport:
-    """Register + stage + promote when gates pass; never deploy failed gates."""
+    """Register + stage + promote when gates AND shadow pass; never otherwise."""
     plan = plan_deployment(eval_report, adapter_dir)
     registry = ModelRegistry(registry_root)
     slots = DeploymentSlots()
@@ -82,6 +83,13 @@ def run_deployment(
 
     if not plan["deploy"]:
         return DeploymentReport(model_id=model_id, deployed=False, plan=plan)
+
+    shadow_ok = True
+    if shadow_report is not None:
+        from training.evaluation.shadow import should_promote  # noqa: PLC0415
+
+        shadow_ok = should_promote(shadow_report)
+        plan["shadow"] = shadow_report.get("verdict", "unknown")
 
     metrics = eval_report.get("metrics", {})
     manifest = build_manifest(
@@ -106,9 +114,17 @@ def run_deployment(
     manifest["status"] = "candidate"
     path = registry.register(manifest)
     registry.set_status(model_id, "staged")
-    # Shadow comparison is the gate before promotion; in this workflow it is
-    # assumed green because gates passed — the real shadow run is the
-    # evaluation report itself (candidate vs baseline).
+    if not shadow_ok:
+        # Gates passed but shadow comparison failed: keep the model staged
+        # (available for offline evaluation) — never active.
+        plan["steps"] = [s for s in plan["steps"] if s != "promote_active"]
+        return DeploymentReport(
+            model_id=model_id,
+            deployed=False,
+            plan=plan,
+            manifest_path=str(path),
+            slots={"current": slots.current, "previous": slots.previous, "known_good": slots.known_good},
+        )
     registry.set_status(model_id, "active")
     slots.promote(model_id)
     return DeploymentReport(

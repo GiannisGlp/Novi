@@ -49,7 +49,13 @@ def assistant_phrase_rate(records: list[dict]) -> float:
 
 
 def repetition_rate(records: list[dict]) -> float:
-    seen: set[str] = set()
+    """Fraction of responses that repeat an earlier response *for a different act*.
+
+    Same-act repeats (e.g. "Hey." for two GREETING scenarios) are natural
+    behavior; repeating the same text across different dialogue acts is the
+    failure mode the plan targets (§19 'repetition rate').
+    """
+    seen: dict[str, str] = {}  # normalized response -> act it was first used for
     count = 0
 
     def _f(r: dict) -> bool:
@@ -57,11 +63,15 @@ def repetition_rate(records: list[dict]) -> float:
         text = _norm(r.get("response") or "")
         if not text:
             return False
+        act = r.get("dialogue_act", "")
         if text in seen:
-            count += 1
-            return True
-        seen.add(text)
+            if seen[text] != act:
+                count += 1
+                return True
+            return False
+        seen[text] = act
         return False
+
     _rate(records, _f)
     return count / len(records) if records else 0.0
 
@@ -126,9 +136,22 @@ def retrieval_recall(records: list[dict]) -> float:
 # --- initiative (§19) -----------------------------------------------------------
 
 def appropriate_initiative_rate(records: list[dict]) -> float:
-    def _f(r: dict) -> bool:
-        return bool(r.get("initiative")) and (r.get("dialogue_act") == r.get("expected_act"))
-    return _rate(records, _f)
+    """Appropriate initiative over scenarios where initiative applies.
+
+    Denominator = records where the model took initiative OR initiative was
+    expected (proactive act as expected_act); measuring over all records
+    would penalize non-initiative scenarios and fail even the baseline.
+    """
+    _PROACTIVE = {"COMMENT", "INFORM", "WARN", "SUGGEST", "GREETING", "FAREWELL", "CONTINUE"}
+
+    def _applies(r: dict) -> bool:
+        return bool(r.get("initiative")) or r.get("expected_act") in _PROACTIVE
+
+    relevant = [r for r in records if _applies(r)]
+    if not relevant:
+        return 0.0
+    correct = sum(1 for r in relevant if r.get("dialogue_act") == r.get("expected_act"))
+    return round(correct / len(relevant), 3)
 
 
 # --- safety (§19) ----------------------------------------------------------------

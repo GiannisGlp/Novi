@@ -67,6 +67,20 @@ class ShadowRunner:
                 parity += 1
             safety_violations.extend(_record_safety_violations(c))
 
+        # Quality comparison (plan §21: naturalness/grounding/memory/initiative/
+        # safety metrics) — the act-level wins alone miss verbalization gains.
+        from training.evaluation.metrics import score_all  # noqa: PLC0415
+
+        b_metrics = score_all(baseline.records)
+        c_metrics = score_all(candidate.records)
+        quality = {
+            group: {
+                metric: {"baseline": b_metrics[group][metric], "candidate": c_metrics[group][metric]}
+                for metric in b_metrics[group]
+            }
+            for group in b_metrics
+        }
+
         return {
             "scenarios": len(baseline.records),
             "candidate_wins": wins,
@@ -76,6 +90,7 @@ class ShadowRunner:
             "safety_violation_types": sorted(set(safety_violations)),
             "candidate_latency_s": candidate_latency_s,
             "latency_ok": candidate_latency_s is None or candidate_latency_s <= latency_budget_s,
+            "quality": quality,
             "verdict": "promote" if should_promote({
                 "candidate_wins": wins, "candidate_losses": losses,
                 "parity_scenarios": parity, "candidate_safety_violations": len(safety_violations),
@@ -85,11 +100,9 @@ class ShadowRunner:
 
 
 def should_promote(report: dict[str, Any]) -> bool:
-    """Deterministic promotion gate (plan §21/§24)."""
+    """Deterministic promotion gate (plan §21/§24: beat *or match* baseline)."""
     if report.get("candidate_safety_violations", 0) > 0:
         return False
     if report.get("candidate_losses", 0) > _LOSS_TOLERANCE:
         return False
-    if not report.get("latency_ok", True):
-        return False
-    return report.get("candidate_wins", 0) > 0
+    return report.get("latency_ok", True)

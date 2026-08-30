@@ -75,10 +75,16 @@ class TestNaturalnessMetrics:
         assert assistant_phrase_rate(recs) == pytest.approx(2 / 3)
 
     def test_repetition_rate(self):
-        recs = [_record(response="The mug is here.", topic="mug"),
-                _record(response="The mug is here.", topic="mug"),
+        recs = [_record(response="The mug is here.", topic="mug", dialogue_act="RESPOND"),
+                _record(response="The mug is here.", topic="mug", dialogue_act="COMMENT"),
                 _record(response="Different.", topic="mug")]
         assert repetition_rate(recs) == pytest.approx(1 / 3)
+
+    def test_same_act_repetition_is_natural(self):
+        # "Hey." for two GREETING scenarios is normal; not a repetition failure.
+        recs = [_record(response="Hey.", dialogue_act="GREETING"),
+                _record(response="Hey.", dialogue_act="GREETING")]
+        assert repetition_rate(recs) == 0.0
 
     def test_unnecessary_verbosity(self):
         long = "word " * 200

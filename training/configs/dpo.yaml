@@ -6,15 +6,15 @@ hf_model_id: Qwen/Qwen3-8B
 sft_adapter: training/models/adapters/novi-qwen3-8b-dialogue-v1
 dataset: training/datasets/dpo/preference_pairs_v1.jsonl
 dataset_version: v1
-output_dir: training/models/adapters
+output_dir: training/models/adapters/novi-qwen3-8b-dialogue-dpo-v1
 seed: 20260830
 min_examples: 1000           # plan §33: 1,000+ preference pairs
 eval_after: true
 hyperparams:
   beta: 0.1
-  batch_size: 4
+  batch_size: 1              # memory-bounded (2x 8B fp16 on 36GB unified)
   learning_rate: 1.0e-5
-  epochs: 2
+  epochs: 1                  # first run: single epoch, memory-bounded
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05

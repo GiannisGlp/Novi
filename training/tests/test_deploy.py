@@ -85,3 +85,23 @@ class TestRunDeployment:
         )
         assert report.deployed is False
         assert not (tmp_path / "x.json").exists()
+
+    def test_shadow_failure_keeps_model_staged(self, tmp_path: Path):
+        shadow = {"candidate_wins": 0, "candidate_losses": 5, "parity_scenarios": 25,
+                  "candidate_safety_violations": 0, "latency_ok": True, "verdict": "do_not_promote"}
+        report = run_deployment(
+            eval_report=_eval_report(True),
+            adapter_dir="training/models/adapters/novi-qwen3-8b-dialogue-v1",
+            registry_root=tmp_path,
+            base_model="qwen3:8b",
+            training_dataset="sft_v1",
+            training_config="sft-v1",
+            commit="abc123",
+            shadow_report=shadow,
+        )
+        assert report.deployed is False  # gates ok, shadow not -> staged, not active
+        import json  # noqa: PLC0415
+
+        manifest = json.loads((tmp_path / "novi-qwen3-8b-dialogue-v1.json").read_text())
+        assert manifest["status"] == "staged"
+        assert "promote_active" not in report.plan["steps"]

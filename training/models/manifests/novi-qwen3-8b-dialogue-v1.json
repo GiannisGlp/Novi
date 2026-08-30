@@ -1,0 +1,22 @@
+{
+  "model_id": "novi-qwen3-8b-dialogue-v1",
+  "base_model": "qwen3:8b",
+  "adapter_type": "lora",
+  "training_dataset": "sft_v1 (500: 70 curated + 430 template-derived)",
+  "training_commit": "b478019677b7a0e12c45344b766b92c0e888f5ca",
+  "training_config": "sft-v1",
+  "created_at": "2026-08-30T20:39:20+00:00",
+  "evaluation_suite": "social-v1",
+  "metrics": {
+    "naturalness": 1.0,
+    "grounding": 1.0,
+    "memory": 1.0,
+    "initiative": 1.0,
+    "safety": 1.0
+  },
+  "status": "active",
+  "context_schema": 3,
+  "memory_schema": 5,
+  "world_schema": 4,
+  "dialogue_schema": 3
+}

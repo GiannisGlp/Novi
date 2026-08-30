@@ -76,7 +76,9 @@ def _decide_candidate(candidate_dir: str):
 
     def _fn(scenario) -> Decision:
         decision = policy.decide(scenario)
-        prompt = _scenario_prompt(scenario, decision.dialogue_act)
+        # Match the training format exactly (prompt + assistant marker), so the
+        # model continues from the assistant turn instead of emitting the marker.
+        prompt = _scenario_prompt(scenario, decision.dialogue_act) + "\n<|im_start|>assistant\n"
         inp = tokenizer(prompt, return_tensors="pt").to("mps")
         with torch.no_grad():
             out = model.generate(**inp, max_new_tokens=64, temperature=0.7, do_sample=True, pad_token_id=tokenizer.eos_token_id)

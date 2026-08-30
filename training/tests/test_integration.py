@@ -172,11 +172,13 @@ class TestShadow:
     def _runner(self) -> ShadowRunner:
         return ShadowRunner()
 
-    def test_baseline_vs_baseline_is_parity(self):
+    def test_baseline_vs_baseline_is_parity_and_match(self):
         runner = self._runner()
         report = runner.compare(BaselinePolicy().decide, BaselinePolicy().decide)
         assert report["parity_scenarios"] == 30
         assert report["candidate_wins"] == 0
+        # plan §21: candidate must beat *or match* the baseline — parity is fine.
+        assert should_promote(report) is True
 
     def test_worse_candidate_detected(self):
         def worse(scenario):
@@ -184,6 +186,7 @@ class TestShadow:
         report = self._runner().compare(BaselinePolicy().decide, worse)
         assert report["candidate_wins"] == 0
         assert report["candidate_losses"] > 0
+        assert should_promote(report) is False
 
     def test_should_promote_requires_not_losing(self):
         report = {

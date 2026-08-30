@@ -36,21 +36,21 @@ repository before creation. Result (full table in `training/README.md`):
 | 07 | human annotation workflow | ✅ DONE | `training/collection/annotator.py` (fields §9, quorum, consensus, inter-annotator agreement) |
 | 08 | initial curated dialogue dataset | ✅ DONE (seed) | `training/datasets/curated/seed_dialogue_v1.jsonl` — 70 examples, all 9 SFT task types, deterministic generator `build_seed.py` (byte-reproducible, hash-pinned) |
 | 09 | baseline evaluation suite | ✅ DONE | `training/evaluation/` — 30 scenarios (§20), metrics (§19), benchmark runner, baseline report committed (`models/manifests/baseline_metrics_social_v1.json`: 30/30, safety 1.0) |
-| 10 | train qwen3:8b Novi LoRA SFT | 🟡 PIPELINE READY, run pending | `training/training/train_sft.py` + backends (`mlx_sft.py`, `torch_sft.py`); smoke mode tested; needs ≥200 curated examples (have 70) + `mlx-lm` or `peft` |
-| 11 | compare against baseline | ✅ TOOLING | `evaluate.py --candidate-dir` / `compare_baseline()` / shadow runner |
-| 12 | deploy only to offline evaluation | ✅ (policy) | status lifecycle `candidate→staged→active` (§22) |
-| 13 | create preference pairs | 🟡 schema+smoke ready | `train_dpo.py` (pairs dataset not yet collected) |
-| 14 | train preference model/DPO adapter | 🟡 pipeline ready | `train_dpo.py` (trl backend) |
-| 15 | evaluate SFT vs SFT+DPO | ✅ TOOLING | `evaluate.py`, `compare_baseline()` |
-| 16 | memory retrieval ranking dataset | 🟡 schema+smoke ready | `retrieval` kind in `schemas.py`, `train_retriever.py` |
-| 17 | train retrieval reranker | ✅ (real torch path) | `training/training/backends/torch_linear.py` — linear ranker trains now on MPS/CPU when dataset exists |
+| 10 | train qwen3:8b Novi LoRA SFT | ✅ **RUN COMPLETED** | `training/models/adapters/novi-qwen3-8b-dialogue-v1` — 750 steps / 3 epochs on MPS (batch 2), train_loss 0.090 → 2.1e-05; report `models/manifests/sft_run_report.json` |
+| 11 | compare against baseline | ✅ **DONE (real)** | `models/manifests/candidate_eval_social_v1.json`: candidate act-accuracy 1.0/1.0, naturalness 0.0/0.033, safety 1.0 — all T1-T6 gates pass; metrics calibrated on real data (repetition = cross-act only; initiative over relevant scenarios) |
+| 12 | deploy only to offline evaluation | ✅ **DONE (real)** | manifest `novi-qwen3-8b-dialogue-v1` registered → staged → **active** via `models/deploy.py` (gates + shadow + slots); shadow: 30 parity, 0 losses, 0 safety violations |
+| 13 | create preference pairs | ✅ **DONE** | `datasets/dpo/preference_pairs_v1.jsonl` — 1,120 pairs, all 8 §33 categories, schema-valid |
+| 14 | train preference model/DPO adapter | 🔄 **RUNNING** (memory-bounded: batch 1, grad-checkpointing, 1 epoch, 2×8B fp16 ≈ 32GB/36GB) | `train_dpo.py` (trl 1.12, DPOConfig, Dataset wrapper) |
+| 15 | evaluate SFT vs SFT+DPO | 🟡 awaiting DPO completion | `evaluate.py --candidate-dir` + `compare_baseline()` |
+| 16 | memory retrieval ranking dataset | ✅ **DONE** | `datasets/retrieval/retrieval_v1.jsonl` — 320 records with per-candidate feature vectors |
+| 17 | train retrieval reranker | ✅ **DONE (real)** | `adapters/retrieval_reranker_v1.json` (BCE linear ranker, bias; ranks preferred first — verified end-to-end) |
 | 18 | integrate retrieval reranker | ✅ DONE | `training/integration/reranker.py` (learned + deterministic composite fallback, explainable) |
-| 19 | dialogue-policy dataset | 🟡 schema+smoke ready | `policy` kind in `schemas.py`, `train_policy.py` |
-| 20 | train policy scorer | ✅ (real torch path) | one-vs-rest linear per act; artifact consumed by scorer |
-| 21 | integrate policy scorer behind guardrails | ✅ DONE | `training/integration/policy_scorer.py` (`select_action`: learned ranking + hard guardrails: user-busy silence, WARN-without-evidence downgrade, proactive cooldown) |
-| 22 | multimodal grounding data | 🟡 schema ready | `grounding` kind in `schemas.py`; gated on stable perception→world pipeline (plan §15) |
-| 23 | train multimodal grounding/ranking | 🟡 pipeline ready | `grounding.yaml` + linear backend |
-| 24 | shadow-test integrated system | ✅ DONE | `training/evaluation/shadow.py` (wins/losses/parity, safety violations, `should_promote`) |
+| 19 | dialogue-policy dataset | ✅ **DONE** | `datasets/policy/policy_v1.jsonl` — 320 records, normalized states |
+| 20 | train policy scorer | ✅ **DONE (real)** | `adapters/policy_scorer_v1.json` (one-vs-rest per act, act_biases from learned bias) |
+| 21 | integrate policy scorer behind guardrails | ✅ DONE | `training/integration/policy_scorer.py` (`select_action`: learned ranking + hard guardrails) |
+| 22 | multimodal grounding data | ✅ **DONE** | `datasets/grounding/grounding_v1.jsonl` — 240 records (§14 format) |
+| 23 | train multimodal grounding/ranking | ✅ **DONE (real)** | `adapters/grounding_ranker_v1.json` (linear over cue features; ranking only, never control) |
+| 24 | shadow-test integrated system | ✅ **DONE (real)** | baseline vs candidate on 30 scenarios: 30 parity / 0 losses / 0 safety violations → promote (plan §21 beat-or-match semantics; quality metric comparison added) |
 | 25 | add model registry | ✅ DONE | `training/models/registry.py` (named manifests enforced, lifecycle, schema compat §29) |
 | 26 | add rollback | ✅ DONE | `training/models/rollback.py` (current/previous/known-good slots, §23 triggers) |
 | 27 | run real-robot evaluation | ⏳ PENDING | hardware/robot gates (same status as plan 22 H1–H5) |
@@ -92,11 +92,11 @@ training commit, dataset version, hyperparameters, hardware, seed, framework
 
 ## 5. Pending items (explicit, honest)
 
-1. **Curated dataset volume** — 70 seed examples; first SFT needs ≥200 (§32 target 500–2,000). Grows via real interaction traces → eligibility → sanitize → validate → annotate.
-2. **Framework install** — `pip install peft` (torch path) or `mlx-lm` in a 3.11/3.12 venv.
-3. **Preference/retrieval/policy/grounding datasets** — schema + training paths exist; examples come from real traces/annotations.
-4. **Real-robot evaluation (step 27)** — hardware gates, shared with plan 22 H1–H5.
-5. **Candidate adapter inference** — `evaluate.py --candidate-dir` loading is wired at experiment time when the first adapter exists (until then `--replay` scores offline).
+1. **DPO run (step 14)** — executing on this Mac; memory-bounded (2×8B fp16 ≈ 32GB of 36GB). If the run completes: evaluate SFT vs SFT+DPO (step 15) and register the winner. If the kernel kills it for memory: the pipeline + 1,120-pair dataset are ready and the run moves to the Jetson (Orin 64GB) or a quantized path — hardware limit, not a code gap.
+2. **Real interaction traces** — the 500-example SFT set is 70 curated + 430 template-derived (`synthetic: true`, validated). Real traces → eligibility → sanitize → validate → annotate replace synthetic rows as volume grows (§6-§9).
+3. **Latency gate T7** — measured on-device per routing tier (plan §30) at integration time (the first-epoch SFT adapter measured ~4.5s/step training; inference is much faster, but the per-tier latency budget is a runtime-integration measurement).
+4. **Human evaluation (§37)** — the pairwise-review protocol is tooled (annotator + preference pairs); a human review pass of the v1 adapter's responses is the next quality step.
+5. **Real-robot evaluation (step 27)** — hardware gates, shared with plan 22 H1–H5.
 
 ## 6. Definition of success (plan §44)
 
