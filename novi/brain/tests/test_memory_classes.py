@@ -33,11 +33,19 @@ class MemoryClassDecisionTests(unittest.TestCase):
         deferred = set(self.registry.deferred())
         for cls in DEFERRED_CLASSES:
             self.assertIn(cls, deferred)
-        # The four heavy classes are deferred by design (body phase).
+        # PROCEDURAL_COMPETENCE and METAMEMORY stay deferred by design
+        # (body phase); plan 22 Phase 5.1 activated the rest as projections.
         self.assertIn(MemoryClass.PROCEDURAL_COMPETENCE, deferred)
-        self.assertIn(MemoryClass.PROSPECTIVE, deferred)
         self.assertIn(MemoryClass.METAMEMORY, deferred)
-        self.assertIn(MemoryClass.AUTOBIOGRAPHICAL, deferred)
+        self.assertNotIn(MemoryClass.PROSPECTIVE, deferred)
+        self.assertNotIn(MemoryClass.AUTOBIOGRAPHICAL, deferred)
+
+    def test_social_and_object_projections_implemented(self):
+        implemented = set(self.registry.implemented())
+        self.assertIn(MemoryClass.SOCIAL, implemented)
+        self.assertIn(MemoryClass.OBJECT, implemented)
+        self.assertIn(MemoryClass.PROSPECTIVE, implemented)
+        self.assertIn(MemoryClass.AUTOBIOGRAPHICAL, implemented)
 
     def test_no_class_is_both_implemented_and_deferred(self):
         self.assertTrue(IMPLEMENTED_NOW.isdisjoint(DEFERRED_CLASSES))
@@ -111,7 +119,9 @@ class RuntimeMemoryClassTests(unittest.TestCase):
             self.assertIsNotNone(brain.memory_classes)
             self.assertIsNotNone(brain.schema_evolution)
             self.assertIn("semantic", brain.memory_classes.snapshot()["implemented"])
-            self.assertIn("prospective", brain.memory_classes.snapshot()["deferred"])
+            # plan 22 Phase 5.1: prospective is now an active projection
+            self.assertIn("prospective", brain.memory_classes.snapshot()["implemented"])
+            self.assertIn("metamemory", brain.memory_classes.snapshot()["deferred"])
         finally:
             brain.stop()
 

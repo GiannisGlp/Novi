@@ -86,6 +86,14 @@ from .social import TIER_EXPRESSION
 from .soul_acceptance import affect_expression
 
 
+def _is_correction_like(text: str) -> bool:
+    """Task 18.2: explicit user corrections ('no, that's not what I meant')."""
+    low = (text or "").lower().strip()
+    if low.startswith("no") and any(mark in low[:80] for mark in ("not", "didn't", "wrong", "meant")):
+        return True
+    return "that's not what" in low or "that is not what" in low
+
+
 class ChatMixin:
     """Chat and dialogue orchestration methods for MacBrain.
 
@@ -226,9 +234,31 @@ class ChatMixin:
             allowed = set(self.governance.authorize_ids([r.memory_id for r in candidates], requested_purpose=self.governance.default_purpose))
             candidates = [r for r in candidates if r.memory_id in allowed]
             self._emit("privacy.gate", {"query": query, "candidates": len(candidates), "allowed": len(candidates), "denied": 0})
-        now = datetime.now(timezone.utc)
-        scored = sorted(enumerate(candidates), key=lambda pair: self._memory_score(pair[1], pair[0], now), reverse=True)
-        records = [record for _, record in scored[:5]]
+        # Plan 22 Phase 5.3: composite retrieval policy — semantic similarity
+        # is one signal among many (person / situation / goal / causal /
+        # spatial / novelty, minus contradiction and staleness penalties).
+        # Retrieval stays explainable (Task 5.4): each selected memory carries
+        # its per-signal contributions and a "why" trace.
+        from .retrieval_policy import RetrievalContext, RetrievalScorer
+
+        goal_ctx = getattr(self, "_goal_context", lambda: None)() or {}
+        identity = getattr(self, "identity", None)
+        identity_for = getattr(identity, "identity_for", lambda _: None)
+        ctx = RetrievalContext(
+            person=str(getattr(identity_for("person"), "name", "") or ""),
+            situation=str(getattr(situation, "situation_type", "") or ""),
+            goal=str(goal_ctx.get("target", "") or ""),
+            location=str((getattr(self, "_spatial_context", lambda: {})() or {}).get("place", "") or ""),
+            recently_retrieved=set(getattr(self, "_last_recall_ids", set())),
+        )
+        scored = RetrievalScorer().rank(
+            candidates,
+            relevance_for=lambda idx, _r: 1.0 / (1 + idx),
+            context=ctx,
+            limit=5,
+        )
+        records = [s.record for s in scored]
+        self._last_recall_ids = {s.memory_id for s in scored}
         memories = [
             {
                 "memory_type": record.memory_type,
@@ -816,12 +846,48 @@ class ChatMixin:
                     self._learn_from_chat(text, addressee)
             cycle = getattr(self, "_cycle", 0)
             discourse_hint = self.note_user_message(text)["resolved_topic"]
+            # Plan 22 Phase 4: the utterance enters bounded working memory.
+            wm = getattr(self, "working_memory", None)
+            if wm is not None:
+                with contextlib.suppress(Exception):
+                    wm.update(cycle=cycle, utterance=text, utterance_source="chat")
             reply_obj = self.compose_reply(
                 text, person=addressee, history=history, llm_chat=llm_chat,
                 last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
                 topic_hint=discourse_hint,
             )
             reply = reply_obj.get("text")
+            # Plan 22 Phase 18.1: record the interaction outcome (input,
+            # decision, act, response) — explicit corrections become learning
+            # evidence (Task 18.2).
+            with contextlib.suppress(Exception):
+                from .interaction_outcome import InteractionOutcome
+
+                correction = text if _is_correction_like(text) else ""
+                self.outcome_recorder.record(InteractionOutcome(
+                    interaction_id=f"ia-{cycle}-{len(self.outcome_recorder._outcomes)}",
+                    input_text=text,
+                    person=addressee,
+                    dialogue_act=str(reply_obj.get("route", "") or reply_obj.get("reply_source", "") or "RESPOND"),
+                    response_text=reply or "",
+                    reply_source=str(reply_obj.get("reply_source", "") or ""),
+                    decision_reason=str(reply_obj.get("reason", "") or ""),
+                    user_reaction="correction" if correction else "",
+                    correction=correction,
+                    outcome="corrected" if correction else "acknowledged",
+                ))
+            # Plan 22 Phase 6: "remind me to X" registers a prospective
+            # memory; when the trigger fires, salience → policy → INITIATE.
+            with contextlib.suppress(Exception):
+                if _is_reminder_request(text):
+                    self.prospective_memory.register(
+                        trigger="conversation_end",
+                        intended_action=text[:120],
+                        owner=addressee or "user",
+                        priority=0.8,
+                        source="chat.reminder",
+                    )
+                    self._emit("prospective.registered", {"trigger": "conversation_end", "action": text[:120]})
             if reply is not None:
                 # Slow personality learning from typed interactions (Phase E1):
                 # only clear moments nudge traits, by ≤0.01 each, so character

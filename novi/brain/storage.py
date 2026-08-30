@@ -164,6 +164,13 @@ CREATE TABLE IF NOT EXISTS body (
 );
 """
 
+SCHEMA_OBJECTS = """
+CREATE TABLE IF NOT EXISTS objects (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
 SCHEMA_IDENTITY = """
 CREATE TABLE IF NOT EXISTS identity (
     key         TEXT PRIMARY KEY,
@@ -264,6 +271,7 @@ class DurableMemoryStore:
         self._conn.executescript(SCHEMA_LEARNING)
         self._conn.executescript(SCHEMA_VECTORS)
         self._conn.executescript(SCHEMA_BODY)
+        self._conn.executescript(SCHEMA_OBJECTS)
         self._conn.executescript(SCHEMA_IDENTITY)
         self._conn.executescript(SCHEMA_KNOWLEDGE)
         self._conn.executescript(SCHEMA_PLANS)
@@ -1103,6 +1111,28 @@ class DurableMemoryStore:
 
     def load_identity(self) -> dict[str, Any] | None:
         row = self._conn.execute("SELECT value FROM identity WHERE key='state'").fetchone()
+        if row is None:
+            return None
+        return _unjson(row["value"], None)
+
+    # ---- person registry (plan 22 Phase 2) ----
+    def save_person_registry(self, snapshot: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO identity (key, value) VALUES ('registry', ?)", (_json(snapshot),))
+        self._conn.commit()
+
+    def load_person_registry(self) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT value FROM identity WHERE key='registry'").fetchone()
+        if row is None:
+            return None
+        return _unjson(row["value"], None)
+
+    # ---- object registry (plan 22 Phase 3) ----
+    def save_object_registry(self, snapshot: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO objects (key, value) VALUES ('state', ?)", (_json(snapshot),))
+        self._conn.commit()
+
+    def load_object_registry(self) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT value FROM objects WHERE key='state'").fetchone()
         if row is None:
             return None
         return _unjson(row["value"], None)

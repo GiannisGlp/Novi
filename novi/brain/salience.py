@@ -63,6 +63,80 @@ _EVENT_AFFORDANCE: dict[str, str] = {
     "object.recognized": "comment",
 }
 
+# Plan 22 Phase 8 (Task 8.3) — kinds that may be worth speaking about.
+_WORTH_SPEAKING_KINDS = frozenset({
+    "presence.entered",       # person enters
+    "presence.left",          # important person leaves
+    "identity.recognized",    # known person recognized
+    "object.novel",           # unexpected object appears
+    "object.disappeared",     # known object disappears
+    "object.moved",           # known object moved (evidence-dependent)
+    "object.pointed",         # user explicitly looks/points at an object
+    "safety.event",           # safety event — overrides suppression
+    "task.completed",         # task completes
+    "prediction.failed",      # prediction fails significantly
+    "commitment.due",         # open commitment becomes due
+    "hearing.anomaly",        # unusual sound
+})
+
+# Plan 22 Phase 8 (Task 8.3) — kinds that should normally remain silent.
+_SILENT_KINDS = frozenset({
+    "object.detected",        # chair detected, wall detected
+    "object.seen",            # same mug seen again
+    "presence.seen",          # same person remains seated
+    "scene.stable",
+    "perception.completed",
+})
+
+
+@dataclass
+class SalienceGate:
+    """Anti-narration guard (plan 22 Phase 8, Task 8.3).
+
+    Separates the three layers (Task 8.2):
+    - attention = "notice" (upstream AttentionRanker);
+    - salience = "important" (EventSaliencePolicy thresholds);
+    - this gate = "worth saying" — an event may be salient but still not
+      worth interrupting the user about.
+
+    Safety events override every suppression rule (plan §8.3).
+    """
+
+    silence_cooldown_cycles: int = 45
+    novelty_threshold: float = 0.7
+
+    def should_speak(
+        self,
+        event: dict,
+        *,
+        kind: str,
+        entity: str = "",
+        novelty: float = 0.0,
+        safety: bool = False,
+        seen_recently: bool = False,
+        seen_cycles_ago: int = 10**9,
+        upstream_vetted: bool = False,
+    ) -> tuple[bool, str]:
+        """Decide whether an event is worth *saying* (not just noticing).
+
+        Returns (speak, reason). ``upstream_vetted=True`` means a salience
+        evaluator already applied its novelty threshold — the gate then only
+        enforces the hard guards (anti-narration kinds, dedup, safety).
+        """
+        if safety:
+            return True, "safety_event_overrides_suppression"
+        if kind in _SILENT_KINDS:
+            return False, f"anti_narration:{kind}"
+        if seen_recently and seen_cycles_ago <= self.silence_cooldown_cycles:
+            return False, "recently_said_dedup"
+        if upstream_vetted:
+            return True, "upstream_vetted"
+        if kind in _WORTH_SPEAKING_KINDS:
+            return True, f"worth_speaking:{kind}"
+        if novelty >= self.novelty_threshold:
+            return True, f"high_novelty:{novelty:.2f}"
+        return False, "below_speech_threshold"
+
 
 def _entity_of(event: dict, *, prefer: tuple[str, ...] = ()) -> str:
     """Extract a named entity from an event payload, if present.

@@ -1,6 +1,6 @@
 # Novi — Human-Like Social Cognition & Natural Interaction Implementation Plan
 
-**Status:** PLANNED
+**Status:** IMPLEMENTED 2026-08-30 — phases 0–24 complete (deterministic suite green); hardware gates H1–H5 pending real camera/voice; fine-tuning deferred per §33
 **Date:** 2026-08-30
 **Workstream:** `docs/plans/01_BRAIN/`
 **Primary objective:** make Novi's speech and interaction feel like the behavior of a persistent, situated robot rather than a chatbot attached to a robot.

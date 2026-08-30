@@ -439,6 +439,44 @@ class MacBrain(ChatMixin):
             self.identity = PersonIdentity.from_snapshot(persisted) if persisted else PersonIdentity()
         else:
             self.identity = PersonIdentity()
+        # Plan 22 Phase 2: canonical persistent person registry (lifecycle,
+        # cross-modal fusion, recognition events). Restored independently of
+        # the legacy single-slot identity so old stores migrate cleanly.
+        from .person_model import PersonRegistry
+
+        if isinstance(self.memory, DurableMemoryStore):
+            self.person_registry = PersonRegistry.from_snapshot(self.memory.load_person_registry())
+        else:
+            self.person_registry = PersonRegistry()
+        # Plan 22 Phase 3: persistent object-instance registry.
+        from .object_identity import ObjectRegistry
+
+        if isinstance(self.memory, DurableMemoryStore):
+            self.object_registry = ObjectRegistry.from_snapshot(self.memory.load_object_registry())
+        else:
+            self.object_registry = ObjectRegistry()
+        # Plan 22 Phase 4: bounded working memory (cognition buffer, not a
+        # second memory database).
+        from .working_memory import WorkingMemory
+
+        self.working_memory = WorkingMemory()
+        # Plan 22 Phase 10: dialogue policy — the social decision layer.
+        from .dialogue_policy import DialoguePolicy
+
+        self.dialogue_policy = DialoguePolicy()
+        self.last_dialogue_decision = None
+        # Plan 22 Phase 6: prospective memory (commitments/reminders).
+        from .prospective_memory import ProspectiveMemoryStore
+
+        self.prospective_memory = ProspectiveMemoryStore()
+        # Plan 22 Phase 18: interaction outcome recording.
+        from .interaction_outcome import OutcomeRecorder
+
+        self.outcome_recorder = OutcomeRecorder()
+        # Plan 22 Phase 23: end-to-end decision traces.
+        from .decision_trace import TraceRecorder
+
+        self.decision_traces = TraceRecorder()
         # Discourse state: bounded sliding-window model of "what are we
         # talking about" (gap-audit plan Phase B1). Known world/person labels
         # are preferred as topics so pronoun resolution lands on real referents.
@@ -696,6 +734,24 @@ class MacBrain(ChatMixin):
         )
         if candidate is None:
             return None
+        # Plan 22 Phase 8.3: the anti-narration gate decides "worth saying"
+        # (chair detected / same mug again stay silent even if salient).
+        from .salience import SalienceGate
+
+        gate = SalienceGate()
+        speak, reason = gate.should_speak(
+            {"kind": candidate.kind, "entity": candidate.entity},
+            kind=candidate.kind,
+            entity=candidate.entity,
+            novelty=float(getattr(candidate, "novelty", 0.0) or 0.0),
+            safety=False,
+            upstream_vetted=True,  # SurgeSalienceEvaluator already thresholded
+        )
+        if not speak:
+            self._emit("speech.initiative_suppressed", {
+                "cycle": self._cycle, "reason": f"anti_narration:{reason}",
+            })
+            return None
         # GAP-E grounding: a scene-change remark can reference prior memory
         # ("I remember your red mug was on the counter.").
         grounding = self._memory_grounding(candidate.entity) if candidate.kind == "scene.changed" else ""
@@ -814,6 +870,9 @@ class MacBrain(ChatMixin):
             "hypotheses": list(cognitive.reasoning.hypotheses),
             "relations": list(cognitive.situation.relations),
         })
+        # Plan 22 Phase 4: bounded working memory — update the active slots,
+        # expire stale entries and promote important events to durable memory.
+        self._update_working_memory(evidence)
         # Skill priming (plan 16 P4): every cycle, whatever Novi saw, heard,
         # or recalled can activate relevant skills — not only chat utterances.
         self.skill_activator.expire(self._cycle)
@@ -854,9 +913,14 @@ class MacBrain(ChatMixin):
         if self.goals.has_active and self.goals.active is not None:
             active_goal_ids = (self.goals.active.goal.goal_id,)
         novi_state = {"cycle": self._cycle, "lifecycle": self.brain.lifecycle.value}
+        # Plan 22 Phase 7: derive the short-lived SocialContext from
+        # observable evidence (person model + conversation state) and feed it
+        # into the situation model's social slot.
+        social_snapshot = self._build_social_context()
         social_ctx = {
-            "conversation_active": False,
+            "conversation_active": social_snapshot["interaction_phase"] == "active",
             "participants": list(cognitive.situation.salient_entities),
+            "social": social_snapshot,
         }
         situations = self.situation_model.derive(
             self.unified_world,
@@ -880,6 +944,10 @@ class MacBrain(ChatMixin):
             self.beliefs.observe(detection.label, True, confidence=detection.confidence, now=now)
             if detection.label in {"person", "human", "face"}:
                 self.identity.observe("person", confidence=detection.confidence, modality="vision", cycle=self._cycle)
+                self._observe_person_registry(
+                    "person", name=None, confidence=detection.confidence,
+                    modality="vision", cycle=self._cycle,
+                )
                 self._persist_identity()
                 self._identify_face(detection, image=frame.payload)
         identity = self.identity.identity_for("person")
@@ -1465,6 +1533,11 @@ class MacBrain(ChatMixin):
         autonomous = None
         if initiative is None:
             event_records = [r for r in consumed_inputs if r.get("kind") and r.get("payload") is not None]
+            # Plan 22 Phase 10: the dialogue policy is the social decision
+            # layer — run it each cycle and expose the decision for
+            # observability (proactive candidates are gated by it and by the
+            # anti-narration guard inside _maybe_autonomous_speech).
+            self._run_dialogue_policy(event_records, evidence=evidence, goal_id=active_goal_ids[0] if active_goal_ids else None)
             autonomous = self._maybe_autonomous_speech(event_records, evidence.detections, person)
         # CommunicationDecision: advance fatigue cooldown each cycle.
         self.communication_decision.tick()
@@ -1548,6 +1621,9 @@ class MacBrain(ChatMixin):
 
     def consolidate(self, now: str | None = None) -> None:
         """Run the memory consolidation/decay pass (durable store only)."""
+        # Plan 22 Phase 3: object-instance housekeeping rides the same cadence
+        # (LOST marking + persistence), independent of the consolidator.
+        self._housekeep_object_registry()
         if self.consolidator is None:
             return
         report = self.consolidator.consolidate(now=now)
@@ -1825,6 +1901,10 @@ class MacBrain(ChatMixin):
         if introduced:
             introduced = introduced.lower()
             self.identity.observe("person", name=introduced, confidence=transcription.confidence, modality="speech", cycle=self._cycle)
+            self._observe_person_registry(
+                "person", name=introduced, confidence=transcription.confidence,
+                modality="speech", cycle=self._cycle,
+            )
             self._persist_identity()
             self._emit("identity.named", {"cycle": self._cycle, "name": introduced, "confidence": transcription.confidence})
         self._learn_triples(transcription.text, entity_refs, transcription.confidence, source="audio.stt")
@@ -2093,47 +2173,27 @@ class MacBrain(ChatMixin):
         explicit grounding path (`ground_scene` ->
         world_state_adapter.admit_grounding_outcome): candidates can never
         overwrite observed state (epistemic discipline).
+
+        Plan 22 (Phase 1): the admission now flows through the canonical
+        Observation contract (novi.brain.observation) — the same normalized
+        shape used by fusion, grounding and identity — and attaches the
+        measurement uncertainty (sigma) and spatial_ref to world entities.
         """
+        from .observation import apply_observation_to_world, observation_from_world_observation
+
         now = datetime.now(timezone.utc).isoformat()
-        from .kgraph import infer_entity_type
-        for track in observation.tracks:
-            entity_id = f"track-{track.track_id}"
-            entity_type = infer_entity_type(track.label)
-            wm_type = {
-                "person": WM_PERSON,
-                "place": WM_PLACE,
-                "building": WM_BUILDING,
-                "object": WM_OBJECT,
-            }.get(entity_type, WM_OBJECT)
-            confident = track.last_confidence >= 0.5
-            status = WM_OBSERVED if confident else WM_UNKNOWN
-            existing = self.unified_world.resolve(entity_id)
-            if existing is None:
-                self.unified_world.add_entity(
-                    entity_id, wm_type,
-                    labels=[track.label],
-                    epistemic_status=status,
-                    confidence=track.last_confidence,
-                    created_at=now,
-                )
-            elif track.label not in existing.labels:
-                # Same physical object under a refined label: merge, never fork.
-                self.unified_world.add_entity(entity_id, wm_type, labels=[track.label])
-            self.unified_world.update_entity_state(
-                entity_id, "presence", "present",
-                epistemic_status=status,
-                confidence=track.last_confidence,
+        for obs in observation_from_world_observation(observation):
+            entity_id = apply_observation_to_world(
+                self.unified_world,
+                obs,
                 source=self.config.sensor_id,
                 timestamp=now,
             )
-            self.unified_world.update_entity_state(
-                entity_id, "bbox_px", list(track.bbox),
-                epistemic_status=status,
-                confidence=track.last_confidence,
-                source=self.config.sensor_id,
-                timestamp=now,
-            )
-            self._seen_entities.add(entity_id)
+            if entity_id is not None:
+                self._seen_entities.add(entity_id)
+            # Plan 22 Phase 3: instance identity + object events (moved /
+            # reappeared / ...). Events are evidence for salience, never speech.
+            self._observe_object_registry(obs, now=now)
 
     def ground_scene(self, query_text: str, *, policy: Any | None = None, requester: str = "brain") -> dict[str, Any]:
         """Explicit language-grounding capability (Phase 1a; plan Step 5.3).
@@ -2518,6 +2578,8 @@ class MacBrain(ChatMixin):
         crash or hard kill rather than only a graceful stop()."""
         if isinstance(self.memory, DurableMemoryStore):
             self.memory.save_identity(self.identity.snapshot())
+            with contextlib.suppress(Exception):
+                self.memory.save_person_registry(self.person_registry.snapshot())
 
     def retrieve_knowledge(self, entity: str, *, limit: int = 10) -> dict[str, Any]:
         """Return the knowledge-graph context around an entity."""
@@ -3089,6 +3151,14 @@ class MacBrain(ChatMixin):
         if result is None:
             return None
         self.identity.observe("person", name=result.name, confidence=result.confidence, modality="face", cycle=self._cycle)
+        # Plan 22 Phase 2: feed the canonical person registry (lifecycle +
+        # recognition events). The face identity ref stays opaque — biometric
+        # data never enters conversation memory.
+        face_ref = getattr(result, "ref", None) or f"face:{result.name}"
+        self._observe_person_registry(
+            "person", name=result.name, confidence=result.confidence,
+            modality="face", cycle=self._cycle, face_ref=face_ref,
+        )
         self._persist_identity()
         self._emit("identity.face", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)})
         return {"name": result.name, "confidence": result.confidence}
@@ -3104,9 +3174,271 @@ class MacBrain(ChatMixin):
         if result is None:
             return None
         self.identity.observe("person", name=result.name, confidence=result.confidence, modality="voice", cycle=self._cycle)
+        voice_ref = getattr(result, "ref", None) or f"voice:{result.name}"
+        self._observe_person_registry(
+            "person", name=result.name, confidence=result.confidence,
+            modality="voice", cycle=self._cycle, voice_ref=voice_ref,
+        )
         self._persist_identity()
         self._emit("identity.voice", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)})
         return {"name": result.name, "confidence": result.confidence}
+
+    def _observe_person_registry(
+        self,
+        person_id: str,
+        *,
+        name: str | None,
+        confidence: float,
+        modality: str,
+        cycle: int,
+        face_ref: str | None = None,
+        voice_ref: str | None = None,
+    ) -> None:
+        """Feed identity evidence into the canonical PersonRegistry and emit
+        recognition events (plan 22 Phase 2, Task 2.4). Best-effort: identity
+        events must never break the perception/cognition loop.
+        """
+        try:
+            self.person_registry.observe(
+                person_id=person_id or "person",
+                name=name,
+                confidence=confidence,
+                modality=modality,
+                cycle=cycle,
+                face_ref=face_ref,
+                voice_ref=voice_ref,
+            )
+            for evt in self.person_registry.drain_events():
+                self._emit(evt["event_type"], {
+                    "cycle": cycle,
+                    "person_id": evt["person_id"],
+                    "name": evt["name"],
+                    "confidence": evt["confidence"],
+                    "status": evt["status"],
+                })
+        except Exception:  # noqa: BLE001 - identity events are best-effort
+            pass
+
+    def _observe_object_registry(self, obs: Any, *, now: str) -> None:
+        """Feed one canonical Observation into the ObjectRegistry and emit
+        object events (plan 22 Phase 3, Task 3.4). Events are evidence for
+        salience, never speech by themselves. Best-effort: object identity
+        must never break the perception loop.
+        """
+        try:
+            location = ""
+            if obs.location:
+                if obs.location.get("place"):
+                    location = str(obs.location["place"])
+                elif obs.location.get("x") is not None:
+                    location = f"map@{obs.location.get('x')},{obs.location.get('y')}"
+            self.object_registry.observe(
+                entity_id=obs.entity_id or f"obs-{obs.observation_id}",
+                cls=obs.entity_candidate,
+                confidence=obs.confidence,
+                cycle=self._cycle,
+                location=location,
+                bbox=obs.attributes.get("bbox_px"),
+                now=now,
+            )
+            for evt in self.object_registry.drain_events():
+                self._emit(evt["event_type"], {"cycle": self._cycle, **evt})
+        except Exception:  # noqa: BLE001 - object events are best-effort
+            pass
+
+    def _run_dialogue_policy(
+        self,
+        event_records: list[dict[str, Any]],
+        *,
+        evidence: Any = None,
+        goal_id: str | None = None,
+    ) -> Any:
+        """Plan 22 Phase 10: build the DialogueContext from this cycle's state
+        and select the communicative act. The decision is stored (and emitted
+        when non-SILENCE) so proactive speech and the context packet can
+        consume it. Best-effort: never breaks the step loop.
+        """
+        try:
+            from .dialogue_policy import DialogueAct, DialogueContext
+
+            kinds = [str(r.get("kind", "")) for r in event_records]
+            social = getattr(self.social_context, "snapshot", lambda: {})() if getattr(self, "social_context", None) else {}
+            commitments = [str(c.get("trigger", "")) for c in self.working_memory.pending_commitments if c.get("due")]
+            threads = [q for q in self.working_memory.unresolved_questions]
+            ctx = DialogueContext(
+                has_user_message=False,
+                person_present=bool(social.get("interaction_phase") not in ("departed", "none")),
+                person_entered="presence.entered" in kinds,
+                person_left="presence.left" in kinds,
+                salient_events=[r for r in event_records if r.get("kind")],
+                safety_event="safety.event" in kinds,
+                addressee=str(social.get("addressee", "") or ""),
+                addressee_known=bool(getattr(getattr(self, "social_context", None), "familiarity", 0.0) or 0.0) >= 0.5,
+                social_opportunity=float(social.get("social_opportunity", 0.0) or 0.0),
+                user_engagement=float(social.get("user_engagement", 0.0) or 0.0),
+                interruptibility=float(social.get("interruptibility", 1.0) or 1.0),
+                speaking_lease_held=bool(self.speaking_lease),
+                open_threads=threads,
+                commitments_due=commitments,
+                active_goal=str(getattr(getattr(self, "goals", None), "active", None) or ""),
+                initiative_budget_available=not bool(self.speaking_lease),
+            )
+            decision = self.dialogue_policy.decide(ctx)
+            self.last_dialogue_decision = decision
+            # Plan 22 Phase 23: record the decision trace (why Novi would say
+            # anything this cycle is debuggable).
+            with contextlib.suppress(Exception):
+                trace = self.decision_traces.new_trace(
+                    cycle_id=self._cycle,
+                    input_event=",".join(kinds) or "cycle",
+                )
+                trace.perception_evidence = list({d.label for d in evidence.detections}) if evidence is not None else []
+                trace.social_context = dict(social)
+                trace.dialogue_act = decision.act.value
+                trace.dialogue_reason = decision.reason
+                trace.initiative_score = decision.expected_value if hasattr(decision, "expected_value") else 0.0
+                trace.retrieved_memories = list(getattr(self, "_last_recall_ids", set()))[:6]
+                trace.goals = [str(goal_id)] if goal_id else []
+            # Plan 22 Phase 6: fire due prospective memories; due commitments
+            # flow into working memory so the policy can INITIATE.
+            with contextlib.suppress(Exception):
+                conversation_ended = "presence.left" in kinds
+                due = self.prospective_memory.check_due(conversation_ended=conversation_ended)
+                for mem in due:
+                    self.working_memory.update(
+                        cycle=self._cycle,
+                        commitment={"trigger": mem.intended_action, "due": True},
+                    )
+                    self._emit("prospective.due", {"memory_id": mem.memory_id, "action": mem.intended_action})
+            if decision.act is not DialogueAct.SILENCE:
+                self._emit("dialogue.policy", {"cycle": self._cycle, **decision.snapshot()})
+            return decision
+        except Exception:  # noqa: BLE001 - policy is best-effort
+            return None
+
+    def _build_social_context(self) -> dict[str, Any]:
+        """Plan 22 Phase 7: derive the short-lived SocialContext from
+        observable evidence and keep it on the brain for dialogue policy /
+        initiative scoring. Best-effort: never breaks the step loop.
+        """
+        try:
+            from .social_context import SocialContextBuilder, SocialEvidence
+
+            person_name = ""
+            familiarity = 0.0
+            with contextlib.suppress(Exception):
+                belief = self.identity.identity_for("person")
+                if belief is not None and belief.name:
+                    person_name = belief.name
+                model = self.person_registry.person("person")
+                if model is not None and model.known:
+                    familiarity = model.confidence
+            person_present = False
+            with contextlib.suppress(Exception):
+                person_present = (
+                    self.identity.identity_for("person") is not None
+                    or any(
+                        e.lower() in {"person", "human", "face"}
+                        for e in self.unified_world.to_world_state().entities
+                    )
+                )
+            last_utterance = getattr(self, "_last_user_utterance_cycle", -1)
+            recent_utterances = 1 if 0 <= self._cycle - last_utterance <= 3 else 0
+            evidence = SocialEvidence(
+                person_name=person_name,
+                familiarity=familiarity,
+                relationship="unknown",
+                last_user_utterance_cycle=last_utterance,
+                current_cycle=self._cycle,
+                user_speaking=recent_utterances > 0,
+                novi_speaking=bool(self.speaking_lease),
+                interaction_count=self.communication_decision.interaction_count,
+                recent_utterances=recent_utterances,
+                person_present=person_present,
+            )
+            ctx = SocialContextBuilder().build(evidence)
+            self.social_context = ctx
+            return ctx.snapshot()
+        except Exception:  # noqa: BLE001 - social context is best-effort
+            return {"interaction_phase": "none", "social_opportunity": 0.0}
+
+    def _update_working_memory(self, evidence: Any) -> None:
+        """Plan 22 Phase 4: refresh the bounded working-memory slots from this
+        cycle's state, expire stale entries and promote important events to
+        durable memory. Best-effort: WM must never break the step loop.
+        """
+        try:
+            wm = self.working_memory
+            topic = ""
+            with contextlib.suppress(Exception):
+                topic = self.discourse.snapshot().get("topic", "") or ""
+            person = ""
+            with contextlib.suppress(Exception):
+                model = self.person_registry.resolve(self.identity.identity_for("person").name or "")  # type: ignore[union-attr]
+                if model is not None:
+                    person = model.canonical_name or ""
+                elif self.identity.identity_for("person") is not None:  # type: ignore[union-attr]
+                    person = self.identity.identity_for("person").name or ""  # type: ignore[union-attr]
+            goal_id = None
+            with contextlib.suppress(Exception):
+                if self.goals.has_active and self.goals.active is not None:
+                    goal_id = self.goals.active.goal.goal_id
+            labels = [d.label for d in getattr(evidence, "detections", []) or ()]
+            importance = 0.0
+            if labels:
+                top = max((getattr(d, "confidence", 0.0) for d in evidence.detections), default=0.0)
+                importance = max(0.0, min(0.95, top * 0.9))
+            wm.update(
+                cycle=self._cycle,
+                person=person,
+                topic=topic,
+                goal=goal_id,
+                event={"event_id": f"wm-{self._cycle}", "kind": "perception", "entities": labels, "importance": importance},
+            )
+            wm.expire(cycle=self._cycle)
+            wm.promote_important(self._promote_working_event)
+        except Exception:  # noqa: BLE001 - working memory is best-effort
+            pass
+
+    def _promote_working_event(self, entry: dict[str, Any]) -> None:
+        """Promote one important working-memory event into durable memory."""
+        try:
+            allowed, _mem_class = self._gate_memory("episodic")
+            if not allowed:
+                return
+            entity_refs = tuple(str(e) for e in entry.get("entities", []) if e)
+            admission = self.memory.admit(
+                memory_type="episodic",
+                content={"event": entry.get("kind", "perception"), "entities": entity_refs},
+                confidence=float(entry.get("importance", 0.7)),
+                verification_status="unverified",
+                privacy_class="private",
+                provenance={"source": "working_memory", "capability": "cognition.working_memory"},
+                entity_refs=entity_refs,
+            )
+            if admission is not None and admission.accepted:
+                self._emit("memory.promoted", {
+                    "memory_id": admission.memory_id,
+                    "memory_type": "episodic",
+                    "source": "working_memory",
+                    "importance": entry.get("importance"),
+                })
+        except Exception:  # noqa: BLE001 - promotion is best-effort
+            pass
+
+    def _housekeep_object_registry(self, *, max_age_cycles: int = 40) -> None:
+        """Mark long-unseen object instances LOST and persist the registry
+        (runs on the consolidation/sleep cadence; frame-level loss is the
+        tracker's job)."""
+        try:
+            for evt in self.object_registry.expire_missing(
+                cycle=self._cycle, max_age_cycles=max_age_cycles
+            ):
+                self._emit(evt["event_type"], {"cycle": self._cycle, **evt})
+            if isinstance(self.memory, DurableMemoryStore):
+                self.memory.save_object_registry(self.object_registry.snapshot())
+        except Exception:  # noqa: BLE001 - housekeeping is best-effort
+            pass
     def observe_expression(self, expression: str, *, source: str = "speech", person: str = "", now: str = "") -> str:
         entry = self.lexicon.observe(expression, source=source, person=person, now=now)
         self._emit("lexicon.observed", {"expression": expression, "person": person, "status": entry.status.value, "frequency": entry.frequency})
@@ -3114,7 +3446,26 @@ class MacBrain(ChatMixin):
 
     def learn_preference(self, person: str, kind: str, value, *, explicit: bool = False, now: str = "") -> None:
         pref = self.preferences.learn(person, kind, value, explicit=explicit, now=now)
+        # Plan 22 Phase 18.3: preferences also land on the canonical person
+        # model so they can change future behavior (verbosity/directness).
+        with contextlib.suppress(Exception):
+            model = self.person_registry.person(person) or self.person_registry.resolve(person)
+            if model is not None:
+                self.person_registry.learn_preference(model.person_id, kind, value)
         self._emit("preference.learned", {"person": person, "kind": kind, "value": value, "confidence": pref.confidence, "explicit": explicit})
+
+    def _preferred_verbosity(self, person: str = "") -> str:
+        """Phase 18.3: the person's persisted verbosity preference drives reply
+        length ('' when unset)."""
+        try:
+            model = self.person_registry.person(person) or self.person_registry.resolve(person)
+            if model is not None:
+                value = model.preferences.get("verbosity")
+                if value in ("short", "medium", "long"):
+                    return str(value)
+        except Exception:  # noqa: BLE001
+            pass
+        return ""
 
     # ---- Learning pipeline (roadmap item 13) ----
 

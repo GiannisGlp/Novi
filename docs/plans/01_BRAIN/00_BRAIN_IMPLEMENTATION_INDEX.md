@@ -47,6 +47,7 @@ B2 acceptance                     LATER
 - `19_COGNITION_MATURATION_PLAN.md` — reasoning/cognition/knowledge/memory maturation: web thin-client (delete `_chat_busy`, `listen()`→`respond()`), initiative×speaking-lease fusion, prediction-error→curiosity, cross-modal verified-tier, perception cadence (`perception_every_n_cycles`). Implemented 2026-08-27.
 - `20_DIALOGUE_AND_EVENT_DRIVEN_AUTONOMY_PLAN.md` — dialogue + event-driven autonomy: unified `respond()` for every modality (shipped), proactive autonomous speech from non-text events (SalienceToUtterance / `SurgeSalienceEvaluator`), naturalization guardrails for proactive remarks, multitask concurrency regression, and default model → `qwen3:4b`. IMPLEMENTED 2026-08-29 (wiring gaps GAP-1a/1b/2/3 closed via doc 21).
 - `21_GAP_AND_BUG_ANALYSIS_2026-08-28.md` — gap & bug analysis of the uncommitted WIP (model persistence/runtime switch, preview downscale, narrative cache, poll changes) + plan-vs-code drift across 01_BRAIN / 02_PERCEPTION. Phased fix plan executed 2026-08-29: H1–H4/M1–M4/L1–L5, GAP-1b/2/3, ruff clean across `novi/`, CI lint gate widened to the whole package.
+- `22_HUMAN_LIKE_SOCIAL_COGNITION_AND_NATURAL_INTERACTION_PLAN.md` — situated social cognition: perception→identity→world→memory→attention→situation→social state→dialogue policy→verbalization loop. Phase 0 (architecture truth map) COMPLETE 2026-08-30; ownership/disposition in `22_SOCIAL_COGNITION_IMPLEMENTATION_STATUS.md`.
 
 ## Hardware candidates
 

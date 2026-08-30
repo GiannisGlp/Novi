@@ -73,10 +73,16 @@ class RegistryGateTests(unittest.TestCase):
 
     def test_deferred_classes_are_refused(self):
         reg = MemoryClassDecisionRegistry()
-        for mt in ("procedural_competence", "prospective", "metamemory", "autobiographical"):
+        # plan 22 Phase 5.1: only PROCEDURAL_COMPETENCE and METAMEMORY remain
+        # deferred — prospective/autobiographical are active projections.
+        for mt in ("procedural_competence", "metamemory"):
             allowed, cls, state = reg.gate(mt)
             self.assertFalse(allowed, mt)
             self.assertEqual(state, "deferred")
+        for mt in ("prospective", "autobiographical", "relationship", "object"):
+            allowed, cls, state = reg.gate(mt)
+            self.assertTrue(allowed, mt)
+            self.assertEqual(state, "implemented")
         self.assertTrue(DEFERRED_CLASSES.isdisjoint(IMPLEMENTED_NOW))
 
 

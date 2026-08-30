@@ -33,6 +33,8 @@ class MemoryClass(str, Enum):
 
     SEMANTIC = "semantic"
     EPISODIC = "episodic"
+    SOCIAL = "social"  # plan 22 Phase 5.1: relationships / social facts
+    OBJECT = "object"  # plan 22 Phase 5.1: persistent object instances
     SPATIAL = "spatial"
     TEMPORAL = "temporal"
     PREFERENCE = "preference"
@@ -47,18 +49,20 @@ class MemoryClass(str, Enum):
 IMPLEMENTED_NOW = frozenset({
     MemoryClass.SEMANTIC,
     MemoryClass.EPISODIC,
+    MemoryClass.SOCIAL,
+    MemoryClass.OBJECT,
     MemoryClass.SPATIAL,
     MemoryClass.TEMPORAL,
     MemoryClass.PREFERENCE,
     MemoryClass.ROUTINE_CANDIDATE,
     MemoryClass.PROCEDURAL_CANDIDATE,
+    MemoryClass.PROSPECTIVE,
+    MemoryClass.AUTOBIOGRAPHICAL,
 })
 
 DEFERRED_CLASSES = frozenset({
     MemoryClass.PROCEDURAL_COMPETENCE,
-    MemoryClass.PROSPECTIVE,
     MemoryClass.METAMEMORY,
-    MemoryClass.AUTOBIOGRAPHICAL,
 })
 
 # Deterministic memory_type -> class routing used at admission time so every
@@ -81,6 +85,15 @@ _MEMORY_TYPE_CLASS: dict[str, MemoryClass] = {
     "spatial": MemoryClass.SPATIAL,
     "temporal": MemoryClass.TEMPORAL,
     "causal_link": MemoryClass.TEMPORAL,
+    # plan 22 Phase 5.1 projections
+    "relationship": MemoryClass.SOCIAL,
+    "social": MemoryClass.SOCIAL,
+    "object": MemoryClass.OBJECT,
+    "object_event": MemoryClass.OBJECT,
+    "prospective": MemoryClass.PROSPECTIVE,
+    "commitment": MemoryClass.PROSPECTIVE,
+    "autobiographical": MemoryClass.AUTOBIOGRAPHICAL,
+    "self_history": MemoryClass.AUTOBIOGRAPHICAL,
 }
 
 

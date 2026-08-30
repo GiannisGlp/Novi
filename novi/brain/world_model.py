@@ -508,6 +508,21 @@ class WorldModel:
             entity.lifecycle = lifecycle
             self._world_version += 1
 
+    def set_entity_spatial_ref(self, entity_id: str, spatial_ref: dict[str, Any] | None) -> bool:
+        """Attach/update an entity's live metric reference into a coordinate
+        frame (e.g. {"frame": "map", "x": 1.0, "y": 0.5}).
+
+        Plan 22 Task 1.4 (spatial identity): persistent entities carry a
+        spatial_ref so spatial reasoning never depends on semantic-only
+        location strings.
+        """
+        entity = self._entities.get(entity_id)
+        if entity is None:
+            return False
+        entity.spatial_ref = dict(spatial_ref) if spatial_ref else None
+        self._world_version += 1
+        return True
+
     # ---- freshness / TTL policy (doc 03 Step 2) ----
 
     def set_field_ttl(self, entity_id: str, field_name: str, *, ttl_cycles: int, observed_cycle: int = 0) -> bool:
