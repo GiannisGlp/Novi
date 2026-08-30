@@ -256,6 +256,51 @@ def main() -> int:
             f"({evidence['route']['elapsed_s']:.2f}s)"
         )
 
+        # Routed soak (plan 12 §50 via the GENERIC path): N warm requests
+        # through the full runtime, tracking latency + failures + telemetry.
+        if args.soak > 0:
+            import resource as _resource
+
+            def _rss_mib() -> float:
+                return _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss / 1024.0
+
+            rss_before = _rss_mib()
+            soak_samples = []
+            for i in range(args.soak):
+                began = time.monotonic()
+                result = runtime.generate(
+                    InferenceRequest(
+                        messages=[{"role": "user", "content": f"Routed soak {i}: answer briefly."}],
+                        max_output_tokens=16,
+                        temperature=0.0,
+                        reasoning_budget="FAST",
+                        caller="airllm-mac-validation",
+                        purpose="route-soak",
+                    )
+                )
+                soak_samples.append(
+                    {
+                        "iteration": i,
+                        "elapsed_s": round(time.monotonic() - began, 2),
+                        "ok": result.ok,
+                        "backend": result.backend_id,
+                    }
+                )
+                print(
+                    f"route-soak[{i}] {soak_samples[-1]['elapsed_s']:.2f}s backend={result.backend_id} ok={result.ok}"
+                )
+            evidence["route_soak"] = {
+                "iterations": args.soak,
+                "rss_before_mib": round(rss_before, 1),
+                "rss_after_mib": round(_rss_mib(), 1),
+                "avg_generation_s": round(sum(s["elapsed_s"] for s in soak_samples) / len(soak_samples), 2),
+                "failures": sum(1 for s in soak_samples if not s["ok"]),
+                "all_airllm": all(s["backend"] == "airllm" for s in soak_samples),
+                "samples": soak_samples,
+                "telemetry": runtime.telemetry.summary(),
+                "note": "preliminary routed soak; plan 12 §50 requires 1h/4h/8h/24h on target hardware",
+            }
+
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     out = EVIDENCE_DIR / f"{args.registry_model}.json"
     out.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")

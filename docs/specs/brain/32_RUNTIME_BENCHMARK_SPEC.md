@@ -103,7 +103,8 @@ Failure injection: remove shard, corrupt shard, fill disk, kill worker, interrup
 | `benchmarks/baseline/qwen3_8b.json` | **baseline captured** — TTFT 15.81 s, 25.43 tok/s, 0% error, 8/8 prompts |
 | `benchmarks/baseline/qwen3_4b.json` | **baseline captured** — TTFT 16.47 s, 46.45 tok/s, 0% error, 8/8 prompts |
 | `benchmarks/baseline/nemotron-3.5-lightning_latest.json` | **baseline captured** — TTFT 10.76 s, 44.62 tok/s, 0% error, 8/8 prompts |
-| qwen3.8-27b airllm | blocked (Step 18): 55.6 GB checkpoint + shards ≈ 112 GB > 58 GiB free; Transformers 5.8+ requirement conflicts with validated <5.13 stack |
+| `benchmarks/airllm-mac/tinyllama-1.1b.json` | **AirLLM Mac execution** — full pipeline (prepare 20 s, cold 56.8 s, warm 28.2 s, unload) + raw soak (27.85 s avg, 0 failures) + **routed soak through the full runtime** (4/4 requests → `backend=airllm`, 31.3 s avg, 0 failures, all_airllm=true) |
+| qwen3.8-27b airllm | blocked (Step 18): 55.6 GB checkpoint + shards ≈ 112 GB > 99 GiB free after cleanup; Transformers 5.8+ requirement; Mac MLX path cannot stream `Qwen3_5ForConditionalGeneration`. The GENERIC AirLLM path runs compatible models (e.g. TinyLlama) on this Mac |
 | soak / failure-injection | failure injection covered by `test_failure_injection.py` (20/20 cases); soak harness `novi/brain/benchmarks/soak.py` (CI-safe `--ci` verified, 0% error; 1h/4h/8h/24h runs documented for target hardware) |
 
 Harness: `novi/brain/benchmarks/inference_baseline.py` (stdlib-only, `python novi/brain/benchmarks/inference_baseline.py`).
