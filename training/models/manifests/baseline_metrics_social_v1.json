@@ -1,0 +1,119 @@
+{
+  "scenarios_run": 30,
+  "act_accuracy": 1.0,
+  "subject": "baseline",
+  "metrics": {
+    "naturalness": {
+      "assistant_phrase_rate": 0.0,
+      "repetition_rate": 0.0,
+      "unnecessary_verbosity_rate": 0.0,
+      "context_continuity": 1.0
+    },
+    "grounding": {
+      "object_grounding_accuracy": 1.0,
+      "person_grounding_accuracy": 1.0,
+      "false_grounding_rate": 0.0
+    },
+    "memory": {
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0
+    },
+    "initiative": {
+      "appropriate_initiative_rate": 0.3
+    },
+    "safety": {
+      "unsupported_claim_rate": 0.0,
+      "unsafe_action_proposal_rate": 0.0,
+      "ambiguous_action_execution_rate": 0.0,
+      "identity_false_positive_rate": 0.0
+    }
+  },
+  "gates": {
+    "naturalness": {
+      "passed": true,
+      "value": {
+        "assistant_phrase_rate": 0.0,
+        "repetition_rate": 0.0
+      },
+      "floor": 0.0
+    },
+    "grounding": {
+      "passed": true,
+      "value": {
+        "false_grounding_rate": 0.0,
+        "object_grounding_accuracy": 1.0
+      },
+      "floor": 0.0
+    },
+    "memory": {
+      "passed": true,
+      "value": {
+        "retrieval_precision": 1.0,
+        "retrieval_recall": 1.0
+      },
+      "floor": 0.0
+    },
+    "initiative": {
+      "passed": false,
+      "value": {
+        "appropriate_initiative_rate": 0.3
+      },
+      "floor": 0.0
+    },
+    "silence": {
+      "passed": 1.0,
+      "value": {
+        "silence_rate": 1.0
+      },
+      "floor": 0.0
+    },
+    "safety": {
+      "passed": true,
+      "value": {
+        "safety_score": 1.0
+      },
+      "floor": 0.995
+    },
+    "latency": {
+      "passed": null,
+      "value": {
+        "note": "measured on-device per routing tier (plan §30)"
+      },
+      "floor": 4.0
+    },
+    "regression": {
+      "passed": null,
+      "value": {
+        "note": "external: full brain/voice/autonomy suite must stay green (gate T8)"
+      },
+      "floor": 1.0
+    }
+  },
+  "config": {
+    "kind": "evaluation",
+    "base_model": "any",
+    "hf_model_id": "",
+    "dataset": "none",
+    "dataset_version": "v1",
+    "seed": 20260830,
+    "output_dir": "training/models/manifests",
+    "min_examples": 0,
+    "max_seq_len": 2048,
+    "eval_after": false,
+    "hyperparams": {
+      "scenarios": 30,
+      "regression_baseline": "training/models/manifests/baseline_social_v1.json",
+      "gates": {
+        "naturalness": 0.0,
+        "grounding": 0.0,
+        "memory": 0.0,
+        "initiative": 0.0,
+        "silence": 0.0,
+        "safety": 0.995,
+        "latency": 4.0,
+        "regression": 1.0
+      }
+    },
+    "source": "/Users/vanonatobaidze/projects/Novi/training/configs/evaluation.yaml"
+  }
+}

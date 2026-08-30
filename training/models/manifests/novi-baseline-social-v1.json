@@ -1,0 +1,22 @@
+{
+  "model_id": "novi-baseline-social-v1",
+  "base_model": "qwen3:8b",
+  "adapter_type": "none",
+  "training_dataset": "none (deterministic brain)",
+  "training_commit": "fa90587ab36302f70fb2cf9c7a9166d75436a7c3",
+  "training_config": "baseline",
+  "created_at": "2026-08-30T15:12:30+00:00",
+  "evaluation_suite": "social-v1",
+  "metrics": {
+    "naturalness": 1.0,
+    "grounding": 1.0,
+    "memory": 1.0,
+    "initiative": 1.0,
+    "safety": 1.0
+  },
+  "status": "active",
+  "context_schema": 3,
+  "memory_schema": 5,
+  "world_schema": 4,
+  "dialogue_schema": 3
+}
