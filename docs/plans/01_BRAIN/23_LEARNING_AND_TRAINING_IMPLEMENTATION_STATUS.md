@@ -40,8 +40,8 @@ repository before creation. Result (full table in `training/README.md`):
 | 11 | compare against baseline | ✅ **DONE (real)** | `models/manifests/candidate_eval_social_v1.json`: candidate act-accuracy 1.0/1.0, naturalness 0.0/0.033, safety 1.0 — all T1-T6 gates pass; metrics calibrated on real data (repetition = cross-act only; initiative over relevant scenarios) |
 | 12 | deploy only to offline evaluation | ✅ **DONE (real)** | manifest `novi-qwen3-8b-dialogue-v1` registered → staged → **active** via `models/deploy.py` (gates + shadow + slots); shadow: 30 parity, 0 losses, 0 safety violations |
 | 13 | create preference pairs | ✅ **DONE** | `datasets/dpo/preference_pairs_v1.jsonl` — 1,120 pairs, all 8 §33 categories, schema-valid |
-| 14 | train preference model/DPO adapter | 🔄 **RUNNING** (memory-bounded: batch 1, grad-checkpointing, 1 epoch, 2×8B fp16 ≈ 32GB/36GB) | `train_dpo.py` (trl 1.12, DPOConfig, Dataset wrapper) |
-| 15 | evaluate SFT vs SFT+DPO | 🟡 awaiting DPO completion | `evaluate.py --candidate-dir` + `compare_baseline()` |
+| 14 | train preference model/DPO adapter | ✅ **RUN COMPLETED** | `adapters/novi-qwen3-8b-dialogue-dpo-v1` — 1,120 steps/1 epoch, train_loss 0.076, rewards accuracy 100% (chosen/rejected logps −50/−121); unblocked on 36GB via int8-quantized ref (torchao 0.18) — first attempt thrash-killed at 32GB |
+| 15 | evaluate SFT vs SFT+DPO | ✅ **DONE (real)** | `candidate_eval_dpo_social_v1.json`: DPO passes all T1-T6 gates, **parity** with SFT (act 1.0, safety 1.0, naturalness 0.0/0.033) with one grounding slip (false_grounding 0.033 vs 0.0). Per plan §33 ("only retain improvements") DPO is registered **staged** — held for human evaluation §37; SFT v1 remains **active** |
 | 16 | memory retrieval ranking dataset | ✅ **DONE** | `datasets/retrieval/retrieval_v1.jsonl` — 320 records with per-candidate feature vectors |
 | 17 | train retrieval reranker | ✅ **DONE (real)** | `adapters/retrieval_reranker_v1.json` (BCE linear ranker, bias; ranks preferred first — verified end-to-end) |
 | 18 | integrate retrieval reranker | ✅ DONE | `training/integration/reranker.py` (learned + deterministic composite fallback, explainable) |
@@ -92,11 +92,10 @@ training commit, dataset version, hyperparameters, hardware, seed, framework
 
 ## 5. Pending items (explicit, honest)
 
-1. **DPO run (step 14)** — executing on this Mac; memory-bounded (2×8B fp16 ≈ 32GB of 36GB). If the run completes: evaluate SFT vs SFT+DPO (step 15) and register the winner. If the kernel kills it for memory: the pipeline + 1,120-pair dataset are ready and the run moves to the Jetson (Orin 64GB) or a quantized path — hardware limit, not a code gap.
+1. **Human evaluation (§37)** — both adapters registered (SFT v1 **active**, DPO **staged** at parity); the pairwise-review protocol is tooled (annotator + preference pairs). A human review pass decides whether DPO's preference training earns promotion.
 2. **Real interaction traces** — the 500-example SFT set is 70 curated + 430 template-derived (`synthetic: true`, validated). Real traces → eligibility → sanitize → validate → annotate replace synthetic rows as volume grows (§6-§9).
-3. **Latency gate T7** — measured on-device per routing tier (plan §30) at integration time (the first-epoch SFT adapter measured ~4.5s/step training; inference is much faster, but the per-tier latency budget is a runtime-integration measurement).
-4. **Human evaluation (§37)** — the pairwise-review protocol is tooled (annotator + preference pairs); a human review pass of the v1 adapter's responses is the next quality step.
-5. **Real-robot evaluation (step 27)** — hardware gates, shared with plan 22 H1–H5.
+3. **Latency gate T7** — measured on-device per routing tier (plan §30) at integration time; the per-tier latency budget is a runtime-integration measurement.
+4. **Real-robot evaluation (step 27)** — hardware gates, shared with plan 22 H1–H5.
 
 ## 6. Definition of success (plan §44)
 
