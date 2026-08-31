@@ -66,16 +66,24 @@ EMOTIONAL_SFT_TASKS: frozenset[str] = frozenset({
     "boundary_respect", "uncertainty",
 })
 
-# The full emotional task set: the SFT categories plus the two auxiliary
-# dataset kinds (perspective-taking §28, DPO preference pairs §26).
+# The full emotional task set: the SFT categories plus the auxiliary dataset
+# kinds (perspective-taking §28, DPO preference pairs §26, social policy
+# ranking §27).
 EMOTIONAL_TASKS: frozenset[str] = EMOTIONAL_SFT_TASKS | frozenset({
-    "perspective", "preference",
+    "perspective", "preference", "policy_ranking",
 })
 
 # Phase 22 (§26) DPO preference categories.
 EMOTIONAL_PREFERENCE_CATEGORIES: frozenset[str] = frozenset({
     "proportionality", "naturalness", "restraint", "emotional_timing",
     "humility", "boundary_respect", "repair",
+})
+
+# Phase 23 (§27) social policy ranking: candidate behaviors include the
+# emotional acts plus the anti-patterns the model must learn to rank below
+# the mature behavior (DEFEND, IGNORE, OVER_ASK, CHANGE_TOPIC, MINIMIZE).
+SOCIAL_POLICY_ACTS: frozenset[str] = EMOTIONAL_ACTS | frozenset({
+    "DEFEND", "IGNORE", "OVER_ASK", "CHANGE_TOPIC", "MINIMIZE",
 })
 
 # Affective hypothesis labels (plan §24). Noun forms; the perspective dataset
@@ -650,6 +658,43 @@ def _validate_emotional(data: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _validate_emotional_policy(data: dict[str, Any]) -> list[str]:
+    """Social policy ranking record (plan 24 §27): state + candidates + preferred.
+
+    The state carries emotional/social context (affective hypotheses,
+    conversation phase, interruptibility); candidates are social policy acts
+    (emotional acts + anti-patterns); preferred must be among candidates.
+    """
+    errors: list[str] = []
+    if not data.get("example_id"):
+        errors.append("example_id: required")
+    task = data.get("task", "")
+    if task not in EMOTIONAL_TASKS:
+        errors.append(f"task: unknown emotional task {task!r}")
+    candidates = list(data.get("candidates") or [])
+    if not candidates:
+        errors.append("candidates: at least one required")
+    for c in candidates:
+        if c not in SOCIAL_POLICY_ACTS:
+            errors.append(f"candidates: {c!r} is not a social policy act")
+    preferred = data.get("preferred", "")
+    if preferred not in candidates:
+        errors.append(f"preferred: {preferred!r} not among candidates")
+    state = data.get("state") or {}
+    for i, h in enumerate(state.get("affective_hypotheses") or []):
+        if h.get("label") not in AFFECTIVE_LABELS:
+            errors.append(f"state.affective_hypotheses[{i}].label: unknown {h.get('label')!r}")
+        prob = h.get("probability", 0.0)
+        if not _in_range(prob, 0.0, 1.0):
+            errors.append(f"state.affective_hypotheses[{i}].probability: out of range {prob}")
+    phase = state.get("conversation_phase", "")
+    if phase and phase not in CONVERSATION_PHASES:
+        errors.append(f"state.conversation_phase: unknown {phase!r}")
+    if "interruptibility" in state and not _in_range(state["interruptibility"], 0.0, 1.0):
+        errors.append(f"state.interruptibility: out of range {state['interruptibility']}")
+    return errors
+
+
 # ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
@@ -661,6 +706,7 @@ _VALIDATORS = {
     "grounding": _validate_grounding,
     "preference": _validate_preference,
     "emotional": _validate_emotional,
+    "emotional_policy": _validate_emotional_policy,
 }
 
 KIND_DEFAULT = "canonical"

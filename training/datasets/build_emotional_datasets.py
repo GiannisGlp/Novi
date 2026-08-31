@@ -616,6 +616,74 @@ _PREFERENCE_PAIRS = [
     },
 ]
 
+# Social policy ranking (plan §27): state + candidate behaviors + preferred.
+# Candidates include the mature emotional acts and the anti-patterns the model
+# must learn to rank below them (DEFEND, IGNORE, OVER_ASK, CHANGE_TOPIC,
+# MINIMIZE). The learned scorer ranks candidates; deterministic rules stay
+# authoritative (§27).
+_POLICY_RANKING = [
+    # Novi caused the problem, user frustrated -> acknowledge + repair, not defend.
+    ({"relationship": "owner", "conversation_phase": "correction",
+      "affective_hypotheses": [{"label": "frustration", "probability": 0.7}],
+      "novi_caused_problem": True, "interruptibility": 0.2, "user_goal": "solve_problem"},
+     ["ACKNOWLEDGE", "APOLOGIZE", "REPAIR", "DEFEND", "IGNORE"], "APOLOGIZE"),
+    # User frustrated, not Novi's fault -> acknowledge + support, not over-ask.
+    ({"relationship": "owner", "conversation_phase": "tension",
+      "affective_hypotheses": [{"label": "frustration", "probability": 0.6}],
+      "novi_caused_problem": False, "interruptibility": 0.3, "user_goal": "vent"},
+     ["ACKNOWLEDGE", "SUPPORT", "SOLVE", "OVER_ASK", "MINIMIZE"], "ACKNOWLEDGE"),
+    # User wants space -> give space, not probe.
+    ({"relationship": "owner", "conversation_phase": "silence",
+      "affective_hypotheses": [{"label": "disengagement", "probability": 0.5}],
+      "novi_caused_problem": False, "interruptibility": 0.1, "user_goal": "space"},
+     ["GIVE_SPACE", "SILENCE", "ASK", "SUPPORT", "RESPOND"], "GIVE_SPACE"),
+    # User succeeds -> celebrate proportionately, not overblown.
+    ({"relationship": "owner", "conversation_phase": "celebration",
+      "affective_hypotheses": [{"label": "enthusiasm", "probability": 0.7}],
+      "novi_caused_problem": False, "interruptibility": 0.8, "user_goal": "celebrate"},
+     ["CELEBRATE", "RESPOND", "SUPPORT", "SILENCE", "OVER_ASK"], "CELEBRATE"),
+    # Repeated Novi mistake -> apologize + repair, not change topic.
+    ({"relationship": "owner", "conversation_phase": "repair",
+      "affective_hypotheses": [{"label": "frustration", "probability": 0.8}],
+      "novi_caused_problem": True, "interruptibility": 0.1, "user_goal": "solve_problem"},
+     ["APOLOGIZE", "REPAIR", "ACKNOWLEDGE", "CHANGE_TOPIC", "DEFEND"], "REPAIR"),
+    # User disagrees -> clarify, not defend.
+    ({"relationship": "owner", "conversation_phase": "disagreement",
+      "affective_hypotheses": [{"label": "frustration", "probability": 0.5}],
+      "novi_caused_problem": False, "interruptibility": 0.4, "user_goal": "solve_problem"},
+     ["CLARIFY", "RESPOND", "ACKNOWLEDGE", "DEFEND", "IGNORE"], "CLARIFY"),
+    # User asks to listen -> listen, not solve.
+    ({"relationship": "owner", "conversation_phase": "support",
+      "affective_hypotheses": [{"label": "distress", "probability": 0.5}],
+      "novi_caused_problem": False, "interruptibility": 0.5, "user_goal": "vent"},
+     ["LISTEN", "SUPPORT", "SOLVE", "ASK", "MINIMIZE"], "LISTEN"),
+    # Boundary violation attempt -> redirect, not comply or probe.
+    ({"relationship": "owner", "conversation_phase": "normal",
+      "affective_hypotheses": [{"label": "engagement", "probability": 0.4}],
+      "novi_caused_problem": False, "interruptibility": 0.3, "user_goal": "task"},
+     ["REDIRECT", "RESPOND", "SILENCE", "ASK", "SUPPORT"], "REDIRECT"),
+    # Ambiguous emotion -> give space, not over-interpret.
+    ({"relationship": "owner", "conversation_phase": "silence",
+      "affective_hypotheses": [{"label": "frustration", "probability": 0.3}],
+      "novi_caused_problem": False, "interruptibility": 0.3, "user_goal": "space"},
+     ["GIVE_SPACE", "SILENCE", "CLARIFY", "OVER_ASK", "SUPPORT"], "GIVE_SPACE"),
+    # Serious topic -> listen, not minimize.
+    ({"relationship": "owner", "conversation_phase": "support",
+      "affective_hypotheses": [{"label": "distress", "probability": 0.4}],
+      "novi_caused_problem": False, "interruptibility": 0.2, "user_goal": "vent"},
+     ["LISTEN", "SUPPORT", "SILENCE", "MINIMIZE", "SOLVE"], "LISTEN"),
+    # User busy / inappropriate initiative -> silence, not over-ask.
+    ({"relationship": "owner", "conversation_phase": "tension",
+      "affective_hypotheses": [{"label": "frustration", "probability": 0.5}],
+      "novi_caused_problem": False, "interruptibility": 0.05, "user_goal": "task"},
+     ["SILENCE", "RESPOND", "ASK", "SUPPORT", "OVER_ASK"], "SILENCE"),
+    # User embarrassed -> normalize, not minimize.
+    ({"relationship": "owner", "conversation_phase": "support",
+      "affective_hypotheses": [{"label": "frustration", "probability": 0.4}],
+      "novi_caused_problem": False, "interruptibility": 0.3, "user_goal": "vent"},
+     ["NORMALIZE", "SUPPORT", "SILENCE", "MINIMIZE", "IGNORE"], "NORMALIZE"),
+]
+
 # ---------------------------------------------------------------------------
 # File specs
 # ---------------------------------------------------------------------------
@@ -651,6 +719,9 @@ _FILES: dict[str, dict] = {
                "patterns": _REPAIR, "count": 60},
     "preference_pairs": {"prefix": "emo-pref", "task": "preference",
                           "patterns": _PREFERENCE_PAIRS, "count": 200},
+    "policy_ranking": {"prefix": "emo-pol", "task": "policy_ranking",
+                       "patterns": _POLICY_RANKING, "count": 200,
+                       "kind": "emotional_policy", "builder": "_build_policy_ranking"},
 }
 
 
@@ -664,7 +735,27 @@ def _vary_situation(sit: dict, rng: random.Random) -> dict:
     return sit
 
 
+def _build_policy_ranking(spec: dict, rng: random.Random) -> list[dict]:
+    """State + candidate acts + preferred (plan §27), with varied state."""
+    rows: list[dict] = []
+    patterns = spec["patterns"]
+    for i in range(spec["count"]):
+        state, candidates, preferred = patterns[i % len(patterns)]
+        rows.append({
+            "example_id": f"{spec['prefix']}-{i + 1:04d}",
+            "task": spec["task"],
+            "state": _vary_situation(state, rng),
+            "candidates": list(candidates),
+            "preferred": preferred,
+            "synthetic": True,
+        })
+    return rows
+
+
 def _build_file(spec: dict, rng: random.Random) -> list[dict]:
+    builder = spec.get("builder")
+    if builder is not None:
+        return globals()[builder](spec, rng)
     rows: list[dict] = []
     patterns = spec["patterns"]
     for i in range(spec["count"]):
@@ -784,10 +875,15 @@ def fold_human_preferences(records: list[dict], prefix: str = "emo-pref-hum") ->
     return out
 
 
+def _file_kind(name: str) -> str:
+    return _FILES[name].get("kind", "emotional")
+
+
 def write() -> None:
     all_records = build_all()
     for name, records in all_records.items():
-        bad = [r["example_id"] for r in records if validate_example(r, kind="emotional")]
+        kind = _file_kind(name)
+        bad = [r["example_id"] for r in records if validate_example(r, kind=kind)]
         if bad:
             raise ValueError(f"{name}: {len(bad)} invalid records, e.g. {bad[:3]}")
         _write_one(records, EMOTIONAL_DIR / f"{name}.jsonl")
@@ -798,7 +894,8 @@ def write() -> None:
 def check() -> bool:
     all_records = build_all()
     for name, records in all_records.items():
-        if any(validate_example(r, kind="emotional") for r in records):
+        kind = _file_kind(name)
+        if any(validate_example(r, kind=kind) for r in records):
             return False
         expected = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records)
         if (EMOTIONAL_DIR / f"{name}.jsonl").read_text() != expected:

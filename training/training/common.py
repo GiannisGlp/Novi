@@ -122,7 +122,10 @@ def check_min_examples(examples: list[dict[str, Any]], minimum: int, kind: str) 
 
 
 def _validate_schema(examples: list[dict[str, Any]], kind: str) -> None:
-    bad = [(ex.get("example_id"), validate_example(ex)) for ex in examples]
+    # Emotional examples (plan 24) carry desired_behavior and validate as
+    # `emotional`; plan-23 examples validate as `canonical`.
+    schema_kind = "emotional" if any("desired_behavior" in ex for ex in examples) else "canonical"
+    bad = [(ex.get("example_id"), validate_example(ex, kind=schema_kind)) for ex in examples]
     bad = [(eid, errs) for eid, errs in bad if errs]
     if bad:
         raise ValueError(f"{kind}: {len(bad)} examples fail schema validation, e.g. {bad[:3]}")
