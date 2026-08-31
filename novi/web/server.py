@@ -216,7 +216,10 @@ class NoviWebServer(IntegrationMixin):
         stt_device: str = "cpu",
         listen_seconds: float = 3.0,
         sleep_every_n_cycles: int = 500,
-        available_models: tuple[str, ...] = ("nemotron-3.5-lightning", "qwen3:8b", "qwen3.8:27b", "qwen3:4b"),
+        available_models: tuple[str, ...] = (
+            "nemotron-3.5-lightning", "qwen3:8b", "qwen3.8:27b", "qwen3:4b",
+            "novi-trained",  # plan 23: qwen3:8b + Novi dialogue LoRA (ollama adapter)
+        ),
         embedder: str = "auto",
         deliberation_rounds: int = 1,
         persist_model: bool = False,

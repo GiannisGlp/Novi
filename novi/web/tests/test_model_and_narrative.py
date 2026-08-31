@@ -31,6 +31,16 @@ class ModelPropagationTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_trained_model_available_and_switchable(self) -> None:
+        s = self._server()
+        try:
+            self.assertIn("novi-trained", s.available_models)
+            s.switch_model("novi-trained")
+            self.assertEqual(s.llm_model, "novi-trained")
+            self.assertEqual(s._reasoning_provider.llm.model, "novi-trained")
+        finally:
+            s.stop()
+
     def test_switch_model_propagates_to_all_components(self) -> None:
         s = self._server()
         try:
