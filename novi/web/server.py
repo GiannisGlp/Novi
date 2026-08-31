@@ -207,6 +207,10 @@ class NoviWebServer(IntegrationMixin):
         tick: float = 0.8,
         auto_step: bool = True,
         chat_llm: bool = True,
+        trained_reply_enabled: bool = False,
+        trained_dialogue_adapter: str = "",
+        trained_emotional_adapter: str = "",
+        trained_base_model: str = "Qwen/Qwen3-8B",
         llm_url: str = DEFAULT_OLLAMA_URL,
         llm_model: str | None = None,
         camera: str = "demo",
@@ -233,6 +237,10 @@ class NoviWebServer(IntegrationMixin):
         self.auto_step = auto_step
         self.sleep_every_n_cycles = max(0, int(sleep_every_n_cycles))
         self.chat_llm = chat_llm
+        self.trained_reply_enabled = trained_reply_enabled
+        self.trained_dialogue_adapter = trained_dialogue_adapter
+        self.trained_emotional_adapter = trained_emotional_adapter
+        self.trained_base_model = trained_base_model
         self.llm_url = llm_url
         self._persist_model = bool(persist_model)
         self.available_models = list(available_models)
@@ -380,6 +388,10 @@ class NoviWebServer(IntegrationMixin):
                 initiative_enabled=True,
                 event_autonomy_enabled=self.event_autonomy,
                 sleep_every_n_cycles=self.sleep_every_n_cycles,
+                trained_reply_enabled=self.trained_reply_enabled,
+                trained_dialogue_adapter=self.trained_dialogue_adapter,
+                trained_emotional_adapter=self.trained_emotional_adapter,
+                trained_base_model=self.trained_base_model,
             ),
         )
 
@@ -728,7 +740,7 @@ class NoviWebServer(IntegrationMixin):
             history = self._build_history(6, person)
             recent_novi = self._recent_novi(4, person)
             last_novi = self._last_novi_text(person)
-            transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+            transport = self._reply_transport()
             resp = self.brain.respond(
                 text,
                 person=addressee,
@@ -760,7 +772,7 @@ class NoviWebServer(IntegrationMixin):
                 # empty (or a designed fallback path) vs. no transport at all.
                 designed = (resp.get("grounding") or {}).get("route")
                 trace["route_reason"] = designed or (
-                    "llm_reply_rejected" if (self.chat_llm and self._llm_up()) else "llm_unavailable"
+                    "llm_reply_rejected" if transport is not None else "no_llm_transport"
                 )
                 trace["confidence"] = heard_conf
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
@@ -810,7 +822,7 @@ class NoviWebServer(IntegrationMixin):
             history = self._build_history(6, addressee)
             recent_novi = self._recent_novi(4, addressee)
             last_novi = self._last_novi_text(addressee)
-            transport = self._llm_chat if (self.chat_llm and self._llm_up()) else None
+            transport = self._reply_transport()
             resp = self.brain.respond(
                 text,
                 person=addressee,
@@ -839,7 +851,7 @@ class NoviWebServer(IntegrationMixin):
                 trace["route"] = "deterministic"
                 designed = (resp.get("grounding") or {}).get("route")
                 trace["route_reason"] = designed or (
-                    "llm_reply_rejected" if (self.chat_llm and self._llm_up()) else "llm_unavailable"
+                    "llm_reply_rejected" if transport is not None else "no_llm_transport"
                 )
                 trace["confidence"] = result.get("confidence", 0.8)
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
@@ -920,6 +932,20 @@ class NoviWebServer(IntegrationMixin):
         for fast in (self._fast_narrator, self._fast_summarizer, self._fast_conv_summarizer):
             if fast is not None:
                 fast.model = self.llm_model  # type: ignore[attr-defined]
+
+    def _reply_transport(self) -> Any:
+        """The chat reply transport: the trained adapters when configured, else
+        the Ollama transport (when chat_llm is on and Ollama is up).
+
+        Plan 25: the brain's trained dialogue/emotional adapters are the
+        preferred talk path — "everything with the trained data". The Ollama
+        transport remains the fallback (and the streaming-capable path).
+        """
+        if self.trained_reply_enabled:
+            trained = self.brain.default_llm_chat()
+            if trained is not None:
+                return trained
+        return self._llm_chat if (self.chat_llm and self._llm_up()) else None
 
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
         from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
@@ -1077,14 +1103,15 @@ class NoviWebServer(IntegrationMixin):
             self.brain._learn_from_chat(text, addressee)
             recent_novi = self._recent_novi(4)
             last_novi = next((c["text"] for c in reversed(self._chat) if c.get("role") == "novi"), "")
-            # If LLM is down, fallback without streaming.
-            if not (self.chat_llm and self._llm_up()):
+            # If no reply transport is available, fallback without streaming.
+            transport = self._reply_transport()
+            if transport is None:
                 fb = self.brain.natural_reply_fallback(text=text, cycle=step.get("cycle"))
                 trace["conclusion"] = conclusion
                 trace["action"] = "respond"
                 trace["rationale"] = fb.get("reason") or "No LLM reply available; used a natural acknowledgement."
                 trace["route"] = "deterministic"
-                trace["route_reason"] = "llm_unavailable"
+                trace["route_reason"] = "no_llm_transport"
                 trace["confidence"] = heard_conf
                 novi_text = fb["text"]
                 # Stream the fallback as one chunk for uniform UI handling.
@@ -1109,7 +1136,7 @@ class NoviWebServer(IntegrationMixin):
                 text,
                 person=addressee,
                 history=history,
-                llm_chat=self._llm_chat,
+                llm_chat=transport,
                 last_novi_text=last_novi,
                 addressee_name=addressee,
                 recent_novi=recent_novi,
@@ -2185,6 +2212,29 @@ def main() -> None:
         help="default chat model; falls back to the persisted UI selection, then nemotron-3.5-lightning (switch at runtime via the UI)",
     )
     parser.add_argument(
+        "--trained-reply",
+        action="store_true",
+        help="reply with the trained dialogue/emotional LoRA adapters (plan 25) instead of the Ollama chat model",
+    )
+    parser.add_argument(
+        "--trained-dialogue-adapter",
+        type=str,
+        default="",
+        help="path to the trained dialogue LoRA adapter dir (required with --trained-reply)",
+    )
+    parser.add_argument(
+        "--trained-emotional-adapter",
+        type=str,
+        default="",
+        help="path to the trained emotional LoRA adapter dir (optional with --trained-reply)",
+    )
+    parser.add_argument(
+        "--trained-base-model",
+        type=str,
+        default="Qwen/Qwen3-8B",
+        help="base model for the trained adapters (default: Qwen/Qwen3-8B)",
+    )
+    parser.add_argument(
         "--stt-model",
         type=str,
         default="base",
@@ -2221,6 +2271,10 @@ def main() -> None:
         reasoning=args.reasoning,
         route_threshold=args.route_threshold,
         llm_model=args.ollama_model or args.model,
+        trained_reply_enabled=args.trained_reply,
+        trained_dialogue_adapter=args.trained_dialogue_adapter,
+        trained_emotional_adapter=args.trained_emotional_adapter,
+        trained_base_model=args.trained_base_model,
         stt_model=args.stt_model,
         persist_model=True,
         stt_device=args.stt_device,

@@ -4,6 +4,7 @@ import time
 import unittest
 from pathlib import Path
 
+from novi.brain.trained_reply import TrainedReplyTransport
 from novi.web.server import NoviWebServer
 
 # ═══════════════════════════════════════════════════════════════════
@@ -459,6 +460,42 @@ class NoviWebServerDurableTests(unittest.TestCase):
             self.assertIn("alice", summaries[0].content.lower())
         finally:
             s.stop()
+
+
+class TrainedReplyTransportPreferenceTest(unittest.TestCase):
+    """Plan 25: the web chat prefers the trained adapters when configured."""
+
+    def _server(self, **kw) -> NoviWebServer:
+        defaults = {"port": 0, "store_path": None, "auto_step": False, "chat_llm": False}
+        defaults.update(kw)
+        return NoviWebServer(**defaults)
+
+    def test_reply_transport_prefers_trained_when_enabled(self) -> None:
+        s = self._server(
+            trained_reply_enabled=True,
+            trained_dialogue_adapter="/fake/dialogue",
+        )
+        transport = s._reply_transport()
+        self.assertIsInstance(transport, TrainedReplyTransport)
+        self.assertEqual(transport.dialogue_adapter, "/fake/dialogue")
+
+    def test_reply_transport_falls_back_to_ollama_when_trained_disabled(self) -> None:
+        s = self._server(chat_llm=False)
+        self.assertIsNone(s._reply_transport())
+
+    def test_reply_transport_none_when_trained_enabled_without_adapters(self) -> None:
+        s = self._server(trained_reply_enabled=True)
+        self.assertIsNone(s._reply_transport())
+
+    def test_trained_config_flows_into_brain(self) -> None:
+        s = self._server(
+            trained_reply_enabled=True,
+            trained_dialogue_adapter="/fake/dialogue",
+            trained_emotional_adapter="/fake/emotional",
+        )
+        self.assertTrue(s.brain.config.trained_reply_enabled)
+        self.assertEqual(s.brain.config.trained_dialogue_adapter, "/fake/dialogue")
+        self.assertEqual(s.brain.config.trained_emotional_adapter, "/fake/emotional")
 
 
 if __name__ == "__main__":

@@ -145,6 +145,14 @@ class MacBrainConfig:
     brain_llm_url: str = "http://localhost:11434"
     brain_llm_model: str = ""
     brain_llm_probe_cooldown_s: float = 60.0
+    # Plan 25: trained-adapter reply (talk with the trained data). When enabled
+    # and an adapter dir is configured, the brain's default transport renders
+    # replies through the plan-23/24 LoRA adapters in the training prompt format
+    # (situation + communicative act), so Novi's talk uses the trained data.
+    trained_reply_enabled: bool = False
+    trained_dialogue_adapter: str = ""
+    trained_emotional_adapter: str = ""
+    trained_base_model: str = "Qwen/Qwen3-8B"
     # Phase P1 (sleep cycle): memory-maturation cadence in cycles (0 disables).
     sleep_every_n_cycles: int = 500
     # Phase 5 (plan 19): neural perception cadence — run the (expensive)
@@ -232,6 +240,8 @@ class MacBrain(ChatMixin):
         # message. Unreachable endpoints degrade to deterministic fallbacks.
         self._override_llm_chat = llm_chat
         self._brain_llm_chat: Any | None = None
+        # Plan 25: lazily-built trained-adapter transport (talk with the trained data).
+        self._trained_transport: Any | None = None
         self._llm_unreachable_until: float = 0.0
         # Phase 3a (north-star gap analysis): grounded reasoning is the default
         # — the engine routes through ReasoningRouter (cost-aware: the LLM is
@@ -2288,6 +2298,12 @@ class MacBrain(ChatMixin):
         """
         if self._override_llm_chat is not None:
             return self._override_llm_chat
+        # Plan 25: the trained-adapter transport (talk with the trained data)
+        # outranks the generic Ollama transport when enabled and configured.
+        if self.config.trained_reply_enabled:
+            transport = self._trained_reply_transport()
+            if transport is not None:
+                return transport
         if not self.config.brain_llm_enabled:
             return None
         if not force and time.monotonic() < self._llm_unreachable_until:
@@ -2346,6 +2362,24 @@ class MacBrain(ChatMixin):
         return lambda *, system, user, temperature=0.5, timeout=120: self._brain_llm_call(
             system=system, user=user, temperature=temperature, timeout=timeout,
         )
+
+    def _trained_reply_transport(self) -> Any:
+        """Lazily build the trained-adapter transport (plan 25, Part A).
+
+        Returns None when no adapter dir is configured, so the resolution falls
+        through to the Ollama transport / deterministic fallback unchanged.
+        """
+        if self._trained_transport is None:
+            if not (self.config.trained_dialogue_adapter or self.config.trained_emotional_adapter):
+                return None
+            from .trained_reply import TrainedReplyTransport
+
+            self._trained_transport = TrainedReplyTransport(
+                dialogue_adapter=self.config.trained_dialogue_adapter,
+                emotional_adapter=self.config.trained_emotional_adapter,
+                base_model=self.config.trained_base_model,
+            )
+        return self._trained_transport
 
     def _sync_robot_world_state(self) -> None:
         """Phase 1c: maintain the ROBOT self-entity in the unified world model.
