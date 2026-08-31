@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import unittest
 
-from novi.brain.empathy_policy import EmpathyPolicy, EmpathyEvidence
+from novi.brain.empathy_policy import EmpathyEvidence, EmpathyPolicy
 
 
 class EmpathyPolicyTest(unittest.TestCase):
@@ -61,6 +61,30 @@ class EmpathyPolicyTest(unittest.TestCase):
         )
         self.assertEqual(strategies[0], "ACKNOWLEDGE")
         self.assertIn("APOLOGIZE", strategies)
+
+    def test_low_interruptibility_gives_space(self) -> None:
+        # plan §51 item 30: deterministic guardrail — very low interruptibility
+        # suppresses speech strategies in favor of giving space
+        strategies = self.policy.select(
+            EmpathyEvidence(frustration=0.8, novi_caused_problem=True, interruptibility=0.05)
+        )
+        self.assertEqual(strategies, ["GIVE_SPACE"])
+
+    def test_do_not_interrupt_boundary_gives_space(self) -> None:
+        # plan §51 item 30: an explicit DO_NOT_INTERRUPT boundary always wins
+        strategies = self.policy.select(
+            EmpathyEvidence(frustration=0.8, boundary_state="DO_NOT_INTERRUPT")
+        )
+        self.assertEqual(strategies, ["GIVE_SPACE"])
+
+    def test_normal_interruptibility_keeps_strategies(self) -> None:
+        # guardrails only fire on genuinely low availability; normal
+        # interruptibility keeps the full empathy strategy set
+        strategies = self.policy.select(
+            EmpathyEvidence(frustration=0.8, novi_caused_problem=True, interruptibility=0.8)
+        )
+        self.assertIn("APOLOGIZE", strategies)
+        self.assertNotIn("GIVE_SPACE", strategies)
 
 
 if __name__ == "__main__":
