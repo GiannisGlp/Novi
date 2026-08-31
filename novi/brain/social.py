@@ -73,6 +73,15 @@ class Relationship:
     stability: float = 0.0
     last_interaction_at: str = ""
     interaction_count: int = 0
+    # plan 24 Phase 7: evidence-based interpersonal model (operational proxies)
+    communication_preferences: dict[str, Any] = field(default_factory=dict)
+    interaction_history_summary: str = ""
+    successful_patterns: list[str] = field(default_factory=list)
+    failed_patterns: list[str] = field(default_factory=list)
+    preferred_verbosity: str = "measured"  # concise | measured | detailed
+    preferred_directness: str = "balanced"  # direct | balanced | gentle
+    typical_interruptibility: float = 0.5
+    confidence: float = 0.0
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -89,6 +98,14 @@ class Relationship:
             "stability": self.stability,
             "last_interaction_at": self.last_interaction_at,
             "interaction_count": self.interaction_count,
+            "communication_preferences": dict(self.communication_preferences),
+            "interaction_history_summary": self.interaction_history_summary,
+            "successful_patterns": list(self.successful_patterns),
+            "failed_patterns": list(self.failed_patterns),
+            "preferred_verbosity": self.preferred_verbosity,
+            "preferred_directness": self.preferred_directness,
+            "typical_interruptibility": self.typical_interruptibility,
+            "confidence": self.confidence,
         }
 
     @classmethod
@@ -129,8 +146,46 @@ class Relationships:
         rel.shared_history += 1
         rel.interaction_count += 1
         rel.stability = _clamp01(rel.stability + 0.02)
+        rel.confidence = _clamp01(rel.confidence + 0.05)
         rel.last_interaction_at = now
         rel.category = self._category_for(rel)
+        return rel
+
+    def note_pattern(self, person: str, *, pattern: str, successful: bool) -> Relationship:
+        """Record a communication pattern that worked or failed (plan 24 §7)."""
+        rel = self.get(person)
+        bucket = rel.successful_patterns if successful else rel.failed_patterns
+        if pattern not in bucket:
+            bucket.append(pattern)
+        rel.confidence = _clamp01(rel.confidence + 0.08)
+        return rel
+
+    def note_communication_preference(
+        self,
+        person: str,
+        *,
+        verbosity: str | None = None,
+        directness: str | None = None,
+        interruptibility: float | None = None,
+    ) -> Relationship:
+        """Record learned communication preferences (plan 24 §7)."""
+        rel = self.get(person)
+        if verbosity is not None:
+            rel.preferred_verbosity = verbosity
+            rel.communication_preferences["verbosity"] = verbosity
+        if directness is not None:
+            rel.preferred_directness = directness
+            rel.communication_preferences["directness"] = directness
+        if interruptibility is not None:
+            rel.typical_interruptibility = _clamp01(interruptibility)
+            rel.communication_preferences["interruptibility"] = rel.typical_interruptibility
+        rel.confidence = _clamp01(rel.confidence + 0.06)
+        return rel
+
+    def note_interaction_summary(self, person: str, *, summary: str) -> Relationship:
+        """Update the short interaction-history summary (plan 24 §7)."""
+        rel = self.get(person)
+        rel.interaction_history_summary = summary
         return rel
 
     def note_preference(self, person: str, *, topic: str, delta: float) -> Relationship:

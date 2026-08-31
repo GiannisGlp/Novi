@@ -47,9 +47,12 @@ class Verbalizer:
         verbosity: str = "short",
         tone: str = "conversational",
         question: bool = False,
+        strategy: list[str] | None = None,
+        certainty: str = "moderate",
     ) -> NaturalLanguageResponse:
         text = (text or "").strip()
         controls: list[str] = []
+        strategy = list(strategy or [])
         if not text:
             return NaturalLanguageResponse("", verbosity=verbosity, tone=tone, controls=["empty"])
 
@@ -60,8 +63,9 @@ class Verbalizer:
             text = " ".join(words[:limit]).rstrip(" ,;:") + "."
             controls.append(f"truncated_to_{verbosity}")
 
-        # 2. Hedging — only when evidence is genuinely uncertain (§19).
-        if confidence < 0.6 and not text.lower().startswith(_HEDGE_PREFIXES):
+        # 2. Hedging — only when evidence is genuinely uncertain (§19) or the
+        # strategy asks for low certainty (plan 24 §22).
+        if (confidence < 0.6 or certainty == "low") and not text.lower().startswith(_HEDGE_PREFIXES):
             text = f"I think {text[0].lower()}{text[1:]}"
             controls.append("hedged_low_confidence")
 
@@ -70,11 +74,21 @@ class Verbalizer:
             text = text.rstrip(".") + "?"
             controls.append("question_form")
 
-        # 4. Tone: conversational acknowledgements stay natural, but we never
+        # 4. Strategy-based realization (plan 24 §22): the verbalizer receives
+        # a strategy rather than raw emotion. Phrasing varies while preserving
+        # the selected strategy.
+        if "APOLOGIZE" in strategy:
+            text = f"You're right. {text[0].lower()}{text[1:]}"
+            controls.append("APOLOGIZE")
+        elif "ACKNOWLEDGE" in strategy:
+            text = f"Yeah, I see the problem. {text[0].lower()}{text[1:]}"
+            controls.append("ACKNOWLEDGE")
+        if "GIVE_SPACE" in strategy:
+            controls.append("GIVE_SPACE")
+
+        # 5. Tone: conversational acknowledgements stay natural, but we never
         # inject canned personality — only trim robotic double-acknowledgement.
         text = re.sub(r"\b(okay|alright),?\s+(okay|alright),?\s+", "okay, ", text, flags=re.IGNORECASE)
-        if "acknowledgement" in controls:
-            pass  # reserved for future fine control
         return NaturalLanguageResponse(text, verbosity=verbosity, tone=tone, controls=controls)
 
     @staticmethod

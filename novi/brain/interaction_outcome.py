@@ -35,6 +35,12 @@ class InteractionOutcome:
     outcome: str = ""  # "" | acknowledged | corrected | ignored
     confidence: float = 0.0
     at: str = field(default_factory=utc_now_iso)
+    # plan 24 Phase 8: emotional memory — an interaction-learning record,
+    # never a diagnosis.
+    episode: str = ""  # interaction event, e.g. "camera debugging"
+    social_context: str = ""  # observable description, e.g. "user became frustrated after repeated explanation"
+    affective_signals: dict[str, Any] = field(default_factory=dict)  # fused affective snapshot
+    learned_implication: str = ""  # e.g. "reduce verbosity under similar conditions"
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -52,7 +58,17 @@ class InteractionOutcome:
             "outcome": self.outcome,
             "confidence": round(self.confidence, 3),
             "at": self.at,
+            "episode": self.episode,
+            "social_context": self.social_context,
+            "affective_signals": dict(self.affective_signals),
+            "learned_implication": self.learned_implication,
         }
+
+    @classmethod
+    def from_snapshot(cls, data: dict[str, Any]) -> "InteractionOutcome":
+        allowed = {f for f in cls.__dataclass_fields__}
+        fields = {k: v for k, v in data.items() if k in allowed}
+        return cls(**fields)
 
 
 class OutcomeRecorder:
@@ -74,6 +90,26 @@ class OutcomeRecorder:
     def corrections(self) -> list[InteractionOutcome]:
         """Task 18.2: explicit corrections are learning evidence."""
         return [o for o in self._outcomes if o.user_reaction == "correction"]
+
+    @staticmethod
+    def derive_implication(outcome: InteractionOutcome) -> str:
+        """Produce a learned implication from a correction (plan 24 §8).
+
+        A correction like "shorter answer" becomes "reduce verbosity under
+        similar conditions". Returns "" when there is nothing to learn.
+        """
+        if outcome.user_reaction != "correction" or not outcome.correction:
+            return ""
+        correction = outcome.correction.strip().lower()
+        if "short" in correction or "concise" in correction or "less" in correction:
+            return "reduce verbosity under similar conditions"
+        if "step" in correction or "slow" in correction:
+            return "break down explanations into steps under similar conditions"
+        return f"adjust behavior: {outcome.correction}"
+
+    def learned_implications(self) -> list[str]:
+        """Plan 24 §8: implications learned from recorded interactions."""
+        return [o.learned_implication for o in self._outcomes if o.learned_implication]
 
     def snapshot(self) -> dict[str, Any]:
         return {"count": len(self._outcomes), "recent": [o.snapshot() for o in self.recent(8)]}

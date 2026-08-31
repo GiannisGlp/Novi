@@ -36,6 +36,13 @@ class SocialContext:
     familiarity: float = 0.0
     social_opportunity: float = 0.0
     cues: list[dict[str, Any]] = field(default_factory=list)  # observable evidence
+    # plan 24 Phase 6: affective + conversational slots
+    emotional_signal: dict[str, Any] = field(default_factory=dict)  # affective state snapshot
+    confidence: float = 0.0  # overall confidence in this social interpretation
+    recent_social_events: list[str] = field(default_factory=list)  # corrections, thanks, ...
+    current_topic: str = ""
+    user_goal: str = ""
+    boundary_state: str = "NORMAL"  # NORMAL | REDUCE_CONTACT | DO_NOT_INTERRUPT | DO_NOT_PROBE | TOPIC_LIMIT | PRIVACY_LIMIT | SAFETY_LIMIT
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -51,6 +58,12 @@ class SocialContext:
             "familiarity": round(self.familiarity, 3),
             "social_opportunity": round(self.social_opportunity, 3),
             "cues": list(self.cues),
+            "emotional_signal": dict(self.emotional_signal),
+            "confidence": round(self.confidence, 3),
+            "recent_social_events": list(self.recent_social_events),
+            "current_topic": self.current_topic,
+            "user_goal": self.user_goal,
+            "boundary_state": self.boundary_state,
         }
 
 
@@ -70,6 +83,12 @@ class SocialEvidence:
     speech_tempo_ratio: float | None = None  # >1 = faster than baseline
     speech_volume_ratio: float | None = None  # >1 = louder than baseline
     person_present: bool = False
+    # plan 24 Phase 6: affective + conversational inputs
+    affective_state: dict[str, Any] | None = None  # AffectiveState snapshot
+    recent_social_events: list[str] = field(default_factory=list)
+    current_topic: str = ""
+    user_goal: str = ""
+    boundary_state: str = "NORMAL"
 
 
 class SocialContextBuilder:
@@ -145,4 +164,18 @@ class SocialContextBuilder:
                 + (1.0 if ctx.user_availability == "available" else 0.2 if ctx.user_availability == "busy" else 0.0) * 0.3
                 + ctx.interruptibility * 0.2
             )
+
+        # ---- plan 24 Phase 6: affective + conversational slots ----
+        ctx.emotional_signal = dict(evidence.affective_state or {})
+        ctx.recent_social_events = list(evidence.recent_social_events)
+        ctx.current_topic = evidence.current_topic
+        ctx.user_goal = evidence.user_goal
+        ctx.boundary_state = evidence.boundary_state or "NORMAL"
+
+        # overall confidence: rises with observable cues and affective evidence
+        confidence = 0.2 if evidence.person_present else 0.0
+        confidence += 0.2 * len(ctx.cues)
+        if ctx.emotional_signal:
+            confidence += 0.1
+        ctx.confidence = _clamp01(confidence)
         return ctx

@@ -65,9 +65,11 @@ class InitiativeScorer:
         novelty: float = 0.0,
         expected_value: float = 0.0,
         urgency: float = 0.0,
+        relationship_fit: float = 1.0,  # multiplicative identity when unknown
         interruption_cost: float = 0.0,
         repetition_penalty: float = 0.0,
         fatigue_penalty: float = 0.0,
+        emotional_pressure: float = 0.0,
     ) -> InitiativeScore:
         components = {
             "relevance": _clamp01(relevance),
@@ -76,11 +78,13 @@ class InitiativeScorer:
             "novelty": _clamp01(novelty),
             "expected_value": _clamp01(expected_value),
             "urgency": _clamp01(urgency),
+            "relationship_fit": _clamp01(relationship_fit),
         }
         penalties = {
             "interruption_cost": _clamp01(interruption_cost),
             "repetition_penalty": _clamp01(repetition_penalty),
             "fatigue_penalty": _clamp01(fatigue_penalty),
+            "emotional_pressure": _clamp01(emotional_pressure),
         }
         product = 1.0
         for value in components.values():
