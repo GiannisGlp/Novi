@@ -17,8 +17,13 @@ from typing import Any
 
 from training.schemas import validate_annotation
 
-# Fields reviewers score (1-5 or boolean/probability).
-_SCORED_FIELDS = ("naturalness", "verbosity", "certainty", "outcome_quality", "memory_relevance")
+# Fields reviewers score (1-5 or boolean/probability). The emotional fields
+# (plan 24 §31) score the affective reading and the response's proportionality,
+# boundary respect, and timing.
+_SCORED_FIELDS = (
+    "naturalness", "verbosity", "certainty", "outcome_quality", "memory_relevance",
+    "emotional_accuracy", "proportionality", "boundary_respect", "timing",
+)
 _BOOL_FIELDS = ("initiative_appropriate", "grounding_correct")
 _NOMINAL_FIELDS = ("dialogue_act", "user_intent", "conversation_state", "social_context")
 

@@ -48,6 +48,14 @@ class DecisionTrace:
     response: str = ""
     outcome: str = ""
     memory_writes: list[str] = field(default_factory=list)
+    # plan 24 §29: emotional outcome record — the user's reaction and any
+    # correction, plus the realized style and failure bookkeeping.
+    user_reaction: str = ""
+    correction: str = ""
+    verbosity: str = "short"
+    defensiveness: str = "none"
+    novi_caused_problem: bool = False
+    repeat_count: int = 0
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -72,6 +80,12 @@ class DecisionTrace:
             "response": self.response,
             "outcome": self.outcome,
             "memory_writes": list(self.memory_writes),
+            "user_reaction": self.user_reaction,
+            "correction": self.correction,
+            "verbosity": self.verbosity,
+            "defensiveness": self.defensiveness,
+            "novi_caused_problem": self.novi_caused_problem,
+            "repeat_count": self.repeat_count,
         }
 
 

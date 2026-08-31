@@ -310,6 +310,16 @@ def validate_annotation(data: dict[str, Any]) -> list[str]:
         v = data.get(key, 0)
         if not (0 <= int(v) <= 5):
             errors.append(f"{key}: review score must be 0-5, got {v}")
+    # Emotional review fields (plan 24 §31): accuracy of the affective reading,
+    # proportionality of the response, boundary respect, and timing.
+    for key in ("emotional_accuracy", "proportionality", "boundary_respect", "timing"):
+        try:
+            v = int(data.get(key, 0))
+        except (TypeError, ValueError):
+            errors.append(f"{key}: review score must be 0-5, got {data.get(key)!r}")
+            continue
+        if not (0 <= v <= 5):
+            errors.append(f"{key}: review score must be 0-5, got {v}")
     return errors
 
 

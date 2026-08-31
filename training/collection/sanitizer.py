@@ -166,6 +166,14 @@ class Sanitizer:
         if redacted_response != out.get("response", ""):
             report.redacted += 1
         out["response"] = redacted_response
+        # Emotional fields (plan 24 §29-§30): preferred_response, evidence,
+        # and DPO preference pairs carry the same PII obligations.
+        for key in ("preferred_response", "evidence", "response_a", "response_b"):
+            if key in out and isinstance(out[key], str):
+                redacted = redact_text(out[key])
+                if redacted != out[key]:
+                    report.redacted += 1
+                out[key] = redacted
         sit = out.get("situation") or {}
         for mem in sit.get("memory") or []:
             mem["summary"] = redact_text(mem.get("summary", ""))
@@ -181,6 +189,12 @@ class Sanitizer:
         for k, v in list(social.items()):
             if isinstance(v, str):
                 social[k] = redact_text(v)
+        # Emotional situation strings (relationship, user_goal, ...); the
+        # person dict is handled separately below.
+        for key, value in list(sit.items()):
+            if key == "person" or not isinstance(value, str):
+                continue
+            sit[key] = redact_text(value)
 
         # Strip biometric refs from structured fields (already done above for
         # the whole tree; keep the world-level pass for clarity).
