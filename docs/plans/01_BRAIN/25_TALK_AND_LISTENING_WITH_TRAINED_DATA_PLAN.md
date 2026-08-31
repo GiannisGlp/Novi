@@ -1,6 +1,6 @@
 # Plan 25 — Talk and Listening with the Trained Data
 
-**Status:** IMPLEMENTING
+**Status:** DONE (committed e084895)
 **Date:** 2026-08-31
 **Depends on:** plan 23 (dialogue SFT/DPO adapters), plan 24 (emotional SFT/DPO adapters)
 
