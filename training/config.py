@@ -36,13 +36,14 @@ class TrainConfig:
     eval_after: bool = False
     hf_model_id: str = ""
     sft_adapter: str = ""
+    adapter_name: str = ""  # adapter subdir under output_dir (SFT runs)
     hyperparams: dict[str, Any] = field(default_factory=dict)
     source: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind, "base_model": self.base_model, "hf_model_id": self.hf_model_id,
-            "sft_adapter": self.sft_adapter,
+            "sft_adapter": self.sft_adapter, "adapter_name": self.adapter_name,
             "dataset": self.dataset, "dataset_version": self.dataset_version,
             "seed": self.seed, "output_dir": self.output_dir, "min_examples": self.min_examples,
             "max_seq_len": self.max_seq_len, "eval_after": self.eval_after,
@@ -73,6 +74,7 @@ def load_config(path: str | Path) -> TrainConfig:
         eval_after=bool(raw.get("eval_after", False)),
         hf_model_id=str(raw.get("hf_model_id", "")),
         sft_adapter=str(raw.get("sft_adapter", "")),
+        adapter_name=str(raw.get("adapter_name", "")),
         hyperparams=dict(raw.get("hyperparams") or {}),
         source=str(p.resolve()),
     )

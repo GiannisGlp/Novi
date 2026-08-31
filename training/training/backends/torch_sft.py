@@ -22,7 +22,8 @@ def _build_chat_dataset(examples: list[dict], tokenizer, max_seq_len: int) -> li
     rows = []
     for ex in examples:
         prompt = _prompt_text(ex)
-        text = f"{prompt}\n<|im_start|>assistant\n{ex['response']}<|im_end|>"
+        response = ex.get("preferred_response") or ex.get("response") or ""
+        text = f"{prompt}\n<|im_start|>assistant\n{response}<|im_end|>"
         enc_prompt = tokenizer(prompt, truncation=True, max_length=max_seq_len, return_tensors="pt")
         enc_full = tokenizer(text, truncation=True, max_length=max_seq_len, return_tensors="pt")
         labels = enc_full["input_ids"][0].clone()
@@ -36,9 +37,9 @@ def _build_chat_dataset(examples: list[dict], tokenizer, max_seq_len: int) -> li
 
 
 def _prompt_text(example: dict) -> str:
-    from training.training.common import situation_to_prompt  # noqa: PLC0415
+    from training.training.common import prompt_for  # noqa: PLC0415
 
-    return situation_to_prompt(example)
+    return prompt_for(example)
 
 
 def run_torch_sft(cfg: Any) -> dict[str, Any]:
@@ -65,7 +66,9 @@ def run_torch_sft(cfg: Any) -> dict[str, Any]:
     examples = load_jsonl(repo_root / cfg.dataset)
 
     # Dedicated adapter directory per run (kept separate from scorer artifacts).
-    run_dir = Path(cfg.output_dir) / "novi-qwen3-8b-dialogue-v1"
+    # The adapter name comes from the config (e.g. novi-qwen3-8b-emotional-v1);
+    # the plan-23 default is preserved for the first experiment.
+    run_dir = Path(cfg.output_dir) / (cfg.adapter_name or "novi-qwen3-8b-dialogue-v1")
     run_dir.mkdir(parents=True, exist_ok=True)
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.hf_model_id or cfg.base_model)

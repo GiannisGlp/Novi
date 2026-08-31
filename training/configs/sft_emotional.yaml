@@ -7,6 +7,7 @@ hf_model_id: Qwen/Qwen3-8B
 dataset: training/datasets/sft/emotional_sft_v1.jsonl
 dataset_version: emotional_sft_v1
 output_dir: training/models/adapters
+adapter_name: novi-qwen3-8b-emotional-v1
 seed: 20260831
 min_examples: 200            # 13 SFT files x 60 = 780 rows
 max_seq_len: 2048
