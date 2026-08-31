@@ -1,9 +1,10 @@
-"""DPO preference training — second experiment (plan 23 §33, step 13-15).
+"""DPO preference training — second experiment (plan 23 §33, plan 24 §26-§27).
 
 Runs after SFT is stable: 1,000+ preference pairs (datasets/dpo/) train the
 adapter to prefer natural, brief, grounded responses (plan §11 categories:
 naturalness, brevity, context, memory, clarification, initiative, repair,
-social appropriateness).
+social appropriateness). Emotional preference pairs (plan 24 §26) use the
+emotional prompt (social context + selected strategy) via `prompt_for`.
 
 Real backend: trl's DPOTrainer over the SFT adapter (torch). Smoke mode is
 the deterministic CI-safe default.
@@ -24,15 +25,25 @@ from training.training.common import (  # noqa: E402
     add_common_args,
     emit_report,
     load_jsonl,
-    situation_to_prompt,
+    prompt_for,
 )
+
+
+def _validate_pair(pair: dict) -> list[str]:
+    """Validate a preference pair with the right schema kind.
+
+    Emotional pairs (plan 24 §26) carry `desired_behavior` and validate as
+    `emotional`; plan-23 pairs validate as `preference`.
+    """
+    from training.schemas import validate_example  # noqa: PLC0415
+
+    kind = "emotional" if "desired_behavior" in pair else "preference"
+    return validate_example(pair, kind=kind)
 
 
 def _smoke_report(cfg) -> dict:
     pairs = load_jsonl(ROOT / cfg.dataset)
-    from training.schemas import validate_example  # noqa: PLC0415
-
-    bad = [p["example_id"] for p in pairs if validate_example(p, kind="preference")]
+    bad = [p["example_id"] for p in pairs if _validate_pair(p)]
     if bad:
         raise ValueError(f"dpo: {len(bad)} preference pairs fail validation, e.g. {bad[:3]}")
     categories: dict[str, int] = {}
@@ -84,7 +95,7 @@ def _real_report(cfg, quantize_ref: bool = False) -> dict:
             raise SystemExit(2) from None
 
     def _format(pair: dict) -> dict:
-        prompt = situation_to_prompt({"situation": pair.get("situation", {})})
+        prompt = prompt_for(pair)
         chosen = pair["response_a"] if pair["preferred"] == "A" else pair["response_b"]
         rejected = pair["response_b"] if pair["preferred"] == "A" else pair["response_a"]
         return {"prompt": prompt, "chosen": chosen, "rejected": rejected}

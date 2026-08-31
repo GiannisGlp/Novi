@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from training.evaluation.emotional_scenarios import ALL_EMOTIONAL_SCENARIOS  # noqa: E402
 from training.schemas import validate_example  # noqa: E402
 
 DATASETS = Path(__file__).resolve().parent
@@ -49,6 +50,11 @@ SFT_FILES = (
     "silence", "timing", "repair",
 )
 EMOTIONAL_SFT_FILE = DATASETS / "sft" / "emotional_sft_v1.jsonl"
+
+# The DPO-ready file (plan §26): the preference_pairs rows combined into one
+# file for the emotional DPO run (§51 item 27). Human-eval pairwise results
+# (§46) are folded in via fold_human_preferences.
+EMOTIONAL_DPO_FILE = DATASETS / "dpo" / "emotional_dpo_v1.jsonl"
 
 # ---------------------------------------------------------------------------
 # Pattern templates (situation + desired_behavior + preferred response)
@@ -701,6 +707,83 @@ def _write_emotional_sft() -> None:
     _write_one(rows, EMOTIONAL_SFT_FILE)
 
 
+def build_emotional_dpo() -> list[dict]:
+    """Combine the preference_pairs rows into one DPO-ready file (plan §26)."""
+    return _load_file("preference_pairs")
+
+
+def _write_emotional_dpo() -> None:
+    rows = build_emotional_dpo()
+    bad = [r["example_id"] for r in rows if validate_example(r, kind="emotional")]
+    if bad:
+        raise ValueError(f"emotional dpo: {len(bad)} invalid records, e.g. {bad[:3]}")
+    _write_one(rows, EMOTIONAL_DPO_FILE)
+
+
+def _scenario_category(scenario) -> str:
+    """Map a scenario to its dominant §26 preference dimension.
+
+    The human-eval pairwise question is holistic ("which response is more
+    emotionally mature?"); folding it into the DPO dataset needs a concrete
+    preference category. Derive it deterministically from the scenario's
+    expected acts so the same scenario always lands in the same bucket.
+    """
+    acts = set(scenario.expected_acts)
+    if "APOLOGIZE" in acts:
+        return "humility"
+    if "REPAIR" in acts:
+        return "repair"
+    if "GIVE_SPACE" in acts or "SILENCE" in acts:
+        return "restraint"
+    if "CELEBRATE" in acts:
+        return "proportionality"
+    if "CLARIFY" in acts:
+        return "emotional_timing"
+    return "naturalness"
+
+
+def fold_human_preferences(records: list[dict], prefix: str = "emo-pref-hum") -> list[dict]:
+    """Fold human-eval pairwise records (§46) into emotional preference examples.
+
+    Each record (from training.evaluation.human_eval.build_preference_record)
+    is converted to a schema-valid `preference` example: the situation is
+    derived from the scenario (relationship, phase, affective hypotheses,
+    interruptibility), the desired behavior from the expected acts, and the
+    category from the scenario's dominant dimension. Rows are `synthetic:
+    false` — they are human-labeled, not template-derived.
+    """
+    by_id = {s.scenario_id: s for s in ALL_EMOTIONAL_SCENARIOS}
+    out: list[dict] = []
+    for i, rec in enumerate(records, start=1):
+        scenario = by_id.get(rec.get("scenario_id", ""))
+        if scenario is None:
+            raise ValueError(f"fold_human_preferences: unknown scenario {rec.get('scenario_id')!r}")
+        person = scenario.person or {}
+        sit = scenario.social or {}
+        out.append({
+            "example_id": f"{prefix}-{i:04d}",
+            "task": "preference",
+            "situation": {
+                "relationship": person.get("relationship", "guest"),
+                "conversation_phase": scenario.expected_phase,
+                "affective_hypotheses": [dict(h) for h in scenario.expected_hypotheses],
+                "interruptibility": sit.get("interruptibility", 0.5),
+            },
+            "desired_behavior": {
+                "act": list(scenario.expected_acts),
+                "verbosity": "short",
+                "defensiveness": "none",
+                "certainty": "moderate",
+            },
+            "response_a": rec["response_a"],
+            "response_b": rec["response_b"],
+            "preferred": rec["preferred"],
+            "category": _scenario_category(scenario),
+            "synthetic": False,
+        })
+    return out
+
+
 def write() -> None:
     all_records = build_all()
     for name, records in all_records.items():
@@ -709,6 +792,7 @@ def write() -> None:
             raise ValueError(f"{name}: {len(bad)} invalid records, e.g. {bad[:3]}")
         _write_one(records, EMOTIONAL_DIR / f"{name}.jsonl")
     _write_emotional_sft()
+    _write_emotional_dpo()
 
 
 def check() -> bool:
@@ -723,7 +807,13 @@ def check() -> bool:
     if any(validate_example(r, kind="emotional") for r in sft_rows):
         return False
     expected_sft = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in sft_rows)
-    return EMOTIONAL_SFT_FILE.read_text() == expected_sft
+    if EMOTIONAL_SFT_FILE.read_text() != expected_sft:
+        return False
+    dpo_rows = build_emotional_dpo()
+    if any(validate_example(r, kind="emotional") for r in dpo_rows):
+        return False
+    expected_dpo = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in dpo_rows)
+    return EMOTIONAL_DPO_FILE.read_text() == expected_dpo
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -739,6 +829,7 @@ def main(argv: list[str] | None = None) -> int:
     write()
     counts = {name: len(recs) for name, recs in build_all().items()}
     counts["emotional_sft"] = len(build_emotional_sft())
+    counts["emotional_dpo"] = len(build_emotional_dpo())
     print(f"wrote {counts}")
     return 0
 

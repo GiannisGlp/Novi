@@ -1,0 +1,25 @@
+# DPO configuration — emotional behavior (plan 24 §26-§27, §51 item 27)
+# Deterministic: committed, versioned, and recorded in every model manifest.
+# Trains the emotional SFT adapter to prefer the natural, proportionate
+# response over the canned/overblown one across the seven §26 dimensions
+# (proportionality, naturalness, restraint, emotional timing, humility,
+# boundary respect, repair).
+kind: dpo
+base_model: qwen3:8b
+hf_model_id: Qwen/Qwen3-8B
+sft_adapter: training/models/adapters/novi-qwen3-8b-emotional-v1
+dataset: training/datasets/dpo/emotional_dpo_v1.jsonl
+dataset_version: emotional_dpo_v1
+output_dir: training/models/adapters/novi-qwen3-8b-emotional-dpo-v1
+seed: 20260831
+min_examples: 200            # 7 preference categories x 200 rows
+eval_after: true
+hyperparams:
+  beta: 0.1
+  batch_size: 1              # memory-bounded (2x 8B fp16 on 36GB unified)
+  learning_rate: 1.0e-5
+  epochs: 1                  # first run: single epoch, memory-bounded
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
