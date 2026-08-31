@@ -1,6 +1,6 @@
-"""Continuous emotional learning cycle (plan 24 §46, §51 item 37).
+"""Continuous emotional learning cycle (plan 24 §50, §51 item 37).
 
-The §46 loop:
+The §50 loop:
 
     interaction -> ... -> outcome -> interaction memory -> quality filtering
     -> training example -> SFT/DPO/policy ranking -> evaluation -> shadow
@@ -10,7 +10,7 @@ This module is the cycle coordinator. It accumulates quality-filtered
 preference signals into a growing log and, when enough have accumulated,
 *plans* a training cycle. It never trains or deploys itself — "never
 automatically train/deploy directly from raw emotional observations"
-(plan §46). A human/operator executes the plan and calls `complete_cycle`
+(plan §50). A human/operator executes the plan and calls `complete_cycle`
 with the outcome.
 
     outcome/feedback records -> quality_filter -> accumulate_cycle -> log
@@ -26,14 +26,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from training.collection.preference_learning import accumulate_preferences
+from training.collection.preference_learning import (
+    _EXPLICIT_POSITIVE,
+    accumulate_preferences,
+)
 
 # Default minimum quality-filtered signals before a training cycle is planned.
 DEFAULT_MIN_SIGNALS = 50
-
-# plan §29: only explicit positive reactions confirm success. Silence alone
-# (a bare "acknowledged" outcome) is never treated as a learning signal.
-_EXPLICIT_POSITIVE = frozenset({"thanks", "follow_up"})
 
 
 @dataclass
@@ -54,7 +53,7 @@ class CycleState:
 
 @dataclass(frozen=True)
 class CycleReport:
-    """A planned (not executed) training cycle (plan §46 'training example')."""
+    """A planned (not executed) training cycle (plan §50 'training example')."""
 
     signals: int
     training_kind: str
@@ -78,7 +77,7 @@ class CycleReport:
 
 @dataclass(frozen=True)
 class CycleCompletion:
-    """The outcome of a finished cycle (plan §46 'approved model')."""
+    """The outcome of a finished cycle (plan §50 'approved model')."""
 
     accepted: bool
     signals_consumed: int
@@ -87,7 +86,7 @@ class CycleCompletion:
 
 
 def quality_filter(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Keep only records with an explicit learning signal (plan §46 quality filtering).
+    """Keep only records with an explicit learning signal (plan §50 quality filtering).
 
     Raw emotional observations are never training candidates: a record is
     kept only when it carries explicit feedback, a correction, or an explicit

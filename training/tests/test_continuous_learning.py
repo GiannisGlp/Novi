@@ -1,13 +1,13 @@
-"""Tests for the continuous emotional learning cycle (plan 24 §46, §51 item 37).
+"""Tests for the continuous emotional learning cycle (plan 24 §50, §51 item 37).
 
-The §46 loop: interaction -> ... -> outcome -> interaction memory ->
+The §50 loop: interaction -> ... -> outcome -> interaction memory ->
 quality filtering -> training example -> SFT/DPO/policy ranking ->
 evaluation -> shadow deployment -> approved model -> new interaction.
 
 The coordinator accumulates quality-filtered preference signals into a
 growing log and, when enough have accumulated, *plans* a training cycle.
 It never trains or deploys itself — "never automatically train/deploy
-directly from raw emotional observations" (plan §46).
+directly from raw emotional observations" (plan §50).
 """
 
 from __future__ import annotations
