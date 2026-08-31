@@ -3,7 +3,7 @@
 **Plan:** `24_EMOTIONAL_AND_SOCIAL_MATURITY_PLAN.md`
 **This document:** Phase 0 output (Steps 0.1–0.3) + running phase-status tracker for the whole implementation.
 **Date:** 2026-08-31
-**Status:** Phases 0–20 **COMPLETE** — Phase 21 (evaluation + DPO + policy ranking) is next.
+**Status:** Phases 0–20 **COMPLETE** — Phase 21 (evaluation + DPO + policy ranking) in progress: §51 items 19–23 done (trace collection, sanitization, annotation, emotional SFT dataset, baseline evaluation suite).
 
 ---
 
@@ -210,5 +210,5 @@ modules are the natural extension points.
 | 17 — backchannel behavior | **COMPLETE** |
 | 18 — emotional language realization | **COMPLETE** |
 | 19–24 — emotional training datasets + SFT | **COMPLETE** (datasets + schema; SFT run is Phase 21 §29–§31) |
-| 25–31 — evaluation + DPO + policy ranking | pending |
+| 25–31 — evaluation + DPO + policy ranking | **IN PROGRESS** — §51 items 19–23 complete (trace collection, sanitization, annotation, emotional SFT dataset, baseline evaluation suite §44–§45); items 24–31 pending (SFT run, human eval, DPO, policy ranking) |
 | 32–37 — multimodal eval, shadow eval, registry, rollback, acceptance, continuous learning | pending |
