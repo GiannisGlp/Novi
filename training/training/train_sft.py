@@ -26,14 +26,18 @@ from training.training.common import (  # noqa: E402
     add_common_args,
     emit_report,
     load_jsonl,
-    situation_to_prompt,
+    prompt_for,
     task_counts,
 )
 
 
 def _build_rows(examples: list[dict]) -> list[dict]:
     return [
-        {"example_id": ex["example_id"], "prompt": situation_to_prompt(ex), "response": ex["response"]}
+        {
+            "example_id": ex["example_id"],
+            "prompt": prompt_for(ex),
+            "response": ex.get("preferred_response") or ex.get("response") or "",
+        }
         for ex in examples
     ]
 

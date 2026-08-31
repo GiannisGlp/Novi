@@ -1,0 +1,23 @@
+# SFT configuration — emotional behavior (plan 24 §25, §51 item 24)
+# Deterministic: committed, versioned, and recorded in every model manifest.
+# Training target: social context + selected strategy -> natural response.
+kind: sft
+base_model: qwen3:8b
+hf_model_id: Qwen/Qwen3-8B
+dataset: training/datasets/sft/emotional_sft_v1.jsonl
+dataset_version: emotional_sft_v1
+output_dir: training/models/adapters
+seed: 20260831
+min_examples: 200            # 13 SFT files x 60 = 780 rows
+max_seq_len: 2048
+eval_after: true
+hyperparams:
+  batch_size: 2
+  learning_rate: 2.0e-4
+  epochs: 3
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  warmup_steps: 20
+  gradient_checkpointing: false

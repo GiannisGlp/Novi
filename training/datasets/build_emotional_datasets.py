@@ -40,6 +40,16 @@ DATASETS = Path(__file__).resolve().parent
 EMOTIONAL_DIR = DATASETS / "emotional"
 SEED = 20260831
 
+# The 13 SFT files (plan §25) — perspective (§28) and preference_pairs (§26)
+# are auxiliary kinds with different training targets and are excluded from the
+# SFT-ready file. Combined into one file for the emotional LoRA SFT run.
+SFT_FILES = (
+    "affective_context", "empathy", "regulation", "frustration", "conflict",
+    "apology", "disagreement", "boundaries", "encouragement", "celebration",
+    "silence", "timing", "repair",
+)
+EMOTIONAL_SFT_FILE = DATASETS / "sft" / "emotional_sft_v1.jsonl"
+
 # ---------------------------------------------------------------------------
 # Pattern templates (situation + desired_behavior + preferred response)
 # ---------------------------------------------------------------------------
@@ -671,6 +681,26 @@ def _write_one(records: list[dict], path: Path) -> None:
     path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records))
 
 
+def _load_file(name: str) -> list[dict]:
+    return [json.loads(line) for line in (EMOTIONAL_DIR / f"{name}.jsonl").read_text().splitlines() if line.strip()]
+
+
+def build_emotional_sft() -> list[dict]:
+    """Combine the 13 SFT files into one SFT-ready file (plan §25)."""
+    rows: list[dict] = []
+    for name in SFT_FILES:
+        rows.extend(_load_file(name))
+    return rows
+
+
+def _write_emotional_sft() -> None:
+    rows = build_emotional_sft()
+    bad = [r["example_id"] for r in rows if validate_example(r, kind="emotional")]
+    if bad:
+        raise ValueError(f"emotional sft: {len(bad)} invalid records, e.g. {bad[:3]}")
+    _write_one(rows, EMOTIONAL_SFT_FILE)
+
+
 def write() -> None:
     all_records = build_all()
     for name, records in all_records.items():
@@ -678,6 +708,7 @@ def write() -> None:
         if bad:
             raise ValueError(f"{name}: {len(bad)} invalid records, e.g. {bad[:3]}")
         _write_one(records, EMOTIONAL_DIR / f"{name}.jsonl")
+    _write_emotional_sft()
 
 
 def check() -> bool:
@@ -688,7 +719,11 @@ def check() -> bool:
         expected = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records)
         if (EMOTIONAL_DIR / f"{name}.jsonl").read_text() != expected:
             return False
-    return True
+    sft_rows = build_emotional_sft()
+    if any(validate_example(r, kind="emotional") for r in sft_rows):
+        return False
+    expected_sft = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in sft_rows)
+    return EMOTIONAL_SFT_FILE.read_text() == expected_sft
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -703,6 +738,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     write()
     counts = {name: len(recs) for name, recs in build_all().items()}
+    counts["emotional_sft"] = len(build_emotional_sft())
     print(f"wrote {counts}")
     return 0
 

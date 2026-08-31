@@ -49,6 +49,45 @@ def situation_to_prompt(example: dict[str, Any]) -> str:
     return "\n".join(parts + [f"Communicative act: {act}"])
 
 
+def emotional_situation_to_prompt(example: dict[str, Any]) -> str:
+    """Emotional example -> SFT prompt (social context + selected strategy).
+
+    Training target (plan 24 §25): social context + selected strategy -> natural
+    response. NOT emotion label -> canned phrase. The affective hypotheses are
+    rendered as probabilistic context (the emotional signal is not a fact), and
+    the selected strategy is the first acceptable act in desired_behavior.
+    """
+    sit = example.get("situation") or {}
+    parts = []
+    if sit.get("relationship"):
+        parts.append(f"Relationship: {sit['relationship']}")
+    if sit.get("conversation_phase"):
+        parts.append(f"Conversation phase: {sit['conversation_phase']}")
+    if sit.get("user_goal"):
+        parts.append(f"User goal: {sit['user_goal']}")
+    if sit.get("affective_hypotheses"):
+        parts.append(f"Affective hypotheses: {json.dumps(sit['affective_hypotheses'], ensure_ascii=False)}")
+    if "novi_caused_problem" in sit:
+        parts.append(f"Novi caused problem: {str(sit['novi_caused_problem']).lower()}")
+    if "interruptibility" in sit:
+        parts.append(f"Interruptibility: {sit['interruptibility']}")
+    beh = example.get("desired_behavior") or {}
+    acts = beh.get("act") or []
+    act = acts[0] if acts else ""
+    return "\n".join(parts + [f"Communicative act: {act}"])
+
+
+def prompt_for(example: dict[str, Any]) -> str:
+    """Dispatch to the right prompt builder by example kind.
+
+    Emotional examples (plan 24 §24) carry `desired_behavior` and use the
+    emotional prompt; plan-23 examples use the canonical situation prompt.
+    """
+    if "desired_behavior" in example:
+        return emotional_situation_to_prompt(example)
+    return situation_to_prompt(example)
+
+
 def task_counts(examples: list[dict[str, Any]]) -> dict[str, int]:
     return dict(sorted(Counter(ex.get("task", "unknown") for ex in examples).items()))
 
