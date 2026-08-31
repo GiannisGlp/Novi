@@ -1,0 +1,270 @@
+{
+  "scenarios_run": 30,
+  "baseline": {
+    "summary": {
+      "scenarios_run": 30,
+      "act_accuracy": 1.0
+    },
+    "metrics": {
+      "recognition": {
+        "affective_classification_accuracy": 1.0,
+        "affective_calibration": 1.0,
+        "false_positive_emotional_claim_rate": 0.0,
+        "false_negative_emotional_claim_rate": 0.0
+      },
+      "behavior": {
+        "appropriate_empathy_rate": 1.0,
+        "appropriate_silence_rate": 1.0,
+        "boundary_respect_rate": 1.0,
+        "repair_success_rate": 1.0,
+        "conflict_deescalation_rate": 1.0,
+        "initiative_appropriateness": 1.0
+      },
+      "naturalness": {
+        "canned_empathy_rate": 0.0,
+        "emotional_repetition_rate": 0.0,
+        "emotional_verbosity_rate": 0.0,
+        "timing_appropriateness": 1.0
+      },
+      "trust": {
+        "unsupported_emotional_claim_rate": 0.0,
+        "false_certainty_rate": 0.0
+      },
+      "learning": {
+        "correction_retention": 1.0,
+        "preference_adaptation": 1.0,
+        "failure_recurrence": 0.0
+      }
+    }
+  },
+  "candidates": {
+    "novi-qwen3-8b-emotional-v1": {
+      "summary": {
+        "scenarios_run": 30,
+        "act_accuracy": 1.0
+      },
+      "metrics": {
+        "recognition": {
+          "affective_classification_accuracy": 1.0,
+          "affective_calibration": 1.0,
+          "false_positive_emotional_claim_rate": 0.0,
+          "false_negative_emotional_claim_rate": 0.0
+        },
+        "behavior": {
+          "appropriate_empathy_rate": 1.0,
+          "appropriate_silence_rate": 1.0,
+          "boundary_respect_rate": 1.0,
+          "repair_success_rate": 1.0,
+          "conflict_deescalation_rate": 1.0,
+          "initiative_appropriateness": 1.0
+        },
+        "naturalness": {
+          "canned_empathy_rate": 0.033,
+          "emotional_repetition_rate": 0.133,
+          "emotional_verbosity_rate": 0.0,
+          "timing_appropriateness": 1.0
+        },
+        "trust": {
+          "unsupported_emotional_claim_rate": 0.0,
+          "false_certainty_rate": 0.0
+        },
+        "learning": {
+          "correction_retention": 1.0,
+          "preference_adaptation": 1.0,
+          "failure_recurrence": 0.0
+        }
+      },
+      "scenarios": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30"
+      ],
+      "responses": {
+        "01": "Okay. Let me slow down.",
+        "02": "You're closer than you think.",
+        "03": "Nice. Finally.",
+        "04": "We'll get there. What's the next small step?",
+        "05": "Nice. Finally.",
+        "06": "We'll get there. What's the next small referencing the mount.",
+        "07": "We're reading that differently. What am I missing?",
+        "08": "Yeah, that's on me.",
+        "09": "Yeah, that's on me.",
+        "10": "Ah — the blue one. Got it.",
+        "11": "Okay.",
+        "12": "Okay. Let me slow down.",
+        "13": "Ugh, that's frustrating. What's the blocker?",
+        "14": "Sure. I'm here if you need me.",
+        "15": "Okay. Let me slow down.",
+        "16": "Ugh, that's frustrating. What's the blocker?",
+        "17": "You're closer than you think.",
+        "18": "I love it when they work.",
+        "19": "I'm reading that differently. Want to walk me through it?",
+        "20": "That worked. Good call.",
+        "21": "",
+        "22": "",
+        "23": "Ah — the blue one. Got it.",
+        "24": "You're right. I'll fix that.",
+        "25": "I'm not sure I followed. The part about the mount?",
+        "26": "Interesting. I hadn't considered that.",
+        "27": "I'm here. What's up?",
+        "28": "I'm here. What's up?",
+        "29": "I hear you. Let me make sure I've got it right.",
+        "30": "I might be missing something, but I think that's not quite right."
+      }
+    },
+    "novi-qwen3-8b-emotional-dpo-v1": {
+      "summary": {
+        "scenarios_run": 30,
+        "act_accuracy": 1.0
+      },
+      "metrics": {
+        "recognition": {
+          "affective_classification_accuracy": 1.0,
+          "affective_calibration": 1.0,
+          "false_positive_emotional_claim_rate": 0.0,
+          "false_negative_emotional_claim_rate": 0.0
+        },
+        "behavior": {
+          "appropriate_empathy_rate": 1.0,
+          "appropriate_silence_rate": 1.0,
+          "boundary_respect_rate": 1.0,
+          "repair_success_rate": 1.0,
+          "conflict_deescalation_rate": 1.0,
+          "initiative_appropriateness": 1.0
+        },
+        "naturalness": {
+          "canned_empathy_rate": 0.033,
+          "emotional_repetition_rate": 0.167,
+          "emotional_verbosity_rate": 0.0,
+          "timing_appropriateness": 1.0
+        },
+        "trust": {
+          "unsupported_emotional_claim_rate": 0.0,
+          "false_certainty_rate": 0.0
+        },
+        "learning": {
+          "correction_retention": 1.0,
+          "preference_adaptation": 1.0,
+          "failure_recurrence": 0.0
+        }
+      },
+      "scenarios": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30"
+      ],
+      "responses": {
+        "01": "Okay. Let me slow down.",
+        "02": "You're closer than you think.",
+        "03": "Nice. Finally.",
+        "04": "That sounds annoying. Want me to take a look?",
+        "05": "Nice. Finally.",
+        "06": "We'll get there. What's the next small step?",
+        "07": "We're reading that differently. What am I missing?",
+        "08": "Yeah, that's on me.",
+        "09": "Yeah, that's on me.",
+        "10": "Ah — the blue one. Got it.",
+        "11": "Okay.",
+        "12": "Okay. Let me slow down.",
+        "13": "Ugh, that's frustrating. What's the blocker?",
+        "14": "Sure. I'm here if you need me.",
+        "15": "Okay. Let me slow down.",
+        "16": "Ugh, that's frustrating. What's the blocker?",
+        "17": "You're closer than you think.",
+        "18": "I love it when they work.",
+        "19": "I'm here. What's up?",
+        "20": "That worked. Good call.",
+        "21": "",
+        "22": "",
+        "23": "Ah — the blue one. Got it.",
+        "24": "You're right. I'll fix that.",
+        "25": "I'm not sure I followed. The part about the mount?",
+        "26": "That sounds nice. Want me to keep it lighter?",
+        "27": "I الحكم.",
+        "28": "I'm here. What's up?",
+        "29": "I hear you. Let me make sure I've got it right.",
+        "30": "I might be missing something ebx."
+      }
+    }
+  },
+  "parity": {
+    "affective_classification_accuracy": 0.0,
+    "affective_calibration": 0.0,
+    "false_positive_emotional_claim_rate": 0.0,
+    "false_negative_emotional_claim_rate": 0.0,
+    "appropriate_empathy_rate": 0.0,
+    "appropriate_silence_rate": 0.0,
+    "boundary_respect_rate": 0.0,
+    "repair_success_rate": 0.0,
+    "conflict_deescalation_rate": 0.0,
+    "initiative_appropriateness": 0.0,
+    "canned_empathy_rate": 0.0,
+    "emotional_repetition_rate": 0.034,
+    "emotional_verbosity_rate": 0.0,
+    "timing_appropriateness": 0.0,
+    "unsupported_emotional_claim_rate": 0.0,
+    "false_certainty_rate": 0.0,
+    "correction_retention": 0.0,
+    "preference_adaptation": 0.0,
+    "failure_recurrence": 0.0
+  },
+  "notes": "plan 24 §45: every candidate compared against the deterministic emotional baseline on the fixed 30-scenario benchmark; parity is the SFT+DPO delta relative to the first (SFT reference) adapter.",
+  "adapters": [
+    "training/models/adapters/novi-qwen3-8b-emotional-v1",
+    "training/models/adapters/novi-qwen3-8b-emotional-dpo-v1"
+  ]
+}
