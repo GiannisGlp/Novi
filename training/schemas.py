@@ -49,6 +49,51 @@ PREFERENCE_CATEGORIES: frozenset[str] = frozenset({
     "initiative", "repair", "social_appropriateness",
 })
 
+# Emotional maturity vocabulary (plan 24 §24-§26). The act set mirrors
+# novi.brain.empathy_policy.STRATEGIES plus the dialogue acts the emotional
+# behavior may select; a test asserts the overlap.
+EMOTIONAL_ACTS: frozenset[str] = frozenset({
+    "ACKNOWLEDGE", "APOLOGIZE", "SOLVE", "GIVE_SPACE", "VALIDATE", "CLARIFY",
+    "SUPPORT", "ENCOURAGE", "CELEBRATE", "LISTEN", "NORMALIZE", "REDIRECT",
+    "SILENCE", "RESPOND", "ASK", "REPAIR",
+})
+
+# Phase 21 (§25) SFT categories: social context + selected strategy -> natural
+# response. Never emotion label -> canned phrase.
+EMOTIONAL_SFT_TASKS: frozenset[str] = frozenset({
+    "appropriate_acknowledgement", "appropriate_silence", "repair", "apology",
+    "calm_disagreement", "support", "encouragement", "celebration",
+    "boundary_respect", "uncertainty",
+})
+
+# The full emotional task set: the SFT categories plus the two auxiliary
+# dataset kinds (perspective-taking §28, DPO preference pairs §26).
+EMOTIONAL_TASKS: frozenset[str] = EMOTIONAL_SFT_TASKS | frozenset({
+    "perspective", "preference",
+})
+
+# Phase 22 (§26) DPO preference categories.
+EMOTIONAL_PREFERENCE_CATEGORIES: frozenset[str] = frozenset({
+    "proportionality", "naturalness", "restraint", "emotional_timing",
+    "humility", "boundary_respect", "repair",
+})
+
+# Affective hypothesis labels (plan §24). Noun forms; the perspective dataset
+# (§28) uses the same vocabulary for its interpretation distribution.
+AFFECTIVE_LABELS: frozenset[str] = frozenset({
+    "frustration", "fatigue", "stress", "enthusiasm", "confusion", "comfort",
+    "engagement", "disengagement", "sadness", "anger", "anxiety", "joy",
+    "satisfaction", "distress", "success", "neutrality", "casualness", "surprise",
+})
+
+CONVERSATION_PHASES: frozenset[str] = frozenset({
+    "normal", "correction", "disagreement", "tension", "repair", "resolution",
+    "celebration", "silence", "support",
+})
+
+DEFENSIVENESS_LEVELS = ("none", "low", "moderate", "high")
+CERTAINTY_LEVELS = ("low", "moderate", "high")
+
 # Plan §29 — a model declares which context schemas it expects.
 SCHEMA_VERSIONS: dict[str, int] = {
     "context": 3,
@@ -471,6 +516,131 @@ def _validate_preference(data: dict[str, Any]) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Emotional example (plan 24 §24)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EmotionalExample:
+    """One emotional training example (plan 24 §24).
+
+    The emotional signal is probabilistic, not a fact: `situation` carries
+    affective hypotheses with probabilities, and `desired_behavior` selects
+    the strategy. The `task` field distinguishes the SFT categories (§25)
+    from the auxiliary kinds — `perspective` (§28) and `preference` (§26).
+    """
+
+    example_id: str
+    task: str
+    situation: dict[str, Any]
+    desired_behavior: dict[str, Any]
+    preferred_response: str = ""
+    # perspective-taking (§28)
+    evidence: str = ""
+    interpretations: list[dict] = field(default_factory=list)
+    robust_action: str = ""
+    # DPO preference pair (§26)
+    response_a: str = ""
+    response_b: str = ""
+    preferred: str = ""
+    category: str = ""
+    synthetic: bool = True
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "EmotionalExample":
+        return cls(
+            example_id=data.get("example_id", ""),
+            task=data.get("task", ""),
+            situation=dict(data.get("situation") or {}),
+            desired_behavior=dict(data.get("desired_behavior") or {}),
+            preferred_response=data.get("preferred_response", ""),
+            evidence=data.get("evidence", ""),
+            interpretations=list(data.get("interpretations") or []),
+            robust_action=data.get("robust_action", ""),
+            response_a=data.get("response_a", ""),
+            response_b=data.get("response_b", ""),
+            preferred=data.get("preferred", ""),
+            category=data.get("category", ""),
+            synthetic=bool(data.get("synthetic", True)),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "example_id": self.example_id,
+            "task": self.task,
+            "situation": dict(self.situation),
+            "desired_behavior": dict(self.desired_behavior),
+            "preferred_response": self.preferred_response,
+            "evidence": self.evidence,
+            "interpretations": list(self.interpretations),
+            "robust_action": self.robust_action,
+            "response_a": self.response_a,
+            "response_b": self.response_b,
+            "preferred": self.preferred,
+            "category": self.category,
+            "synthetic": self.synthetic,
+        }
+
+
+def _validate_emotional(data: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if not data.get("example_id"):
+        errors.append("example_id: required")
+    task = data.get("task", "")
+    if task not in EMOTIONAL_TASKS:
+        errors.append(f"task: unknown emotional task {task!r}")
+    sit = data.get("situation") or {}
+    for i, h in enumerate(sit.get("affective_hypotheses") or []):
+        if h.get("label") not in AFFECTIVE_LABELS:
+            errors.append(f"situation.affective_hypotheses[{i}].label: unknown {h.get('label')!r}")
+        prob = h.get("probability", 0.0)
+        if not _in_range(prob, 0.0, 1.0):
+            errors.append(f"situation.affective_hypotheses[{i}].probability: out of range {prob}")
+    phase = sit.get("conversation_phase", "")
+    if phase and phase not in CONVERSATION_PHASES:
+        errors.append(f"situation.conversation_phase: unknown {phase!r}")
+    if "interruptibility" in sit and not _in_range(sit["interruptibility"], 0.0, 1.0):
+        errors.append(f"situation.interruptibility: out of range {sit['interruptibility']}")
+    beh = data.get("desired_behavior") or {}
+    for i, act in enumerate(beh.get("act") or []):
+        if act not in EMOTIONAL_ACTS:
+            errors.append(f"desired_behavior.act[{i}]: unknown act {act!r}")
+    verbosity = beh.get("verbosity", "short")
+    if verbosity not in VERBOSITY_LEVELS:
+        errors.append(f"desired_behavior.verbosity: unknown level {verbosity!r}")
+    defensiveness = beh.get("defensiveness", "none")
+    if defensiveness not in DEFENSIVENESS_LEVELS:
+        errors.append(f"desired_behavior.defensiveness: unknown level {defensiveness!r}")
+    certainty = beh.get("certainty", "moderate")
+    if certainty not in CERTAINTY_LEVELS:
+        errors.append(f"desired_behavior.certainty: unknown level {certainty!r}")
+    acts = set(beh.get("act") or [])
+    if task == "preference":
+        if data.get("category") not in EMOTIONAL_PREFERENCE_CATEGORIES:
+            errors.append(f"category: unknown {data.get('category')!r}")
+        if not data.get("response_a") or not data.get("response_b"):
+            errors.append("response_a/response_b: both required for preference task")
+        if data.get("preferred") not in ("A", "B"):
+            errors.append("preferred: must be 'A' or 'B' for preference task")
+    elif task == "perspective":
+        if not data.get("evidence"):
+            errors.append("evidence: required for perspective task")
+        interps = data.get("interpretations") or []
+        if not interps:
+            errors.append("interpretations: at least one required for perspective task")
+        total = sum(float(i.get("probability", 0.0)) for i in interps)
+        if not (0.9 <= total <= 1.1):
+            errors.append(f"interpretations: probabilities must sum to ~1.0, got {total:.3f}")
+        if not data.get("robust_action"):
+            errors.append("robust_action: required for perspective task")
+    else:
+        response = data.get("preferred_response", "")
+        if not response and "SILENCE" not in acts:
+            errors.append("preferred_response: required for spoken emotional acts")
+    return errors
+
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 
@@ -480,6 +650,7 @@ _VALIDATORS = {
     "retrieval": _validate_retrieval,
     "grounding": _validate_grounding,
     "preference": _validate_preference,
+    "emotional": _validate_emotional,
 }
 
 KIND_DEFAULT = "canonical"
