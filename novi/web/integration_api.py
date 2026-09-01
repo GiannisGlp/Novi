@@ -8,7 +8,6 @@ undisturbed (doc 16 §4).
 
 from __future__ import annotations
 
-import base64
 import contextlib
 import threading
 import time
@@ -17,15 +16,14 @@ from typing import Any
 
 from novi.brain.agent import BrainDriver
 from novi.integration.multimodal import MultimodalRuntime
+from novi.integration.person_object_store import PersonObjectAssociationStore
 from novi.integration.recognition_store import RecognitionKind, RecognitionStore
 from novi.perception.camera import CameraFeed
+from novi.web.camera_loop import PERSON_LABELS as _PERSON_LABELS
 
 # enrollment input bounds (HTTP boundary validation)
 MAX_ENROLL_NAME_LEN = 80
 MAX_EMBEDDING_DIMS = 4096
-
-# detection classes that denote a person (face box + body classes)
-_PERSON_LABELS = ("person", "human", "face")
 # fraction of an object box covered by the person box to read as "held"
 _HELD_COVERAGE = 0.25
 
@@ -67,8 +65,9 @@ class IntegrationMixin:
     # populated by _integration_init() in __init__
     mm_runtime: MultimodalRuntime
     mm_store: RecognitionStore
+    association_store: PersonObjectAssociationStore
     mm_camera_feed: CameraFeed | None
-    mm_last_frame_bytes: bytes | None
+    mm_last_frame_bgr: Any | None  # decoded BGR ndarray; enrollment crops against it
 
     def _integration_init(self) -> None:
         db = Path(self.store_path) if getattr(self, "store_path", None) else None
@@ -78,6 +77,9 @@ class IntegrationMixin:
         from novi.integration.observation_recorder import ObservationRecorder
 
         self.observation_recorder = ObservationRecorder(db or ":memory:")
+        # Person-object co-occurrence memory (who was seen with which object,
+        # where) — durable facts for dialogue on the same canonical DB file.
+        self.association_store = PersonObjectAssociationStore(db or ":memory:")
         # Voice turns get the same LLM transport as chat so spoken dialogue is
         # real dialogue (router-grade), not just the deterministic fallback.
         llm_transport = self._llm_chat if getattr(self, "chat_llm", False) else None
@@ -133,6 +135,7 @@ class IntegrationMixin:
             face_identifier=faces,
             recognition=self.mm_store,
             observations=self.observation_recorder,
+            associations=self.association_store,
             # GAP-2: only a real camera's stable landmark sets become durable
             # places; the demo camera's synthetic frames must not pollute the
             # place store.
@@ -140,6 +143,12 @@ class IntegrationMixin:
         )
         self.mm_camera_feed = None
         self.mm_last_frame_b64: str | None = None
+        # last decoded BGR array (plan 26 A: the loop decodes once and reuses it;
+        # enrollment embeds/crops against this, never a re-encoded full-res JPEG).
+        self.mm_last_frame_bgr: Any | None = None
+        # last (face_embedding, face_bbox) pair — reused when a frame's face
+        # stage is cadence-skipped so identity matching keeps presence alive.
+        self.mm_last_face_pair: tuple | None = None
         # last face identity seen by the camera loop (tier/person/similarity)
         self.mm_last_face: dict[str, Any] | None = None
         # last object embedding per detection label — lets the UI name a
@@ -156,6 +165,13 @@ class IntegrationMixin:
         self._voice_recognizer: Any | None = None
         self._camera_thread: threading.Thread | None = None
         self.speak_back_enabled = True
+        # Plan 26 B: give the brain a read-only live-vision provider so it can
+        # honestly say what it currently sees — and that it can't before a real
+        # camera is enabled. The provider only READS runtime/feed state (never
+        # calls brain methods), so the reply and camera threads can't deadlock.
+        from novi.web.vision_provider import build_vision_provider
+
+        self.brain.set_vision_provider(build_vision_provider(self))
 
     # ---- real I/O (doc 17) -------------------------------------------------
 
@@ -211,138 +227,55 @@ class IntegrationMixin:
         self.real_io_enabled = any(self.real_io.values())
         return results
 
-    def _store_preview_frame(self, rec: Any) -> None:
-        """Store the downscaled preview + a full-res JPEG for enrollment.
+    def _store_preview_frame(self, rec: Any, bgr: Any | None = None) -> None:
+        """Store the decoded BGR frame + a downscaled preview b64.
 
-        The browser preview is shrunk (<=640px, q72) to cut base64/encode cost,
-        but enrollment must crop against the SAME resolution the tracks were
-        computed on — so a full-res JPEG is kept alongside (H1/H2: never crop a
-        full-res bbox against the preview, and never embed a low-res face).
+        The browser preview is shrunk (<=640px, q72) to cut base64/encode cost.
+        The full-res **decoded array** is kept as ``mm_last_frame_bgr`` so
+        enrollment embeds/crops against the SAME resolution the tracks were
+        computed on — a full-res JPEG is no longer re-encoded every frame
+        (H1/H2: never crop a full-res bbox against the preview, and never
+        embed a low-res face). plan 26 A.
         """
-        from novi.integration.real_io import encode_frame_jpeg_b64, encode_preview_jpeg_b64
+        from novi.integration.real_io import encode_preview_jpeg_b64
+        from novi.web.camera_loop import build_work_frame, decode_bgr
 
-        data_url = encode_preview_jpeg_b64(rec.frame)
-        full_b64 = encode_frame_jpeg_b64(rec.frame)
+        work = build_work_frame(rec, bgr) if bgr is not None else rec.frame
+        data_url = encode_preview_jpeg_b64(work)
         with self.mm_lock:
             self.mm_last_frame_b64 = data_url
-            self.mm_last_frame_bytes = (
-                base64.b64decode(full_b64.split(",", 1)[1]) if full_b64 else None
-            )
+            self.mm_last_frame_bgr = bgr if bgr is not None else decode_bgr(rec.frame.payload)
 
     def _start_camera_loop(self) -> None:
-        """Background loop: poll frames → perception → preview b64."""
+        """Background loop: poll frames → perception → preview b64 (budgeted).
 
-        def _loop() -> None:
-            while getattr(self, "mm_camera_feed", None) is not None and not self._stop.is_set():
-                feed = self.mm_camera_feed
-                if feed is None:
-                    break
-                rec = feed.poll(timeout_s=0.5)
-                if rec is None:
-                    continue
-                try:
-                    # Preview is downscaled + quality-capped; detection below
-                    # runs on the full-res frame.payload untouched.
-                    self._store_preview_frame(rec)
-                    # Real face identity: embed the largest face in this frame
-                    # when the SFace backend is available; None = skip stage.
-                    embedding: list[float] | None = None
-                    face_bbox = None
-                    embedder = getattr(self, "face_embedder", None)
-                    if embedder is not None:
-                        payload = rec.frame.payload
-                        if isinstance(payload, (bytes, bytearray)):
-                            embedding, face_bbox = embedder.embed(payload)
-                    obs = self.mm_runtime.process_camera_frame(
-                        rec.frame,
-                        face_embedding=embedding,
-                    )
-                    # Instance-level object recognition: embed each detection's
-                    # crop and match against enrolled objects (durable memory).
-                    if self.object_embedder is not None and obs.detections:
-                        try:
-                            bboxes = [d.bbox for d in obs.detections]
-                            vecs = self.object_embedder.embed(rec.frame.payload, bboxes)
-                            pairs = [
-                                (d.label, v)
-                                for d, v in zip(obs.detections, vecs, strict=False)
-                                if v is not None
-                            ]
-                            if pairs:
-                                self.mm_runtime.recognize_objects(pairs, frame_id=rec.frame.frame_id)
-                                # remember the last embedding per label so the UI
-                                # can name a proposal without re-supplying it (GAP-3)
-                                with self.mm_lock:
-                                    for label, vec in pairs:
-                                        self.mm_last_object_embeddings[label] = vec
-                            # person-object co-occurrence (plan 20 WS5): when a
-                            # recognized person's box overlaps a detected object,
-                            # resolve the held instance → person.holding/object.novel
-                            self._note_person_holding(obs.detections, face_bbox, vecs, rec.frame.frame_id)
-                        except Exception:  # noqa: BLE001 - object recognition best-effort
-                            pass
-                    if embedding is not None and obs.identities:
-                        dec = obs.identities[-1]
-                        self.mm_last_face = {
-                            "bbox": face_bbox,
-                            "tier": dec.tier.value,
-                            "person": dec.person_id,
-                            "similarity": round(dec.similarity, 3),
-                            "proposal": bool(dec.new_person_proposal),
-                        }
-                    # Stable track labels for the overlay: person tracks get
-                    # identity names (Vano / someone), objects keep their class
-                    # label + track id. Stored under mm_lock for /api/preview.
-                    overlay: list[dict[str, Any]] = []
-                    for t in getattr(obs, "tracks", []) or []:
-                        entry: dict[str, Any] = {
-                            "track_id": t.track_id,
-                            "label": t.label,
-                            "bbox": list(t.bbox),
-                            "confirmed": bool(t.confirmed),
-                        }
-                        if t.label in ("person", "human", "face"):
-                            name = self.mm_runtime.current_person or (
-                                "someone" if self.mm_last_face else None
-                            )
-                            if name:
-                                entry["name"] = f"{name} ({self.mm_runtime.current_person_tier or 'seen'})"
-                                entry["is_person"] = True
-                        overlay.append(entry)
-                    if self.mm_last_face and face_bbox:
-                        # the identified face box itself, named by tier
-                        overlay.append({
-                            "track_id": -1,
-                            "label": "face",
-                            "bbox": list(face_bbox),
-                            "confirmed": True,
-                            "is_person": True,
-                            "name": (
-                                self.mm_last_face.get("person")
-                                or ("new person — enroll" if self.mm_last_face.get("proposal") else "person?")
-                            ),
-                        })
-                    with self.mm_lock:
-                        self.mm_last_tracks = overlay
-                    # Presence/scene salience -> the brain's input bus (north
-                    # star §4.2): room transitions become real cognition inputs.
-                    try:
-                        for ev in self.mm_runtime.pop_pending_events():
-                            kind = str(ev.get("kind", ""))
-                            if _is_bus_event(kind):
-                                self.brain.submit(
-                                    "camera", kind,
-                                    {k: v for k, v in ev.items() if k != "kind"},
-                                    coalesce_key=f"{kind}:{ev.get('person', ev.get('object', 'scene'))}",
-                                )
-                    except Exception:  # noqa: BLE001 - event feed is best-effort
-                        pass
-                except Exception:  # noqa: BLE001 - preview loop must survive anything
-                    continue
+        The heavy per-frame mechanics live in ``novi.web`` camera_loop:
+        single JPEG decode + VisionBudget gating + per-stage timing telemetry.
+        """
+        from novi.web.camera_loop import build_camera_loop
 
-        t = threading.Thread(target=_loop, daemon=True, name="novi-real-camera")
+        t = threading.Thread(target=build_camera_loop(self), daemon=True, name="novi-real-camera")
         t.start()
         self._camera_thread = t
+
+    def _forward_bus_events(self, events: list[dict[str, Any]]) -> None:
+        """Forward presence/scene/identity events onto the brain's input bus.
+
+        Only perception-frame-level salience reaches cognition (north star
+        §4.2); raw perception frames and ambiguous identity decisions are not.
+        Best-effort: a busy brain must never take down the camera loop.
+        """
+        try:
+            for ev in events:
+                kind = str(ev.get("kind", ""))
+                if _is_bus_event(kind):
+                    self.brain.submit(
+                        "camera", kind,
+                        {k: v for k, v in ev.items() if k != "kind"},
+                        coalesce_key=f"{kind}:{ev.get('person', ev.get('object', 'scene'))}",
+                    )
+        except Exception:  # noqa: BLE001 - event feed is best-effort
+            pass
 
     def _note_person_holding(self, detections, face_bbox, vecs, frame_id: str) -> None:
         """Feed bbox-overlapping (person, object) pairs into the runtime.
@@ -446,11 +379,21 @@ class IntegrationMixin:
         embedder = getattr(self, "face_embedder", None)
         if embedder is None:
             return {"error": "face embedding backend unavailable (opencv models failed to load)"}
+        # enroll against the SAME decoded frame the tracks were computed on —
+        # never against a re-encoded JPEG or the q72 preview (H1/H2).
         with self.mm_lock:
-            jpeg = self.mm_last_frame_bytes
-        if not jpeg:
+            bgr = self.mm_last_frame_bgr
+        if bgr is None:
             return {"error": "no camera frame yet — enable the camera and try again"}
-        vec, bbox = embedder.embed(jpeg)
+        if hasattr(embedder, "embed_bgr"):
+            vec, bbox = embedder.embed_bgr(bgr)
+        else:
+            from novi.web.camera_loop import encode_bgr_jpeg
+
+            jpeg = encode_bgr_jpeg(bgr)
+            if jpeg is None:
+                return {"error": "could not encode the camera frame"}
+            vec, bbox = embedder.embed(jpeg)
         if vec is None:
             return {"error": "no face visible — sit facing the camera and retry"}
         # store under the canonical person id + durable recognition entry
@@ -487,9 +430,9 @@ class IntegrationMixin:
         # frame and overlay must come from the same loop iteration — capture
         # both under one lock hold or a fresh frame pairs with a stale bbox
         with self.mm_lock:
-            jpeg = self.mm_last_frame_bytes
+            bgr = self.mm_last_frame_bgr
             tracks = list(self.mm_last_tracks or [])
-        if not jpeg:
+        if bgr is None:
             return {"error": "no camera frame yet — enable the camera and try again"}
         # largest non-person track bbox from the latest frame overlay
         best: tuple[int, tuple[int, int, int, int]] | None = None
@@ -504,7 +447,7 @@ class IntegrationMixin:
                 best = (area, (int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
         if best is None:
             return {"error": "no object visible — point the camera at an object and retry"}
-        vecs = embedder.embed(jpeg, [best[1]])
+        vecs = embedder.embed(bgr, [best[1]])
         vec = vecs[0] if vecs else None
         if vec is None:
             return {"error": "could not embed the object crop"}
@@ -680,6 +623,59 @@ class IntegrationMixin:
             oc = self._require_observations()
             hits = oc.search([float(v) for v in query], kind=kind, place=place, limit=limit)
             return {"matches": [{"entity_ref": ref, "similarity": round(sim, 3)} for ref, sim in hits]}
+
+    # ---- person-object association memory (plan 26 D) -------------------------
+
+    def _require_associations(self):
+        if self.association_store is None:
+            raise RuntimeError("association memory unavailable")
+        return self.association_store
+
+    @staticmethod
+    def _canonical_person(person: str) -> str:
+        """Normalize a person label/id to the durable ``person-{slug}`` ref."""
+        if person.startswith("person-"):
+            return person
+        return f"person-{person.lower().replace(' ', '-')}"
+
+    def association_query(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Who was seen with which object, where, how often (plan 26 D).
+
+        ``action`` is one of ``objects_with`` (top objects for a person),
+        ``seen_with`` (has person been seen with object?) or
+        ``recent_summary`` (bounded human lines for dialogue). ``person``
+        accepts a label ("Anna") or a canonical ref ("person-anna"); when
+        omitted it falls back to the runtime's recognized current person.
+        """
+        action = str(body.get("action", "") or "").strip()
+        person_raw = str(body.get("person", "") or "").strip()
+        limit = max(1, min(int(body.get("limit", 8)), 25))
+        with self.mm_lock:
+            assoc = self._require_associations()
+            # fall back to the recognized person currently in view
+            person = person_raw
+            if not person:
+                rt = getattr(self, "mm_runtime", None)
+                if rt is not None and rt.current_person_tier in ("recognized", "verified"):
+                    person = rt.current_person
+            canonical = self._canonical_person(person) if person else ""
+            if not canonical:
+                return {"error": "person required (or no recognized person in view)"}
+            if action == "objects_with":
+                return {
+                    "associations": [
+                        a.as_dict() for a in assoc.objects_with(canonical, limit=limit)
+                    ]
+                }
+            if action == "seen_with":
+                object_ref = str(body.get("object", "") or "").strip()
+                if not object_ref:
+                    return {"error": "object required for seen_with"}
+                hit = assoc.seen_with(canonical, object_ref)
+                return {"seen": hit if hit else {"seen": False}}
+            if action == "recent_summary":
+                return {"summary": assoc.recent_summary(canonical, limit=min(limit, 3))}
+            return {"error": "action must be objects_with|seen_with|recent_summary"}
 
     def proposal_list(self) -> dict[str, Any]:
         """Pending novel-object proposals awaiting a name (GAP-S3)."""

@@ -31,6 +31,7 @@ class SelfModel:
     active_goal: dict[str, Any] | None
     mode: str  # aggregate health status
     known_persons: list[str] = field(default_factory=list)
+    live_vision: dict[str, Any] = field(default_factory=dict)  # plan 26 B
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -46,6 +47,7 @@ class SelfModel:
             "active_goal": self.active_goal,
             "mode": self.mode,
             "known_persons": list(self.known_persons),
+            "live_vision": dict(self.live_vision),
         }
 
     @property
@@ -55,6 +57,26 @@ class SelfModel:
     @property
     def can_hear(self) -> bool:
         return self.capabilities.get("hearing") == "PASS"
+
+
+def _merge_vision(brain: Any, checks: dict[str, str]) -> dict[str, Any]:
+    """Fold live vision into the capability checks (plan 26 B).
+
+    Only when the brain has a vision provider wired does the self-model gain
+    a ``vision`` capability — a default camera-less brain stays byte-identical
+    (no capability entry, honest offline ``live_vision``).
+    """
+    try:
+        status = dict(brain.vision_status())
+    except Exception:  # noqa: BLE001
+        return {}
+    if status.get("available"):
+        if status.get("can_see"):
+            checks["vision"] = "PASS"
+        else:
+            health = str(status.get("health", "")).lower()
+            checks["vision"] = "FAIL" if health in ("offline", "failed") else "WARN"
+    return status
 
 
 def build_self_model(brain: Any) -> SelfModel:
@@ -74,6 +96,7 @@ def build_self_model(brain: Any) -> SelfModel:
     allowed_actions = set(body.get("ALLOWED_ACTIONS", set()) or set())
     object_manip = bool({"open", "close", "turn_on", "turn_off", "move", "pick_up"} & allowed_actions)
     checks.setdefault("physical_actions", "PASS" if object_manip else "FAIL")
+    vision: dict[str, Any] = _merge_vision(brain, checks)
     known: list[str] = []
     try:
         known = brain._chat_known_persons()
@@ -97,4 +120,5 @@ def build_self_model(brain: Any) -> SelfModel:
         active_goal=goal,
         mode=health.get("status", "UNKNOWN"),
         known_persons=known,
+        live_vision=vision,
     )

@@ -211,25 +211,58 @@ class IntegrationApiTests(unittest.TestCase):
 
     # ---- H1/H2: enrollment must source the FULL-RES frame, not the preview ----
 
-    def test_store_preview_frame_keeps_full_res_for_enrollment(self) -> None:
+    def test_store_preview_frame_keeps_decoded_bgr_for_enrollment(self) -> None:
+        import numpy as np
+
         from novi.brain.io import CameraFrame
 
-        full_res = b"\xff\xd8" + b"\x00" * 32  # JPEG magic; full-res payload
+        bgr = np.zeros((720, 1280, 3), dtype="uint8")
         rec = type("Rec", (), {"frame": CameraFrame(
-            frame_id="f1", captured_at="t", width=1280, height=720, payload=full_res,
+            frame_id="f1", captured_at="t", width=1280, height=720, payload=bgr,
         )})()
-        self.s._store_preview_frame(rec)
-        # the full-res JPEG is preserved for enrollment cropping
-        self.assertEqual(self.s.mm_last_frame_bytes, full_res)
-        # the preview slot is a separate (downscaled/None) value, never the raw frame
-        self.assertNotEqual(self.s.mm_last_frame_b64, full_res)
+        self.s._store_preview_frame(rec, bgr)
+        # the decoded array is preserved for enrollment cropping (no per-frame
+        # full-res JPEG re-encode); the preview slot is a separate data URL.
+        self.assertIs(self.s.mm_last_frame_bgr, bgr)
+        self.assertTrue(
+            isinstance(self.s.mm_last_frame_b64, str)
+            and self.s.mm_last_frame_b64.startswith("data:image/jpeg;base64,")
+        )
 
-    def test_enroll_face_uses_full_res_frame(self) -> None:
+    def test_enroll_face_prefers_decoded_bgr(self) -> None:
+        import numpy as np
+
         s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
         try:
             class _FakeEmbedder:
                 def __init__(self) -> None:
-                    self.received: bytes | None = None
+                    self.received = None
+
+                def embed_bgr(self, bgr):
+                    self.received = bgr
+                    return ([1.0, 0.0], (0, 0, 10, 10))
+
+                def embed(self, jpeg):
+                    raise AssertionError("embed_bgr path must be preferred")
+
+            fake = _FakeEmbedder()
+            s.face_embedder = fake
+            bgr = np.zeros((48, 64, 3), dtype="uint8")
+            s.mm_last_frame_bgr = bgr
+            r = s.enroll_face_from_camera("Alice")
+            self.assertTrue(r["ok"])
+            self.assertIs(fake.received, bgr)
+        finally:
+            s.stop()
+
+    def test_enroll_face_falls_back_to_encoded_jpeg(self) -> None:
+        import numpy as np
+
+        s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+        try:
+            class _FakeEmbedder:
+                def __init__(self) -> None:
+                    self.received = None
 
                 def embed(self, jpeg):
                     self.received = jpeg
@@ -237,38 +270,105 @@ class IntegrationApiTests(unittest.TestCase):
 
             fake = _FakeEmbedder()
             s.face_embedder = fake
-            s.mm_last_frame_bytes = b"\xff\xd8full-res-face"
-            s.mm_last_frame_b64 = "data:image/jpeg;base64,downscaled-preview"
+            s.mm_last_frame_bgr = np.zeros((48, 64, 3), dtype="uint8")
             r = s.enroll_face_from_camera("Alice")
             self.assertTrue(r["ok"])
-            # the embedder saw the full-res frame, not the q72 preview
-            self.assertEqual(fake.received, b"\xff\xd8full-res-face")
+            # legacy embedder receives a JPEG encoded on demand from the bgr
+            self.assertIsInstance(fake.received, bytes)
+            self.assertEqual(fake.received[:2], b"\xff\xd8")
         finally:
             s.stop()
 
-    def test_enroll_object_uses_full_res_frame_and_bbox(self) -> None:
+    def test_enroll_object_uses_decoded_bgr_and_bbox(self) -> None:
+        import numpy as np
+
         s = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
         try:
             class _FakeEmbedder:
                 def __init__(self) -> None:
-                    self.received: tuple[bytes, list] | None = None
+                    self.received = None
 
-                def embed(self, jpeg, bboxes):
-                    self.received = (jpeg, bboxes)
+                def embed(self, payload, bboxes):
+                    self.received = (payload, bboxes)
                     return [[1.0, 0.0]]
 
             fake = _FakeEmbedder()
             s.object_embedder = fake
-            s.mm_last_frame_bytes = b"\xff\xd8full-res-object"
-            s.mm_last_frame_b64 = "data:image/jpeg;base64,downscaled-preview"
+            bgr = np.zeros((48, 64, 3), dtype="uint8")
+            s.mm_last_frame_bgr = bgr
             s.mm_last_tracks = [{"label": "cup", "bbox": [10, 20, 30, 40], "is_person": False}]
             r = s.enroll_object_from_camera("mug")
             self.assertTrue(r["ok"])
-            # full-res frame + the full-res bbox (no coordinate mismatch)
-            self.assertEqual(fake.received[0], b"\xff\xd8full-res-object")
+            # the decoded array + the full-res bbox (no coordinate mismatch)
+            self.assertIs(fake.received[0], bgr)
             self.assertEqual(fake.received[1], [(10, 20, 30, 40)])
         finally:
             s.stop()
+
+
+class AssociationApiTests(unittest.TestCase):
+    """Person-object association endpoint (plan 26 D).
+
+    A FRESH server per test: these tests enroll object instances whose
+    embeddings collide with the shared-class observations tests, and their
+    coalescing counts depend on a clean store — so no mutable state may be
+    shared between them.
+    """
+
+    def setUp(self) -> None:
+        self.a = NoviWebServer(port=0, store_path=None, auto_step=False, chat_llm=False)
+
+    def tearDown(self) -> None:
+        self.a.stop()
+
+    def _record(self) -> None:
+        self.a.mm_runtime.recognize_object("my-mug", embedding=[1.0, 0.0], frame_id="f0")
+        self.a.mm_runtime.current_person = "Anna"
+        self.a.mm_runtime.current_person_tier = "recognized"
+        self.a.mm_runtime.current_place = "kitchen"
+        self.a.mm_runtime.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+
+    def test_association_objects_with_recognized_person(self) -> None:
+        self._record()
+        r = self.a.association_query({"action": "objects_with", "person": "Anna"})
+        self.assertEqual(len(r["associations"]), 1)
+        self.assertEqual(r["associations"][0]["object_ref"], "object-my-mug")
+        self.assertEqual(r["associations"][0]["places"], ["kitchen"])
+
+    def test_association_objects_with_defaults_to_current_person(self) -> None:
+        self.a.mm_runtime.recognize_object("my-mug", embedding=[1.0, 0.0], frame_id="f0")
+        self.a.mm_runtime.current_person = "Anna"
+        self.a.mm_runtime.current_person_tier = "verified"
+        self.a.mm_runtime.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+        # no person supplied -> the recognized person in view is used
+        r = self.a.association_query({"action": "objects_with"})
+        self.assertEqual(r["associations"][0]["object_ref"], "object-my-mug")
+
+    def test_association_seen_with_true_and_false(self) -> None:
+        self.a.mm_runtime.recognize_object("my-mug", embedding=[1.0, 0.0], frame_id="f0")
+        self.a.mm_runtime.current_person = "Anna"
+        self.a.mm_runtime.current_person_tier = "recognized"
+        self.a.mm_runtime.recognize_objects([("cup", [1.0, 0.0])], frame_id="f1")
+
+        hit = self.a.association_query({
+            "action": "seen_with", "person": "Anna", "object": "object-my-mug",
+        })
+        self.assertTrue(hit["seen"]["seen"])
+        miss = self.a.association_query({
+            "action": "seen_with", "person": "Anna", "object": "object-lamp",
+        })
+        self.assertFalse(miss["seen"]["seen"])
+
+    def test_association_recent_summary_lines(self) -> None:
+        self._record()
+        r = self.a.association_query({"action": "recent_summary", "person": "person-anna"})
+        self.assertEqual(r["summary"], ["my-mug in kitchen (1x)"])
+
+    def test_association_requires_person_when_none_recognized(self) -> None:
+        self.a.mm_runtime.current_person = ""
+        self.a.mm_runtime.current_person_tier = ""
+        r = self.a.association_query({"action": "objects_with"})
+        self.assertIn("error", r)
 
 
 if __name__ == "__main__":

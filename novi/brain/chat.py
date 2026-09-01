@@ -124,15 +124,18 @@ class ChatMixin:
             "warning": "Do not use relationship-scoped expressions from other people." if other_scoped else "",
         }
 
-    def _assemble_world_context(self, text: str, person: str = "") -> dict[str, Any]:
+    def _assemble_world_context(self, text: str, person: str = "", *, vision_provider: Any = None) -> dict[str, Any]:
         """Assemble a bounded, provenance-filtered context package from the
         unified world model for dialogue/reasoning grounding (Step 1).
 
         Returns a compact dict with visible entities, relations, attention
-        summary, and contradictions — all provenance-tagged.
+        summary, and contradictions — all provenance-tagged. A
+        ``vision_provider`` (plan 26 C) additionally merges bounded
+        live-perception state so replies can reference what Novi currently
+        sees; with no provider the package is byte-identical to today.
         """
         if not self.unified_world.entities:
-            return {}
+            return self._merge_live_perception({}, vision_provider) if vision_provider is not None else {}
         # Include derived situations in the context request.
         situations = tuple(s.snapshot() for s in self.situation_model.current_situations)
         request = ContextRequest(
@@ -144,7 +147,7 @@ class ChatMixin:
         )
         ctx = self.context_assembler.assemble(self.unified_world, request)
         self._last_context_package = ctx.to_dict()
-        return {
+        pkg = {
             "visible_entities": [
                 {"id": e.data.get("entity_id"), "type": e.data.get("entity_type"),
                  "label": (e.data.get("labels") or [""])[0] if e.data.get("labels") else "",
@@ -165,6 +168,63 @@ class ChatMixin:
             "item_count": len(ctx.items),
             "items_dropped": ctx.items_dropped,
         }
+        if vision_provider is None:
+            return pkg
+        return self._merge_live_perception(pkg, vision_provider)
+
+    def _merge_live_perception(self, pkg: dict[str, Any], provider: Any) -> dict[str, Any]:
+        """Merge what Novi currently sees into a world-context package (plan 26 C).
+
+        Adds a bounded ``perception`` block and prepends/appends live
+        person/object entities (tagged ``source:"camera"``) to
+        ``visible_entities`` — deduped by label against the unified-world
+        entities already present — so the trained ``World:`` line carries live
+        sight. The provider only READS camera/runtime state (never brain
+        methods), and a throwing provider degrades to an offline report.
+        """
+        try:
+            status = dict(provider() or {})
+        except Exception:  # noqa: BLE001 - a broken feed degrades to offline
+            status = {}
+        objects = [
+            {"label": str(o), "kind": "object", "recognized": True}
+            for o in (status.get("objects") or [])
+        ][:8]
+        associations = list((status.get("associations") or []) or [])[:3]
+        pkg["perception"] = {
+            "camera_live": bool(status.get("camera_live")),
+            "person": str(status.get("person", "") or ""),
+            "person_tier": str(status.get("person_tier", "") or ""),
+            "place": str(status.get("place", "") or ""),
+            "objects": objects,
+            "associations": associations,
+        }
+        entities = list(pkg.get("visible_entities") or [])
+        seen_labels = {e.get("label") for e in entities}
+        person = pkg["perception"]["person"]
+        if person:
+            entities.insert(0, {
+                "id": "perception-person",
+                "type": "perception.person",
+                "label": person,
+                "source": "camera",
+                "epistemic_status": pkg["perception"]["person_tier"] or "perceived",
+                "confidence": 1.0,
+            })
+        for obj in objects:
+            if obj["label"] in seen_labels:
+                continue
+            seen_labels.add(obj["label"])
+            entities.append({
+                "id": f"perception-object-{obj['label']}",
+                "type": "perception.object",
+                "label": obj["label"],
+                "source": "camera",
+                "epistemic_status": "perceived",
+                "confidence": 1.0,
+            })
+        pkg["visible_entities"] = entities
+        return pkg
 
     def _entities_in_text(self, text: str) -> tuple[str, ...]:
         """Entities mentioned in a message.
@@ -1009,6 +1069,16 @@ class ChatMixin:
         # "Prefer silence" when there's no useful communicative reason; respect
         # social-fatigue budget, turn-taking, and affect-driven social overload
         # (docs/06-soul/08 §S60, §S61; docs/06-soul/05 §14; roadmap item 26).
+        # Plan 26 C: when no addressee was supplied but a recognized person is
+        # currently in view, address that person. Gated on a vision provider
+        # being wired, so the default brain stays byte-identical.
+        if not person and not addressee_name and getattr(self, "_vision_provider", None) is not None:
+            try:
+                seen = str((self._vision_provider() or {}).get("person") or "")
+                if seen:
+                    addressee_name = seen
+            except Exception:  # noqa: BLE001 - a broken feed stays unnamed
+                pass
         addressee = person or addressee_name
         affect = dict(self.soul.affect.dimensions)
         should, silence_reason = self.communication_decision.should_speak(
@@ -1060,7 +1130,10 @@ class ChatMixin:
         grounding_text = f"{text} {topic_hint}".strip() if topic_hint else text
         # One auditable ContextPackage grounds this reply (gap-audit Phase B3):
         # knowledge + memory facts come from its provenance-tagged layers.
-        world_context = self._assemble_world_context(grounding_text, person or addressee_name)
+        world_context = self._assemble_world_context(
+            grounding_text, person or addressee_name,
+            vision_provider=getattr(self, "_vision_provider", None),
+        )
         pkg_items = (self._last_context_package or {}).get("items", [])
         knowledge_items = [i for i in pkg_items if i.get("layer") == "knowledge"]
         memory_items = [i for i in pkg_items if i.get("layer") == "memory"]

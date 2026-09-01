@@ -313,3 +313,29 @@ class TestAutoEnrollAndNaming:
         res = rt.name_person("new-person-9", "Bob")
         assert res["moved"] == 0
         assert res["person_id"] == "person-bob"
+
+
+class TestCadenceBudget:
+    def test_snapshot_includes_cadence_telemetry(self, tmp_path):
+        rt, _, _ = _runtime(tmp_path)
+        snap = rt.snapshot()
+        cadence = snap.get("cadence")
+        assert cadence is not None
+        for key in ("frames_processed", "processed_fps", "stage_ms", "runs"):
+            assert key in cadence
+        assert set(cadence["stage_ms"]) == {"detect", "face_embed", "object_embed", "preview"}
+
+    def test_injected_budget_is_used(self, tmp_path, monkeypatch):
+        from novi.perception.cadence import VisionBudget
+
+        rt, _, _ = _runtime(tmp_path)
+        budget = VisionBudget(face_every_n=5)
+        rt2 = MultimodalRuntime(
+            driver=rt.driver,
+            detector=rt.perception.detector,
+            face_identifier=rt.faces,
+            recognition=rt.recognition,
+            observations=rt.observations,
+            budget=budget,
+        )
+        assert rt2.budget is budget

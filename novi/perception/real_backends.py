@@ -183,7 +183,12 @@ class OpenCVFaceEmbedder:
     # -- inference --------------------------------------------------------------
 
     def embed(self, payload: bytes | bytearray) -> tuple[list[float] | None, tuple[int, int, int, int] | None]:
-        """JPEG/PNG bytes -> (128-d embedding, (x, y, w, h)) for the largest face."""
+        """JPEG/PNG bytes -> (128-d embedding, (x, y, w, h)) for the largest face.
+
+        Decodes the payload once, then delegates to :meth:`embed_bgr` so the
+        camera loop's already-decoded array never goes through a second
+        encode/decode round trip.
+        """
         if not self.available:
             return None, None
         try:
@@ -193,6 +198,22 @@ class OpenCVFaceEmbedder:
             img = cv2.imdecode(np.frombuffer(payload, dtype=np.uint8), cv2.IMREAD_COLOR)
             if img is None:
                 return None, None
+            return self.embed_bgr(img)
+        except Exception:  # noqa: BLE001 - biometrics are best-effort
+            return None, None
+
+    def embed_bgr(self, img) -> tuple[list[float] | None, tuple[int, int, int, int] | None]:
+        """(128-d embedding, largest-face bbox) over an already-decoded BGR array.
+
+        Same YuNet + SFace pipeline as :meth:`embed` but consumes a decoded
+        BGR ndarray, so a frame that is decoded once can feed detection, the
+        object embedder, and face identity without re-decoding (plan 26 A).
+        """
+        if not self.available:
+            return None, None
+        try:
+            import cv2
+
             h, w = img.shape[:2]
             assert self._detector is not None
             self._detector.setInputSize((w, h))

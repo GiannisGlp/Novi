@@ -12,9 +12,11 @@ to the face embedder. Contract:
 
 from __future__ import annotations
 
+from unittest import mock
+
 import numpy as np
 
-from novi.perception.real_backends import TorchvisionObjectEmbedder
+from novi.perception.real_backends import OpenCVFaceEmbedder, TorchvisionObjectEmbedder
 
 
 def _jpeg() -> bytes:
@@ -63,3 +65,73 @@ class TestObjectEmbedder:
         emb._failed = True
         assert emb.available is False
         assert emb.embed(_jpeg(), [(0, 0, 16, 16)]) == [None]
+
+
+class _FakeYnet:
+    """YuNet-contract stand-in: one face box (x, y, w, h, score...) row."""
+
+    def setInputSize(self, size) -> None:
+        self.size = size
+
+    def detect(self, img):
+        self.seen = img
+        return True, [[40.0, 50.0, 30.0, 40.0, 0.99, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+
+
+class _FakeSFace:
+    """SFace-contract stand-in: pass-through crop + fixed 3-d feature."""
+
+    def alignCrop(self, img, face):
+        self.seen = (img, face)
+        return img
+
+    def feature(self, aligned):
+        self._aligned = aligned
+        return np.array([0.0, 0.0, 1.0])
+
+
+class TestFaceEmbedBgr:
+    """embed_bgr: the same SFace pipeline over an already-decoded BGR array.
+
+    Plan 26 (A) makes the camera loop decode the JPEG once; the face embedder
+    must then run over that decoded array (`embed_bgr`) instead of re-decoding.
+    """
+
+    def test_embed_delegates_to_embed_bgr_after_single_decode(self):
+        emb = OpenCVFaceEmbedder()
+        seen: list[np.ndarray] = []
+
+        def fake_bgr(img):
+            seen.append(img)
+            return ([float(i) for i in range(128)], (2, 2, 8, 8))
+
+        emb.embed_bgr = fake_bgr  # type: ignore[method-assign]
+        with mock.patch.object(
+            OpenCVFaceEmbedder, "available", new_callable=mock.PropertyMock, return_value=True
+        ):
+            vec, bbox = emb.embed(_jpeg())
+        assert len(seen) == 1, "embed() decodes once then delegates to embed_bgr"
+        assert seen[0].shape[:2] == (48, 64), "the SAME JPEG array, no re-encode"
+        assert bbox == (2, 2, 8, 8)
+        assert len(vec) == 128
+
+    def test_embed_bgr_unavailable_returns_none(self):
+        emb = OpenCVFaceEmbedder()
+        with mock.patch.object(
+            OpenCVFaceEmbedder, "available", new_callable=mock.PropertyMock, return_value=False
+        ):
+            assert emb.embed_bgr(np.zeros((64, 64, 3), dtype="uint8")) == (None, None)
+
+    def test_embed_bgr_runs_pipeline_over_the_passed_array(self):
+        emb = OpenCVFaceEmbedder()
+        emb._detector = _FakeYnet()
+        emb._recognizer = _FakeSFace()
+        img = np.zeros((96, 128, 3), dtype="uint8")
+        with mock.patch.object(
+            OpenCVFaceEmbedder, "available", new_callable=mock.PropertyMock, return_value=True
+        ):
+            vec, bbox = emb.embed_bgr(img)
+        assert emb._detector.seen is img, "embed_bgr must not copy or re-decode the array"
+        assert emb._detector.size == (128, 96)  # setInputSize((w, h))
+        assert bbox == (40, 50, 30, 40)
+        assert vec == [0.0, 0.0, 1.0]

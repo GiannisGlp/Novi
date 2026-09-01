@@ -17,7 +17,7 @@ from __future__ import annotations
 import threading
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from novi.brain.agent import BrainDriver
 from novi.brain.io import CameraFrame
@@ -27,6 +27,11 @@ from novi.perception.pipeline import PerceptionPipeline
 
 from .observation_recorder import ObservationRecorder
 from .recognition_store import RecognitionKind, RecognitionStore
+
+if TYPE_CHECKING:
+    from novi.perception.cadence import VisionBudget
+
+    from .person_object_store import PersonObjectAssociationStore
 
 
 @dataclass
@@ -84,9 +89,11 @@ class MultimodalRuntime:
         face_identifier: FaceIdentifier | None = None,
         recognition: RecognitionStore | None = None,
         observations: ObservationRecorder | None = None,
+        associations: PersonObjectAssociationStore | None = None,
         absent_frames: int = 8,
         scene_change_enabled: bool = True,
         place_auto_enroll: bool = False,
+        budget: VisionBudget | None = None,
     ) -> None:
         if absent_frames < 1:
             raise ValueError("absent_frames must be >= 1")
@@ -95,6 +102,7 @@ class MultimodalRuntime:
         self.faces = face_identifier
         self.recognition = recognition
         self.observations = observations
+        self.associations = associations
         self._events: list[dict[str, Any]] = []
         self._lock = threading.RLock()
         self._id_to_label: dict[str, str] = {}  # FaceIdentifier pid -> human label
@@ -126,6 +134,14 @@ class MultimodalRuntime:
         self._presence_tracks: dict[str, _PresenceTrack] = {}
         self._last_scene_labels: set[str] | None = None
         self._pending_events: deque[dict[str, Any]] = deque()
+        # per-stage cost gate + telemetry for the camera loop (plan 26 A); the
+        # camera_loop drives it and snapshot() exposes its telemetry.
+        if budget is not None:
+            self.budget = budget
+        else:
+            from novi.perception.cadence import VisionBudget
+
+            self.budget = VisionBudget()
 
     # -- events -----------------------------------------------------------
 
@@ -420,6 +436,9 @@ class MultimodalRuntime:
             self._id_to_label[internal_pid] = name.title()
         if self.observations is not None:
             self.observations.rename_entity(RecognitionKind.FACE, old_ref, canonical)
+        if self.associations is not None:
+            # co-occurrence memory follows the identity to its canonical ref
+            self.associations.rename_person(old_ref, canonical)
         if self.current_person == placeholder_ref:
             self.current_person = name.title()
         self.pending_enrollment_proposal = False
@@ -484,6 +503,9 @@ class MultimodalRuntime:
                 # durable sighting of the recognized instance at the current place
                 self._record_sighting(RecognitionKind.OBJECT, m.person_id, m.label,
                                       place=self.current_place, frame_id=frame_id)
+                # who is in view was seen with this recognized instance, here
+                self._note_cooccurrence(m.person_id, label=m.label, category=label,
+                                        frame_id=frame_id)
                 if self._object_state.get(label) != resolved:
                     self._stage_event(
                         "object.recognized", label=label, object=m.label, similarity=round(m.similarity, 3)
@@ -551,6 +573,8 @@ class MultimodalRuntime:
         if m is not None:
             self._record_sighting(RecognitionKind.OBJECT, m.person_id, m.label,
                                   place=self.current_place, frame_id=frame_id)
+            self._note_cooccurrence(m.person_id, label=m.label, category=object_label,
+                                    frame_id=frame_id)
             self._emit_holding("person.holding", person, m.label)
             return {"person": person, "object": m.label, "recognized": True, "enrolled": False}
         ref = self._next_placeholder_object_ref()
@@ -565,6 +589,8 @@ class MultimodalRuntime:
         if self.observations is not None:
             # re-key any sightings recorded under the unresolved per-class ref
             self.observations.rename_entity(RecognitionKind.OBJECT, f"object-unresolved-{object_label}", f"object-{ref}")
+        self._note_cooccurrence(f"object-{ref}", label=ref, category=object_label,
+                                frame_id=frame_id)
         self._emit_holding("object.novel", person, ref, novelty=1.0)
         return {"person": person, "object": ref, "recognized": False, "enrolled": True}
 
@@ -603,6 +629,58 @@ class MultimodalRuntime:
             pass
         except Exception:  # noqa: BLE001 - observation memory is best-effort
             pass
+
+    def _note_cooccurrence(
+        self,
+        object_ref: str,
+        *,
+        label: str,
+        category: str,
+        frame_id: str = "",
+    ) -> None:
+        """Durable person-object co-occurrence (plan 26 D).
+
+        Records *"the person currently in view was seen with this object,
+        here"* in the PersonObjectAssociationStore — the memory that lets Novi
+        answer "have I seen Anna with the blue mug?" Only a *recognized*
+        identity (tier in {recognized, verified}) is recorded; a placeholder /
+        "someone" / empty current person never grows the store with anonymous
+        rows. Best-effort by the same rule as :meth:`_record_sighting`: a
+        storage fault or a privacy-off write never breaks recognition.
+        """
+        if self.associations is None or not object_ref:
+            return
+        if not self.current_person or self.current_person_tier not in ("recognized", "verified"):
+            return
+        canonical = f"person-{self.current_person.lower().replace(' ', '-')}"
+        try:
+            self.associations.note(
+                canonical,
+                object_ref,
+                label=label,
+                category=category,
+                place=self.current_place,
+                frame_id=frame_id,
+                provenance={"source": "recognition"},
+            )
+        except PermissionError:
+            # privacy-off session: co-occurrence memory simply doesn't grow
+            pass
+        except Exception:  # noqa: BLE001 - association memory is best-effort
+            pass
+
+    def association_summary(self, limit: int = 3) -> list[dict[str, Any]]:
+        """Bounded association memory for the current recognized person.
+
+        Fed to snapshot() so the web API and vision status can carry what Novi
+        remembers seeing with the person in view (plan 26 D).
+        """
+        if self.associations is None or not self.current_person:
+            return []
+        if self.current_person_tier not in ("recognized", "verified"):
+            return []
+        canonical = f"person-{self.current_person.lower().replace(' ', '-')}"
+        return [a.as_dict() for a in self.associations.objects_with(canonical, limit=limit)]
 
     def _label_for_person(self, person_id: str | None) -> str:
         """Resolve a FaceIdentifier person id to its human label."""
@@ -687,5 +765,7 @@ class MultimodalRuntime:
             "objects": self.current_objects,
             "enrollment_proposal": self.pending_enrollment_proposal,
             "perception": self.perception.snapshot(),
+            "cadence": self.budget.telemetry(),
+            "associations": self.association_summary(),
             "recent_events": self._events[-12:],
         }

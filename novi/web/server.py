@@ -1585,7 +1585,10 @@ class NoviWebServer(IntegrationMixin):
             if pkg is None:
                 # fallback: assemble from current world state for the first cycle
                 try:
-                    pkg = self.brain._assemble_world_context("", person="")
+                    pkg = self.brain._assemble_world_context(
+                        "", person="",
+                        vision_provider=getattr(self.brain, "_vision_provider", None),
+                    )
                 except Exception:
                     pkg = {}
             discourse = {}
@@ -2136,6 +2139,14 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/observation/search":
                 self._json(
                     {"result": novi.observation_search(data)}
+                    if novi.mm_runtime
+                    else {"error": "integration unavailable"}
+                )
+            elif path == "/api/association":
+                # person-object co-occurrence memory: objects_with | seen_with |
+                # recent_summary for a person (or the recognized person in view)
+                self._json(
+                    {"result": novi.association_query(data)}
                     if novi.mm_runtime
                     else {"error": "integration unavailable"}
                 )

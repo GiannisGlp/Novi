@@ -234,6 +234,11 @@ class MacBrain(ChatMixin):
         self.perception_pipeline = perception_pipeline
         self._last_frame: Any | None = None
         self._last_world_observation: Any | None = None
+        # Plan 26 B: an injectable live-vision snapshot provider (installed by
+        # the web layer). None keeps the brain's honest "no camera wired"
+        # vision_status; a provider only READS camera/runtime state so the
+        # reply thread can never deadlock against the camera thread.
+        self._vision_provider: Any | None = None
         # Phase 3e: the brain's OWN default LLM transport. An injected callable
         # is a tiering override; without one, the brain builds (lazily) its own
         # Ollama-backed transport when enabled, so surfaces pass only the
@@ -3060,6 +3065,26 @@ class MacBrain(ChatMixin):
     def self_model(self) -> dict[str, Any]:
         """Assemble a first-person self-model for dialogue/reasoning (docs/06-soul/01 §6)."""
         return build_self_model(self).snapshot()
+
+    def set_vision_provider(self, provider: Any) -> None:
+        """Install the live-vision snapshot provider (plan 26 B).
+
+        The web layer installs a provider that reads MultimodalRuntime +
+        CameraFeed state so ``vision_status()`` reports what Novi currently
+        sees. One install point; the default (no provider) keeps the honest
+        offline report and the default-brain behavior byte-identical.
+        """
+        self._vision_provider = provider
+
+    def vision_status(self) -> dict[str, Any]:
+        """JSON-safe live vision state or an honest offline report (plan 26 B).
+
+        With no provider installed (non-web builds) this is offline — Novi
+        won't claim it can see what it has no camera wired for.
+        """
+        from novi.brain.vision_status import build_vision_status
+
+        return build_vision_status(self, self._vision_provider)
 
     def _attention_score_for(self, label: str) -> float:
         """Salience of this entity in the latest attention ranking (0 if absent)."""
