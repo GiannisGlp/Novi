@@ -50,7 +50,10 @@ class WebRuntimeBudgets:
     # Concurrency
     max_sse_clients: int = 16  # simultaneous /api/events/stream connections
     max_concurrent_requests: int = 32  # in-flight HTTP requests
-    request_timeout_s: float = 30.0  # per-request ceiling
+    # Per-request ceiling (seconds). Reserved configuration for a future
+    # deadline-enforcing transport; the stdlib HTTP layer bounds concurrency
+    # (above) but does not preempt long handlers. Not yet enforced.
+    request_timeout_s: float = 30.0
     # SSE transport
     sse_heartbeat_s: float = 12.0
     sse_poll_interval_s: float = 0.25
