@@ -46,7 +46,7 @@ from novi.perception.locate_anything import DeterministicLocateAnythingBackend
 from novi.perception.pipeline import PerceptionPipeline
 from novi.perception.tracking import ObjectTracker
 from novi.web.integration_api import IntegrationMixin
-from novi.web.runtime_budgets import DEFAULT_BUDGETS, WebRuntimeBudgets
+from novi.web.runtime_budgets import WebRuntimeBudgets
 
 _ROUTED = Path(__file__).resolve().parent
 
@@ -233,6 +233,7 @@ class NoviWebServer(IntegrationMixin):
         persist_model: bool = False,
         event_autonomy: bool = True,
         grounding_backend: SpatialPerceptionBackend | None = None,
+        budgets: WebRuntimeBudgets | None = None,
     ) -> None:
         self.host = host
         self.port = port
@@ -304,7 +305,8 @@ class NoviWebServer(IntegrationMixin):
         # Event pipeline budgets (plan 02, Phase 6). EventBus is the
         # authoritative bounded history; the compat list is a bounded window;
         # this server log is a bounded presentation cache keyed by server seq.
-        self.budgets: WebRuntimeBudgets = DEFAULT_BUDGETS
+        # Explicit budgets win; otherwise NOVI_WEB_* env overrides apply.
+        self.budgets: WebRuntimeBudgets = budgets or WebRuntimeBudgets.from_env()
         # Cursor into the brain's compat event `sequence` (EventBus sequence).
         # Sequence-based (not index-based) so source-side trimming can never
         # cause skips or duplicates.
@@ -318,6 +320,9 @@ class NoviWebServer(IntegrationMixin):
         # SSE connection accounting (bounded clients, plan 02 §12.3).
         self._sse_clients = 0
         self._sse_lock = threading.Lock()
+        # Request budget (plan 02 §12.4): at most max_concurrent_requests
+        # handlers run at once; the HTTP layer 503s excess immediately.
+        self.request_semaphore = threading.Semaphore(self.budgets.max_concurrent_requests)
         # chat conversation (user <-> Novi reasoning responses), per person
         self._threads: dict[str, list[dict[str, Any]]] = {"": []}
         self._seqs: dict[str, int] = {"": 0}
@@ -1894,7 +1899,31 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:  # noqa: BLE001
             return {}
 
+    def _admit(self) -> bool:
+        """Non-blocking take of the request budget; 503 + False when full."""
+        sem = self.server.novi.request_semaphore
+        if sem.acquire(blocking=False):
+            return True
+        try:
+            self.send_response(503)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Retry-After", "2")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(b'{"error": "server busy"}')
+        except Exception:  # noqa: BLE001 - client already gone
+            pass
+        return False
+
     def do_GET(self) -> None:
+        if not self._admit():
+            return
+        try:
+            self._do_GET()
+        finally:
+            self.server.novi.request_semaphore.release()
+
+    def _do_GET(self) -> None:
         path = self.path.split("?")[0]
         if path.startswith("/assets/"):
             self._serve_ui_asset(path.lstrip("/"))
@@ -2103,6 +2132,14 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, b"not found", "text/plain")
 
     def do_POST(self) -> None:
+        if not self._admit():
+            return
+        try:
+            self._do_POST()
+        finally:
+            self.server.novi.request_semaphore.release()
+
+    def _do_POST(self) -> None:
         path = self.path.split("?")[0]
         # Streaming chat: POST /api/chat/stream — yields SSE token events, then done
         if path == "/api/chat/stream":

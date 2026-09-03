@@ -225,6 +225,64 @@ class LifecycleRestartTests(unittest.TestCase):
             s2.stop()
 
 
+class RequestBudgetTests(unittest.TestCase):
+    """Plan §12.4 — concurrent request handling is capped, never unbounded."""
+
+    def test_request_semaphore_matches_budget(self) -> None:
+        s = _server()
+        try:
+            self.assertEqual(s.budgets.max_concurrent_requests, 32)
+            held = []
+            for _ in range(s.budgets.max_concurrent_requests):
+                self.assertTrue(s.request_semaphore.acquire(blocking=False))
+                held.append(True)
+            # Budget exhausted: the handler's non-blocking take must fail
+            # (this is the exact call _admit makes before serving 503).
+            self.assertFalse(s.request_semaphore.acquire(blocking=False))
+            for _ in held:
+                s.request_semaphore.release()
+            self.assertTrue(s.request_semaphore.acquire(blocking=False))
+            s.request_semaphore.release()
+        finally:
+            s.stop()
+
+    def test_custom_budgets_size_the_server(self) -> None:
+        s = _server(budgets=WebRuntimeBudgets(max_events=32, max_concurrent_requests=4))
+        try:
+            self.assertEqual(s.budgets.max_events, 32)
+            held = 0
+            while s.request_semaphore.acquire(blocking=False):
+                held += 1
+            self.assertEqual(held, 4)
+            self.assertFalse(s.request_semaphore.acquire(blocking=False))
+            for _ in range(held):
+                s.request_semaphore.release()
+        finally:
+            s.stop()
+
+
+class BudgetEnvOverrideTests(unittest.TestCase):
+    """NOVI_WEB_* env vars resize budgets without code changes."""
+
+    def test_from_env_honors_overrides(self) -> None:
+        import os
+        from unittest import mock
+
+        with mock.patch.dict(os.environ, {"NOVI_WEB_MAX_EVENTS": "64", "NOVI_WEB_MAX_SSE_CLIENTS": "3"}):
+            b = WebRuntimeBudgets.from_env()
+        self.assertEqual(b.max_events, 64)
+        self.assertEqual(b.max_sse_clients, 3)
+        self.assertEqual(WebRuntimeBudgets.from_env().max_events, 500)
+
+    def test_from_env_tolerates_garbage(self) -> None:
+        import os
+        from unittest import mock
+
+        with mock.patch.dict(os.environ, {"NOVI_WEB_MAX_EVENTS": "lots"}):
+            b = WebRuntimeBudgets.from_env()
+        self.assertEqual(b.max_events, 500)
+
+
 class LargePayloadTests(unittest.TestCase):
     """Test H — oversized event payloads are truncated at the web boundary."""
 
