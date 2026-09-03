@@ -153,6 +153,7 @@ def make_supervisor(
     health: object | None = None,
     authority: str = "BOUNDED_AUTONOMY",
     max_action_retries: int = 2,
+    max_events: int = 2048,
 ) -> AutonomySupervisor:
     return AutonomySupervisor(
         clock=SimClock(),
@@ -165,6 +166,7 @@ def make_supervisor(
         guard=guard or GovernanceGuard(),
         authority_level=authority,
         max_action_retries=max_action_retries,
+        max_events=max_events,
         health_checker=health,
     )
 
@@ -544,6 +546,26 @@ class UnauthorizedActionPropertyTests(unittest.TestCase):
         })
         self.assertTrue(sup.tick_count >= 10_000)
         self.assertGreater(sup.executed_count, 0, "the simulation must actually act")
+
+
+class EventBoundTests(unittest.TestCase):
+    """Memory bound: the event ledger caps with a drop counter, never grows."""
+
+    def test_events_capped_with_drop_counter(self):
+        sup = make_supervisor()
+        for _ in range(2100):
+            sup._emit("TEST", reason="soak", producer="test")
+        self.assertEqual(len(sup.events), 2048)
+        self.assertEqual(sup.dropped_events, 52)
+        # newest retained
+        self.assertEqual(sup.events[-1].reason, "soak")
+
+    def test_cap_tunable_via_constructor(self):
+        sup = make_supervisor(max_events=10)
+        for _ in range(15):
+            sup._emit("TEST", reason="soak", producer="test")
+        self.assertEqual(len(sup.events), 10)
+        self.assertEqual(sup.dropped_events, 5)
 
 
 if __name__ == "__main__":

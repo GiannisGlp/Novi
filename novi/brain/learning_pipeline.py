@@ -78,13 +78,28 @@ class KnowledgePromotionPipeline:
         promote_min_evidence: int = 3,
         promote_min_confidence: float = 0.7,
         record_exposure: bool = False,
+        max_promotions: int = 1000,
     ) -> None:
         self.promote_min_evidence = promote_min_evidence
         self.promote_min_confidence = promote_min_confidence
         self.record_exposure = record_exposure
+        self._max_promotions = max(1, int(max_promotions))
         self._candidates: dict[tuple[str, str, str], PromotionCandidate] = {}
         self._promotions: list[dict[str, Any]] = []
+        self._dropped_promotions = 0
         self._promoted_keys: set[tuple[str, str, str]] = set()
+
+    @property
+    def dropped_promotions(self) -> int:
+        """Promotion-ledger spills so far (bounded-memory accounting)."""
+        return self._dropped_promotions
+
+    def _store_promotion(self, entry: dict[str, Any]) -> None:
+        self._promotions.append(entry)
+        overflow = len(self._promotions) - self._max_promotions
+        if overflow > 0:
+            del self._promotions[:overflow]
+            self._dropped_promotions += overflow
 
     def observe(
         self,
@@ -143,7 +158,7 @@ class KnowledgePromotionPipeline:
             cycle=cycle,
         )
         self._promoted_keys.add(key)
-        self._promotions.append({
+        self._store_promotion({
             "subject": candidate.subject, "predicate": candidate.predicate,
             "object": candidate.object, "confidence": round(candidate.confidence, 3),
             "evidence_count": candidate.evidence_count,
@@ -173,6 +188,7 @@ class KnowledgePromotionPipeline:
             "promotion_count": len(self._promotions),
             "promotions": list(self._promotions),
             "promoted_keys": sorted(self._promoted_keys),
+            "dropped_promotions": self._dropped_promotions,
         }
 
     def from_snapshot(self, snapshot: dict[str, Any]) -> "KnowledgePromotionPipeline":
@@ -193,7 +209,9 @@ class KnowledgePromotionPipeline:
                 continue
             key = (candidate.subject, candidate.predicate, candidate.object)
             self._candidates[key] = candidate
-        self._promotions = list(snapshot.get("promotions", []))
+        for entry in snapshot.get("promotions", []):
+            if isinstance(entry, dict) and entry:
+                self._store_promotion(entry)
         self._promoted_keys.update(str(k) for k in snapshot.get("promoted_keys", []))
         return self
 
@@ -244,8 +262,23 @@ class UserCorrectionLog:
     old triple's history stays visible under its new status.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, max_records: int = 1000) -> None:
+        # The knowledge itself persists in the graph at authoritative
+        # confidence; this log is the audit trail, bounded with a counter.
+        self._max_records = max(1, int(max_records))
         self._records: list[CorrectionRecord] = []
+        self._dropped_records = 0
+
+    @property
+    def dropped_records(self) -> int:
+        return self._dropped_records
+
+    def _store(self, record: CorrectionRecord) -> None:
+        self._records.append(record)
+        overflow = len(self._records) - self._max_records
+        if overflow > 0:
+            del self._records[:overflow]
+            self._dropped_records += overflow
 
     def apply(self, record: CorrectionRecord, graph: EntityGraph) -> bool:
         """Apply a correction: add the corrected triple at authoritative confidence.
@@ -262,7 +295,7 @@ class UserCorrectionLog:
             source=record.source or "user_correction",
             cycle=record.cycle,
         )
-        self._records.append(record)
+        self._store(record)
         return changed
 
     def records(self) -> tuple[CorrectionRecord, ...]:
@@ -275,7 +308,7 @@ class UserCorrectionLog:
         """Phase 4c: reload persisted corrections (learning survives restart)."""
         for r in records or []:
             try:
-                self._records.append(CorrectionRecord(
+                self._store(CorrectionRecord(
                     subject=str(r.get("subject", "")),
                     predicate=str(r.get("predicate", "")),
                     old_object=r.get("old_object"),
@@ -328,6 +361,11 @@ class RoutineDetector:
 
     def observe(self, cycle: int, events: set[str]) -> None:
         self._history.append((cycle, set(events)))
+        # _scan only ever reads the last `window` entries — trimming here is
+        # lossless and keeps the detector O(window) forever.
+        keep = max(1, self.window)
+        if len(self._history) > keep:
+            del self._history[:-keep]
         self._scan(cycle)
 
     def _scan(self, cycle: int) -> None:
@@ -390,8 +428,22 @@ class CounterfactualEngine:
     inform planning but are never merged into observed/knowledge state.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, max_queries: int = 1000) -> None:
+        self._max_queries = max(1, int(max_queries))
         self._queries: list[dict[str, Any]] = []
+        self._dropped_queries = 0
+
+    def _store(self, query: dict[str, Any]) -> None:
+        """Append with a bound; spills counted (never silent)."""
+        self._queries.append(query)
+        overflow = len(self._queries) - self._max_queries
+        if overflow > 0:
+            del self._queries[:overflow]
+            self._dropped_queries += overflow
+
+    @property
+    def dropped_queries(self) -> int:
+        return self._dropped_queries
 
     def evaluate(
         self,
@@ -410,7 +462,7 @@ class CounterfactualEngine:
             "epistemic": SIMULATED,
             "status": "hypothetical",
         }
-        self._queries.append(hypothetical)
+        self._store(hypothetical)
         return hypothetical
 
     def queries(self) -> tuple[dict[str, Any], ...]:
@@ -420,8 +472,12 @@ class CounterfactualEngine:
         """Phase 4c: restore persisted counterfactual queries."""
         for q in data.get("queries", []):
             if isinstance(q, dict) and q:
-                self._queries.append(q)
+                self._store(q)
         return self
 
     def snapshot(self) -> dict[str, Any]:
-        return {"query_count": len(self._queries), "queries": list(self._queries)}
+        return {
+            "query_count": len(self._queries),
+            "queries": list(self._queries),
+            "dropped_queries": self._dropped_queries,
+        }

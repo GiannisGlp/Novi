@@ -72,6 +72,58 @@ class KnowledgePromotionTests(unittest.TestCase):
         self.assertEqual(len(pp.promotions()), 1)
 
 
+class StoreBoundTests(unittest.TestCase):
+    """Memory bounds: hot stores cap with drop counters, never grow forever."""
+
+    def test_routine_history_trimmed_to_window(self):
+        d = RoutineDetector(window=3)
+        for i in range(10):
+            d.observe(i, {"a", "b"})
+        self.assertEqual(len(d._history), 3)
+        # detection still works on the trimmed window
+        self.assertTrue(d.routines())
+
+    def test_counterfactual_queries_capped_with_counter(self):
+        e = CounterfactualEngine()
+        for i in range(1005):
+            e.evaluate(premise=f"p{i}", if_evidence={}, then_prediction="x")
+        self.assertEqual(len(e.queries()), 1000)
+        self.assertEqual(e.dropped_queries, 5)
+        snap = e.snapshot()
+        self.assertEqual(snap["dropped_queries"], 5)
+        # newest retained
+        self.assertEqual(e.queries()[-1]["premise"], "p1004")
+
+    def test_counterfactual_restore_respects_cap(self):
+        e = CounterfactualEngine()
+        e.from_snapshot({"queries": [{"premise": f"p{i}"} for i in range(1500)]})
+        self.assertEqual(len(e.queries()), 1000)
+        self.assertEqual(e.dropped_queries, 500)
+
+    def test_promotions_capped_with_counter(self):
+        pp = KnowledgePromotionPipeline(promote_min_evidence=1, promote_min_confidence=0.0)
+        kg = EntityKnowledgeGraph()
+        for i in range(1005):
+            pp.observe(f"s{i}", "r", "b", confidence=0.9)
+        self.assertEqual(pp.promote_all_ready(kg), 1005)
+        self.assertEqual(len(pp.promotions()), 1000)
+        self.assertEqual(pp.dropped_promotions, 5)
+
+    def test_correction_log_capped_with_counter(self):
+        log = UserCorrectionLog()
+        kg = EntityKnowledgeGraph()
+        for i in range(1005):
+            log.apply(
+                CorrectionRecord(
+                    subject=f"s{i}", predicate="prefers", old_object="a",
+                    new_object="b", person="alice", source="spoken", cycle=i,
+                ),
+                kg,
+            )
+        self.assertEqual(len(log.records()), 1000)
+        self.assertEqual(log.dropped_records, 5)
+
+
 class UserCorrectionTests(unittest.TestCase):
     def setUp(self):
         self.kg = EntityKnowledgeGraph()

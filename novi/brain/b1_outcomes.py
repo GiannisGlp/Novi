@@ -50,13 +50,23 @@ class ReplayRecord:
 
 
 class DeterministicReplay:
-    """Minimal append-only replay ledger for deterministic B1 validation."""
+    """Minimal append-only replay ledger for deterministic B1 validation.
 
-    def __init__(self) -> None:
+    Bounded (newest retained) with a spill counter — validation windows are
+    recent by construction, and the bound keeps long soaks flat.
+    """
+
+    def __init__(self, *, max_records: int = 1000) -> None:
+        self._max_records = max(1, int(max_records))
         self._records: list[ReplayRecord] = []
+        self._dropped_records = 0
 
     def record(self, cycle: int, outcome: ActionOutcome) -> None:
         self._records.append(ReplayRecord(cycle, outcome.proposal_id, outcome.status))
+        overflow = len(self._records) - self._max_records
+        if overflow > 0:
+            del self._records[:overflow]
+            self._dropped_records += overflow
 
     def replay(self) -> tuple[ReplayRecord, ...]:
         return tuple(self._records)
@@ -64,3 +74,8 @@ class DeterministicReplay:
     @property
     def count(self) -> int:
         return len(self._records)
+
+    @property
+    def dropped_records(self) -> int:
+        """Ledger spills so far (bounded-memory accounting, never silent)."""
+        return self._dropped_records

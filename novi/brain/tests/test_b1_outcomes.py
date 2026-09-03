@@ -51,6 +51,17 @@ class B1OutcomeTests(unittest.TestCase):
         self.assertEqual(replay.replay()[0].proposal_id, "proposal-test")
         self.assertEqual(replay.replay()[1].outcome_status, "SUCCEEDED")
 
+    def test_replay_ledger_capped_with_counter(self) -> None:
+        proposal = self.proposal()
+        outcome = DeterministicOutcomeEvaluator().evaluate(proposal, observed_effects=("ok",))
+        replay = DeterministicReplay()
+        for i in range(1005):
+            replay.record(i, outcome)
+        self.assertEqual(replay.count, 1000)
+        self.assertEqual(replay.dropped_records, 5)
+        # newest retained, oldest spilled
+        self.assertEqual(replay.replay()[-1].cycle, 1004)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -343,6 +343,7 @@ class AutonomySupervisor:
         authority_level: str = "BOUNDED_AUTONOMY",
         max_action_retries: int = 2,
         action_timeout_cycles: int = 10,
+        max_events: int = 2048,
         health_checker: Any | None = None,   # callable(cycle) -> AutonomyHealth; None = healthy
     ) -> None:
         self.clock = clock or SimClock()
@@ -360,7 +361,10 @@ class AutonomySupervisor:
         self.state = AutonomyState.IDLE
         self.authority = authority_level
         self._inbox: list[AutonomyEvent] = []
+        # Bounded ledger: oldest spill first, spills counted (never silent).
+        self._max_events = max(1, int(max_events))
         self._events: list[AutonomyEvent] = []
+        self._dropped_events = 0
         self._goal: Any | None = None
         self._plan: Any | None = None
         self._plan_lease: Lease | None = None
@@ -395,6 +399,10 @@ class AutonomySupervisor:
             authority=refs.get("authority", self.authority),
         )
         self._events.append(event)
+        overflow = len(self._events) - self._max_events
+        if overflow > 0:
+            del self._events[:overflow]
+            self._dropped_events += overflow
         return event
 
     def post(self, event: AutonomyEvent) -> None:
@@ -404,6 +412,11 @@ class AutonomySupervisor:
     @property
     def events(self) -> tuple[AutonomyEvent, ...]:
         return tuple(self._events)
+
+    @property
+    def dropped_events(self) -> int:
+        """Ledger spills so far (bounded-memory accounting, never silent)."""
+        return self._dropped_events
 
     @property
     def executed_count(self) -> int:
