@@ -65,7 +65,9 @@ class LLMPayloadThinkTests(unittest.TestCase):
             s._chat = [{"role": "user", "text": "x" * 500}, {"role": "novi", "text": "y" * 500}] * 8
             history = s._build_history(6)
             self.assertEqual(len(history), 6)
-            self.assertTrue(all(len(t["text"]) <= 240 for t in history))
+            self.assertTrue(all(len(t["text"]) <= s.HISTORY_CHARS_PER_TURN for t in history))
+            full = s._build_history()
+            self.assertEqual(len(full), s.HISTORY_TURNS)
         finally:
             s.stop()
 

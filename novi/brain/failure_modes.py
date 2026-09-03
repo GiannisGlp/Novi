@@ -93,6 +93,13 @@ class FailureRecord:
 # FailureHandler — detects failures and manages degraded modes
 # ---------------------------------------------------------------------------
 
+#: Maximum retained failure records. Readers only ever use the last 20
+#: (``recent_failures``) plus category filters over the recent window, so a
+#: bounded tail preserves every consumer while capping per-cycle growth
+#: (plan 02, Rule 1/Rule 3).
+MAX_FAILURE_RECORDS = 512
+
+
 class FailureHandler:
     """Detects cognitive failures and manages graceful degradation.
 
@@ -233,6 +240,8 @@ class FailureHandler:
             timestamp=timestamp,
         )
         self._failures.append(record)
+        if len(self._failures) > MAX_FAILURE_RECORDS:
+            del self._failures[: len(self._failures) - MAX_FAILURE_RECORDS]
         return record
 
     def _most_restrictive(self) -> DegradedMode:

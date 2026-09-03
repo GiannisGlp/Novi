@@ -9,9 +9,37 @@ from __future__ import annotations
 
 import unittest
 
+from novi.brain.chat import history_tail_text
 from novi.brain.engine import MacBrain, MacBrainConfig
 from novi.brain.io import CameraFrame
 from novi.brain.salience import CandidateInitiative
+
+
+class HistoryTailTextTests(unittest.TestCase):
+    """history_tail_text must read the web history shape (``text`` key)."""
+
+    def test_reads_text_key(self) -> None:
+        history = [
+            {"role": "user", "text": "remember the blue door"},
+            {"role": "novi", "text": "noted"},
+        ]
+        tail = history_tail_text(history)
+        self.assertIn("blue door", tail)
+
+    def test_legacy_content_key_still_works(self) -> None:
+        tail = history_tail_text([{"role": "user", "content": "legacy shape"}])
+        self.assertIn("legacy shape", tail)
+
+    def test_empty_and_missing_shapes(self) -> None:
+        self.assertEqual(history_tail_text(None), "")
+        self.assertEqual(history_tail_text([]), "")
+        self.assertEqual(history_tail_text([{"role": "user"}]), "")
+
+    def test_last_turns_and_char_cap(self) -> None:
+        history = [{"role": "user", "text": f"turn-{i}"} for i in range(6)]
+        tail = history_tail_text(history)
+        self.assertNotIn("turn-0", tail)
+        self.assertIn("turn-5", tail)
 
 
 class FakeCamera:
@@ -21,8 +49,12 @@ class FakeCamera:
     def read(self) -> CameraFrame:
         self.n += 1
         return CameraFrame(
-            frame_id=f"r-{self.n}", captured_at="t", width=1, height=1,
-            payload=b"frame", metadata={"backend": "deterministic"},
+            frame_id=f"r-{self.n}",
+            captured_at="t",
+            width=1,
+            height=1,
+            payload=b"frame",
+            metadata={"backend": "deterministic"},
         )
 
     def close(self) -> None:

@@ -300,8 +300,14 @@ class IntegrationMixin:
                 with contextlib.suppress(Exception):  # co-occurrence is best-effort
                     self.mm_runtime.note_person_holding(person, d.label, embedding=vec, frame_id=frame_id)
 
-    def voice_listen(self, seconds: float = 3.0) -> dict[str, Any]:
+    def voice_listen(self, seconds: float = 3.0, *, client_speaks: bool = False) -> dict[str, Any]:
         """Record from the real mic → STT → brain → reply (+ optional speak-back).
+
+        Single-voice rule: exactly one renderer speaks each reply. Browser
+        clients render audio themselves (speechSynthesis) and pass
+        ``client_speaks=True``; the server then stays silent. Server-side
+        speech fires only for callers that cannot render audio. Deliberate
+        server speech always goes through the explicit /api/voice/tts path.
 
         When a RealSpeakerRecognizer is wired, the same recording is also
         voice-matched: the recognized speaker becomes the addressee.
@@ -326,10 +332,20 @@ class IntegrationMixin:
             except Exception:  # noqa: BLE001 - identification is best-effort
                 pass
 
-        turn = self.mm_runtime.voice_turn(tr["text"], speaker_label=speaker_label)
+        # The shared "" thread holds the cross-modal conversation (voice turns
+        # are mirrored into it below), so voice replies compose with the same
+        # visible history as typed chat instead of answering context-free.
+        history = tuple(self._build_history())
+        turn = self.mm_runtime.voice_turn(
+            tr["text"],
+            speaker_label=speaker_label,
+            history=history,
+            last_novi_text=self._last_novi_text(),
+            recent_novi=tuple(self._recent_novi(4)),
+        )
         reply_text = str(turn.get("reply", ""))
-        spoken = {"spoken": False}
-        if self.speak_back_enabled and self._real_speaker is not None and reply_text:
+        spoken: dict[str, Any] = {"spoken": False}
+        if not client_speaks and self.speak_back_enabled and self._real_speaker is not None and reply_text:
             spoken = self._real_speaker.speak(reply_text)
         out = {
             **tr,
@@ -545,10 +561,14 @@ class IntegrationMixin:
         if not text:
             return {"error": "empty text"}
         with self.mm_lock:
+            history = tuple(self._build_history())
             res = self.mm_runtime.voice_turn(
                 text,
                 speaker_label=body.get("speaker_label"),
                 confidence=float(body.get("confidence", 0.9)),
+                history=history,
+                last_novi_text=self._last_novi_text(),
+                recent_novi=tuple(self._recent_novi(4)),
             )
             # mirror into the shared web chat log so the UI shows the exchange
             try:

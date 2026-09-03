@@ -74,6 +74,17 @@ class FailureHandlerTests(unittest.TestCase):
         fh.report_failure(MODEL_UNAVAILABLE, component="reasoning", message="llm_timeout")
         self.assertEqual(fh.degraded_mode, DegradedMode.REASONING_DEGRADED)
 
+    def test_failure_history_stays_bounded(self):
+        """Plan 02: per-cycle failure records must not accumulate forever."""
+        from novi.brain.failure_modes import MAX_FAILURE_RECORDS
+
+        fh = FailureHandler()
+        for i in range(MAX_FAILURE_RECORDS + 500):
+            fh.report_failure(MODEL_UNAVAILABLE, component="reasoning", message=f"timeout-{i}")
+        self.assertLessEqual(len(fh._failures), MAX_FAILURE_RECORDS)
+        self.assertLessEqual(len(fh.recent_failures), 20)
+        self.assertTrue(fh._failures[-1].message.endswith(str(MAX_FAILURE_RECORDS + 499)))
+
     def test_critical_severity_escalates_to_safety_only(self):
         fh = FailureHandler()
         fh.report_failure(TOOL_FAILURE, severity="critical", component="skill", message="catastrophic")

@@ -297,6 +297,170 @@ class RequestBudgetTests(unittest.TestCase):
             s.stop()
 
 
+class MultimodalTrailBoundTests(unittest.TestCase):
+    """Per-frame perception trail stays capped (plan 02, Rule 1/Rule 3)."""
+
+    def test_trail_overflow_stays_bounded(self) -> None:
+        from novi.integration.multimodal import MAX_TRAIL_EVENTS, MultimodalRuntime
+
+        self.assertLessEqual(12, MAX_TRAIL_EVENTS)  # snapshot window fits
+        rt = MultimodalRuntime.__new__(MultimodalRuntime)
+        rt._events = []
+        rt._max_trail_events = 16
+        for i in range(500):
+            MultimodalRuntime._emit(rt, "perception.frame", frame_id=f"f{i}")
+        self.assertLessEqual(len(rt._events), 16)
+        self.assertEqual(rt._events[-1]["frame_id"], "f499")
+
+    def test_snapshot_reads_tail_only(self) -> None:
+        s = _server()
+        try:
+            snap = s.mm_runtime.snapshot()
+            self.assertLessEqual(len(snap["recent_events"]), 12)
+        finally:
+            s.stop()
+
+
+class VoiceAndIdentityTests(unittest.TestCase):
+    """Single voice + face-bound identity (no hardware needed)."""
+
+    def _server_with_stubs(self):
+        from novi.brain.models.stt import TranscriptionResult
+
+        s = _server()
+
+        class FakeSTT:
+            def __init__(self, text: str) -> None:
+                self._text = text
+
+            def listen_and_transcribe(self, seconds: float):
+                return {
+                    "text": self._text,
+                    "confidence": 0.9,
+                    "audio_path": "",
+                    "transcription": TranscriptionResult(
+                        text=self._text,
+                        language="en",
+                        confidence=0.9,
+                        audio_path="",
+                        provider="fake",
+                        model_id="fake",
+                    ),
+                }
+
+        class RecordingSpeaker:
+            def __init__(self) -> None:
+                self.spoken: list[str] = []
+
+            def speak(self, text: str) -> dict:
+                self.spoken.append(text)
+                return {"spoken": True}
+
+        s._real_stt = FakeSTT("hello novi")
+        speaker = RecordingSpeaker()
+        s._real_speaker = speaker
+        # White-box mic flag: no hardware in CI, the stub STT stands in.
+        s.real_io["mic"] = True
+        return s, speaker
+
+    def test_client_speaks_suppresses_server_voice(self) -> None:
+        s, speaker = self._server_with_stubs()
+        try:
+            res = s.voice_listen(1.0, client_speaks=True)
+            self.assertTrue(res.get("reply"))
+            self.assertEqual(speaker.spoken, [])
+            self.assertFalse(res["spoken"].get("spoken", True) and speaker.spoken)
+        finally:
+            s.stop()
+
+    def test_silent_client_gets_server_voice(self) -> None:
+        s, speaker = self._server_with_stubs()
+        try:
+            res = s.voice_listen(1.0, client_speaks=False)
+            self.assertTrue(res.get("reply"))
+            self.assertEqual(speaker.spoken, [res["reply"]])
+            self.assertTrue(res["spoken"].get("spoken"))
+        finally:
+            s.stop()
+
+    def test_face_person_only_named_identities(self) -> None:
+        s = _server()
+        try:
+            self.assertEqual(s._face_person(), "")
+            s.mm_runtime.current_person = "Alice"
+            self.assertEqual(s._face_person(), "Alice")
+            for placeholder in ("someone", "new-person-3", "  "):
+                s.mm_runtime.current_person = placeholder
+                self.assertEqual(s._face_person(), "", placeholder)
+        finally:
+            s.stop()
+
+    def test_chat_send_binds_face_addressee(self) -> None:
+        from unittest.mock import patch
+
+        s = _server()
+        s.start()
+        try:
+            s.mm_runtime.current_person = "Alice"
+            seen: dict[str, object] = {}
+
+            def fake_respond(text, **kwargs):
+                seen.update(kwargs)
+                return {"text": "hi", "reply_source": "dialogue", "addressee": "Alice", "reason": "r", "grounding": {}}
+
+            with patch.object(s.brain, "respond", side_effect=fake_respond):
+                s.chat_send("hello there")
+            self.assertEqual(seen.get("person"), "Alice")
+            # ...while the visible turn stays on the shared device thread.
+            self.assertTrue(any(c.get("text") == "hello there" for c in s._chat))
+        finally:
+            s.stop()
+
+    def test_followup_sees_prior_exchange(self) -> None:
+        from unittest.mock import patch
+
+        s = _server()
+        s.start()
+        try:
+            histories: list[object] = []
+
+            def fake_respond(text, **kwargs):
+                histories.append(kwargs.get("history"))
+                return {"text": "ok", "reply_source": "dialogue", "addressee": "", "reason": "r", "grounding": {}}
+
+            with patch.object(s.brain, "respond", side_effect=fake_respond):
+                s.chat_send("first message here")
+                s.chat_send("second message here")
+            second = histories[1]
+            self.assertTrue(any("first message here" in str(h) for h in second))
+        finally:
+            s.stop()
+
+    def test_voice_turn_receives_visible_history(self) -> None:
+        from unittest.mock import patch
+
+        s = _server()
+        try:
+            s._append_chat({"role": "user", "text": "typed context about zebras"})
+            seen: dict[str, object] = {}
+
+            def fake_respond(text, **kwargs):
+                seen.update(kwargs)
+                return {"text": "ok", "reply_source": "dialogue", "addressee": "", "reason": "r", "grounding": {}}
+
+            with patch.object(s.brain, "respond", side_effect=fake_respond):
+                s.mm_runtime.voice_turn(
+                    "and now voice",
+                    history=tuple(s._build_history()),
+                    last_novi_text=s._last_novi_text(),
+                    recent_novi=tuple(s._recent_novi(4)),
+                )
+            hist = seen.get("history") or []
+            self.assertTrue(any("zebras" in str(h) for h in hist))
+        finally:
+            s.stop()
+
+
 class BudgetEnvOverrideTests(unittest.TestCase):
     """NOVI_WEB_* env vars resize budgets without code changes."""
 

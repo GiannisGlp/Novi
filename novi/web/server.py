@@ -680,12 +680,35 @@ class NoviWebServer(IntegrationMixin):
         so Novi doesn't think the user addressed 'the system' or a 'heard' marker."""
         return re.sub(r"^\s*\[heard\]\s*", "", text)
 
-    def _build_history(self, limit: int = 6, person: str = "") -> list[dict[str, Any]]:
+    def _face_person(self) -> str:
+        """The currently-seen NAMED person, or "" when nobody identifiable.
+
+        Face-bound identity: when the camera sees an enrolled face, Novi knows
+        who it is talking to without being told. Placeholders ("new-person-N")
+        and anonymous sightings ("someone") do not count — only a real name.
+        """
+        runtime = getattr(self, "mm_runtime", None)
+        name = (getattr(runtime, "current_person", None) or "") if runtime is not None else ""
+        name = str(name).strip()
+        if not name or name == "someone" or name.startswith("new-person-"):
+            return ""
+        return name
+
+    #: Turns of conversation history supplied to the LLM per reply. 10 turns ×
+    #: 400 chars (~1K tokens of prefill) sustains multi-turn coherence without
+    #: unbounded prompt growth. Still a hard cap, not a full log.
+    HISTORY_TURNS = 10
+    HISTORY_CHARS_PER_TURN = 400
+
+    def _build_history(self, limit: int = HISTORY_TURNS, person: str = "") -> list[dict[str, Any]]:
         # Capped turns AND per-turn text: history rides inside the LLM prompt
         # (user_payload.conversation_so_far), so unbounded turns inflate prefill
-        # time on every reply. 6 turns × 240 chars keeps context without the cost.
+        # time on every reply.
         thread = self._chat_thread(person)
-        return [{"role": c["role"], "text": self._clean_chat_text(c["text"])[:240]} for c in thread[-limit:]]
+        return [
+            {"role": c["role"], "text": self._clean_chat_text(c["text"])[: self.HISTORY_CHARS_PER_TURN]}
+            for c in thread[-limit:]
+        ]
 
     def _recent_novi(self, limit: int = 4, person: str = "") -> list[str]:
         thread = self._chat_thread(person)
@@ -758,7 +781,9 @@ class NoviWebServer(IntegrationMixin):
         # a concurrent step cannot fire a duplicate initiative at the same
         # person (replaces the old _chat_busy loop-freeze; the loop keeps
         # ticking — SCENARIO-V1; other people stay free — phase 2).
-        addressee = person or self.brain.resolve_addressee(text)
+        # Face-bound identity comes before text resolution: a recognized face
+        # tells Novi who it is talking to without being told.
+        addressee = person or self._face_person() or self.brain.resolve_addressee(text)
         self.brain.acquire_speaking_lease(addressee)
         try:
             with self._lock:
@@ -779,7 +804,7 @@ class NoviWebServer(IntegrationMixin):
             # supplies conversation history and the LLM transport; the brain's
             # respond() detects the addressee, learns from the message, and
             # composes the reply (or the deterministic fallback) in one call.
-            history = self._build_history(6, person)
+            history = self._build_history(person=person)
             recent_novi = self._recent_novi(4, person)
             last_novi = self._last_novi_text(person)
             transport = self._reply_transport()
@@ -852,18 +877,21 @@ class NoviWebServer(IntegrationMixin):
         # Hold the speaking lease for THIS addressee while composing (replaces
         # _chat_busy loop-freeze). The recognized in-home person scopes the
         # lease: their voice turn gates their own stream only (phase 2).
-        runtime = getattr(self, "mm_runtime", None)
-        known_person = (getattr(runtime, "current_person", None) or "") if runtime is not None else ""
-        addressee = known_person or self.brain.resolve_addressee(text)
+        # Placeholders/anonymous sightings do not count (see _face_person).
+        addressee = self._face_person() or self.brain.resolve_addressee(text)
         self.brain.acquire_speaking_lease(addressee)
         try:
             # Brain-owned reply orchestration (north-star R1/R3): the brain
             # resolves the addressee, learns from the message, and composes the
             # natural reply (or the deterministic fallback) in one call. The web
             # layer only supplies conversation history and the LLM transport.
-            history = self._build_history(6, addressee)
-            recent_novi = self._recent_novi(4, addressee)
-            last_novi = self._last_novi_text(addressee)
+            # History comes from the shared device thread (""): typed turns and
+            # voice mirrors all live there, so voice replies see the same
+            # conversation the user sees. The addressee scopes the lease and
+            # the brain's relationship context, not the visible log.
+            history = self._build_history()
+            recent_novi = self._recent_novi(4)
+            last_novi = self._last_novi_text()
             transport = self._reply_transport()
             resp = self.brain.respond(
                 text,
@@ -897,8 +925,8 @@ class NoviWebServer(IntegrationMixin):
                 )
                 trace["confidence"] = result.get("confidence", 0.8)
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
-            self._append_chat({"role": "user", "text": f"[heard] {text}"}, addressee)
-            self._append_chat(novi, addressee)
+            self._append_chat({"role": "user", "text": f"[heard] {text}"})
+            self._append_chat(novi)
             return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
         finally:
             self.brain.release_speaking_lease(addressee)
@@ -1124,8 +1152,9 @@ class NoviWebServer(IntegrationMixin):
             self._last_sent_text = text
             self._last_sent_time = now
         # Hold the speaking lease for THIS addressee while composing (replaces
-        # _chat_busy loop-freeze; phase 2: scoped per sender).
-        addressee = person or self.brain.resolve_addressee(text)
+        # _chat_busy loop-freeze; phase 2: scoped per sender). Face-bound
+        # identity first, then the explicit sender, then text resolution.
+        addressee = person or self._face_person() or self.brain.resolve_addressee(text)
         self.brain.acquire_speaking_lease(addressee)
         try:
             with self._lock:
@@ -1139,8 +1168,8 @@ class NoviWebServer(IntegrationMixin):
                 heard_conf = r["confidence"]
                 step = self.brain.step()
                 trace = dict(self.brain._last_reasoning_trace)
-            history = self._build_history(6)
-            addressee = self.brain.resolve_addressee(text)
+            history = self._build_history()
+            addressee = person or self._face_person() or self.brain.resolve_addressee(text)
             discourse_hint = self.brain.note_user_message(text)["resolved_topic"]
             self.brain._learn_from_chat(text, addressee)
             recent_novi = self._recent_novi(4)
@@ -2094,9 +2123,6 @@ class Handler(BaseHTTPRequestHandler):
             return
         # ---- multimodal integration (doc 16) ----
         novi = self.server.novi
-        if path == "/preview":
-            self._serve_spa()
-            return
         if path == "/api/perception/state":
             self._json(novi.perception_state() if novi.mm_runtime else {"error": "integration unavailable"})
             return
@@ -2330,7 +2356,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"result": res})
             elif path == "/api/voice/listen":
                 try:
-                    self._json({"result": novi.voice_listen(float(data.get("seconds", 3.0)))})
+                    self._json(
+                        {
+                            "result": novi.voice_listen(
+                                float(data.get("seconds", 3.0)),
+                                client_speaks=bool(data.get("client_speaks", False)),
+                            )
+                        }
+                    )
                 except RuntimeError as exc:
                     self._json({"error": str(exc)}, status=400)
             elif path == "/api/voice/tts":

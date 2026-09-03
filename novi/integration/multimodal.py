@@ -71,6 +71,12 @@ class _PresenceTrack:
     present: bool = False  # currently considered in the room
 
 
+#: Maximum retained multimodal trail entries. The trail is a recent-window
+#: diagnostic (snapshot reads the last 12); per-frame perception events would
+#: otherwise grow it for the life of the process (plan 02, Rule 1/Rule 3).
+MAX_TRAIL_EVENTS = 1024
+
+
 class MultimodalRuntime:
     """One bridge instance per brain; thread-safe via the driver's lock.
 
@@ -78,7 +84,7 @@ class MultimodalRuntime:
     brain-ready salience events: ``presence.entered`` / ``presence.left``
     (who is in the room, with `absent_frames` hysteresis) and
     ``scene.changed`` (object-label set shifts). Downstream consumers poll
-    :meth:`pop_pending_events`; the full trail stays in ``.events``.
+    :meth:`pop_pending_events`; a bounded recent trail stays in ``.events``.
     """
 
     def __init__(
@@ -104,6 +110,7 @@ class MultimodalRuntime:
         self.observations = observations
         self.associations = associations
         self._events: list[dict[str, Any]] = []
+        self._max_trail_events = MAX_TRAIL_EVENTS
         self._lock = threading.RLock()
         self._id_to_label: dict[str, str] = {}  # FaceIdentifier pid -> human label
         # live conversational context
@@ -151,6 +158,8 @@ class MultimodalRuntime:
 
     def _emit(self, kind: str, **payload: Any) -> None:
         self._events.append({"kind": kind, **payload})
+        if len(self._events) > self._max_trail_events:
+            del self._events[: len(self._events) - self._max_trail_events]
 
     # -- camera --------------------------------------------------------------
 
@@ -728,9 +737,25 @@ class MultimodalRuntime:
 
     # -- voice -------------------------------------------------------------------
 
-    def voice_turn(self, text: str, *, speaker_label: str | None = None, confidence: float = 0.9) -> dict[str, Any]:
+    def voice_turn(
+        self,
+        text: str,
+        *,
+        speaker_label: str | None = None,
+        confidence: float = 0.9,
+        history: tuple[dict[str, Any], ...] = (),
+        last_novi_text: str = "",
+        recent_novi: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
         person = speaker_label or self.current_person
-        outcome = self.driver.hear(text, person=person, source="voice")
+        outcome = self.driver.hear(
+            text,
+            person=person,
+            source="voice",
+            history=history,
+            last_novi_text=last_novi_text,
+            recent_novi=recent_novi,
+        )
         reply = outcome.reply or ""
         result = {
             "ok": True,

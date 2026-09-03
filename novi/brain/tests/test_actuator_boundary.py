@@ -146,6 +146,16 @@ class ExpiryAndWatchdogTests(unittest.TestCase):
         self.assertEqual(expired[0]["command_id"], cmd.command_id)
         self.assertEqual(expired[0]["code"], "EXPIRED")
 
+    def test_expired_history_stays_bounded(self):
+        """Plan 02: expired-watchdog entries must not accumulate forever."""
+        from novi.brain.actuator_boundary import MAX_EXPIRED_ENTRIES
+
+        b = ActuatorBoundary(command_ttl_cycles=1, max_commands_per_cycle=100)
+        for cycle in range(MAX_EXPIRED_ENTRIES + 200):
+            b.compile(action="wait", parameters={}, cycle=cycle)
+            b.watch(cycle=cycle + 2)
+        self.assertLessEqual(len(b._expired), MAX_EXPIRED_ENTRIES)
+
 
 class EngineBoundaryTests(unittest.TestCase):
     def test_every_executed_action_carries_compiled_command(self):

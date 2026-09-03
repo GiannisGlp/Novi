@@ -86,6 +86,18 @@ from .social import TIER_EXPRESSION
 from .soul_acceptance import affect_expression
 
 
+def history_tail_text(history: list[dict[str, Any]] | None, *, turns: int = 2, chars: int = 300) -> str:
+    """Flatten the last turns for skill-guidance matching.
+
+    History items use the ``text`` key (web ``_build_history`` shape); the
+    ``content`` fallback keeps legacy callers working. A wrong key here
+    silently blanks skill context, so this is unit-tested.
+    """
+    return " ".join(
+        str(h.get("text", h.get("content", "")))[:chars] for h in (history or [])[-turns:] if isinstance(h, dict)
+    )
+
+
 def _is_correction_like(text: str) -> bool:
     """Task 18.2: explicit user corrections ('no, that's not what I meant')."""
     low = (text or "").lower().strip()
@@ -1159,9 +1171,7 @@ class ChatMixin:
         # Instruction-skill activation (plan 16 P3): context beyond the raw
         # utterance activates skills too — recalled knowledge/memory facts and
         # recent chat history (what was said, seen, heard, remembered).
-        history_tail = " ".join(
-            str(h.get("content", ""))[:300] for h in (history or [])[-2:] if isinstance(h, dict)
-        )
+        history_tail = history_tail_text(history)
         memory_text = "; ".join(str(f) for f in facts[-6:]) + " " + history_tail
         skill_guidance, skills_applied = self._matched_instruction_guidance(grounding_text, memory_text, exclude=("humanizer",))
         # Humanizer is an unconditional style pass on every composed reply,

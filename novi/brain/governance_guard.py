@@ -109,6 +109,13 @@ _REQUIRES_CONFIRMATION_ACTIONS = frozenset({"pick", "navigate", "move_forward", 
 _PROHIBITED_IN_DEGRADED = frozenset({"navigate", "move_forward", "pick", "turn_left", "turn_right"})
 
 
+#: Maximum retained governance grants. ``confirm()`` looks up recent
+#: REQUIRE_CONFIRMATION grants and ``all_grants()`` is a small-count
+#: diagnostic; evicting the oldest-inserted grant preserves both while
+#: capping per-cycle growth (plan 02, Rule 1/Rule 3).
+MAX_GRANTS = 1024
+
+
 class GovernanceGuard:
     """The runtime governance guard between proposal and execution.
 
@@ -145,7 +152,7 @@ class GovernanceGuard:
                 decision=DEGRADED_MODE,
                 reason=f"action {proposal.action!r} prohibited in degraded mode",
             )
-            self._grants[grant_id] = grant
+            self._remember_grant(grant_id, grant)
             return grant
 
         # Stage 2: Risk classification — R5 is always denied.
@@ -154,7 +161,7 @@ class GovernanceGuard:
                 grant_id=grant_id, proposal_id=proposal.proposal_id,
                 decision=DENY, reason="R5_action_requires_external_safety_authority",
             )
-            self._grants[grant_id] = grant
+            self._remember_grant(grant_id, grant)
             self._denied_count += 1
             return grant
 
@@ -165,7 +172,7 @@ class GovernanceGuard:
                 decision=REQUIRE_CONFIRMATION,
                 reason=f"model_proposed_{proposal.risk_class}_action_requires_confirmation",
             )
-            self._grants[grant_id] = grant
+            self._remember_grant(grant_id, grant)
             return grant
 
         # Stage 4: R3+ actions require confirmation.
@@ -179,7 +186,7 @@ class GovernanceGuard:
                     decision=REQUIRE_CONFIRMATION,
                     reason=f"{proposal.risk_class}_action_requires_confirmation",
                 )
-                self._grants[grant_id] = grant
+                self._remember_grant(grant_id, grant)
                 return grant
 
         # Stage 5: Always-safe actions pass.
@@ -188,7 +195,7 @@ class GovernanceGuard:
                 grant_id=grant_id, proposal_id=proposal.proposal_id,
                 decision=ALLOW, reason="safe_action",
             )
-            self._grants[grant_id] = grant
+            self._remember_grant(grant_id, grant)
             self._allowed_count += 1
             return grant
 
@@ -198,7 +205,7 @@ class GovernanceGuard:
                 grant_id=grant_id, proposal_id=proposal.proposal_id,
                 decision=ALLOW, reason="low_risk_allowed",
             )
-            self._grants[grant_id] = grant
+            self._remember_grant(grant_id, grant)
             self._allowed_count += 1
             return grant
 
@@ -208,7 +215,7 @@ class GovernanceGuard:
             decision=REQUIRE_CONFIRMATION,
             reason=f"{proposal.risk_class}_action_requires_confirmation",
         )
-        self._grants[grant_id] = grant
+        self._remember_grant(grant_id, grant)
         return grant
 
     def confirm(self, grant_id: str) -> GovernanceGrant | None:
@@ -238,6 +245,12 @@ class GovernanceGuard:
 
     def get_grant(self, grant_id: str) -> GovernanceGrant | None:
         return self._grants.get(grant_id)
+
+    def _remember_grant(self, grant_id: str, grant: GovernanceGrant) -> None:
+        """Single insertion point; evicts oldest-inserted past the bound."""
+        self._grants[grant_id] = grant
+        while len(self._grants) > MAX_GRANTS:
+            self._grants.pop(next(iter(self._grants)))
 
     def all_grants(self) -> tuple[GovernanceGrant, ...]:
         return tuple(self._grants.values())

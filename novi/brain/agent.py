@@ -53,6 +53,12 @@ class AgentInput:
     person: str = ""
     audio: AudioFrame | None = None
     frame: CameraFrame | None = None
+    # Optional conversation context for reply composition. Voice/text callers
+    # that own a visible thread pass it so replies stay in context; empty
+    # keeps the previous context-free behavior for headless callers.
+    history: tuple[dict[str, Any], ...] = ()
+    last_novi_text: str = ""
+    recent_novi: tuple[str, ...] = ()
 
     @classmethod
     def chat(cls, text: str, *, person: str = "", confidence: float = 0.9) -> "AgentInput":
@@ -63,8 +69,25 @@ class AgentInput:
         return cls(modality="cli", text=text, person=person, confidence=confidence)
 
     @classmethod
-    def voice(cls, text: str, *, confidence: float = 0.9, person: str = "") -> "AgentInput":
-        return cls(modality="voice", text=text, person=person, confidence=confidence)
+    def voice(
+        cls,
+        text: str,
+        *,
+        confidence: float = 0.9,
+        person: str = "",
+        history: tuple[dict[str, Any], ...] = (),
+        last_novi_text: str = "",
+        recent_novi: tuple[str, ...] = (),
+    ) -> "AgentInput":
+        return cls(
+            modality="voice",
+            text=text,
+            person=person,
+            confidence=confidence,
+            history=history,
+            last_novi_text=last_novi_text,
+            recent_novi=recent_novi,
+        )
 
     @classmethod
     def vision(cls, frame: CameraFrame) -> "AgentInput":
@@ -203,15 +226,17 @@ class BrainDriver:
 
         Delegates to the brain's source-agnostic ``respond()`` so reply
         orchestration stays in the brain (docs/06-soul/07 §2), not the driver.
+        Conversation context rides on the input when the caller owns a visible
+        thread (voice UI); headless callers leave it empty as before.
         """
         try:
             reply_obj = self.brain.respond(
                 inp.text,
                 person=person,
-                history=[],
+                history=list(inp.history),
                 llm_chat=self.llm_chat,
-                last_novi_text="",
-                recent_novi=[],
+                last_novi_text=inp.last_novi_text,
+                recent_novi=list(inp.recent_novi),
                 learn=True,
             )
             text = reply_obj.get("text")
@@ -258,21 +283,54 @@ class BrainDriver:
 
     # ---- source helpers ------------------------------------------------------
 
-    def hear(self, text: str, *, person: str = "", source: InputModality = "chat") -> AgentOutcome:
+    def hear(
+        self,
+        text: str,
+        *,
+        person: str = "",
+        source: InputModality = "chat",
+        history: tuple[dict[str, Any], ...] = (),
+        last_novi_text: str = "",
+        recent_novi: tuple[str, ...] = (),
+    ) -> AgentOutcome:
         """Hear text from any of chat/CLI/voice — the brain behaves the same."""
-        return self.drive(AgentInput(modality=source, text=text, person=person))
+        return self.drive(
+            AgentInput(
+                modality=source,
+                text=text,
+                person=person,
+                history=history,
+                last_novi_text=last_novi_text,
+                recent_novi=recent_novi,
+            )
+        )
 
     def command(self, text: str) -> AgentOutcome:
         """Treat a CLI command / instruction as an input to the same brain."""
         return self.drive(AgentInput.command(text))
 
-    def transcribe_and_drive(self, transcription: TranscriptionResult) -> AgentOutcome:
+    def transcribe_and_drive(
+        self,
+        transcription: TranscriptionResult,
+        *,
+        history: tuple[dict[str, Any], ...] = (),
+        last_novi_text: str = "",
+        recent_novi: tuple[str, ...] = (),
+    ) -> AgentOutcome:
         """Feed a real STT transcript into the brain (voice modality)."""
         if transcription is None or not (transcription.text or "").strip():
             return self.drive(AgentInput.idle())
         with contextlib.suppress(Exception):
             self.brain.ingest_transcript(transcription)
-        return self.drive(AgentInput.voice(transcription.text, confidence=transcription.confidence))
+        return self.drive(
+            AgentInput.voice(
+                transcription.text,
+                confidence=transcription.confidence,
+                history=history,
+                last_novi_text=last_novi_text,
+                recent_novi=recent_novi,
+            )
+        )
 
     def hear_audio(self, frame: AudioFrame) -> AgentOutcome:
         """Feed a non-speech acoustic event into the brain."""

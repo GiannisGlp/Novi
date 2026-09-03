@@ -214,6 +214,17 @@ class GovernanceGuardTests(unittest.TestCase):
         self.assertEqual(grant.decision, DENY)
         self.assertTrue(grant.is_denied)
 
+    def test_grant_history_stays_bounded(self):
+        """Plan 02: per-cycle grants must not accumulate forever."""
+        from novi.brain.governance_guard import MAX_GRANTS
+
+        guard = GovernanceGuard()
+        for i in range(MAX_GRANTS + 200):
+            guard.evaluate(ActionProposal(proposal_id=f"p{i}", action="wait", parameters={}, risk_class=R0))
+        grants = guard.all_grants()
+        self.assertLessEqual(len(grants), MAX_GRANTS)
+        self.assertEqual(grants[-1].proposal_id, f"p{MAX_GRANTS + 199}")
+
     def test_r3_action_requires_confirmation(self):
         guard = GovernanceGuard()
         proposal = ActionProposal(proposal_id="p3", action="navigate", parameters={}, risk_class=R3)

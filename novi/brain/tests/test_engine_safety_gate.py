@@ -192,6 +192,16 @@ class SafetyGateTests(unittest.TestCase):
         finally:
             brain.stop()
 
+    def test_decision_history_stays_bounded(self):
+        """Plan 02: per-cycle safety decisions must not accumulate forever."""
+        from novi.brain.safety_policy import MAX_SAFETY_DECISIONS, SafetyInvariantSet, SafetyPolicy
+
+        policy = SafetyPolicy(SafetyInvariantSet([]))
+        for _ in range(MAX_SAFETY_DECISIONS + 200):
+            policy.evaluate({"action": "wait"}, {})
+        self.assertLessEqual(len(policy.decisions), MAX_SAFETY_DECISIONS)
+        self.assertTrue(policy.decisions[-1].decision_id.startswith("sd-"))
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

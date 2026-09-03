@@ -95,6 +95,10 @@ class CompileResult:
     reason: str = ""
 
 
+#: Maximum retained expired-watchdog entries (recent-window diagnostic).
+MAX_EXPIRED_ENTRIES = 512
+
+
 @dataclass
 class WatchdogEntry:
     command_id: str
@@ -194,6 +198,8 @@ class ActuatorBoundary:
                 del self._issued[command_id]
                 entry = WatchdogEntry(command_id=command_id, action=command.action, expired_at_cycle=cycle)
                 self._expired.append(entry)
+                if len(self._expired) > MAX_EXPIRED_ENTRIES:
+                    del self._expired[: len(self._expired) - MAX_EXPIRED_ENTRIES]
                 expired.append({
                     "command_id": entry.command_id,
                     "action": entry.action,

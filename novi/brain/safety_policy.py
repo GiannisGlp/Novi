@@ -167,6 +167,12 @@ class PolicyVersion:
                 "supersedes": self.supersedes}
 
 
+#: Maximum retained safety decisions. Consumers read the latest decision(s);
+#: the full per-cycle trail would otherwise grow for the life of the process
+#: (plan 02, Rule 1/Rule 3).
+MAX_SAFETY_DECISIONS = 1024
+
+
 class SafetyPolicy:
     """The deterministic safety gate (doc 08): invariants + risk -> decision.
 
@@ -242,6 +248,8 @@ class SafetyPolicy:
 
     def _record(self, decision: SafetyDecision) -> SafetyDecision:
         self.decisions.append(decision)
+        if len(self.decisions) > MAX_SAFETY_DECISIONS:
+            del self.decisions[: len(self.decisions) - MAX_SAFETY_DECISIONS]
         return decision
 
 

@@ -125,7 +125,8 @@ export const api = {
   realStatus: () => request<RealIOStatus>('/api/real/status'),
   realEnable: () => request<OpaqueResult>('/api/real/enable', postJson({ camera: true, mic: true, speaker: true })),
   realSpeakback: (enabled: boolean) => request<OpaqueResult>('/api/real/speakback', postJson({ enabled })),
-  voiceListen: (seconds = 3) => request<OpaqueResult>('/api/voice/listen', postJson({ seconds })),
+  voiceListen: (seconds = 3, clientSpeaks = true) =>
+    request<OpaqueResult>('/api/voice/listen', postJson({ seconds, client_speaks: clientSpeaks })),
   voiceTurn: (text: string) => request<OpaqueResult>('/api/voice/turn', postJson({ text })),
   enrollFace: (name: string) => request<OpaqueResult>('/api/recognition/enroll-face', postJson({ name })),
   enrollVoice: (name: string) => request<OpaqueResult>('/api/recognition/enroll-voice', postJson({ name })),

@@ -22,7 +22,7 @@ import { KnowledgePage } from './pages/KnowledgePage'
 import { MemoryPage } from './pages/MemoryPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { PerceptionPage } from './pages/PerceptionPage'
-import { PreviewPage } from './pages/PreviewPage'
+
 
 function initialTheme(): string {
   const stored = document.documentElement.getAttribute('data-theme')
@@ -45,7 +45,7 @@ export default function App() {
   // single producer. Preview (300ms base64) is the biggest win: it runs only
   // on the three pages that render the frame.
   const { pathname } = useLocation()
-  const onPreviewPage = pathname === '/camera' || pathname === '/perception' || pathname === '/preview'
+  const onPreviewPage = pathname === '/camera' || pathname === '/perception'
   const onEventsPage = pathname === '/events' || pathname === '/overview'
   const onAttentionPage = pathname === '/overview' || pathname === '/cognition'
   const onContextPage = pathname === '/cognition'
@@ -160,16 +160,6 @@ export default function App() {
               path="/camera"
               element={
                 <CameraPage
-                  reportConnection={reportConnection}
-                  frame={preview.frame}
-                  showImage={preview.showImage}
-                />
-              }
-            />
-            <Route
-              path="/preview"
-              element={
-                <PreviewPage
                   reportConnection={reportConnection}
                   frame={preview.frame}
                   showImage={preview.showImage}

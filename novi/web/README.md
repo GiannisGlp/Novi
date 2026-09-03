@@ -172,6 +172,29 @@ passes. Ownership:
 | Closed-loop VERIFY steps | `ClosedLoopRuntime` | `MAX_LOOP_STEPS` (400 ≈ 100 cycles, `closed_loop.py`) |
 | Body execution outcomes | `MockBody` executed/rejected | `MAX_BODY_OUTCOMES` (1024 per list, `runtime.py`) |
 | Audit records | `AuditTrail` | `retention_max_entries` (10000, pre-existing) |
+| Perception trail (per-frame) | `MultimodalRuntime._events` | `MAX_TRAIL_EVENTS` (1024, `multimodal.py`) |
+| Safety decisions (per evaluation) | `SafetyPolicy.decisions` | `MAX_SAFETY_DECISIONS` (1024, `safety_policy.py`) |
+| Governance grants (per evaluation) | `GovernanceGuard._grants` | `MAX_GRANTS` (1024, oldest-evicted, `governance_guard.py`) |
+| Failure records | `FailureHandler._failures` | `MAX_FAILURE_RECORDS` (512, `failure_modes.py`) |
+| Expired watchdog entries | `Watchdog._expired` | `MAX_EXPIRED_ENTRIES` (512, `actuator_boundary.py`) |
+
+One brain, one memory: the web server constructs a single `MacBrain` whose
+`BrainDriver` wraps that same instance, so typed chat, voice turns, and the
+autonomous loop all read and write the same durable memory. Chat threads are
+per-sender presentation logs over that shared memory — the visible device
+thread (`""`) carries history for every reply path.
+
+Voice rule: exactly one renderer speaks each reply. Browser clients render
+audio themselves (`client_speaks=True`) and the server stays silent;
+server-side speech fires only for callers without audio, or deliberately via
+`/api/voice/tts`.
+
+Face-bound identity: when the camera sees an enrolled face, `_face_person()`
+resolves the addressee for the speaking lease and the reply's relationship
+context without being told. Placeholders (`new-person-N`) and anonymous
+sightings (`someone`) never count — only a real name. Conversation history
+stays on the shared device thread (10 turns × 400 chars) so replies keep
+multi-turn context regardless of modality.
 | Server event cache | `NoviWebServer._log` | `NOVI_WEB_MAX_EVENTS` (500) |
 | Events per poll/SSE response | `poll_events` batching | `NOVI_WEB_EVENT_BATCH_SIZE` (200) + `has_more` paging |
 | Per-entry payload | web boundary guard | `NOVI_WEB_MAX_EVENT_PAYLOAD_BYTES` (64 KiB, truncated with metadata) |
