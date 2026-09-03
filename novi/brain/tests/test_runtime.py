@@ -13,6 +13,46 @@ from novi.brain.runtime import (
 )
 
 
+class SupervisorEventBoundTests(unittest.TestCase):
+    """Plan 02: the supervisor bus is an operational trace, not a history DB."""
+
+    def test_publish_overflow_stays_bounded(self) -> None:
+        from novi.brain.runtime import EventBus
+
+        bus = EventBus(max_events=32)
+        for i in range(1000):
+            bus.publish("probe.event", {"i": i})
+        events = bus.events
+        self.assertLessEqual(len(events), 32)
+        self.assertEqual(events[-1].payload["i"], 999)
+        self.assertGreaterEqual(events[0].payload["i"], 968)
+        # Sequence numbers keep increasing across eviction (no reuse).
+        seqs = [e.sequence for e in events]
+        self.assertEqual(seqs, sorted(seqs))
+
+    def test_body_outcome_history_is_bounded(self) -> None:
+        from novi.brain.runtime import ActionProposal, BrainSupervisor, MockBody
+
+        body = MockBody(max_outcomes=8)
+        brain = BrainSupervisor()
+        brain.start()
+        for i in range(50):
+            proposal = ActionProposal("wait", {}, "test", f"corr-{i}")
+            body.execute(proposal, brain.safety.authorize(proposal))
+        self.assertLessEqual(len(body.executed), 8)
+        brain.shutdown()
+
+    def test_default_bound_matches_canonical_scale(self) -> None:
+        from novi.brain.runtime import MAX_SUPERVISOR_EVENTS, BrainSupervisor, EventBus
+
+        bus = EventBus()
+        self.assertEqual(bus._max_events, MAX_SUPERVISOR_EVENTS)
+        brain = BrainSupervisor()
+        brain.start()
+        self.assertLessEqual(len(brain.events.events), MAX_SUPERVISOR_EVENTS)
+        brain.shutdown()
+
+
 class BrainRuntimeTests(unittest.TestCase):
     def test_start_reaches_active(self) -> None:
         brain = BrainSupervisor()

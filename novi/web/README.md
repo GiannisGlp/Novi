@@ -151,7 +151,57 @@ novi-web --host 127.0.0.1 --port 8080
   ```
 
 - **Restart after a code change:** stop the current server (see above) and launch it
-  again with any of the start methods above.
+  again with any of the start methods above. `start()`/`stop()` are idempotent
+  (double-start creates no second loop, double-stop is safe), but a full stop
+  shuts the brain down terminally by design — restarting means a fresh server
+  instance, same as a process restart.
+
+---
+
+## Memory ownership and resource budgets
+
+The web runtime is a **bounded, demand-driven presentation layer over the
+brain** — it must run indefinitely without memory growing just because time
+passes. Ownership:
+
+| Data | Owner | Bound |
+| --- | --- | --- |
+| Recent events | `EventBus` (authoritative) | `WEB_COMPAT_EVENT_HISTORY` (4096, brain config `compat_event_history`) |
+| Compatibility event view (`MacBrain.events`) | brain, enforced at `_emit` | same as above, hard cap at the source |
+| Supervisor runtime events | `BrainSupervisor.events` | `MAX_SUPERVISOR_EVENTS` (4096, `runtime.py`) |
+| Closed-loop VERIFY steps | `ClosedLoopRuntime` | `MAX_LOOP_STEPS` (400 ≈ 100 cycles, `closed_loop.py`) |
+| Body execution outcomes | `MockBody` executed/rejected | `MAX_BODY_OUTCOMES` (1024 per list, `runtime.py`) |
+| Audit records | `AuditTrail` | `retention_max_entries` (10000, pre-existing) |
+| Server event cache | `NoviWebServer._log` | `NOVI_WEB_MAX_EVENTS` (500) |
+| Events per poll/SSE response | `poll_events` batching | `NOVI_WEB_EVENT_BATCH_SIZE` (200) + `has_more` paging |
+| Per-entry payload | web boundary guard | `NOVI_WEB_MAX_EVENT_PAYLOAD_BYTES` (64 KiB, truncated with metadata) |
+| Chat threads | per-person thread | `NOVI_WEB_MAX_CHAT_TURNS` (200) |
+| Camera preview | single latest-frame slot | `NOVI_WEB_PREVIEW_MAX_BYTES` (200 KiB; over-budget frames withheld, never queued) |
+| SSE subscribers | connection accounting | `NOVI_WEB_MAX_SSE_CLIENTS` (16; excess gets 503 + `Retry-After`) |
+| Browser event dedup | cursor high-water mark | O(1) — no per-sequence Set |
+| Browser polling | page-local `enabled` flags | preview only on camera/perception/preview pages, events on events/overview, attention on overview/cognition, context on cognition, chat while the drawer is open |
+
+Event delivery is cursor-based: clients request `after=N`, the server returns a
+bounded batch, and a `gap: true` response (cursor older than retention) or an
+`epoch` change (server restarted) tells the client to resync from a fresh
+snapshot. Slow clients can never force unbounded server retention.
+
+**Observability:** `GET /api/runtime/metrics` reports RSS, every counter above
+with its limit, SSE clients, preview bytes, and worker threads. The soak
+harness [`scripts/mac-web-soak.py`](../scripts/mac-web-soak.py) samples these
+on a realistic workload and fails on a persistent RSS slope or any counter
+over its bound.
+
+**Rules for future web work** (no exceptions without a documented reason):
+
+1. Every long-lived collection gets an owner, a maximum, and a drop policy.
+2. Real-time streams (preview, sensor state) keep the latest value, not history.
+3. No in-memory event collection grows without a configured maximum.
+4. Inactive pages must not poll — gate with `enabled`, verify unmount cleanup.
+5. Slow clients get backpressure/bounded queues, never unbounded server buffers.
+6. Every new background worker needs an explicit owner and stop path.
+7. Every new cache needs a maximum; every high-frequency endpoint needs a rate
+   and payload budget.
 
 ---
 

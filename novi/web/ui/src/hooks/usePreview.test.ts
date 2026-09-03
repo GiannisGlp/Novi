@@ -40,6 +40,56 @@ describe('usePreview', () => {
     expect(result.current.showImage).toBe(true)
   })
 
+  it('never runs overlapping requests while one is in flight', async () => {
+    vi.useFakeTimers()
+    let resolveFirst!: (r: Response) => void
+    const fetchMock = vi.fn().mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFirst = resolve
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    renderHook(() => usePreview(() => undefined))
+    await act(async () => {})
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    // several intervals pass while the first request hangs: no new requests
+    act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS * 5))
+    await act(async () => {})
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    // once it resolves, polling resumes
+    await act(async () => {
+      resolveFirst(jsonResponse({ image_data_url: 'data:image/jpeg;base64,abc' }))
+    })
+    act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS))
+    await act(async () => {})
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it('aborts the in-flight request when disabled', async () => {
+    const signals: AbortSignal[] = []
+    const fetchMock = vi.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const s = init?.signal
+          if (s) {
+            signals.push(s)
+            s.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+          }
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const { rerender } = renderHook(({ enabled }: { enabled: boolean }) => usePreview(() => undefined, { enabled }), {
+      initialProps: { enabled: true },
+    })
+    await act(async () => {})
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(signals).toHaveLength(1)
+    rerender({ enabled: false })
+    await act(async () => {})
+    expect(signals[0].aborted).toBe(true)
+  })
+
   it('keeps the last frame on a fetch error without reporting disconnection', async () => {
     const fetchMock = jsonFetch({ image_data_url: 'data:image/jpeg;base64,abc' })
     vi.stubGlobal('fetch', fetchMock)

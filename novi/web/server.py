@@ -46,6 +46,7 @@ from novi.perception.locate_anything import DeterministicLocateAnythingBackend
 from novi.perception.pipeline import PerceptionPipeline
 from novi.perception.tracking import ObjectTracker
 from novi.web.integration_api import IntegrationMixin
+from novi.web.runtime_budgets import DEFAULT_BUDGETS, WebRuntimeBudgets
 
 _ROUTED = Path(__file__).resolve().parent
 
@@ -221,7 +222,10 @@ class NoviWebServer(IntegrationMixin):
         listen_seconds: float = 3.0,
         sleep_every_n_cycles: int = 500,
         available_models: tuple[str, ...] = (
-            "nemotron-3.5-lightning", "qwen3:8b", "qwen3.8:27b", "qwen3:4b",
+            "nemotron-3.5-lightning",
+            "qwen3:8b",
+            "qwen3.8:27b",
+            "qwen3:4b",
             "novi-trained",  # plan 23: qwen3:8b + Novi dialogue LoRA (ollama adapter)
         ),
         embedder: str = "auto",
@@ -291,15 +295,29 @@ class NoviWebServer(IntegrationMixin):
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._brain_running = False
         # deduplication: track the last sent text + timestamp to reject
         # duplicate sends (double-click, Enter key race) within a short window.
         self._last_sent_text: str = ""
         self._last_sent_time: float = 0.0
         self._dedup_window_seconds: float = 15.0
-        # event log with stable seq numbers (bounded)
-        self._seen = 0
+        # Event pipeline budgets (plan 02, Phase 6). EventBus is the
+        # authoritative bounded history; the compat list is a bounded window;
+        # this server log is a bounded presentation cache keyed by server seq.
+        self.budgets: WebRuntimeBudgets = DEFAULT_BUDGETS
+        # Cursor into the brain's compat event `sequence` (EventBus sequence).
+        # Sequence-based (not index-based) so source-side trimming can never
+        # cause skips or duplicates.
+        self._seen_seq = 0
         self._seq = 0
         self._log: list[dict[str, Any]] = []
+        # Process-unique epoch so clients can detect a server restart (which
+        # resets server seqs) and resync instead of dropping everything below
+        # their stale cursor.
+        self._epoch = os.urandom(8).hex()
+        # SSE connection accounting (bounded clients, plan 02 §12.3).
+        self._sse_clients = 0
+        self._sse_lock = threading.Lock()
         # chat conversation (user <-> Novi reasoning responses), per person
         self._threads: dict[str, list[dict[str, Any]]] = {"": []}
         self._seqs: dict[str, int] = {"": 0}
@@ -534,18 +552,28 @@ class NoviWebServer(IntegrationMixin):
         except Exception:  # noqa: BLE001 - STT optional; brain falls back to deterministic
             return None
 
-    # ---- lifecycle ----
+    # ---- lifecycle (plan 02, Phase 7: owned, idempotent start/stop) ----
     def start(self) -> None:
-        self.brain.start()
+        """Start the brain loop. Safe to call twice: no second thread/loop."""
+        if self._thread is not None and self._thread.is_alive():
+            return
+        self._stop.clear()
+        if not self._brain_running:
+            self.brain.start()
+            self._brain_running = True
         self._thread = threading.Thread(target=self._loop, daemon=True, name="novi-brain-loop")
         self._thread.start()
 
     def stop(self) -> None:
+        """Stop the brain loop. Safe to call twice or without start()."""
         self._stop.set()
-        if self._thread is not None:
-            self._thread.join(timeout=2.0)
-        with self._lock, contextlib.suppress(Exception):
-            self.brain.stop()
+        thread, self._thread = self._thread, None
+        if thread is not None:
+            thread.join(timeout=2.0)
+        if self._brain_running:
+            with self._lock, contextlib.suppress(Exception):
+                self.brain.stop()
+            self._brain_running = False
 
     def _loop(self) -> None:
         while not self._stop.wait(self.tick):
@@ -566,14 +594,24 @@ class NoviWebServer(IntegrationMixin):
     def _record_event(self, event: dict[str, Any]) -> None:
         self._seq += 1
         self._log.append({"seq": self._seq, "ts": time.time(), "event": event})
-        if len(self._log) > 500:
-            self._log = self._log[-500:]
+        if len(self._log) > self.budgets.max_events:
+            self._log = self._log[-self.budgets.max_events :]
 
     def _drain(self) -> None:
-        """Pull newly emitted brain events into the bounded event log."""
+        """Pull newly emitted brain events into the bounded event log.
+
+        Ownership (plan 02, Phase 2): the EventBus is the authoritative
+        bounded history; the compat list is only a bounded window. This is a
+        consumer/cursor operation — NOT the mechanism that prevents OOM (the
+        brain bounds itself at the source). The cursor is the compat
+        ``sequence`` so trimming at the source can never cause a skip or a
+        duplicate, no matter how far behind this consumer falls.
+        """
         with self._lock:
-            new = list(self.brain.events[self._seen :])
-            self._seen = len(self.brain.events)
+            compat = self.brain.events
+            new = [ev for ev in compat if int(ev.get("sequence", 0) or 0) > self._seen_seq]
+            if new:
+                self._seen_seq = max(int(ev.get("sequence", 0) or 0) for ev in new)
             for ev in new:
                 self._seq += 1
                 self._log.append({"seq": self._seq, "ts": time.time(), "event": ev})
@@ -599,14 +637,13 @@ class NoviWebServer(IntegrationMixin):
                             "llm": False,
                         }
                     )
-                    if len(self._chat) > 200:
-                        self._chat = self._chat[-200:]
+                    if len(self._chat) > self.budgets.max_chat_turns:
+                        self._chat = self._chat[-self.budgets.max_chat_turns :]
                     self._persist_chat()
-            if len(self._log) > 500:
-                self._log = self._log[-500:]
-            if self._seen > 10000:
-                self.brain.events = self.brain.events[-1000:]
-                self._seen = len(self.brain.events)
+            if len(self._log) > self.budgets.max_events:
+                self._log = self._log[-self.budgets.max_events :]
+            # No legacy trim of brain.events here: the brain bounds its compat
+            # window at the source (plan 02 PR1). This drain is purely a cursor.
 
     def hear(self, text: str, confidence: float = 0.9) -> dict[str, Any]:
         # Unified input path (north star §4.2): submit through the brain's bus;
@@ -1217,8 +1254,8 @@ class NoviWebServer(IntegrationMixin):
             stored = {"seq": seq, **entry}
             thread = self._chat_thread(person)
             thread.append(stored)
-            if len(thread) > 200:
-                self._threads[(person or "").lower()] = thread[-200:]
+            if len(thread) > self.budgets.max_chat_turns:
+                self._threads[(person or "").lower()] = thread[-self.budgets.max_chat_turns :]
             # copy for persistence outside the lock to keep the lock short
             snapshot = list(self._chat)
         self._persist_chat_snapshot(snapshot)
@@ -1324,11 +1361,140 @@ class NoviWebServer(IntegrationMixin):
         with self._lock:
             return self.brain.health_report()
 
+    def _guard_event_entry(self, entry: dict[str, Any]) -> dict[str, Any]:
+        """Enforce the per-entry payload budget at the web boundary.
+
+        Oversized entries keep seq/ts/type metadata but have their payload
+        replaced with a truncation summary — a slow/verbose producer must not
+        be able to blow up a poll response or pin memory in clients.
+        """
+        try:
+            size = len(json.dumps(entry.get("event", {}), default=str))
+        except Exception:  # noqa: BLE001 - unserializable means oversized
+            size = self.budgets.max_event_payload_bytes + 1
+        if size <= self.budgets.max_event_payload_bytes:
+            return entry
+        event = entry.get("event", {})
+        summary = {
+            "event_type": event.get("event_type", "unknown"),
+            "cycle": event.get("cycle"),
+            "__truncated__": True,
+            "bytes": size,
+        }
+        return {"seq": entry["seq"], "ts": entry["ts"], "event": summary}
+
     def poll_events(self, after: int) -> dict[str, Any]:
+        """Return events after client cursor ``after`` (cursor-based delivery).
+
+        Contract (plan 02, Phase 2):
+        - at most ``budgets.event_batch_size`` entries per call; the client
+          re-requests with the returned ``after`` to page forward;
+        - ``gap=True`` when ``after`` predates the oldest retained entry, so
+          the client drops its window and resyncs from the fresh snapshot
+          instead of assuming continuity;
+        - ``after`` always advances to the newest delivered seq (or stays when
+          there is nothing new). No client can force unbounded retention.
+        """
         self._drain()
-        entries = [e for e in self._log if e["seq"] > after]
-        next_after = self._log[-1]["seq"] if self._log else after
-        return {"events": entries, "after": next_after}
+        with self._lock:
+            epoch = self._epoch
+            log = self._log
+            if not log:
+                return {"events": [], "after": after, "gap": False, "epoch": epoch}
+            oldest = log[0]["seq"]
+            gap = after < oldest - 1 and after != 0 and len(log) >= self.budgets.max_events
+            # A cursor of 0 (fresh client) is a snapshot request, not a gap.
+            if after == 0:
+                gap = False
+            fresh = [e for e in log if e["seq"] > after]
+            batch = fresh[: self.budgets.event_batch_size]
+            guarded = [self._guard_event_entry(e) for e in batch]
+            # The cursor never moves backwards: an empty batch means "nothing
+            # new", so the client's cursor stands.
+            next_after = batch[-1]["seq"] if batch else after
+            has_more = len(fresh) > len(batch)
+            return {"events": guarded, "after": next_after, "gap": gap, "has_more": has_more, "epoch": epoch}
+
+    @staticmethod
+    def _process_rss_bytes() -> int | None:
+        """Best-effort current RSS in bytes (stdlib only; None when unknown)."""
+        try:
+            import sys
+
+            if sys.platform.startswith("linux"):
+                with open("/proc/self/status", encoding="utf-8") as fh:
+                    for line in fh:
+                        if line.startswith("VmRSS:"):
+                            return int(line.split()[1]) * 1024
+                return None
+            if sys.platform == "darwin":
+                import os
+                import subprocess
+
+                out = subprocess.run(
+                    ["ps", "-o", "rss=", "-p", str(os.getpid())],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if out.returncode == 0 and out.stdout.strip():
+                    return int(out.stdout.strip()) * 1024
+                return None
+            return None
+        except Exception:  # noqa: BLE001 - metrics are best-effort
+            return None
+
+    def runtime_metrics(self) -> dict[str, Any]:
+        """Lightweight memory/resource observability (plan 02, Phase 9).
+
+        Exposes the counters that prove bounded operation: compat window vs
+        limit, EventBus vs limit, server log vs limit, SSE clients vs limit,
+        latest preview bytes, and worker threads. Poll cheaply; RSS slope over
+        a moving window is the soak-test signal (stable/oscillating = healthy,
+        persistent positive slope = investigate).
+        """
+        with self._lock:
+            log_size = len(self._log)
+            sse = self._sse_clients
+        brain = self.brain
+        try:
+            bus_size = len(brain.event_bus.events())
+            bus_limit = int(brain.event_bus.health().get("max_events", -1))
+        except Exception:  # noqa: BLE001
+            bus_size, bus_limit = -1, -1
+        try:
+            compat_size = len(brain.events)
+            compat_limit = brain._compat_event_limit()
+        except Exception:  # noqa: BLE001
+            compat_size, compat_limit = -1, -1
+        try:
+            loop_steps = len(brain.closed_loop.steps)
+            loop_limit = brain.closed_loop.max_steps
+        except Exception:  # noqa: BLE001
+            loop_steps, loop_limit = -1, -1
+        try:
+            preview_bytes = len(getattr(self, "mm_last_frame_b64", None) or "")
+        except Exception:  # noqa: BLE001
+            preview_bytes = -1
+        thread = self._thread
+        return {
+            "rss_bytes": self._process_rss_bytes(),
+            "compat_event_count": compat_size,
+            "compat_event_limit": compat_limit,
+            "loop_step_count": loop_steps,
+            "loop_step_limit": loop_limit,
+            "eventbus_size": bus_size,
+            "eventbus_limit": bus_limit,
+            "server_log_size": log_size,
+            "server_log_limit": self.budgets.max_events,
+            "active_sse_clients": sse,
+            "sse_limit": self.budgets.max_sse_clients,
+            "preview_frame_bytes": preview_bytes,
+            "preview_max_bytes": self.budgets.preview_max_bytes,
+            "worker_threads": threading.active_count(),
+            "brain_thread_alive": bool(thread is not None and thread.is_alive()),
+            "auto_step": self.auto_step,
+        }
 
     def state(self) -> dict[str, Any]:
         with self._lock:
@@ -1586,7 +1752,8 @@ class NoviWebServer(IntegrationMixin):
                 # fallback: assemble from current world state for the first cycle
                 try:
                     pkg = self.brain._assemble_world_context(
-                        "", person="",
+                        "",
+                        person="",
                         vision_provider=getattr(self.brain, "_vision_provider", None),
                     )
                 except Exception:
@@ -1740,48 +1907,68 @@ class Handler(BaseHTTPRequestHandler):
                 after = int(parse_qs(urlparse(self.path).query).get("after", ["0"])[0])
             except Exception:
                 after = 0
-            self.send_response(200)
-            self.send_header("Content-Type", "text/event-stream")
-            self.send_header("Cache-Control", "no-cache")
-            self.send_header("Connection", "keep-alive")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            # Send initial comment to confirm connection
+            novi = self.server.novi
+            # SSE budget (plan 02 §12.3): bounded clients with heartbeat,
+            # disconnect detection, and cleanup. Slow browsers must not grow
+            # server memory: delivery reuses the bounded poll_events batches.
+            budgets = novi.budgets
+            with novi._sse_lock:
+                if novi._sse_clients >= budgets.max_sse_clients:
+                    self.send_response(503)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Retry-After", "5")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    with contextlib.suppress(Exception):
+                        self.wfile.write(b'{"error": "too many event subscribers"}')
+                    return
+                novi._sse_clients += 1
             try:
-                self.wfile.write(b": connected\n\n")
-                self.wfile.flush()
-            except Exception:
-                return
-            last = after
-            # Track last heartbeat to avoid spamming
-            heartbeat_interval = 12.0
-            last_beat = time.time()
-            while not self.server.novi._stop.is_set():
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "keep-alive")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                # Send initial comment to confirm connection
                 try:
-                    chunk = self.server.novi.poll_events(last)
-                    if chunk.get("events"):
-                        payload = json.dumps(chunk)
-                        self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
-                        self.wfile.flush()
-                        last = chunk.get("after", last)
-                        last_beat = time.time()
-                    else:
-                        if time.time() - last_beat > heartbeat_interval:
-                            self.wfile.write(b": ping\n\n")
-                            self.wfile.flush()
-                            last_beat = time.time()
-                except (BrokenPipeError, ConnectionResetError, OSError):
-                    break
+                    self.wfile.write(b": connected\n\n")
+                    self.wfile.flush()
                 except Exception:
-                    # Keep the SSE stream alive even if one poll fails
+                    return
+                last = after
+                # Track last heartbeat to avoid spamming
+                heartbeat_interval = budgets.sse_heartbeat_s
+                last_beat = time.time()
+                while not novi._stop.is_set():
                     try:
-                        self.wfile.write(b": error\n\n")
-                        self.wfile.flush()
-                    except Exception:
+                        chunk = novi.poll_events(last)
+                        if chunk.get("events"):
+                            payload = json.dumps(chunk)
+                            self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+                            self.wfile.flush()
+                            last = chunk.get("after", last)
+                            last_beat = time.time()
+                        else:
+                            if time.time() - last_beat > heartbeat_interval:
+                                self.wfile.write(b": ping\n\n")
+                                self.wfile.flush()
+                                last_beat = time.time()
+                    except (BrokenPipeError, ConnectionResetError, OSError):
                         break
-                # Poll interval — 250ms gives <300ms initiative latency vs 1.2s polling
-                if self.server.novi._stop.wait(0.25):
-                    break
+                    except Exception:
+                        # Keep the SSE stream alive even if one poll fails
+                        try:
+                            self.wfile.write(b": error\n\n")
+                            self.wfile.flush()
+                        except Exception:
+                            break
+                    # Poll interval — 250ms gives <300ms initiative latency vs 1.2s polling
+                    if novi._stop.wait(budgets.sse_poll_interval_s):
+                        break
+            finally:
+                with novi._sse_lock:
+                    novi._sse_clients = max(0, novi._sse_clients - 1)
             return
         if path in ("/", "/index.html"):
             self._serve_spa()
@@ -1797,6 +1984,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/health":
             self._json({"result": self.server.novi.health()})
+            return
+        if path == "/api/runtime/metrics":
+            self._json(self.server.novi.runtime_metrics())
             return
         if path == "/api/attention":
             self._json(self.server.novi.attention())

@@ -251,6 +251,12 @@ export interface BrainEvent {
 export interface EventsChunk {
   after: number
   events?: BrainEvent[]
+  /** Server signals the client cursor fell outside the retention window. */
+  gap?: boolean
+  /** More entries remain; re-request with the returned cursor to page forward. */
+  has_more?: boolean
+  /** Process-unique server epoch; a change means the server restarted. */
+  epoch?: string
 }
 
 export interface ChatEntry {
@@ -292,6 +298,7 @@ export interface PreviewFrame {
   camera_health?: string
   stale?: boolean
   image_data_url?: string
+  preview_omitted_over_budget?: boolean
   person?: string
   tier?: string
   place?: string

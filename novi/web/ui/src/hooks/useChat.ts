@@ -40,7 +40,11 @@ export interface ChatData {
  * duplicate-send window and the 125s stream timeout. The message list itself is
  * rendered by the chat drawer from `turns` + `streaming`.
  */
-export function useChat(reportConnection: (ok: boolean) => void, getModelName?: () => string): ChatData {
+export function useChat(
+  reportConnection: (ok: boolean) => void,
+  getModelName?: () => string,
+  opts?: { enabled?: boolean },
+): ChatData {
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [streaming, setStreaming] = useState<StreamingState | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -242,6 +246,6 @@ export function useChat(reportConnection: (ok: boolean) => void, getModelName?: 
 
   const notice = useCallback((text: string) => pushTurns({ role: 'novi', text }), [pushTurns])
 
-  usePoll(refresh, CHAT_POLL_MS)
+  usePoll(refresh, CHAT_POLL_MS, opts?.enabled ?? true)
   return { turns, streaming, isStreaming, isListening, send, refresh, clear, step, listen, notice }
 }

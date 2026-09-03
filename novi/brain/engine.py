@@ -103,9 +103,16 @@ from .world_model import (
 )
 from .world_model import WorldModel as UnifiedWorldModel
 
+# Plan 02 (web memory stability): single authoritative retention bound for the
+# flattened compatibility event view. Same order of magnitude as the EventBus
+# history so the compat layer never retains substantially more than the
+# authoritative store. Configurable via MacBrainConfig.compat_event_history.
+WEB_COMPAT_EVENT_HISTORY = 4096
+
 
 @dataclass(frozen=True)
 class MacBrainConfig:
+    compat_event_history: int = WEB_COMPAT_EVENT_HISTORY
     sensor_id: str = "mac.camera.front"
     run_id: str = ""
     memory_dir: Path = Path("brain_data/memory")
@@ -271,6 +278,7 @@ class MacBrain(ChatMixin):
         self.stt = stt or DeterministicSTTProvider()
         self.unified_world = UnifiedWorldModel()
         from .spatial_map import default_home_map
+
         # Spatial model (roadmap item 11): runtime holder for frames, regions,
         # occupancy, and the metric<->semantic link. A default home map is
         # established so reachability/visibility queries are available.
@@ -319,13 +327,18 @@ class MacBrain(ChatMixin):
         # (epistemic status, evidence class, source class, independence groups,
         # retrieval failure states) as the in-memory path.
         write_gate = WriteGate()
-        self.memory = DurableMemoryStore(store_path, embedder=embedder, write_gate=write_gate) if store_path else HardenedMemoryManager(write_gate=write_gate)
+        self.memory = (
+            DurableMemoryStore(store_path, embedder=embedder, write_gate=write_gate)
+            if store_path
+            else HardenedMemoryManager(write_gate=write_gate)
+        )
         self._using_hardened_memory = isinstance(self.memory, HardenedMemoryManager)
         # Phase 4b: retention is enforced at the store (per-type TTLs, capacity
         # eviction, expires_at honoring with audited tombstone reports). The
         # sweep rides the sleep cadence; retrieval excludes expired records
         # regardless. The in-memory hardened manager has no store to sweep.
         from .retention import RetentionEnforcer, RetentionPolicy
+
         retention_policy_obj = retention_policy or RetentionPolicy(default_ttl_days=365.0, max_records=50000)
         self.retention_enforcer = (
             None if self._using_hardened_memory else RetentionEnforcer(self.memory, retention_policy_obj)
@@ -356,9 +369,19 @@ class MacBrain(ChatMixin):
                     continue
         if goals is None and isinstance(self.memory, DurableMemoryStore):
             self._load_goals()
-        self.consolidator = MemoryConsolidator(self.memory, self.config.consolidation_config) if isinstance(self.memory, DurableMemoryStore) else None
-        self.summary_consolidator = summary_consolidator or (SummaryConsolidator(self.memory) if isinstance(self.memory, DurableMemoryStore) else None)
-        if self.summary_consolidator is not None and getattr(self.summary_consolidator, "store", None) is None and isinstance(self.memory, DurableMemoryStore):
+        self.consolidator = (
+            MemoryConsolidator(self.memory, self.config.consolidation_config)
+            if isinstance(self.memory, DurableMemoryStore)
+            else None
+        )
+        self.summary_consolidator = summary_consolidator or (
+            SummaryConsolidator(self.memory) if isinstance(self.memory, DurableMemoryStore) else None
+        )
+        if (
+            self.summary_consolidator is not None
+            and getattr(self.summary_consolidator, "store", None) is None
+            and isinstance(self.memory, DurableMemoryStore)
+        ):
             self.summary_consolidator.store = self.memory
         self.narrator = narrator
         # Phase P1 (sleep cycle): scheduled memory-maturation pass over the
@@ -385,6 +408,7 @@ class MacBrain(ChatMixin):
         else:
             self.soul = Soul()
         from .importance import ImportanceModel
+
         self.importance = ImportanceModel(curiosity_trait=float(self.soul.personality.traits.get("curiosity", 0.85)))
         if relationships is not None:
             self.relationships = relationships
@@ -394,7 +418,11 @@ class MacBrain(ChatMixin):
         else:
             self.relationships = Relationships()
         self.social = social or SocialIntelligence()
-        self.social_initiative = SocialInitiative(InitiativeConfig(neglect_threshold=self.config.initiative_neglect_threshold, cooldown=self.config.initiative_cooldown))
+        self.social_initiative = SocialInitiative(
+            InitiativeConfig(
+                neglect_threshold=self.config.initiative_neglect_threshold, cooldown=self.config.initiative_cooldown
+            )
+        )
         # Plan 20: event salience → autonomous utterance (GAP-A/B/C).
         self.salience = SurgeSalienceEvaluator(EventSaliencePolicy())
         # Speaking lease (plan 19, Phase 2): while a reply is being composed
@@ -492,6 +520,7 @@ class MacBrain(ChatMixin):
         from .decision_trace import TraceRecorder
 
         self.decision_traces = TraceRecorder()
+
         # Discourse state: bounded sliding-window model of "what are we
         # talking about" (gap-audit plan Phase B1). Known world/person labels
         # are preferred as topics so pronoun resolution lands on real referents.
@@ -517,6 +546,7 @@ class MacBrain(ChatMixin):
         # Triple semantic index (gap-audit Phase D2): "subject predicate object"
         # embeddings with graceful offline fallback, kept in sync on change.
         from .triple_index import index_for_graph
+
         _kg_embedder = getattr(self.memory, "_embedder", None)
         self.triple_index = index_for_graph(self.knowledge, embedder=_kg_embedder)
         # Learning pipeline (roadmap item 13): evidence-backed promotion into
@@ -528,6 +558,7 @@ class MacBrain(ChatMixin):
             RoutineDetector,
             UserCorrectionLog,
         )
+
         self.learning = KnowledgePromotionPipeline()
         self.corrections = UserCorrectionLog()
         self.routines = RoutineDetector()
@@ -536,24 +567,40 @@ class MacBrain(ChatMixin):
         # of them are persisted with the durable store so learning survives
         # restart and keeps shaping behavior (the north star's revise loop).
         from .recovery import RegressionMemory
+
         self.lessons = RegressionMemory()
         self._restore_learning()
         # Memory-class decision (roadmap item 16) + L0–L6 schema-evolution hooks.
         from .memory_classes import MemoryClassDecisionRegistry, SchemaEvolutionGate
+
         self.memory_classes = MemoryClassDecisionRegistry()
         self.schema_evolution = SchemaEvolutionGate()
-        self.governance = governance or PrivacyGovernance(self.memory if isinstance(self.memory, DurableMemoryStore) else None)
+        self.governance = governance or PrivacyGovernance(
+            self.memory if isinstance(self.memory, DurableMemoryStore) else None
+        )
         self.hearing = hearing or Hearing()
         self._pending_audio: list[ModalityObservation] = []
         self._pending_speech: list[ModalityObservation] = []
         self._last_audio_events: list[dict[str, Any]] = []
-        self._last_reasoning_trace: dict[str, Any] = {"cycle": -1, "conclusion": "awaiting_cycle", "confidence": 0.0, "action": "none", "rationale": "", "route": "none", "route_reason": "", "recalled": 0, "situation": None, "detections": []}
+        self._last_reasoning_trace: dict[str, Any] = {
+            "cycle": -1,
+            "conclusion": "awaiting_cycle",
+            "confidence": 0.0,
+            "action": "none",
+            "rationale": "",
+            "route": "none",
+            "route_reason": "",
+            "recalled": 0,
+            "situation": None,
+            "detections": [],
+        }
         self.metrics = metrics or MetricRegistry()
         self.diagnostics = diagnostics or Diagnostics()
         self.health = health or HealthMonitor(default_health_checks())
         # Skill system (docs/plans/01_BRAIN/16): portable SKILL.md packages;
         # shipped skills + user dirs. Manifests only until a skill is used.
         from .skills import SkillRegistry
+
         shipped_dir = Path(__file__).resolve().parents[1] / "skills"  # novi/skills/
         self.skills = SkillRegistry([shipped_dir, *[Path(d) for d in self.config.skill_dirs]])
         # Centralized skill activation (plan 16 P4): one engine-owned place
@@ -561,9 +608,15 @@ class MacBrain(ChatMixin):
         # one consumer. Cycle observation primes skills from perception and
         # memory; the humanizer style pass lives here too.
         from .skill_activation import SkillActivator
+
         self.skill_activator = SkillActivator(self.skills, emit=self._emit)
         self._last_health: dict[str, Any] | None = None
         self._cycle = 0
+        # Plan 02: bounded flattened compatibility view. `self.events` stays a
+        # plain list so every legacy consumer (iteration, indexing, slicing,
+        # len) keeps working, but insertion goes through _append_compat_event
+        # which enforces the hard retention bound at the source — the brain is
+        # safe even when no web server is draining events.
         self.events: list[dict[str, Any]] = []
         # Autonomy event bus (gap-analysis Step 3, item 17): canonical
         # envelope with correlation/causation IDs, priority, privacy class,
@@ -575,6 +628,7 @@ class MacBrain(ChatMixin):
         # Persistent decision audit trail (gap-analysis Step 3, item 23):
         # structured records of consequential decisions/actions with retention.
         from .audit_trail import AuditTrail
+
         self.audit_trail = AuditTrail()
 
     def start(self) -> None:
@@ -621,9 +675,15 @@ class MacBrain(ChatMixin):
             self._last_submitted_text = str(payload["text"])
         elif isinstance(payload, str) and payload.strip():
             self._last_submitted_text = payload
-        self._emit("input.submitted", {
-            "seq": env.seq, "source": source, "kind": kind, "priority": env.priority,
-        })
+        self._emit(
+            "input.submitted",
+            {
+                "seq": env.seq,
+                "source": source,
+                "kind": kind,
+                "priority": env.priority,
+            },
+        )
         return env.seq
 
     def drain_inputs(self, max_items: int = 8) -> list[dict[str, Any]]:
@@ -643,8 +703,11 @@ class MacBrain(ChatMixin):
         consumed: list[dict[str, Any]] = []
         for env in batch:
             record = {
-                "seq": env.seq, "source": env.source, "kind": env.kind,
-                "priority": env.priority, "submitted_at": env.submitted_at,
+                "seq": env.seq,
+                "source": env.source,
+                "kind": env.kind,
+                "priority": env.priority,
+                "submitted_at": env.submitted_at,
                 "drop_count": env.drop_count,
             }
             if env.drop_count:
@@ -659,10 +722,16 @@ class MacBrain(ChatMixin):
                 try:
                     from .models.stt import TranscriptionResult
 
-                    result = self.ingest_transcript(TranscriptionResult(
-                        text=text, language="en", confidence=0.9,
-                        audio_path="", provider=env.source, model_id=f"bus:{env.kind}",
-                    ))
+                    result = self.ingest_transcript(
+                        TranscriptionResult(
+                            text=text,
+                            language="en",
+                            confidence=0.9,
+                            audio_path="",
+                            provider=env.source,
+                            model_id=f"bus:{env.kind}",
+                        )
+                    )
                     record["admitted"] = bool(result["admission"].accepted)
                     record["memory_id"] = getattr(result["admission"], "memory_id", None)
                 except Exception as exc:  # noqa: BLE001 - admission is best-effort
@@ -728,15 +797,23 @@ class MacBrain(ChatMixin):
         if not self.config.event_autonomy_enabled:
             return None
         if self.speaking_lease_for(person):
-            self._emit("speech.initiative_suppressed", {
-                "cycle": self._cycle, "reason": "speaking_lease_held",
-            })
+            self._emit(
+                "speech.initiative_suppressed",
+                {
+                    "cycle": self._cycle,
+                    "reason": "speaking_lease_held",
+                },
+            )
             return None
         affect = self.soul.affect.dimensions
         if affect.get("social_comfort", 0.5) < 0.35 and affect.get("engagement", 0.5) < 0.5:
-            self._emit("speech.initiative_suppressed", {
-                "cycle": self._cycle, "reason": "social_overload_reduction",
-            })
+            self._emit(
+                "speech.initiative_suppressed",
+                {
+                    "cycle": self._cycle,
+                    "reason": "social_overload_reduction",
+                },
+            )
             return None
         if self.goals.has_active:
             return None
@@ -763,9 +840,13 @@ class MacBrain(ChatMixin):
             upstream_vetted=True,  # SurgeSalienceEvaluator already thresholded
         )
         if not speak:
-            self._emit("speech.initiative_suppressed", {
-                "cycle": self._cycle, "reason": f"anti_narration:{reason}",
-            })
+            self._emit(
+                "speech.initiative_suppressed",
+                {
+                    "cycle": self._cycle,
+                    "reason": f"anti_narration:{reason}",
+                },
+            )
             return None
         # GAP-E grounding: a scene-change remark can reference prior memory
         # ("I remember your red mug was on the counter.").
@@ -814,12 +895,27 @@ class MacBrain(ChatMixin):
             self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
             # In safe-minimum mode, skip the rest of the step.
             self.multi_speed.set_state(AutonomyState.SAFE_MINIMUM)
-            return {"cycle": self._cycle, "safety_gate": "failed", "detections": [], "action": "stop", "authorized": False}
+            return {
+                "cycle": self._cycle,
+                "safety_gate": "failed",
+                "detections": [],
+                "action": "stop",
+                "authorized": False,
+            }
         frame = self.camera.read()
         # Keep the latest frame available for the explicit grounding capability
         # (ground_scene): SpatialQuery frame_id must match the grounded frame.
         self._last_frame = frame
-        self._emit("sensor.camera.frame", {"frame_id": frame.frame_id, "width": frame.width, "height": frame.height, "captured_at": frame.captured_at, "metadata": frame.metadata})
+        self._emit(
+            "sensor.camera.frame",
+            {
+                "frame_id": frame.frame_id,
+                "width": frame.width,
+                "height": frame.height,
+                "captured_at": frame.captured_at,
+                "metadata": frame.metadata,
+            },
+        )
         # Closed-loop OBSERVE: record the start of a new cycle.
         self.closed_loop.observe({"cycle": self._cycle, "frame_id": frame.frame_id})
         # Phase 5 (plan 19): neural perception cadence — run the expensive
@@ -828,17 +924,45 @@ class MacBrain(ChatMixin):
         # cognition) still has a consistent view; the loop keeps stepping.
         cadence = max(1, int(self.config.perception_every_n_cycles))
         if cadence == 1 or self._cycle % cadence == 0:
-            evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
+            evidence = self.perception.process(
+                sensor_id=self.config.sensor_id,
+                frame_id=frame.frame_id,
+                timestamp=frame.captured_at,
+                frame=frame.payload,
+            )
             self._last_evidence = evidence
             if self.perception_pipeline is not None:
                 evidence = self._run_perception_pipeline(frame, evidence)
         else:
             evidence = getattr(self, "_last_evidence", None)
             if evidence is None:
-                evidence = self.perception.process(sensor_id=self.config.sensor_id, frame_id=frame.frame_id, timestamp=frame.captured_at, frame=frame.payload)
+                evidence = self.perception.process(
+                    sensor_id=self.config.sensor_id,
+                    frame_id=frame.frame_id,
+                    timestamp=frame.captured_at,
+                    frame=frame.payload,
+                )
                 self._last_evidence = evidence
-        self._emit("perception.completed", {"frame_id": evidence.frame_id, "detection_count": len(evidence.detections), "provenance": dict(evidence.provenance)})
-        observations = tuple(SensorObservation(cycle=self._cycle, source=f"{self.config.sensor_id}.perception", entity=detection.label, location=None, state="present", confidence=detection.confidence, captured_cycle=self._cycle) for detection in evidence.detections)
+        self._emit(
+            "perception.completed",
+            {
+                "frame_id": evidence.frame_id,
+                "detection_count": len(evidence.detections),
+                "provenance": dict(evidence.provenance),
+            },
+        )
+        observations = tuple(
+            SensorObservation(
+                cycle=self._cycle,
+                source=f"{self.config.sensor_id}.perception",
+                entity=detection.label,
+                location=None,
+                state="present",
+                confidence=detection.confidence,
+                captured_cycle=self._cycle,
+            )
+            for detection in evidence.detections
+        )
         self._admit_detections(evidence.detections)
         if self.perception_pipeline is None:
             self._update_unified_world(evidence.detections)
@@ -865,7 +989,10 @@ class MacBrain(ChatMixin):
         # recall query, then ground the full situation in knowledge + goal + memory.
         prelim = self.cognition.build_situation(self.unified_world.to_world_state(), observations, cycle=self._cycle)
         recall = self._recall_context(prelim, evidence.detections)
-        self._emit("memory.recall", {"cycle": self._cycle, "query": " ".join(recall["query"]), "recalled": len(recall["memories"])})
+        self._emit(
+            "memory.recall",
+            {"cycle": self._cycle, "query": " ".join(recall["query"]), "recalled": len(recall["memories"])},
+        )
         knowledge_ctx = self._knowledge_context_for(prelim.salient_entities)
         goal_ctx = self._goal_context()
         cognitive = self.cognition.cycle(
@@ -876,15 +1003,18 @@ class MacBrain(ChatMixin):
             goal=goal_ctx,
             recalled=recall["memories"],
         )
-        self._emit("cognition.completed", {
-            "cycle": self._cycle,
-            "conclusion": cognitive.reasoning.conclusion,
-            "confidence": cognitive.reasoning.confidence,
-            "uncertainty": list(cognitive.situation.uncertainty),
-            "inferences": list(cognitive.reasoning.inferences),
-            "hypotheses": list(cognitive.reasoning.hypotheses),
-            "relations": list(cognitive.situation.relations),
-        })
+        self._emit(
+            "cognition.completed",
+            {
+                "cycle": self._cycle,
+                "conclusion": cognitive.reasoning.conclusion,
+                "confidence": cognitive.reasoning.confidence,
+                "uncertainty": list(cognitive.situation.uncertainty),
+                "inferences": list(cognitive.reasoning.inferences),
+                "hypotheses": list(cognitive.reasoning.hypotheses),
+                "relations": list(cognitive.situation.relations),
+            },
+        )
         # Plan 22 Phase 4: bounded working memory — update the active slots,
         # expire stale entries and promote important events to durable memory.
         self._update_working_memory(evidence)
@@ -917,11 +1047,14 @@ class MacBrain(ChatMixin):
         )
         self._last_attention_candidates = [c.snapshot() for c in attention_candidates[:10]]
         if attention_candidates:
-            self._emit("cognition.attention", {
-                "cycle": self._cycle,
-                "candidates": self._last_attention_candidates,
-                "top_action": attention_candidates[0].suggested_action,
-            })
+            self._emit(
+                "cognition.attention",
+                {
+                    "cycle": self._cycle,
+                    "candidates": self._last_attention_candidates,
+                    "top_action": attention_candidates[0].suggested_action,
+                },
+            )
 
         # Situation Model: derive meaningful situations from the world state.
         active_goal_ids = ()
@@ -946,11 +1079,14 @@ class MacBrain(ChatMixin):
             cycle=self._cycle,
         )
         self._last_situations = [s.snapshot() for s in situations]
-        self._emit("situation.derived", {
-            "cycle": self._cycle,
-            "situations": self._last_situations,
-            "situation_count": len(situations),
-        })
+        self._emit(
+            "situation.derived",
+            {
+                "cycle": self._cycle,
+                "situations": self._last_situations,
+                "situation_count": len(situations),
+            },
+        )
 
         # Deepen cognition: update beliefs and learn/check expectations from current detections.
         now = datetime.now(timezone.utc).isoformat()
@@ -960,30 +1096,50 @@ class MacBrain(ChatMixin):
             if detection.label in {"person", "human", "face"}:
                 self.identity.observe("person", confidence=detection.confidence, modality="vision", cycle=self._cycle)
                 self._observe_person_registry(
-                    "person", name=None, confidence=detection.confidence,
-                    modality="vision", cycle=self._cycle,
+                    "person",
+                    name=None,
+                    confidence=detection.confidence,
+                    modality="vision",
+                    cycle=self._cycle,
                 )
                 self._persist_identity()
                 self._identify_face(detection, image=frame.payload)
         identity = self.identity.identity_for("person")
         if identity is not None:
-            self._emit("identity.observed", {"cycle": self._cycle, "person": identity.person, "name": identity.name, "tier": identity.tier, "confidence": identity.confidence})
+            self._emit(
+                "identity.observed",
+                {
+                    "cycle": self._cycle,
+                    "person": identity.person,
+                    "name": identity.name,
+                    "tier": identity.tier,
+                    "confidence": identity.confidence,
+                },
+            )
         # Gap-audit Phase D4: deterministic persistence predictions, scored
         # against this cycle's observations. Accuracy is measurable (audit
         # lever 4) and violations feed the expectation system as prediction
         # errors. Predictions never write to the unified world model.
         from .prediction import PredictionEngine, SequencePredictor
+
         predictor = getattr(self, "_predictor", None)
         if predictor is None:
             predictor = PredictionEngine()
             self._predictor = predictor
         new_predictions, confirmed, violated = predictor.observe(set(present), self._cycle)
         for p in confirmed:
-            self._emit("prediction.confirmed", {"cycle": self._cycle, "entity": p.entity, "confidence": round(p.confidence, 3)})
+            self._emit(
+                "prediction.confirmed", {"cycle": self._cycle, "entity": p.entity, "confidence": round(p.confidence, 3)}
+            )
         for p in violated:
-            self._emit("prediction.violated", {"cycle": self._cycle, "entity": p.entity, "confidence": round(p.confidence, 3)})
+            self._emit(
+                "prediction.violated", {"cycle": self._cycle, "entity": p.entity, "confidence": round(p.confidence, 3)}
+            )
         for p in new_predictions:
-            self._emit("prediction.made", {"cycle": self._cycle, "entity": p.entity, "kind": p.kind, "confidence": round(p.confidence, 3)})
+            self._emit(
+                "prediction.made",
+                {"cycle": self._cycle, "entity": p.entity, "kind": p.kind, "confidence": round(p.confidence, 3)},
+            )
         acc = predictor.accuracy.accuracy()
         if acc is not None:
             self.metrics.set("prediction_accuracy", acc, unit="ratio")
@@ -997,24 +1153,39 @@ class MacBrain(ChatMixin):
             self._sequence_predictor = seq_predictor
         seq_new, seq_confirmed, seq_violated = seq_predictor.observe(set(present), self._cycle)
         for p in seq_confirmed:
-            self._emit("prediction.sequence_confirmed", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
+            self._emit(
+                "prediction.sequence_confirmed",
+                {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)},
+            )
         for p in seq_violated:
-            self._emit("prediction.sequence_violated", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
+            self._emit(
+                "prediction.sequence_violated",
+                {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)},
+            )
             # Plan 19, Phase 3: a sequence violation is a *surprise* signal —
             # Novi expected B after A but it never appeared. Surface it as
             # curiosity so the brain can act on the unexpected (e.g. investigate
             # the missing target). Predictions never write world state.
-            self._emit("curiosity.surprise", {
-                "cycle": self._cycle, "source": p.source, "target": p.target,
-                "kind": "sequence_violation", "confidence": round(p.confidence, 3),
-            })
+            self._emit(
+                "curiosity.surprise",
+                {
+                    "cycle": self._cycle,
+                    "source": p.source,
+                    "target": p.target,
+                    "kind": "sequence_violation",
+                    "confidence": round(p.confidence, 3),
+                },
+            )
             # Phase 3c: a violation may invalidate the active plan's
             # assumptions -> fail and regenerate the plan (close the loop).
             self._maybe_replan_for_violation(p.target, "sequence_violated")
             # Investigate the missing target when idle (surprise-driven curiosity).
             self._spawn_surprise_goal(p.target)
         for p in seq_new:
-            self._emit("prediction.sequence_made", {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)})
+            self._emit(
+                "prediction.sequence_made",
+                {"cycle": self._cycle, "source": p.source, "target": p.target, "confidence": round(p.confidence, 3)},
+            )
         seq_acc = seq_predictor.accuracy.accuracy()
         if seq_acc is not None:
             self.metrics.set("sequence_prediction_accuracy", seq_acc, unit="ratio")
@@ -1022,7 +1193,10 @@ class MacBrain(ChatMixin):
         self.expectations.update(present)
         violations = self.expectations.drain_violations()
         for v in violations:
-            self._emit("cognition.expectation_violation", {"cycle": self._cycle, "entity": v.entity, "kind": v.kind, "confidence": v.expectation_confidence})
+            self._emit(
+                "cognition.expectation_violation",
+                {"cycle": self._cycle, "entity": v.entity, "kind": v.kind, "confidence": v.expectation_confidence},
+            )
             # Phase 3c: an expectation violation revises the active plan.
             self._maybe_replan_for_violation(v.entity, "expectation_violated")
         if violations:
@@ -1035,13 +1209,28 @@ class MacBrain(ChatMixin):
         if present:
             self.routines.observe(self._cycle, present)
             for routine in self.routines.routines(min_occurrences=self.routines.min_occurrences):
-                self._emit("learning.routine", {"cycle": self._cycle, "pattern": list(routine.pattern),
-                                                 "occurrences": routine.occurrences, "confidence": routine.confidence})
+                self._emit(
+                    "learning.routine",
+                    {
+                        "cycle": self._cycle,
+                        "pattern": list(routine.pattern),
+                        "occurrences": routine.occurrences,
+                        "confidence": routine.confidence,
+                    },
+                )
                 self._promote_routine_to_knowledge(routine)
 
         # Multimodal fusion: combine vision detections + pending speech into fused events.
         vision_obs = [
-            ModalityObservation(modality="vision", entity=d.label, value="present", confidence=d.confidence, captured_at=now, received_at=now, source="camera")
+            ModalityObservation(
+                modality="vision",
+                entity=d.label,
+                value="present",
+                confidence=d.confidence,
+                captured_at=now,
+                received_at=now,
+                source="camera",
+            )
             for d in evidence.detections
         ]
         fused_events = self.fusion.ingest(vision_obs + self._pending_speech + self._pending_audio)
@@ -1068,10 +1257,7 @@ class MacBrain(ChatMixin):
         # Phase P2: when this cycle consumed speech inputs, route with the
         # input-aware classifier (social fast-path / questions→LLM); otherwise
         # the legacy confidence-threshold decide() applies.
-        speech_texts = [
-            c for c in (consumed_inputs or [])
-            if c.get("kind") in ("chat", "message", "text", "voice")
-        ]
+        speech_texts = [c for c in (consumed_inputs or []) if c.get("kind") in ("chat", "message", "text", "voice")]
         if hasattr(self.reasoning, "decide_for_text") and speech_texts:
             first_text = ""
             payload_text = getattr(self, "_last_submitted_text", "")
@@ -1091,8 +1277,18 @@ class MacBrain(ChatMixin):
                 recall=recall["memories"],
             )
         if hasattr(self.reasoning, "last_route"):
-            self._emit("reasoning.route", {"cycle": self._cycle, "route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")})
-            route_info: dict[str, Any] = {"route": self.reasoning.last_route, "reason": getattr(self.reasoning, "last_reason", "")}
+            self._emit(
+                "reasoning.route",
+                {
+                    "cycle": self._cycle,
+                    "route": self.reasoning.last_route,
+                    "reason": getattr(self.reasoning, "last_reason", ""),
+                },
+            )
+            route_info: dict[str, Any] = {
+                "route": self.reasoning.last_route,
+                "reason": getattr(self.reasoning, "last_reason", ""),
+            }
             # Phase 3a: per-route cost tracking — route counts surface both as
             # live metrics (Dashboard/health) and in the step result.
             counts = getattr(self.reasoning, "route_counts", None)
@@ -1100,12 +1296,16 @@ class MacBrain(ChatMixin):
                 route_info["counts"] = dict(counts)
                 self.metrics.set("reasoning_route_deterministic", float(counts.get("deterministic", 0)), unit="count")
                 self.metrics.set("reasoning_route_llm", float(counts.get("llm", 0)), unit="count")
-        self._emit("reasoning.completed", {"cycle": self._cycle, "action": intent.action, "rationale": intent.rationale})
+        self._emit(
+            "reasoning.completed", {"cycle": self._cycle, "action": intent.action, "rationale": intent.rationale}
+        )
         # Closed-loop PLAN: record the reasoning decision.
         self.closed_loop.plan({"action": intent.action, "rationale": intent.rationale, "cycle": self._cycle})
         deliberation = getattr(self.reasoning, "last_deliberation", None)
         if deliberation is not None:
-            self._emit("reasoning.deliberation", {"cycle": self._cycle, "action": intent.action, "deliberation": deliberation})
+            self._emit(
+                "reasoning.deliberation", {"cycle": self._cycle, "action": intent.action, "deliberation": deliberation}
+            )
             # Plan P5: persist the winning rationale as a decision memory and
             # recall prior decisions so the trace can cite "last time I chose X".
             self._persist_decision_memory(deliberation, situation, intent, cognitive.reasoning.confidence)
@@ -1165,7 +1365,9 @@ class MacBrain(ChatMixin):
                 t = self.autonomy_sm.transition("interaction_started", timestamp=now_sm2)
                 self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         if goal_was_active:
-            step_command = self.goals.step(self.body, cycle=self._cycle, resource_constrained=self._resource_constrained)
+            step_command = self.goals.step(
+                self.body, cycle=self._cycle, resource_constrained=self._resource_constrained
+            )
             action = step_command.action
             parameters = step_command.parameters
             reason = "goal_pursuit"
@@ -1185,7 +1387,15 @@ class MacBrain(ChatMixin):
             if active_plan is not None and active_plan.status == "running":
                 next_step = self.planner.advance(active_plan)
                 if next_step is not None:
-                    self._emit("plan.step", {"cycle": self._cycle, "goal_id": active_plan.goal_id, "description": next_step.description, "kind": next_step.kind})
+                    self._emit(
+                        "plan.step",
+                        {
+                            "cycle": self._cycle,
+                            "goal_id": active_plan.goal_id,
+                            "description": next_step.description,
+                            "kind": next_step.kind,
+                        },
+                    )
                 elif active_plan.complete:
                     self._emit("plan.completed", {"goal_id": active_plan.goal_id, "plan_id": active_plan.plan_id})
 
@@ -1196,11 +1406,22 @@ class MacBrain(ChatMixin):
         for entity in present:
             expected.extend(self.temporal.expected_after(entity, limit=2))
         if expected:
-            self._emit("cognition.temporal", {"cycle": self._cycle, "expected": [link.snapshot() for link in expected], "timeline": self.temporal.timeline(limit=3)})
-        temporal_expected = [{"cause": link.cause, "effect": link.effect, "confidence": round(link.confidence, 3)} for link in expected]
+            self._emit(
+                "cognition.temporal",
+                {
+                    "cycle": self._cycle,
+                    "expected": [link.snapshot() for link in expected],
+                    "timeline": self.temporal.timeline(limit=3),
+                },
+            )
+        temporal_expected = [
+            {"cause": link.cause, "effect": link.effect, "confidence": round(link.confidence, 3)} for link in expected
+        ]
 
         body_before = self.body.snapshot()
-        proposal = RuntimeActionProposal(action=action, parameters=parameters, reason=reason, correlation_id=str(uuid4()))
+        proposal = RuntimeActionProposal(
+            action=action, parameters=parameters, reason=reason, correlation_id=str(uuid4())
+        )
         decision = self.brain.propose(proposal)
 
         # Governance guard: a runtime guard between proposal and execution.
@@ -1217,13 +1438,16 @@ class MacBrain(ChatMixin):
         gov_grant = self.governance_guard.evaluate(gov_proposal)
         governance_allowed = gov_grant.is_allowed
         self._last_governance_grant = gov_grant.snapshot()
-        self._emit("governance.evaluated", {
-            "cycle": self._cycle,
-            "action": action,
-            "risk_class": risk_class,
-            "decision": gov_grant.decision,
-            "reason": gov_grant.reason,
-        })
+        self._emit(
+            "governance.evaluated",
+            {
+                "cycle": self._cycle,
+                "action": action,
+                "risk_class": risk_class,
+                "decision": gov_grant.decision,
+                "reason": gov_grant.reason,
+            },
+        )
 
         # Confirmation flow (gap-analysis Step 3, item 18): a
         # REQUIRE_CONFIRMATION grant is surfaced as a pending request and the
@@ -1244,15 +1468,18 @@ class MacBrain(ChatMixin):
                 "proposal": proposal,
                 "decision": decision,
             }
-            self._emit("governance.confirmation_required", {
-                "cycle": self._cycle,
-                "grant_id": gov_grant.grant_id,
-                "proposal_id": proposal.correlation_id,
-                "action": action,
-                "parameters": dict(parameters),
-                "risk_class": risk_class,
-                "reason": gov_grant.reason,
-            })
+            self._emit(
+                "governance.confirmation_required",
+                {
+                    "cycle": self._cycle,
+                    "grant_id": gov_grant.grant_id,
+                    "proposal_id": proposal.correlation_id,
+                    "action": action,
+                    "parameters": dict(parameters),
+                    "risk_class": risk_class,
+                    "reason": gov_grant.reason,
+                },
+            )
 
         # Phase 2a: deterministic safety gate (doc 08) — the model and the
         # governance guard have spoken; the safety authority still evaluates
@@ -1264,15 +1491,18 @@ class MacBrain(ChatMixin):
             safety_state,
         )
         safety_allowed = safety_decision.allowed and safety_decision.decision != "STOP"
-        self._emit("safety.evaluated", {
-            "cycle": self._cycle,
-            "action": action,
-            "decision": safety_decision.decision,
-            "allowed": safety_allowed,
-            "reason": safety_decision.reason,
-            "risk_class": safety_decision.risk_class or risk_class,
-            "violated": list(safety_decision.violated_invariants),
-        })
+        self._emit(
+            "safety.evaluated",
+            {
+                "cycle": self._cycle,
+                "action": action,
+                "decision": safety_decision.decision,
+                "allowed": safety_allowed,
+                "reason": safety_decision.reason,
+                "risk_class": safety_decision.risk_class or risk_class,
+                "violated": list(safety_decision.violated_invariants),
+            },
+        )
         awaiting_safety_approval = False
         if safety_decision.decision == "STOP":
             # A STOP verdict is the e-stop form: latch the machine and hold.
@@ -1281,12 +1511,15 @@ class MacBrain(ChatMixin):
             self._emit("autonomy.transition", {"cycle": self._cycle, **t_stop.snapshot()})
         elif not safety_decision.allowed:
             authorized = False
-            self._emit("safety.blocked", {
-                "cycle": self._cycle,
-                "action": action,
-                "reason": safety_decision.reason,
-                "violated": list(safety_decision.violated_invariants),
-            })
+            self._emit(
+                "safety.blocked",
+                {
+                    "cycle": self._cycle,
+                    "action": action,
+                    "reason": safety_decision.reason,
+                    "violated": list(safety_decision.violated_invariants),
+                },
+            )
         elif safety_decision.decision == "MODIFY" and "approval" in safety_decision.reason:
             # MODIFY-with-approval-required routes into the same hold-for-
             # confirmation flow the governance guard uses (never silently
@@ -1305,13 +1538,16 @@ class MacBrain(ChatMixin):
                 "decision": decision,
                 "source": "safety_policy",
             }
-            self._emit("safety.confirmation_required", {
-                "cycle": self._cycle,
-                "grant_id": safety_decision.decision_id,
-                "proposal_id": proposal.correlation_id,
-                "action": action,
-                "reason": safety_decision.reason,
-            })
+            self._emit(
+                "safety.confirmation_required",
+                {
+                    "cycle": self._cycle,
+                    "grant_id": safety_decision.decision_id,
+                    "proposal_id": proposal.correlation_id,
+                    "action": action,
+                    "reason": safety_decision.reason,
+                },
+            )
 
         # Action executes only if the brain authorizes AND the governance guard
         # allows AND the safety authority permits.
@@ -1328,12 +1564,15 @@ class MacBrain(ChatMixin):
             skill_passed = skill_invocation.status == SKILL_SUCCESS
             if not skill_passed:
                 authorized = False
-                self._emit("skill.failed", {
-                    "cycle": self._cycle,
-                    "action": action,
-                    "skill_id": skill_invocation.skill_id,
-                    "error": skill_invocation.error,
-                })
+                self._emit(
+                    "skill.failed",
+                    {
+                        "cycle": self._cycle,
+                        "action": action,
+                        "skill_id": skill_invocation.skill_id,
+                        "error": skill_invocation.error,
+                    },
+                )
                 # Report skill failure to the failure handler.
                 failure = self.failure_handler.report_failure(
                     TOOL_FAILURE,
@@ -1362,13 +1601,16 @@ class MacBrain(ChatMixin):
                 authorized = False
                 actuator_command = None
                 actuator_rejection = compiled.rejection or "UNKNOWN"
-                self._emit("actuator.rejected", {
-                    "cycle": self._cycle,
-                    "action": action,
-                    "rejection": actuator_rejection,
-                    "reason": compiled.reason,
-                    "parameters": dict(parameters),
-                })
+                self._emit(
+                    "actuator.rejected",
+                    {
+                        "cycle": self._cycle,
+                        "action": action,
+                        "rejection": actuator_rejection,
+                        "reason": compiled.reason,
+                        "parameters": dict(parameters),
+                    },
+                )
                 self.audit_trail.record(
                     correlation_id=self._cycle_correlation_id,
                     action=action,
@@ -1384,22 +1626,30 @@ class MacBrain(ChatMixin):
             else:
                 actuator_command = compiled.command
                 actuator_rejection = None
-                self._emit("actuator.compiled", {
-                    "cycle": self._cycle,
-                    "command_id": actuator_command.command_id,
-                    "action": actuator_command.action,
-                    "expires_cycle": actuator_command.expires_cycle,
-                })
+                self._emit(
+                    "actuator.compiled",
+                    {
+                        "cycle": self._cycle,
+                        "command_id": actuator_command.command_id,
+                        "action": actuator_command.action,
+                        "expires_cycle": actuator_command.expires_cycle,
+                    },
+                )
                 # Expiry gate: an authorization that outlived its ttl cannot
                 # reach the actuator (watchdog semantics at the chokepoint).
                 if not self.actuator_boundary.is_live(actuator_command, cycle=self._cycle):
                     authorized = False
                     actuator_command = None
                     actuator_rejection = "EXPIRED"
-                    self._emit("actuator.rejected", {
-                        "cycle": self._cycle, "action": action,
-                        "rejection": "EXPIRED", "reason": "command validity window elapsed",
-                    })
+                    self._emit(
+                        "actuator.rejected",
+                        {
+                            "cycle": self._cycle,
+                            "action": action,
+                            "rejection": "EXPIRED",
+                            "reason": "command validity window elapsed",
+                        },
+                    )
         else:
             actuator_command = None
             actuator_rejection = None
@@ -1411,17 +1661,22 @@ class MacBrain(ChatMixin):
             # became unsafe is interrupted (fail closed) and the machine
             # latches to emergency stop.
             monitor_safe, monitor_reason = self.safety_monitor.check(
-                {"action": action}, self._safety_world_state(), cycle=self._cycle,
+                {"action": action},
+                self._safety_world_state(),
+                cycle=self._cycle,
             )
             safety_interrupted = not monitor_safe
             if safety_interrupted:
                 t_int = self.autonomy_sm.emergency_stop(timestamp=datetime.now(timezone.utc).isoformat())
                 self._emit("autonomy.transition", {"cycle": self._cycle, **t_int.snapshot()})
-                self._emit("safety.interrupted", {
-                    "cycle": self._cycle,
-                    "action": action,
-                    "reason": monitor_reason,
-                })
+                self._emit(
+                    "safety.interrupted",
+                    {
+                        "cycle": self._cycle,
+                        "action": action,
+                        "reason": monitor_reason,
+                    },
+                )
                 self.failure_handler.report_failure(
                     PERCEPTION_UNCERTAINTY,
                     severity="critical",
@@ -1429,10 +1684,15 @@ class MacBrain(ChatMixin):
                     message=f"execution_interrupted: {monitor_reason}",
                     timestamp=datetime.now(timezone.utc).isoformat(),
                 )
-                self._emit("failure.detected", {
-                    "cycle": self._cycle, "component": "safety_monitor",
-                    "message": f"execution_interrupted: {monitor_reason}", "severity": "critical",
-                })
+                self._emit(
+                    "failure.detected",
+                    {
+                        "cycle": self._cycle,
+                        "component": "safety_monitor",
+                        "message": f"execution_interrupted: {monitor_reason}",
+                        "severity": "critical",
+                    },
+                )
             # Autonomy state machine: → EXECUTING.
             now_sm3 = datetime.now(timezone.utc).isoformat()
             if self.autonomy_sm.state in (ASMState.PLANNING, ASMState.AWARE):
@@ -1442,22 +1702,35 @@ class MacBrain(ChatMixin):
             outcome = None
             safety_interrupted = False
             virtual_state = self.body.snapshot()
-        self._emit("action.completed", {
-            "action": action,
-            "authorized": authorized,
-            "brain_authorized": decision.authorized,
-            "governance_allowed": governance_allowed,
-            "governance_decision": gov_grant.decision,
-            "awaiting_confirmation": awaiting_confirmation or awaiting_safety_approval,
-            "safety": safety_decision.snapshot(),
-            "safety_interrupted": safety_interrupted,
-            "skill_passed": skill_passed,
-            "skill_invoked": skill_invocation is not None,
-            "outcome": (outcome.detail if outcome else
-                        ("awaiting_confirmation" if (awaiting_confirmation or awaiting_safety_approval) else
-                         (decision.reason if not decision.authorized else (gov_grant.reason if not gov_grant.is_allowed else safety_decision.reason)))),
-            "virtual_body": virtual_state,
-        })
+        self._emit(
+            "action.completed",
+            {
+                "action": action,
+                "authorized": authorized,
+                "brain_authorized": decision.authorized,
+                "governance_allowed": governance_allowed,
+                "governance_decision": gov_grant.decision,
+                "awaiting_confirmation": awaiting_confirmation or awaiting_safety_approval,
+                "safety": safety_decision.snapshot(),
+                "safety_interrupted": safety_interrupted,
+                "skill_passed": skill_passed,
+                "skill_invoked": skill_invocation is not None,
+                "outcome": (
+                    outcome.detail
+                    if outcome
+                    else (
+                        "awaiting_confirmation"
+                        if (awaiting_confirmation or awaiting_safety_approval)
+                        else (
+                            decision.reason
+                            if not decision.authorized
+                            else (gov_grant.reason if not gov_grant.is_allowed else safety_decision.reason)
+                        )
+                    )
+                ),
+                "virtual_body": virtual_state,
+            },
+        )
         # Persistent decision audit trace (doc 13): record the consequential
         # action with policy/safety results and outcome, in the cycle's
         # correlation domain, with goal/plan/action ids when available.
@@ -1467,11 +1740,17 @@ class MacBrain(ChatMixin):
             decision_reason=reason,
             policy_result=gov_grant.decision if not gov_grant.is_allowed else f"ALLOW:{risk_class}",
             safety_result=(
-                "executed" if authorized else
-                ("held" if (awaiting_confirmation or awaiting_safety_approval) else
-                 ("blocked_by_safety:" + safety_decision.reason if not safety_allowed else "blocked"))
+                "executed"
+                if authorized
+                else (
+                    "held"
+                    if (awaiting_confirmation or awaiting_safety_approval)
+                    else ("blocked_by_safety:" + safety_decision.reason if not safety_allowed else "blocked")
+                )
             ),
-            outcome=outcome.detail if outcome else ("held" if (awaiting_confirmation or awaiting_safety_approval) else "not_executed"),
+            outcome=outcome.detail
+            if outcome
+            else ("held" if (awaiting_confirmation or awaiting_safety_approval) else "not_executed"),
             goal_id=self.goals.active.goal.goal_id if self.goals.has_active else "",
             action_id=proposal.correlation_id,
             actor="runtime",
@@ -1479,7 +1758,14 @@ class MacBrain(ChatMixin):
         )
         # Reflection / self-correction: judge whether the action had its intended effect.
         body_after = self.body.snapshot()
-        effective = self._action_effective(action, body_before, body_after, authorized, cognitive.situation.salient_entities, cognitive.reasoning.inferences)
+        effective = self._action_effective(
+            action,
+            body_before,
+            body_after,
+            authorized,
+            cognitive.situation.salient_entities,
+            cognitive.reasoning.inferences,
+        )
         reflection = self.reflection.record(
             cycle=self._cycle,
             action=action,
@@ -1495,21 +1781,36 @@ class MacBrain(ChatMixin):
         act_outcome = LOOP_DENIED if not authorized else (LOOP_SUCCESS if effective else LOOP_FAILURE)
         self.closed_loop.act({"action": action, "authorized": authorized, "outcome": act_outcome})
         verify_criteria = self._verify_criteria_for_action(action, goal_was_active)
-        observed_state = {"action_executed": authorized, "body_changed": body_before != body_after, "effective": effective}
+        observed_state = {
+            "action_executed": authorized,
+            "body_changed": body_before != body_after,
+            "effective": effective,
+        }
         loop_verify = self.closed_loop.verify(verify_criteria, observed_state)
         self._last_loop_snapshot = self.closed_loop.snapshot()
-        self._emit("loop.verify", {
-            "cycle": self._cycle,
-            "phase": loop_verify.phase,
-            "outcome": loop_verify.outcome,
-            "met": self.closed_loop._verify_result.get("met", []),
-            "unmet": self.closed_loop._verify_result.get("unmet", []),
-        })
+        self._emit(
+            "loop.verify",
+            {
+                "cycle": self._cycle,
+                "phase": loop_verify.phase,
+                "outcome": loop_verify.outcome,
+                "met": self.closed_loop._verify_result.get("met", []),
+                "unmet": self.closed_loop._verify_result.get("unmet", []),
+            },
+        )
         soul_success: bool | None = None
         if goal_was_active and not self.goals.has_active:
             terminal = self.goals.history[-1]
             soul_success = terminal.status is GoalStatus.COMPLETED
-            self._emit("goal.status", {"goal_id": terminal.goal.goal_id, "kind": terminal.goal.kind, "status": terminal.status.value, "steps_taken": terminal.steps_taken})
+            self._emit(
+                "goal.status",
+                {
+                    "goal_id": terminal.goal.goal_id,
+                    "kind": terminal.goal.kind,
+                    "status": terminal.status.value,
+                    "steps_taken": terminal.steps_taken,
+                },
+            )
             self._admit_goal_outcome(terminal)
             self._persist_goal(terminal)
             terminal_plan = self._plans.get(terminal.goal.goal_id)
@@ -1523,24 +1824,53 @@ class MacBrain(ChatMixin):
         goal_info = None
         if self.goals.history:
             last = self.goals.history[-1]
-            goal_info = {"goal_id": last.goal.goal_id, "kind": last.goal.kind, "status": last.status.value, "steps_taken": last.steps_taken}
-        if self.consolidator is not None and self.config.consolidation_enabled and self._cycle % self.config.consolidation_every == 0:
+            goal_info = {
+                "goal_id": last.goal.goal_id,
+                "kind": last.goal.kind,
+                "status": last.status.value,
+                "steps_taken": last.steps_taken,
+            }
+        if (
+            self.consolidator is not None
+            and self.config.consolidation_enabled
+            and self._cycle % self.config.consolidation_every == 0
+        ):
             self.consolidate()
         self._sync_goal_states()
 
         observability = self._update_observability()
 
         uncertain = cognitive.reasoning.confidence < 0.5
-        self.soul.update_for_cycle(success=soul_success, novel=novel_spawned is not None, speech=False, uncertain=uncertain)
+        self.soul.update_for_cycle(
+            success=soul_success, novel=novel_spawned is not None, speech=False, uncertain=uncertain
+        )
         tone = self.soul.tone({"serious": uncertain})
-        self._emit("soul.updated", {"cycle": self._cycle, "tone": tone["tone"], "affect": self.soul.affect.dimensions, "motivations": self.soul.motivations})
+        self._emit(
+            "soul.updated",
+            {
+                "cycle": self._cycle,
+                "tone": tone["tone"],
+                "affect": self.soul.affect.dimensions,
+                "motivations": self.soul.motivations,
+            },
+        )
 
         person = self._person_label(evidence.detections)
         social_expression = None
         if person is not None:
             self.relationships.note_interaction(person, positive=True, now=datetime.now(timezone.utc).isoformat())
-            social_expression = self.social.expression(person, self.relationships, self.soul.affect.dimensions, {"serious": uncertain})
-            self._emit("social.interaction", {"cycle": self._cycle, "person": person, "category": self.relationships.category_for(person).value, "expression": social_expression})
+            social_expression = self.social.expression(
+                person, self.relationships, self.soul.affect.dimensions, {"serious": uncertain}
+            )
+            self._emit(
+                "social.interaction",
+                {
+                    "cycle": self._cycle,
+                    "person": person,
+                    "category": self.relationships.category_for(person).value,
+                    "expression": social_expression,
+                },
+            )
         initiative = self._maybe_initiate(person, has_active_goal=self.goals.has_active)
         # Plan 20: event-driven autonomous speech (GAP-A/B/C). If neglect-driven
         # initiative stayed silent, let a salient drained event seed a proactive
@@ -1552,13 +1882,20 @@ class MacBrain(ChatMixin):
             # layer — run it each cycle and expose the decision for
             # observability (proactive candidates are gated by it and by the
             # anti-narration guard inside _maybe_autonomous_speech).
-            self._run_dialogue_policy(event_records, evidence=evidence, goal_id=active_goal_ids[0] if active_goal_ids else None)
+            self._run_dialogue_policy(
+                event_records, evidence=evidence, goal_id=active_goal_ids[0] if active_goal_ids else None
+            )
             autonomous = self._maybe_autonomous_speech(event_records, evidence.detections, person)
         # CommunicationDecision: advance fatigue cooldown each cycle.
         self.communication_decision.tick()
         # Autonomy state machine: return to OBSERVING after action completes.
         now_sm4 = datetime.now(timezone.utc).isoformat()
-        if self.autonomy_sm.state in (ASMState.EXECUTING, ASMState.INTERACTING, ASMState.LEARNING, ASMState.MAINTENANCE):
+        if self.autonomy_sm.state in (
+            ASMState.EXECUTING,
+            ASMState.INTERACTING,
+            ASMState.LEARNING,
+            ASMState.MAINTENANCE,
+        ):
             if not self.goals.has_active:
                 t = self.autonomy_sm.transition("action_completed", timestamp=now_sm4)
                 self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
@@ -1619,12 +1956,17 @@ class MacBrain(ChatMixin):
                 "violated": list(safety_decision.violated_invariants),
                 "interrupted": safety_interrupted,
             },
-            "temporal": {"expected": temporal_expected, "top_links": [link.snapshot() for link in self.temporal.top_links(limit=3)]},
+            "temporal": {
+                "expected": temporal_expected,
+                "top_links": [link.snapshot() for link in self.temporal.top_links(limit=3)],
+            },
             "fusion": fused_reported,
             "knowledge": self.knowledge.counts(),
             "hearing": {"events": self._last_audio_events},
             "observability": observability,
-            "plan": active_plan.snapshot() if active_plan is not None and active_plan.status == "running" else (active_plan.snapshot() if active_plan else None),
+            "plan": active_plan.snapshot()
+            if active_plan is not None and active_plan.status == "running"
+            else (active_plan.snapshot() if active_plan else None),
             "communication": {
                 "fatigue_level": self.communication_decision.fatigue_level,
                 "interaction_count": self.communication_decision.interaction_count,
@@ -1642,11 +1984,22 @@ class MacBrain(ChatMixin):
         if self.consolidator is None:
             return
         report = self.consolidator.consolidate(now=now)
-        self._emit("memory.consolidated", {"cycle": self._cycle, "expired": report.expired, "archived": report.archived, "decayed": report.decayed, "superseded": report.superseded})
+        self._emit(
+            "memory.consolidated",
+            {
+                "cycle": self._cycle,
+                "expired": report.expired,
+                "archived": report.archived,
+                "decayed": report.decayed,
+                "superseded": report.superseded,
+            },
+        )
         if self.summary_consolidator is not None:
             summary = self.summary_consolidator.consolidate()
             if summary.created:
-                self._emit("memory.summarized", {"cycle": self._cycle, "created": summary.created, "groups": summary.groups})
+                self._emit(
+                    "memory.summarized", {"cycle": self._cycle, "created": summary.created, "groups": summary.groups}
+                )
         # Phase 4c: maturation passes also checkpoint the learning subsystems
         # (routines/corrections/reflections/lessons) so they survive kill -9.
         self.persist_learning()
@@ -1681,24 +2034,29 @@ class MacBrain(ChatMixin):
         if isinstance(counterfactuals, dict) and counterfactuals:
             self.counterfactuals.from_snapshot(counterfactuals)
         if getattr(self, "event_bus", None) is not None:  # startup: bus not ready yet
-            self._emit("learning.restored", {
-                "routines": len(self.routines.routines()),
-                "corrections": len(self.corrections.records()),
-            })
+            self._emit(
+                "learning.restored",
+                {
+                    "routines": len(self.routines.routines()),
+                    "corrections": len(self.corrections.records()),
+                },
+            )
 
     def persist_learning(self) -> None:
         """Phase 4c: write the learning subsystems' snapshots to the store."""
         if not isinstance(self.memory, DurableMemoryStore):
             return
-        self.memory.save_learning({
-            "cycle": self._cycle,
-            "routines": self.routines.snapshot(),
-            "corrections": self.corrections.snapshot(),
-            "reflections": self.reflection.snapshot(),
-            "lessons": self.lessons.snapshot(),
-            "promotions": self.learning.snapshot(),
-            "counterfactuals": self.counterfactuals.snapshot(),
-        })
+        self.memory.save_learning(
+            {
+                "cycle": self._cycle,
+                "routines": self.routines.snapshot(),
+                "corrections": self.corrections.snapshot(),
+                "reflections": self.reflection.snapshot(),
+                "lessons": self.lessons.snapshot(),
+                "promotions": self.learning.snapshot(),
+                "counterfactuals": self.counterfactuals.snapshot(),
+            }
+        )
 
     def set_goal(self, goal: Goal, *, cycle: int | None = None) -> GoalState:
         """Adopt a bounded goal for the autonomy layer to pursue."""
@@ -1710,12 +2068,23 @@ class MacBrain(ChatMixin):
         # Plan validation (doc 05 §Plan Validation): a valid plan is not
         # automatically authorized; validation verdict is emitted for audit.
         validation = self.planner.validate(plan, available_actions=getattr(self.body, "ALLOWED_ACTIONS", None))
-        self._emit("plan.validated", {
-            "goal_id": goal.goal_id, "plan_id": plan.plan_id,
-            "valid": validation.valid, "issues": list(validation.issues),
-        })
-        self._emit("plan.created", {"goal_id": goal.goal_id, "goal_kind": goal.kind, "plan_id": plan.plan_id, "steps": len(plan.steps)})
-        self._emit("goal.adopted", {"goal_id": goal.goal_id, "kind": goal.kind, "target": str(goal.target), "max_steps": goal.max_steps})
+        self._emit(
+            "plan.validated",
+            {
+                "goal_id": goal.goal_id,
+                "plan_id": plan.plan_id,
+                "valid": validation.valid,
+                "issues": list(validation.issues),
+            },
+        )
+        self._emit(
+            "plan.created",
+            {"goal_id": goal.goal_id, "goal_kind": goal.kind, "plan_id": plan.plan_id, "steps": len(plan.steps)},
+        )
+        self._emit(
+            "goal.adopted",
+            {"goal_id": goal.goal_id, "kind": goal.kind, "target": str(goal.target), "max_steps": goal.max_steps},
+        )
         self._persist_goal(state)
         return state
 
@@ -1740,19 +2109,24 @@ class MacBrain(ChatMixin):
         self.planner.fail(plan, reason=f"{kind}:{target}")
         self._emit("plan.failed", {"goal_id": goal_id, "plan_id": plan.plan_id, "reason": f"{kind}:{target}"})
         revised = self.replan_goal(goal_id)
-        self._emit("plan.revised", {
-            "goal_id": goal_id,
-            "failed_plan_id": plan.plan_id,
-            "new_plan_id": (revised.plan_id if revised else None),
-            "trigger": kind,
-            "target": str(target),
-        })
+        self._emit(
+            "plan.revised",
+            {
+                "goal_id": goal_id,
+                "failed_plan_id": plan.plan_id,
+                "new_plan_id": (revised.plan_id if revised else None),
+                "trigger": kind,
+                "target": str(target),
+            },
+        )
         return revised
 
     def replan_goal(self, goal_id: str, *, cycle: int | None = None) -> Plan | None:
         """Rebuild a fresh plan for a goal when assumptions are invalidated."""
         cycle = self._cycle if cycle is None else cycle
-        state = self.goals.active if self.goals.active is not None and self.goals.active.goal.goal_id == goal_id else None
+        state = (
+            self.goals.active if self.goals.active is not None and self.goals.active.goal.goal_id == goal_id else None
+        )
         if state is None:
             state = next((s for s in self.goals.pending_goals if s.goal.goal_id == goal_id), None)
         if state is None:
@@ -1775,7 +2149,15 @@ class MacBrain(ChatMixin):
         it on the next cycle.
         """
         state = self.goals.enqueue(goal)
-        self._emit("goal.queued", {"goal_id": goal.goal_id, "kind": goal.kind, "priority": goal.priority, "pending": self.goals.pending_count})
+        self._emit(
+            "goal.queued",
+            {
+                "goal_id": goal.goal_id,
+                "kind": goal.kind,
+                "priority": goal.priority,
+                "pending": self.goals.pending_count,
+            },
+        )
         return state
 
     def _sync_goal_states(self) -> None:
@@ -1894,9 +2276,21 @@ class MacBrain(ChatMixin):
         """Record from the microphone, transcribe locally, and ingest into cognition/memory."""
         output_dir = output_dir or Path("mac_test_results/STT")
         recording = self.microphone.record(seconds, output_dir)
-        self._emit("audio.recording.completed", {"recording_id": recording.recording_id, "duration_s": recording.duration_s, "path": str(recording.path)})
+        self._emit(
+            "audio.recording.completed",
+            {"recording_id": recording.recording_id, "duration_s": recording.duration_s, "path": str(recording.path)},
+        )
         transcription = self.stt.transcribe(recording.path)
-        self._emit("stt.completed", {"recording_id": recording.recording_id, "text": transcription.text, "language": transcription.language, "confidence": transcription.confidence, "model_id": transcription.model_id})
+        self._emit(
+            "stt.completed",
+            {
+                "recording_id": recording.recording_id,
+                "text": transcription.text,
+                "language": transcription.language,
+                "confidence": transcription.confidence,
+                "model_id": transcription.model_id,
+            },
+        )
         self._identify_speaker({"audio_path": str(recording.path)})
         ingested = self.ingest_transcript(transcription)
         return {"transcription": transcription, **ingested}
@@ -1915,15 +2309,24 @@ class MacBrain(ChatMixin):
         introduced = _extract_self_name(transcription.text)
         if introduced:
             introduced = introduced.lower()
-            self.identity.observe("person", name=introduced, confidence=transcription.confidence, modality="speech", cycle=self._cycle)
+            self.identity.observe(
+                "person", name=introduced, confidence=transcription.confidence, modality="speech", cycle=self._cycle
+            )
             self._observe_person_registry(
-                "person", name=introduced, confidence=transcription.confidence,
-                modality="speech", cycle=self._cycle,
+                "person",
+                name=introduced,
+                confidence=transcription.confidence,
+                modality="speech",
+                cycle=self._cycle,
             )
             self._persist_identity()
-            self._emit("identity.named", {"cycle": self._cycle, "name": introduced, "confidence": transcription.confidence})
+            self._emit(
+                "identity.named", {"cycle": self._cycle, "name": introduced, "confidence": transcription.confidence}
+            )
         self._learn_triples(transcription.text, entity_refs, transcription.confidence, source="audio.stt")
-        classification = self.governance.classify(memory_type="utterance", content=transcription.text, entity_refs=entity_refs, modality="speech")
+        classification = self.governance.classify(
+            memory_type="utterance", content=transcription.text, entity_refs=entity_refs, modality="speech"
+        )
         allowed, mem_class = self._gate_memory("utterance")
         admission = None
         if allowed:
@@ -1945,9 +2348,19 @@ class MacBrain(ChatMixin):
                 spatial_context=self._spatial_context(),
             )
         if admission is not None:
-            self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "utterance", "accepted": admission.accepted, "entity_refs": list(entity_refs)})
+            self._emit(
+                "memory.admitted",
+                {
+                    "memory_id": admission.memory_id,
+                    "memory_type": "utterance",
+                    "accepted": admission.accepted,
+                    "entity_refs": list(entity_refs),
+                },
+            )
         if admission is not None and admission.accepted and admission.memory_id:
-            self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
+            self.governance.govern(
+                admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose
+            )
 
         speech = SensorObservation(
             cycle=self._cycle,
@@ -1959,7 +2372,15 @@ class MacBrain(ChatMixin):
             captured_cycle=self._cycle,
         )
         cognitive = self.cognition.cycle(self.unified_world.to_world_state(), (speech,), cycle=self._cycle)
-        self._emit("cognition.completed", {"cycle": self._cycle, "conclusion": cognitive.reasoning.conclusion, "confidence": cognitive.reasoning.confidence, "source": "audio.stt"})
+        self._emit(
+            "cognition.completed",
+            {
+                "cycle": self._cycle,
+                "conclusion": cognitive.reasoning.conclusion,
+                "confidence": cognitive.reasoning.confidence,
+                "source": "audio.stt",
+            },
+        )
         # Skill priming for the audio path (plan 16 P4 symmetry): heard speech
         # activates relevant skills just like vision cycles do.
         self.skill_activator.expire(self._cycle)
@@ -1970,10 +2391,30 @@ class MacBrain(ChatMixin):
         )
         now = datetime.now(timezone.utc).isoformat()
         self._pending_speech.append(
-            ModalityObservation(modality="speech", entity=DeterministicCognition.SPEECH_ENTITY, value="heard", confidence=transcription.confidence, captured_at=now, received_at=now, source="audio.stt")
+            ModalityObservation(
+                modality="speech",
+                entity=DeterministicCognition.SPEECH_ENTITY,
+                value="heard",
+                confidence=transcription.confidence,
+                captured_at=now,
+                received_at=now,
+                source="audio.stt",
+            )
         )
-        self._emit("speech.ingested", {"text": transcription.text, "memory_id": (admission.memory_id if admission else None), "reasoning": cognitive.reasoning.conclusion})
-        return {"admission": admission, "speech_observation": speech, "reasoning": cognitive.reasoning.conclusion, "confidence": cognitive.reasoning.confidence}
+        self._emit(
+            "speech.ingested",
+            {
+                "text": transcription.text,
+                "memory_id": (admission.memory_id if admission else None),
+                "reasoning": cognitive.reasoning.conclusion,
+            },
+        )
+        return {
+            "admission": admission,
+            "speech_observation": speech,
+            "reasoning": cognitive.reasoning.conclusion,
+            "confidence": cognitive.reasoning.confidence,
+        }
 
     def ingest_audio_frame(self, frame: AudioFrame) -> dict[str, Any]:
         """Hear a non-speech acoustic frame: detect events, monitor quality, admit
@@ -1987,13 +2428,20 @@ class MacBrain(ChatMixin):
             if event.speech:
                 self._emit("hearing.voice", {"cycle": self._cycle, **event.snapshot()})
             if event.anomaly:
-                anomaly = {"cycle": self._cycle, "event_type": event.event_type, "novelty": event.novelty, "direction_deg": event.direction_deg}
+                anomaly = {
+                    "cycle": self._cycle,
+                    "event_type": event.event_type,
+                    "novelty": event.novelty,
+                    "direction_deg": event.direction_deg,
+                }
                 self._emit("hearing.anomaly", anomaly)
                 # GAP-1b: also route the anomaly through the input bus so the
                 # salience evaluator can seed a proactive remark about it.
                 self.submit("hearing", "hearing.anomaly", anomaly)
             if self.hearing.worth_attention(event):
-                classification = self.governance.classify(memory_type="audio_event", content=event.snapshot(), entity_refs=(), modality="audio")
+                classification = self.governance.classify(
+                    memory_type="audio_event", content=event.snapshot(), entity_refs=(), modality="audio"
+                )
                 allowed, mem_class = self._gate_memory("audio_event")
                 admission = None
                 if allowed:
@@ -2008,9 +2456,21 @@ class MacBrain(ChatMixin):
                         spatial_context=self._spatial_context(),
                     )
                 if admission is not None and admission.accepted and admission.memory_id:
-                    self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
+                    self.governance.govern(
+                        admission.memory_id,
+                        privacy_class=classification.privacy_class,
+                        purpose=self.governance.default_purpose,
+                    )
                     admitted.append(admission.memory_id)
-                    self._emit("memory.admitted", {"memory_id": admission.memory_id, "memory_type": "audio_event", "accepted": admission.accepted, "event_type": event.event_type})
+                    self._emit(
+                        "memory.admitted",
+                        {
+                            "memory_id": admission.memory_id,
+                            "memory_type": "audio_event",
+                            "accepted": admission.accepted,
+                            "event_type": event.event_type,
+                        },
+                    )
             self._pending_audio.append(self.hearing.to_modality_observation(event, received_at=now))
         self._emit("hearing.quality", {"cycle": self._cycle, **quality.snapshot()})
         self._last_audio_events = [e.snapshot() for e in events]
@@ -2049,21 +2509,37 @@ class MacBrain(ChatMixin):
             self.multi_speed.set_state(AutonomyState.DEGRADED)
         elif self.multi_speed.state not in (AutonomyState.INTERRUPTED,):
             self.multi_speed.set_state(AutonomyState.ACTIVE)
-        self._emit("resource.telemetry", {"cycle": self._cycle, **sample.snapshot(), "resource_mode": resource_mode.value})
+        self._emit(
+            "resource.telemetry", {"cycle": self._cycle, **sample.snapshot(), "resource_mode": resource_mode.value}
+        )
 
     def _admit_detections(self, detections: Any) -> None:
         for detection in detections:
             allowed, mem_class = self._gate_memory("perception")
             admission = None
             if allowed:
-                classification = self.governance.classify(memory_type="perception", content={"label": detection.label, "confidence": detection.confidence}, entity_refs=(detection.label,), modality="vision")
+                classification = self.governance.classify(
+                    memory_type="perception",
+                    content={"label": detection.label, "confidence": detection.confidence},
+                    entity_refs=(detection.label,),
+                    modality="vision",
+                )
                 admission = self.memory.admit(
                     memory_type="perception",
-                    content={"label": detection.label, "confidence": detection.confidence, "bbox": list(detection.bbox_xyxy)},
+                    content={
+                        "label": detection.label,
+                        "confidence": detection.confidence,
+                        "bbox": list(detection.bbox_xyxy),
+                    },
                     confidence=detection.confidence,
                     verification_status="verified" if detection.confidence >= 0.7 else "unverified",
                     privacy_class=classification.privacy_class,
-                    provenance={"source": self.config.sensor_id, "capability": "vision.object_detection", "memory_class": mem_class, "importance": self._importance_for(detection.label, detection.confidence)},
+                    provenance={
+                        "source": self.config.sensor_id,
+                        "capability": "vision.object_detection",
+                        "memory_class": mem_class,
+                        "importance": self._importance_for(detection.label, detection.confidence),
+                    },
                     entity_refs=(detection.label,),
                     temporal_context=self._temporal_context(),
                     spatial_context=self._spatial_context(),
@@ -2071,8 +2547,20 @@ class MacBrain(ChatMixin):
             else:
                 classification = None
             if admission is not None and admission.accepted and admission.memory_id:
-                self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
-            self._emit("memory.admitted", {"memory_id": (admission.memory_id if admission else None), "memory_type": "perception", "accepted": bool(admission and admission.accepted), "entity": detection.label})
+                self.governance.govern(
+                    admission.memory_id,
+                    privacy_class=classification.privacy_class,
+                    purpose=self.governance.default_purpose,
+                )
+            self._emit(
+                "memory.admitted",
+                {
+                    "memory_id": (admission.memory_id if admission else None),
+                    "memory_type": "perception",
+                    "accepted": bool(admission and admission.accepted),
+                    "entity": detection.label,
+                },
+            )
 
     def _update_unified_world(self, detections: Any) -> None:
         """Update the unified WorldModel with perception detections.
@@ -2084,6 +2572,7 @@ class MacBrain(ChatMixin):
         """
         now = datetime.now(timezone.utc).isoformat()
         from .kgraph import infer_entity_type
+
         for detection in detections:
             label = detection.label
             entity_type = infer_entity_type(label)
@@ -2101,14 +2590,17 @@ class MacBrain(ChatMixin):
                 entity_id = existing.entity_id
             else:
                 self.unified_world.add_entity(
-                    entity_id, wm_type,
+                    entity_id,
+                    wm_type,
                     labels=[label],
                     epistemic_status=WM_OBSERVED if detection.confidence >= 0.5 else WM_UNKNOWN,
                     confidence=detection.confidence,
                     created_at=now,
                 )
             self.unified_world.update_entity_state(
-                entity_id, "presence", "present",
+                entity_id,
+                "presence",
+                "present",
                 epistemic_status=WM_OBSERVED,
                 confidence=detection.confidence,
                 source=self.config.sensor_id,
@@ -2133,12 +2625,15 @@ class MacBrain(ChatMixin):
         try:
             observation = self.perception_pipeline.process_frame(frame)
         except Exception as exc:
-            self._emit("failure.detected", {
-                "cycle": self._cycle,
-                "component": "vision_pipeline",
-                "message": f"process_frame_failed: {exc}",
-                "severity": "warning",
-            })
+            self._emit(
+                "failure.detected",
+                {
+                    "cycle": self._cycle,
+                    "component": "vision_pipeline",
+                    "message": f"process_frame_failed: {exc}",
+                    "severity": "warning",
+                },
+            )
             self.failure_handler.report_failure(
                 PERCEPTION_UNCERTAINTY,
                 severity="warning",
@@ -2148,13 +2643,16 @@ class MacBrain(ChatMixin):
             )
             return evidence
         self._last_world_observation = observation
-        self._emit("perception.vision_observation", {
-            "frame_id": observation.frame_id,
-            "tracked": len(observation.tracks),
-            "detections": [d.label for d in observation.detections],
-            "identities": len(observation.identities),
-            "grounding_backend": self.perception_pipeline.grounding_backend is not None,
-        })
+        self._emit(
+            "perception.vision_observation",
+            {
+                "frame_id": observation.frame_id,
+                "tracked": len(observation.tracks),
+                "detections": [d.label for d in observation.detections],
+                "identities": len(observation.identities),
+                "grounding_backend": self.perception_pipeline.grounding_backend is not None,
+            },
+        )
         self._admit_world_observation(observation)
         # Convert to the brain-side evidence shape so every downstream
         # consumer (memory admission, beliefs, identity, fusion, attention,
@@ -2243,23 +2741,29 @@ class MacBrain(ChatMixin):
             outcome = self.perception_pipeline.ground_frame(frame, query, grounding_policy)
             summary = admit_grounding_outcome(self.unified_world, outcome)
         except Exception as exc:
-            self._emit("failure.detected", {
-                "cycle": self._cycle,
-                "component": "vision_pipeline",
-                "message": f"ground_frame_failed: {exc}",
-                "severity": "warning",
-            })
+            self._emit(
+                "failure.detected",
+                {
+                    "cycle": self._cycle,
+                    "component": "vision_pipeline",
+                    "message": f"ground_frame_failed: {exc}",
+                    "severity": "warning",
+                },
+            )
             return {"grounded": False, "reason": f"grounding_error: {exc}"}
-        self._emit("perception.grounded", {
-            "frame_id": frame.frame_id,
-            "query": query_text,
-            "requester": requester,
-            "created": summary.created,
-            "updated": summary.updates,
-            "candidates": summary.candidates,
-            "success": bool(outcome.result.success),
-            "no_object": bool(outcome.result.no_object),
-        })
+        self._emit(
+            "perception.grounded",
+            {
+                "frame_id": frame.frame_id,
+                "query": query_text,
+                "requester": requester,
+                "created": summary.created,
+                "updated": summary.updates,
+                "candidates": summary.candidates,
+                "success": bool(outcome.result.success),
+                "no_object": bool(outcome.result.no_object),
+            },
+        )
         return {
             "grounded": True,
             "frame_id": frame.frame_id,
@@ -2317,9 +2821,13 @@ class MacBrain(ChatMixin):
             if not self._brain_llm_reachable():
                 # Downed endpoint: back off instead of hammering per message.
                 self._llm_unreachable_until = time.monotonic() + float(self.config.brain_llm_probe_cooldown_s)
-                self._emit("llm.unreachable", {
-                    "url": self.config.brain_llm_url, "cooldown_s": float(self.config.brain_llm_probe_cooldown_s),
-                })
+                self._emit(
+                    "llm.unreachable",
+                    {
+                        "url": self.config.brain_llm_url,
+                        "cooldown_s": float(self.config.brain_llm_probe_cooldown_s),
+                    },
+                )
                 return None
             self._brain_llm_chat = self._build_brain_llm_chat()
         return self._brain_llm_chat
@@ -2365,7 +2873,10 @@ class MacBrain(ChatMixin):
     def _build_brain_llm_chat(self) -> Any:
         """Build the brain-owned chat callable once (endpoint already probed)."""
         return lambda *, system, user, temperature=0.5, timeout=120: self._brain_llm_call(
-            system=system, user=user, temperature=temperature, timeout=timeout,
+            system=system,
+            user=user,
+            temperature=temperature,
+            timeout=timeout,
         )
 
     def _trained_reply_transport(self) -> Any:
@@ -2399,7 +2910,8 @@ class MacBrain(ChatMixin):
         y = float(body_now.get("y_m", 0.0))
         now = datetime.now(timezone.utc).isoformat()
         robot = self.unified_world.add_entity(
-            "robot", ROBOT_WM,
+            "robot",
+            ROBOT_WM,
             labels=["novi"],
             epistemic_status=WM_OBSERVED,
             confidence=1.0,
@@ -2407,7 +2919,8 @@ class MacBrain(ChatMixin):
         )
         region = self.spatial.region_at(x, y, frame="map") if self.spatial is not None else None
         self.unified_world.update_entity_state(
-            "robot", "pose_2d",
+            "robot",
+            "pose_2d",
             {"frame": "map", "x_m": x, "y_m": y, "heading_deg": float(body_now.get("heading_deg", 0.0))},
             epistemic_status=WM_OBSERVED,
             confidence=1.0,
@@ -2417,7 +2930,9 @@ class MacBrain(ChatMixin):
         )
         if region is not None:
             self.unified_world.update_entity_state(
-                "robot", "location", region,
+                "robot",
+                "location",
+                region,
                 epistemic_status=WM_OBSERVED,
                 confidence=1.0,
                 source="spatial_map.region_at",
@@ -2426,7 +2941,9 @@ class MacBrain(ChatMixin):
             )
         else:
             self.unified_world.update_entity_state(
-                "robot", "location", "unknown",
+                "robot",
+                "location",
+                "unknown",
                 epistemic_status=WM_UNKNOWN,
                 confidence=0.5,
                 source="spatial_map.region_at",
@@ -2531,7 +3048,9 @@ class MacBrain(ChatMixin):
             return {"text": parameters.get("text", action), "volume": 0.5}
         return {}
 
-    def _invoke_skill_for_action(self, action: str, parameters: dict[str, Any], goal_was_active: bool) -> SkillInvocation | None:
+    def _invoke_skill_for_action(
+        self, action: str, parameters: dict[str, Any], goal_was_active: bool
+    ) -> SkillInvocation | None:
         """Invoke the skill contract for an action, if one exists.
 
         Returns the SkillInvocation result, or None if no skill maps to this action.
@@ -2543,13 +3062,16 @@ class MacBrain(ChatMixin):
         skill_params = self._skill_parameters(action, parameters)
         invocation = self.skill_executor.invoke(skill_id, skill_params, context=ctx)
         self._last_skill_invocation = invocation.snapshot()
-        self._emit("skill.invoked", {
-            "cycle": self._cycle,
-            "skill_id": skill_id,
-            "action": action,
-            "status": invocation.status,
-            "error": invocation.error,
-        })
+        self._emit(
+            "skill.invoked",
+            {
+                "cycle": self._cycle,
+                "skill_id": skill_id,
+                "action": action,
+                "status": invocation.status,
+                "error": invocation.error,
+            },
+        )
         return invocation
 
     def _verify_criteria_for_action(self, action: str, goal_was_active: bool) -> tuple[str, ...]:
@@ -2564,11 +3086,66 @@ class MacBrain(ChatMixin):
     # pronouns, small function words) are not candidate entities.
     _ENTITY_STOPWORDS = frozenset(
         {
-            "the", "a", "an", "i", "my", "me", "you", "your", "yours", "he", "she", "his", "her",
-            "we", "us", "they", "them", "hi", "hello", "hey", "its", "it's", "do", "does", "did",
-            "is", "am", "are", "was", "were", "be", "been", "of", "to", "and", "or", "in", "on",
-            "at", "with", "what", "who", "when", "where", "how", "why", "remember", "name", "called",
-            "like", "love", "not", "no", "yes", "ok", "so", "just", "very", "really", "please",
+            "the",
+            "a",
+            "an",
+            "i",
+            "my",
+            "me",
+            "you",
+            "your",
+            "yours",
+            "he",
+            "she",
+            "his",
+            "her",
+            "we",
+            "us",
+            "they",
+            "them",
+            "hi",
+            "hello",
+            "hey",
+            "its",
+            "it's",
+            "do",
+            "does",
+            "did",
+            "is",
+            "am",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "of",
+            "to",
+            "and",
+            "or",
+            "in",
+            "on",
+            "at",
+            "with",
+            "what",
+            "who",
+            "when",
+            "where",
+            "how",
+            "why",
+            "remember",
+            "name",
+            "called",
+            "like",
+            "love",
+            "not",
+            "no",
+            "yes",
+            "ok",
+            "so",
+            "just",
+            "very",
+            "really",
+            "please",
         }
     )
 
@@ -2584,6 +3161,7 @@ class MacBrain(ChatMixin):
         if self.config.llm_triples_enabled:
             try:
                 from .knowledge_extraction import LLMTripleExtractor
+
                 extractor = getattr(self, "_triple_extractor", None)
                 if extractor is None:
                     extractor = LLMTripleExtractor()
@@ -2595,11 +3173,25 @@ class MacBrain(ChatMixin):
             for t in llm_triples:
                 if t not in candidates:
                     candidates.append(t)
-        for (subject, predicate, obj) in candidates:
-            triple = self.knowledge.add(subject, predicate, obj, confidence=confidence, source=source, cycle=self._cycle)
-            self._emit("knowledge.updated", {"cycle": self._cycle, "subject": subject, "predicate": predicate, "object": obj, "status": triple.status})
+        for subject, predicate, obj in candidates:
+            triple = self.knowledge.add(
+                subject, predicate, obj, confidence=confidence, source=source, cycle=self._cycle
+            )
+            self._emit(
+                "knowledge.updated",
+                {
+                    "cycle": self._cycle,
+                    "subject": subject,
+                    "predicate": predicate,
+                    "object": obj,
+                    "status": triple.status,
+                },
+            )
             if triple.status == "contradicted":
-                self._emit("knowledge.contradiction", {"cycle": self._cycle, "subject": subject, "predicate": predicate, "object": obj})
+                self._emit(
+                    "knowledge.contradiction",
+                    {"cycle": self._cycle, "subject": subject, "predicate": predicate, "object": obj},
+                )
 
     def _persist_knowledge(self) -> None:
         """Persist the knowledge graph immediately after a mutation (WAL-backed).
@@ -2649,15 +3241,17 @@ class MacBrain(ChatMixin):
         """Snapshots of actions currently awaiting user/operator confirmation."""
         out: list[dict[str, Any]] = []
         for v in self._pending_confirmations.values():
-            out.append({
-                "grant_id": v["grant_id"],
-                "proposal_id": v["proposal_id"],
-                "action": v["action"],
-                "parameters": dict(v["parameters"]),
-                "risk_class": v["risk_class"],
-                "reason": v["reason"],
-                "cycle": v["cycle"],
-            })
+            out.append(
+                {
+                    "grant_id": v["grant_id"],
+                    "proposal_id": v["proposal_id"],
+                    "action": v["action"],
+                    "parameters": dict(v["parameters"]),
+                    "risk_class": v["risk_class"],
+                    "reason": v["reason"],
+                    "cycle": v["cycle"],
+                }
+            )
         return tuple(out)
 
     def confirm_action(self, grant_id: str) -> bool:
@@ -2675,11 +3269,14 @@ class MacBrain(ChatMixin):
         if pending is None:
             return False
         self._last_governance_grant = confirmed.snapshot()
-        self._emit("governance.confirmed", {
-            "grant_id": grant_id,
-            "action": pending["action"],
-            "reason": "confirmed_by_user_or_operator",
-        })
+        self._emit(
+            "governance.confirmed",
+            {
+                "grant_id": grant_id,
+                "action": pending["action"],
+                "reason": "confirmed_by_user_or_operator",
+            },
+        )
         # Execute the confirmed action through the same brain + body path —
         # still compiled through the physical authority boundary (Phase 2c):
         # a grant that expired or commands an out-of-envelope action dies here.
@@ -2692,44 +3289,64 @@ class MacBrain(ChatMixin):
             correlation_id=str(pending.get("proposal_id") or ""),
         )
         if compiled.command is None:
-            self._emit("actuator.rejected", {
-                "cycle": self._cycle,
-                "action": pending["action"],
-                "rejection": compiled.rejection,
-                "reason": compiled.reason,
-                "stage": "confirmation",
-            })
+            self._emit(
+                "actuator.rejected",
+                {
+                    "cycle": self._cycle,
+                    "action": pending["action"],
+                    "rejection": compiled.rejection,
+                    "reason": compiled.reason,
+                    "stage": "confirmation",
+                },
+            )
             return False
         if not self.actuator_boundary.is_live(compiled.command, cycle=self._cycle):
-            self._emit("actuator.rejected", {
-                "cycle": self._cycle, "action": pending["action"],
-                "rejection": "EXPIRED", "reason": "confirmed command issued past its validity window",
-            })
+            self._emit(
+                "actuator.rejected",
+                {
+                    "cycle": self._cycle,
+                    "action": pending["action"],
+                    "rejection": "EXPIRED",
+                    "reason": "confirmed command issued past its validity window",
+                },
+            )
             return False
-        self._emit("actuator.compiled", {
-            "cycle": self._cycle,
-            "command_id": compiled.command.command_id,
-            "action": compiled.command.action,
-            "expires_cycle": compiled.command.expires_cycle,
-            "stage": "confirmation",
-        })
+        self._emit(
+            "actuator.compiled",
+            {
+                "cycle": self._cycle,
+                "command_id": compiled.command.command_id,
+                "action": compiled.command.action,
+                "expires_cycle": compiled.command.expires_cycle,
+                "stage": "confirmation",
+            },
+        )
         outcome = self.brain.execute(pending["proposal"], pending["decision"])
         virtual_state = self.body.execute(pending["action"], **pending["parameters"])
-        self._emit("action.completed", {
-            "action": pending["action"],
-            "authorized": True,
-            "brain_authorized": True,
-            "governance_allowed": True,
-            "governance_decision": "ALLOW",
-            "awaiting_confirmation": False,
-            "safety": {"decision": "ALLOW", "allowed": True, "reason": "confirmed", "violated": [], "interrupted": False},
-            "safety_interrupted": False,
-            "actuator": {"command_id": compiled.command.command_id, "rejection": None},
-            "skill_passed": True,
-            "skill_invoked": False,
-            "outcome": outcome.detail,
-            "virtual_body": virtual_state,
-        })
+        self._emit(
+            "action.completed",
+            {
+                "action": pending["action"],
+                "authorized": True,
+                "brain_authorized": True,
+                "governance_allowed": True,
+                "governance_decision": "ALLOW",
+                "awaiting_confirmation": False,
+                "safety": {
+                    "decision": "ALLOW",
+                    "allowed": True,
+                    "reason": "confirmed",
+                    "violated": [],
+                    "interrupted": False,
+                },
+                "safety_interrupted": False,
+                "actuator": {"command_id": compiled.command.command_id, "rejection": None},
+                "skill_passed": True,
+                "skill_invoked": False,
+                "outcome": outcome.detail,
+                "virtual_body": virtual_state,
+            },
+        )
         return True
 
     def reject_confirmation(self, grant_id: str) -> bool:
@@ -2737,21 +3354,32 @@ class MacBrain(ChatMixin):
         pending = self._pending_confirmations.pop(grant_id, None)
         if pending is None:
             return False
-        self._emit("governance.confirmation_rejected", {
-            "grant_id": grant_id,
-            "action": pending["action"],
-        })
+        self._emit(
+            "governance.confirmation_rejected",
+            {
+                "grant_id": grant_id,
+                "action": pending["action"],
+            },
+        )
         return True
 
     # ---- privacy / memory governance API ----
     def forget_memory(self, memory_id: str, *, reason: str = "user_request") -> dict[str, Any]:
         report = self.governance.erase_memory(memory_id, reason=reason)
         self._emit("privacy.erased", {"memory_id": memory_id, "reason": reason, "propagated": report.propagated})
-        return {"memory_id": memory_id, "reason": reason, "erased": memory_id in report.erased_ids, "propagated": report.propagated}
+        return {
+            "memory_id": memory_id,
+            "reason": reason,
+            "erased": memory_id in report.erased_ids,
+            "propagated": report.propagated,
+        }
 
     def forget_entity(self, entity: str, *, reason: str = "right_to_be_forgotten") -> dict[str, Any]:
         report = self.governance.forget_entity(entity, reason=reason)
-        self._emit("privacy.entity_erased", {"entity": entity, "reason": reason, "erased": len(report.erased_ids), "propagated": report.propagated})
+        self._emit(
+            "privacy.entity_erased",
+            {"entity": entity, "reason": reason, "erased": len(report.erased_ids), "propagated": report.propagated},
+        )
         return {"entity": entity, "reason": reason, "erased": report.erased_ids, "propagated": report.propagated}
 
     def restrict_memory(self, memory_id: str, *, purpose: str) -> bool:
@@ -2810,7 +3438,9 @@ class MacBrain(ChatMixin):
         observations = observations if observations is not None else ()
         state = self.unified_world.to_world_state()
         out = self.cognition.cycle_typed(
-            state, observations, cycle=self._cycle,
+            state,
+            observations,
+            cycle=self._cycle,
             world_revision=self.unified_world.world_version,
             knowledge=knowledge,
             goal=goal,
@@ -2818,21 +3448,24 @@ class MacBrain(ChatMixin):
             correlation_id=self._cycle_correlation_id,
         )
         snap = out.snapshot()
-        self._emit("cognition.typed", {
-            "cycle": self._cycle,
-            "correlation_id": out.correlation_id,
-            "situation": snap["situation"]["id"] if snap.get("situation") else None,
-            "person_contexts": [p["id"] for p in snap["person_contexts"]],
-            "predictions": [p["id"] for p in snap["predictions"]],
-            "intent_hypotheses": [h["id"] for h in snap["intent_hypotheses"]],
-            "decision": snap["decision"]["id"] if snap.get("decision") else None,
-            "counts": {
-                "person_contexts": len(snap["person_contexts"]),
-                "predictions": len(snap["predictions"]),
-                "intent_hypotheses": len(snap["intent_hypotheses"]),
-                "events": len(out.events),
+        self._emit(
+            "cognition.typed",
+            {
+                "cycle": self._cycle,
+                "correlation_id": out.correlation_id,
+                "situation": snap["situation"]["id"] if snap.get("situation") else None,
+                "person_contexts": [p["id"] for p in snap["person_contexts"]],
+                "predictions": [p["id"] for p in snap["predictions"]],
+                "intent_hypotheses": [h["id"] for h in snap["intent_hypotheses"]],
+                "decision": snap["decision"]["id"] if snap.get("decision") else None,
+                "counts": {
+                    "person_contexts": len(snap["person_contexts"]),
+                    "predictions": len(snap["predictions"]),
+                    "intent_hypotheses": len(snap["intent_hypotheses"]),
+                    "events": len(out.events),
+                },
             },
-        })
+        )
         self._last_typed_cognition = snap
         return snap
 
@@ -2848,9 +3481,14 @@ class MacBrain(ChatMixin):
             platform={"runtime": "mac_brain", "recording": "auto"},
         )
         self._recording_enabled = True
-        self._emit("episode.recording_started", {
-            "cycle": self._cycle, "task_name": task_name, "description": description,
-        })
+        self._emit(
+            "episode.recording_started",
+            {
+                "cycle": self._cycle,
+                "task_name": task_name,
+                "description": description,
+            },
+        )
 
     def stop_recording(self) -> NoviEpisode | None:
         """Stop recording and return the built episode."""
@@ -2858,10 +3496,14 @@ class MacBrain(ChatMixin):
         if self.episode_recorder is None:
             return None
         episode = self.episode_recorder.build_episode()
-        self._emit("episode.recording_stopped", {
-            "cycle": self._cycle, "episode_id": episode.episode_id,
-            "step_count": len(episode.steps),
-        })
+        self._emit(
+            "episode.recording_stopped",
+            {
+                "cycle": self._cycle,
+                "episode_id": episode.episode_id,
+                "step_count": len(episode.steps),
+            },
+        )
         self.episode_recorder = None
         return episode
 
@@ -2922,7 +3564,11 @@ class MacBrain(ChatMixin):
                     confidence=0.9,
                     verification_status="verified",
                     privacy_class=classification.privacy_class,
-                    provenance={"source": f"skill:{result.skill}", "capability": "skill.script", "memory_class": mem_class},
+                    provenance={
+                        "source": f"skill:{result.skill}",
+                        "capability": "skill.script",
+                        "memory_class": mem_class,
+                    },
                     entity_refs=(),
                     temporal_context=self._temporal_context(),
                 )
@@ -2930,7 +3576,10 @@ class MacBrain(ChatMixin):
 
     def add_diagnostic(self, severity: str, message: str, context: dict[str, Any] | None = None) -> None:
         self.diagnostics.add(severity, message, context)
-        self._emit("observability.diagnostic", {"cycle": self._cycle, "severity": severity, "message": message, "context": context or {}})
+        self._emit(
+            "observability.diagnostic",
+            {"cycle": self._cycle, "severity": severity, "message": message, "context": context or {}},
+        )
 
     def _update_observability(self) -> dict[str, Any]:
         """Record per-cycle metrics + run the health loop. Returns an observability block."""
@@ -2949,10 +3598,21 @@ class MacBrain(ChatMixin):
         allowed, mem_class = self._gate_memory("goal_outcome")
         admission = None
         if allowed:
-            classification = self.governance.classify(memory_type="goal_outcome", content={"goal_id": state.goal.goal_id, "kind": state.goal.kind}, entity_refs=(), modality="")
+            classification = self.governance.classify(
+                memory_type="goal_outcome",
+                content={"goal_id": state.goal.goal_id, "kind": state.goal.kind},
+                entity_refs=(),
+                modality="",
+            )
             admission = self.memory.admit(
                 memory_type="goal_outcome",
-                content={"goal_id": state.goal.goal_id, "kind": state.goal.kind, "status": state.status.value, "steps_taken": state.steps_taken, "target": str(state.goal.target)},
+                content={
+                    "goal_id": state.goal.goal_id,
+                    "kind": state.goal.kind,
+                    "status": state.status.value,
+                    "steps_taken": state.steps_taken,
+                    "target": str(state.goal.target),
+                },
                 confidence=1.0,
                 verification_status="verified",
                 privacy_class=classification.privacy_class,
@@ -2961,8 +3621,20 @@ class MacBrain(ChatMixin):
                 spatial_context=self._spatial_context(),
             )
             if admission.accepted and admission.memory_id:
-                self.governance.govern(admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose)
-        self._emit("memory.admitted", {"memory_id": (admission.memory_id if admission else None), "memory_type": "goal_outcome", "accepted": bool(admission and admission.accepted), "goal_id": state.goal.goal_id})
+                self.governance.govern(
+                    admission.memory_id,
+                    privacy_class=classification.privacy_class,
+                    purpose=self.governance.default_purpose,
+                )
+        self._emit(
+            "memory.admitted",
+            {
+                "memory_id": (admission.memory_id if admission else None),
+                "memory_type": "goal_outcome",
+                "accepted": bool(admission and admission.accepted),
+                "goal_id": state.goal.goal_id,
+            },
+        )
 
     def _knowledge_context_for(self, salient_entities: tuple[str, ...]) -> list[dict[str, Any]]:
         """Knowledge-graph triples relevant to the salient entities (Cognition 2.0)."""
@@ -2999,7 +3671,15 @@ class MacBrain(ChatMixin):
             pass
         return None
 
-    def _action_effective(self, action: str, body_before: dict[str, Any], body_after: dict[str, Any], authorized: bool, salient: Any, inferences: Any) -> bool:
+    def _action_effective(
+        self,
+        action: str,
+        body_before: dict[str, Any],
+        body_after: dict[str, Any],
+        authorized: bool,
+        salient: Any,
+        inferences: Any,
+    ) -> bool:
         """Judge whether an action had its intended observable effect (Reasoning 2.0)."""
         if action in {"move_forward", "turn_left", "turn_right"}:
             moved = body_before.get("x_m") != body_after.get("x_m") or body_before.get("y_m") != body_after.get("y_m")
@@ -3039,7 +3719,13 @@ class MacBrain(ChatMixin):
             return {"query": query, "memories": []}
         records = retrieve(query, limit=limit)
         memories = [
-            {"memory_id": record.memory_id, "memory_type": record.memory_type, "content": record.content, "confidence": record.confidence, "entity_refs": list(record.entity_refs)}
+            {
+                "memory_id": record.memory_id,
+                "memory_type": record.memory_type,
+                "content": record.content,
+                "confidence": record.confidence,
+                "entity_refs": list(record.entity_refs),
+            }
             for record in records
         ]
         self._emit("memory.semantic_recall", {"query": query, "recalled": len(memories)})
@@ -3123,7 +3809,9 @@ class MacBrain(ChatMixin):
         """
         return {"cycle": self._cycle}
 
-    def _persist_decision_memory(self, deliberation: dict[str, Any], situation: Any, intent: Any, confidence: float) -> None:
+    def _persist_decision_memory(
+        self, deliberation: dict[str, Any], situation: Any, intent: Any, confidence: float
+    ) -> None:
         """Persist a deliberation's winning rationale as a first-class decision
         memory (plan P5): situation, chosen action, rejected alternatives, reason.
 
@@ -3153,7 +3841,10 @@ class MacBrain(ChatMixin):
                 spatial_context=self._spatial_context(),
             )
             if admission is not None and admission.accepted:
-                self._emit("memory.decision_admitted", {"cycle": self._cycle, "memory_id": admission.memory_id, "action": chosen})
+                self._emit(
+                    "memory.decision_admitted",
+                    {"cycle": self._cycle, "memory_id": admission.memory_id, "action": chosen},
+                )
         except Exception:  # noqa: BLE001 - decision memory is best-effort, never blocks the loop
             self._emit("memory.decision_failed", {"cycle": self._cycle, "action": chosen})
 
@@ -3173,11 +3864,13 @@ class MacBrain(ChatMixin):
         out: list[dict[str, Any]] = []
         for r in records:
             content = r.content if isinstance(r.content, dict) else {}
-            out.append({
-                "chosen_action": content.get("chosen_action", ""),
-                "reason": content.get("reason", ""),
-                "situation": content.get("situation", ""),
-            })
+            out.append(
+                {
+                    "chosen_action": content.get("chosen_action", ""),
+                    "reason": content.get("reason", ""),
+                    "situation": content.get("situation", ""),
+                }
+            )
         return out
 
     def _gate_memory(self, memory_type: str) -> tuple[bool, str]:
@@ -3190,36 +3883,52 @@ class MacBrain(ChatMixin):
         """
         allowed, mem_class, state = self.memory_classes.gate(memory_type)
         if not allowed:
-            self._emit("memory.class_deferred", {
-                "cycle": getattr(self, "_cycle", 0),
-                "memory_type": memory_type,
-                "memory_class": mem_class,
-                "state": state,
-            })
+            self._emit(
+                "memory.class_deferred",
+                {
+                    "cycle": getattr(self, "_cycle", 0),
+                    "memory_type": memory_type,
+                    "memory_class": mem_class,
+                    "state": state,
+                },
+            )
         return allowed, mem_class
 
     def _identify_face(self, detection: Any, image: Any = None) -> dict[str, Any] | None:
         """Recognise a detected face and feed it as voice-grade identity evidence (rule 6)."""
         if self.face_id is None:
             return None
-        det = {"label": getattr(detection, "label", ""), "track": getattr(detection, "track", ""), "bbox": list(getattr(detection, "bbox_xyxy", ())), "image": image}
+        det = {
+            "label": getattr(detection, "label", ""),
+            "track": getattr(detection, "track", ""),
+            "bbox": list(getattr(detection, "bbox_xyxy", ())),
+            "image": image,
+        }
         try:
             result = self.face_id.identify(detection=det)
         except Exception:  # noqa: BLE001 - recognition is best-effort evidence
             return None
         if result is None:
             return None
-        self.identity.observe("person", name=result.name, confidence=result.confidence, modality="face", cycle=self._cycle)
+        self.identity.observe(
+            "person", name=result.name, confidence=result.confidence, modality="face", cycle=self._cycle
+        )
         # Plan 22 Phase 2: feed the canonical person registry (lifecycle +
         # recognition events). The face identity ref stays opaque — biometric
         # data never enters conversation memory.
         face_ref = getattr(result, "ref", None) or f"face:{result.name}"
         self._observe_person_registry(
-            "person", name=result.name, confidence=result.confidence,
-            modality="face", cycle=self._cycle, face_ref=face_ref,
+            "person",
+            name=result.name,
+            confidence=result.confidence,
+            modality="face",
+            cycle=self._cycle,
+            face_ref=face_ref,
         )
         self._persist_identity()
-        self._emit("identity.face", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)})
+        self._emit(
+            "identity.face", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)}
+        )
         return {"name": result.name, "confidence": result.confidence}
 
     def _identify_speaker(self, audio_features: dict[str, Any]) -> dict[str, Any] | None:
@@ -3232,14 +3941,22 @@ class MacBrain(ChatMixin):
             return None
         if result is None:
             return None
-        self.identity.observe("person", name=result.name, confidence=result.confidence, modality="voice", cycle=self._cycle)
+        self.identity.observe(
+            "person", name=result.name, confidence=result.confidence, modality="voice", cycle=self._cycle
+        )
         voice_ref = getattr(result, "ref", None) or f"voice:{result.name}"
         self._observe_person_registry(
-            "person", name=result.name, confidence=result.confidence,
-            modality="voice", cycle=self._cycle, voice_ref=voice_ref,
+            "person",
+            name=result.name,
+            confidence=result.confidence,
+            modality="voice",
+            cycle=self._cycle,
+            voice_ref=voice_ref,
         )
         self._persist_identity()
-        self._emit("identity.voice", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)})
+        self._emit(
+            "identity.voice", {"cycle": self._cycle, "name": result.name, "confidence": round(result.confidence, 3)}
+        )
         return {"name": result.name, "confidence": result.confidence}
 
     def _observe_person_registry(
@@ -3268,13 +3985,16 @@ class MacBrain(ChatMixin):
                 voice_ref=voice_ref,
             )
             for evt in self.person_registry.drain_events():
-                self._emit(evt["event_type"], {
-                    "cycle": cycle,
-                    "person_id": evt["person_id"],
-                    "name": evt["name"],
-                    "confidence": evt["confidence"],
-                    "status": evt["status"],
-                })
+                self._emit(
+                    evt["event_type"],
+                    {
+                        "cycle": cycle,
+                        "person_id": evt["person_id"],
+                        "name": evt["name"],
+                        "confidence": evt["confidence"],
+                        "status": evt["status"],
+                    },
+                )
         except Exception:  # noqa: BLE001 - identity events are best-effort
             pass
 
@@ -3321,7 +4041,9 @@ class MacBrain(ChatMixin):
             from .dialogue_policy import DialogueAct, DialogueContext
 
             kinds = [str(r.get("kind", "")) for r in event_records]
-            social = getattr(self.social_context, "snapshot", lambda: {})() if getattr(self, "social_context", None) else {}
+            social = (
+                getattr(self.social_context, "snapshot", lambda: {})() if getattr(self, "social_context", None) else {}
+            )
             commitments = [str(c.get("trigger", "")) for c in self.working_memory.pending_commitments if c.get("due")]
             threads = [q for q in self.working_memory.unresolved_questions]
             ctx = DialogueContext(
@@ -3394,12 +4116,8 @@ class MacBrain(ChatMixin):
                     familiarity = model.confidence
             person_present = False
             with contextlib.suppress(Exception):
-                person_present = (
-                    self.identity.identity_for("person") is not None
-                    or any(
-                        e.lower() in {"person", "human", "face"}
-                        for e in self.unified_world.to_world_state().entities
-                    )
+                person_present = self.identity.identity_for("person") is not None or any(
+                    e.lower() in {"person", "human", "face"} for e in self.unified_world.to_world_state().entities
                 )
             last_utterance = getattr(self, "_last_user_utterance_cycle", -1)
             recent_utterances = 1 if 0 <= self._cycle - last_utterance <= 3 else 0
@@ -3452,7 +4170,12 @@ class MacBrain(ChatMixin):
                 person=person,
                 topic=topic,
                 goal=goal_id,
-                event={"event_id": f"wm-{self._cycle}", "kind": "perception", "entities": labels, "importance": importance},
+                event={
+                    "event_id": f"wm-{self._cycle}",
+                    "kind": "perception",
+                    "entities": labels,
+                    "importance": importance,
+                },
             )
             wm.expire(cycle=self._cycle)
             wm.promote_important(self._promote_working_event)
@@ -3476,12 +4199,15 @@ class MacBrain(ChatMixin):
                 entity_refs=entity_refs,
             )
             if admission is not None and admission.accepted:
-                self._emit("memory.promoted", {
-                    "memory_id": admission.memory_id,
-                    "memory_type": "episodic",
-                    "source": "working_memory",
-                    "importance": entry.get("importance"),
-                })
+                self._emit(
+                    "memory.promoted",
+                    {
+                        "memory_id": admission.memory_id,
+                        "memory_type": "episodic",
+                        "source": "working_memory",
+                        "importance": entry.get("importance"),
+                    },
+                )
         except Exception:  # noqa: BLE001 - promotion is best-effort
             pass
 
@@ -3490,17 +4216,19 @@ class MacBrain(ChatMixin):
         (runs on the consolidation/sleep cadence; frame-level loss is the
         tracker's job)."""
         try:
-            for evt in self.object_registry.expire_missing(
-                cycle=self._cycle, max_age_cycles=max_age_cycles
-            ):
+            for evt in self.object_registry.expire_missing(cycle=self._cycle, max_age_cycles=max_age_cycles):
                 self._emit(evt["event_type"], {"cycle": self._cycle, **evt})
             if isinstance(self.memory, DurableMemoryStore):
                 self.memory.save_object_registry(self.object_registry.snapshot())
         except Exception:  # noqa: BLE001 - housekeeping is best-effort
             pass
+
     def observe_expression(self, expression: str, *, source: str = "speech", person: str = "", now: str = "") -> str:
         entry = self.lexicon.observe(expression, source=source, person=person, now=now)
-        self._emit("lexicon.observed", {"expression": expression, "person": person, "status": entry.status.value, "frequency": entry.frequency})
+        self._emit(
+            "lexicon.observed",
+            {"expression": expression, "person": person, "status": entry.status.value, "frequency": entry.frequency},
+        )
         return entry.status.value
 
     def learn_preference(self, person: str, kind: str, value, *, explicit: bool = False, now: str = "") -> None:
@@ -3511,7 +4239,10 @@ class MacBrain(ChatMixin):
             model = self.person_registry.person(person) or self.person_registry.resolve(person)
             if model is not None:
                 self.person_registry.learn_preference(model.person_id, kind, value)
-        self._emit("preference.learned", {"person": person, "kind": kind, "value": value, "confidence": pref.confidence, "explicit": explicit})
+        self._emit(
+            "preference.learned",
+            {"person": person, "kind": kind, "value": value, "confidence": pref.confidence, "explicit": explicit},
+        )
 
     def _preferred_verbosity(self, person: str = "") -> str:
         """Phase 18.3: the person's persisted verbosity preference drives reply
@@ -3528,48 +4259,86 @@ class MacBrain(ChatMixin):
 
     # ---- Learning pipeline (roadmap item 13) ----
 
-    def observe_knowledge(self, subject: str, predicate: str, object: str, *, confidence: float,
-                          source: str = "", epistemic: str = "OBSERVED") -> bool:
+    def observe_knowledge(
+        self,
+        subject: str,
+        predicate: str,
+        object: str,
+        *,
+        confidence: float,
+        source: str = "",
+        epistemic: str = "OBSERVED",
+    ) -> bool:
         """Feed an observation into the promotion pipeline; promote when ready.
 
         Returns True if the candidate crossed the promotion thresholds and was
         added to the knowledge graph (never for SIMULATED/PREDICTED input).
         """
         from .learning_pipeline import OBSERVED, VERIFIED
+
         promotable = epistemic in (OBSERVED, VERIFIED, "INFERRED")
-        cand = self.learning.observe(subject, predicate, object,
-                                     confidence=confidence, source=source,
-                                     cycle=self._cycle, epistemic=epistemic)
+        cand = self.learning.observe(
+            subject, predicate, object, confidence=confidence, source=source, cycle=self._cycle, epistemic=epistemic
+        )
         if not promotable:
-            self._emit("learning.candidate", {"subject": subject, "predicate": predicate,
-                                               "object": object, "epistemic": epistemic,
-                                               "status": "hypothetical"})
+            self._emit(
+                "learning.candidate",
+                {
+                    "subject": subject,
+                    "predicate": predicate,
+                    "object": object,
+                    "epistemic": epistemic,
+                    "status": "hypothetical",
+                },
+            )
             return False
         promoted = self.learning.promote(cand, self.knowledge, cycle=self._cycle)
-        self._emit("learning.candidate", {"subject": subject, "predicate": predicate,
-                                           "object": object, "epistemic": epistemic,
-                                           "status": "promoted" if promoted else "accumulating",
-                                           "evidence_count": cand.evidence_count})
+        self._emit(
+            "learning.candidate",
+            {
+                "subject": subject,
+                "predicate": predicate,
+                "object": object,
+                "epistemic": epistemic,
+                "status": "promoted" if promoted else "accumulating",
+                "evidence_count": cand.evidence_count,
+            },
+        )
         return promoted
 
-    def correct_knowledge(self, subject: str, predicate: str, new_object: str, *,
-                          person: str = "", source: str = "user_correction") -> bool:
+    def correct_knowledge(
+        self, subject: str, predicate: str, new_object: str, *, person: str = "", source: str = "user_correction"
+    ) -> bool:
         """Apply an explicit user correction with provenance; supersedes prior claim.
 
         Returns True when a prior claim was actually corrected.
         """
         from .learning_pipeline import CorrectionRecord
+
         prior = self.knowledge.leading(subject, predicate)
         old_object = prior.object if prior is not None else None
-        record = CorrectionRecord(subject=subject, predicate=predicate, old_object=old_object,
-                                  new_object=new_object, person=person, source=source,
-                                  cycle=self._cycle)
+        record = CorrectionRecord(
+            subject=subject,
+            predicate=predicate,
+            old_object=old_object,
+            new_object=new_object,
+            person=person,
+            source=source,
+            cycle=self._cycle,
+        )
         changed = self.corrections.apply(record, self.knowledge)
-        self._emit("learning.corrected", {
-            "subject": subject, "predicate": predicate,
-            "old_object": old_object, "new_object": new_object,
-            "corrected_by": person, "source": source, "changed": changed,
-        })
+        self._emit(
+            "learning.corrected",
+            {
+                "subject": subject,
+                "predicate": predicate,
+                "old_object": old_object,
+                "new_object": new_object,
+                "corrected_by": person,
+                "source": source,
+                "changed": changed,
+            },
+        )
         return changed
 
     def observe_routine(self, events: set[str]) -> None:
@@ -3577,10 +4346,15 @@ class MacBrain(ChatMixin):
         self.routines.observe(self._cycle, events)
         routines = self.routines.routines(min_occurrences=self.routines.min_occurrences)
         for routine in routines:
-            self._emit("learning.routine", {"cycle": self._cycle,
-                                             "pattern": list(routine.pattern),
-                                             "occurrences": routine.occurrences,
-                                             "confidence": routine.confidence})
+            self._emit(
+                "learning.routine",
+                {
+                    "cycle": self._cycle,
+                    "pattern": list(routine.pattern),
+                    "occurrences": routine.occurrences,
+                    "confidence": routine.confidence,
+                },
+            )
             self._promote_routine_to_knowledge(routine)
 
     def _promote_routine_to_knowledge(self, routine: Any) -> None:
@@ -3593,23 +4367,31 @@ class MacBrain(ChatMixin):
         always INFERRED and reversible.
         """
         from .learning_pipeline import INFERRED
+
         pattern = list(routine.pattern)
         if len(pattern) >= 2:
             for i in range(1, len(pattern)):
                 cand = self.learning.observe(
-                    pattern[0], "co_occurs_with", pattern[i],
-                    confidence=routine.confidence, source="routine_detector",
-                    cycle=self._cycle, epistemic=INFERRED,
+                    pattern[0],
+                    "co_occurs_with",
+                    pattern[i],
+                    confidence=routine.confidence,
+                    source="routine_detector",
+                    cycle=self._cycle,
+                    epistemic=INFERRED,
                 )
                 if cand.epistemic in (INFERRED,) and cand.evidence_count >= self.learning.promote_min_evidence:
                     self.learning.promote(cand, self.knowledge, cycle=self._cycle)
 
-    def counterfactual(self, *, premise: str, if_evidence: dict[str, Any],
-                       then_prediction: str, confidence: float = 0.4) -> dict[str, Any]:
+    def counterfactual(
+        self, *, premise: str, if_evidence: dict[str, Any], then_prediction: str, confidence: float = 0.4
+    ) -> dict[str, Any]:
         """Evaluate a what-if question; result is SIMULATED, never merged into facts."""
         result = self.counterfactuals.evaluate(
-            premise=premise, if_evidence=if_evidence,
-            then_prediction=then_prediction, confidence=confidence,
+            premise=premise,
+            if_evidence=if_evidence,
+            then_prediction=then_prediction,
+            confidence=confidence,
         )
         self._emit("learning.counterfactual", {"cycle": self._cycle, **result})
         return result
@@ -3669,7 +4451,13 @@ class MacBrain(ChatMixin):
             self.memory.save_knowledge(self.knowledge.snapshot())
             self.memory.save_plans([p.snapshot() for p in self._plans.values()])
             self.memory.save_body(
-                {"x_m": self.body.x_m, "y_m": self.body.y_m, "heading_deg": self.body.heading_deg, "velocity_mps": self.body.velocity_mps, "last_action": self.body.last_action}
+                {
+                    "x_m": self.body.x_m,
+                    "y_m": self.body.y_m,
+                    "heading_deg": self.body.heading_deg,
+                    "velocity_mps": self.body.velocity_mps,
+                    "last_action": self.body.last_action,
+                }
             )
             self._sync_goal_states()
             self.memory.close()
@@ -3680,6 +4468,45 @@ class MacBrain(ChatMixin):
         t = self.autonomy_sm.shutdown(timestamp=now)
         self._emit("autonomy.transition", {"cycle": self._cycle, **t.snapshot()})
         self._emit("brain.stopped", {"run_id": self.run_id, "cycles": self._cycle})
+
+    def _compat_event_limit(self) -> int:
+        """Hard upper bound for the flattened compatibility view."""
+        try:
+            limit = int(getattr(self.config, "compat_event_history", WEB_COMPAT_EVENT_HISTORY))
+        except (TypeError, ValueError):
+            limit = WEB_COMPAT_EVENT_HISTORY
+        return max(1, limit)
+
+    @staticmethod
+    def _sanitize_compat_payload(payload: dict[str, Any]) -> dict[str, Any]:
+        """Defensive copy that never retains large runtime objects.
+
+        Events must carry serializable summaries (ids/dimensions), not live
+        buffers. Anything bytes-like over 1 KiB, or any value whose type name
+        suggests an ndarray/tensor, is replaced with a compact reference so
+        one misbehaving producer cannot pin megabytes per event.
+        """
+        clean: dict[str, Any] = {}
+        for key, value in payload.items():
+            if isinstance(value, (bytes, bytearray, memoryview)):
+                if len(value) > 1024:
+                    clean[key] = {"__ref__": str(key), "bytes": len(value), "truncated": True}
+                else:
+                    clean[key] = bytes(value)
+                continue
+            tname = type(value).__name__
+            if tname in ("ndarray", "Tensor", "EagerTensor") or "tensor" in tname.lower():
+                clean[key] = {"__ref__": str(key), "type": tname}
+                continue
+            clean[key] = value
+        return clean
+
+    def _append_compat_event(self, event: dict[str, Any]) -> None:
+        """Single insertion point for the compatibility view; enforces the bound."""
+        self.events.append(event)
+        limit = self._compat_event_limit()
+        if len(self.events) > limit:
+            del self.events[: len(self.events) - limit]
 
     def _emit(
         self,
@@ -3697,7 +4524,9 @@ class MacBrain(ChatMixin):
         Returns the event_id. Events are threaded into the current cycle's
         correlation domain and causally chained to the previous event when no
         explicit ids are given. ``self.events`` remains the flattened
-        compatibility view for legacy consumers.
+        compatibility view for legacy consumers, now bounded at the source
+        (plan 02): ``len(self.events) <= config.compat_event_history`` under
+        all runtime conditions, with or without a web server draining.
         """
         envelope = self.event_bus.publish(
             event_type,
@@ -3708,19 +4537,22 @@ class MacBrain(ChatMixin):
             priority=priority,
             privacy_class=privacy_class,
         )
-        self.events.append({
-            "event_type": event_type,
-            "run_id": self.run_id,
-            "cycle": self._cycle,
-            "payload": payload,
-            "event_id": envelope.event_id,
-            "correlation_id": envelope.correlation_id,
-            "causation_id": envelope.causation_id,
-            "priority": envelope.priority,
-            "privacy_class": envelope.privacy_class,
-            "sequence": envelope.sequence,
-        })
+        self._append_compat_event(
+            {
+                "event_type": event_type,
+                "run_id": self.run_id,
+                "cycle": self._cycle,
+                "payload": self._sanitize_compat_payload(payload),
+                "event_id": envelope.event_id,
+                "correlation_id": envelope.correlation_id,
+                "causation_id": envelope.causation_id,
+                "priority": envelope.priority,
+                "privacy_class": envelope.privacy_class,
+                "sequence": envelope.sequence,
+            }
+        )
         return envelope.event_id
+
 
 # Agnostic alias — new code should import Brain; MacBrain kept for backward compat.
 Brain = MacBrain

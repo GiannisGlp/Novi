@@ -6,7 +6,10 @@ import { usePoll } from './usePoll'
 export const CONTEXT_POLL_MS = 1100
 
 /** 1.1s poll of /api/context; keeps the last response on failure. */
-export function useContextData(reportConnection: (ok: boolean) => void): {
+export function useContextData(
+  reportConnection: (ok: boolean) => void,
+  opts?: { enabled?: boolean },
+): {
   response: ContextResponse | null
   refresh: () => Promise<void>
 } {
@@ -24,6 +27,6 @@ export function useContextData(reportConnection: (ok: boolean) => void): {
     }
   }, [])
 
-  usePoll(refresh, CONTEXT_POLL_MS)
+  usePoll(refresh, CONTEXT_POLL_MS, opts?.enabled ?? true)
   return { response, refresh }
 }

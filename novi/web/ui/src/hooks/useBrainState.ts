@@ -19,7 +19,10 @@ export interface BrainStateData {
  * state on failure, records the confidence + triples histories for the activity
  * chart (capped at 60 samples each).
  */
-export function useBrainState(reportConnection: (ok: boolean) => void): BrainStateData {
+export function useBrainState(
+  reportConnection: (ok: boolean) => void,
+  opts?: { enabled?: boolean },
+): BrainStateData {
   const [state, setState] = useState<BrainState | null>(null)
   const [confHist, setConfHist] = useState<number[]>([])
   const [memHist, setMemHist] = useState<number[]>([])
@@ -45,6 +48,6 @@ export function useBrainState(reportConnection: (ok: boolean) => void): BrainSta
     }
   }, [])
 
-  usePoll(refresh, STATE_POLL_MS)
+  usePoll(refresh, STATE_POLL_MS, opts?.enabled ?? true)
   return { state, confHist, memHist, lastUpdatedAt, refresh }
 }

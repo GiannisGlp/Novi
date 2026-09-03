@@ -118,7 +118,8 @@ export const api = {
   chat: (after: number) => request<ChatChunk>(`/api/chat?after=${after}`),
 
   perceptionState: () => request<OpaqueResult>('/api/perception/state'),
-  preview: () => request<PreviewFrame>('/api/preview'),
+  preview: (signal?: AbortSignal) =>
+    request<PreviewFrame>('/api/preview', signal ? { signal } : undefined),
   recognition: (kind?: string) =>
     request<RecognitionList>(`/api/recognition${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),
   realStatus: () => request<RealIOStatus>('/api/real/status'),

@@ -123,6 +123,31 @@ class ClosedLoopRuntimeTests(unittest.TestCase):
         self.assertEqual(snap["current_phase"], PLAN)
         self.assertEqual(len(snap["steps"]), 1)
 
+    def test_steps_stay_bounded_over_many_cycles(self):
+        """Plan 02: the per-cycle VERIFY loop must not accumulate history."""
+
+        rt = ClosedLoopRuntime(max_steps=16)
+        for i in range(100):
+            rt.observe({"cycle": i})
+            rt.plan({"cycle": i})
+            rt.act({"cycle": i})
+            rt.verify([], {})
+        self.assertLessEqual(len(rt.steps), 16)
+        self.assertEqual(rt.max_steps, 16)
+        # Tail window: newest cycle retained, oldest evicted.
+        self.assertEqual(rt.steps[-1].cycle, 100)
+        self.assertEqual(rt.steps[0].cycle, 97)
+
+    def test_default_window_holds_many_cycles(self):
+        from novi.brain.closed_loop import MAX_LOOP_STEPS
+
+        rt = ClosedLoopRuntime()
+        self.assertEqual(rt.max_steps, MAX_LOOP_STEPS)
+        for i in range(200):
+            rt.observe({"cycle": i})
+            rt.plan({"cycle": i})
+        self.assertLessEqual(len(rt.steps), MAX_LOOP_STEPS)
+
     def test_verify_step_is_first_class(self):
         """The VERIFY step is a first-class phase, not an afterthought."""
         rt = ClosedLoopRuntime()
@@ -181,8 +206,12 @@ class CrossSystemAcceptanceTests(unittest.TestCase):
 class CompletionGateTests(unittest.TestCase):
     def test_completion_gate_all_steps_pass(self):
         step_results = {
-            "step_0": True, "step_1": True, "step_2": True,
-            "step_3": True, "step_4": True, "step_5": True,
+            "step_0": True,
+            "step_1": True,
+            "step_2": True,
+            "step_3": True,
+            "step_4": True,
+            "step_5": True,
         }
         gate = run_completion_gate(step_results)
         self.assertTrue(gate.passed)
@@ -190,8 +219,12 @@ class CompletionGateTests(unittest.TestCase):
 
     def test_completion_gate_any_step_fail(self):
         step_results = {
-            "step_0": True, "step_1": True, "step_2": False,
-            "step_3": True, "step_4": True, "step_5": True,
+            "step_0": True,
+            "step_1": True,
+            "step_2": False,
+            "step_3": True,
+            "step_4": True,
+            "step_5": True,
         }
         gate = run_completion_gate(step_results)
         self.assertFalse(gate.passed)

@@ -6,7 +6,10 @@ import { usePoll } from './usePoll'
 export const IDENTITY_POLL_MS = 1500
 
 /** 1.5s poll of /api/identity; keeps the last detail on failure. */
-export function useIdentity(reportConnection: (ok: boolean) => void): {
+export function useIdentity(
+  reportConnection: (ok: boolean) => void,
+  opts?: { enabled?: boolean },
+): {
   detail: IdentityDetail | null
   refresh: () => Promise<void>
 } {
@@ -24,6 +27,6 @@ export function useIdentity(reportConnection: (ok: boolean) => void): {
     }
   }, [])
 
-  usePoll(refresh, IDENTITY_POLL_MS)
+  usePoll(refresh, IDENTITY_POLL_MS, opts?.enabled ?? true)
   return { detail, refresh }
 }

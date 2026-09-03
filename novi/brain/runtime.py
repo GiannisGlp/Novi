@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from time import monotonic, time
@@ -94,14 +95,35 @@ class ScheduledTask:
     priority: int = 0
 
 
+#: Maximum retained supervisor events. The supervisor bus is an operational
+#: trace, not a history database: per-cycle observe/propose/safety/act events
+#: accumulate ~10 per cycle, so an unbounded list is a second OOM vector of
+#: the same class as the compat event list (plan 02, Rule 1/Rule 3).
+MAX_SUPERVISOR_EVENTS = 4096
+
+
 class EventBus:
-    def __init__(self) -> None:
-        self._events: list[RuntimeEvent] = []
+    def __init__(self, *, max_events: int = MAX_SUPERVISOR_EVENTS) -> None:
+        self._max_events = max(1, int(max_events))
+        self._events: deque[RuntimeEvent] = deque(maxlen=self._max_events)
         self._sequence = 0
 
-    def publish(self, event_type: str, payload: dict[str, Any], *, correlation_id: str | None = None, causation_id: str | None = None) -> RuntimeEvent:
+    def publish(
+        self,
+        event_type: str,
+        payload: dict[str, Any],
+        *,
+        correlation_id: str | None = None,
+        causation_id: str | None = None,
+    ) -> RuntimeEvent:
         self._sequence += 1
-        event = RuntimeEvent(event_type, payload, correlation_id=correlation_id or str(uuid4()), causation_id=causation_id, sequence=self._sequence)
+        event = RuntimeEvent(
+            event_type,
+            payload,
+            correlation_id=correlation_id or str(uuid4()),
+            causation_id=causation_id,
+            sequence=self._sequence,
+        )
         self._events.append(event)
         return event
 
@@ -143,7 +165,10 @@ class DeterministicScheduler:
                 item.task()
             except Exception as exc:
                 if self._events:
-                    self._events.publish("scheduler.task.failed", {"name": item.name, "error_type": type(exc).__name__, "detail": str(exc)})
+                    self._events.publish(
+                        "scheduler.task.failed",
+                        {"name": item.name, "error_type": type(exc).__name__, "detail": str(exc)},
+                    )
                 raise SchedulerError(f"scheduler task failed: {item.name}") from exc
             executed.append(item.name)
         if self._events:
@@ -185,20 +210,34 @@ class MockSafetyGateway:
         return SafetyDecision(True, "authorized", proposal.correlation_id)
 
 
+#: Maximum retained body outcomes per list. Execution history is an
+#: operational tail (latest outcome is what recovery/debugging reads), not an
+#: archive — durable records belong in the audit trail (plan 02, Rule 1).
+MAX_BODY_OUTCOMES = 1024
+
+
 class MockBody:
     """Embodiment boundary that cannot execute without an explicit allow decision."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, max_outcomes: int = MAX_BODY_OUTCOMES) -> None:
+        # Plain lists (legacy consumers compare against [] and slice); the
+        # bound is enforced on append in execute().
         self.executed: list[ActionOutcome] = []
         self.rejected: list[ActionOutcome] = []
+        self._max_outcomes = max(1, int(max_outcomes))
+
+    def _record(self, target: list[ActionOutcome], outcome: ActionOutcome) -> None:
+        target.append(outcome)
+        if len(target) > self._max_outcomes:
+            del target[: len(target) - self._max_outcomes]
 
     def execute(self, proposal: ActionProposal, decision: SafetyDecision) -> ActionOutcome:
         if not decision.authorized:
             outcome = ActionOutcome(proposal.action, False, decision.reason, proposal.correlation_id)
-            self.rejected.append(outcome)
+            self._record(self.rejected, outcome)
             raise SafetyViolation(decision.reason)
         outcome = ActionOutcome(proposal.action, True, "mock execution completed", proposal.correlation_id)
-        self.executed.append(outcome)
+        self._record(self.executed, outcome)
         return outcome
 
 
@@ -208,7 +247,12 @@ class SyntheticSensor:
 
     def read(self) -> Observation:
         self._sequence += 1
-        return Observation(source="synthetic.environment", value={"entity": "test_object", "distance_m": 1.0, "state": "present"}, quality=1.0, sequence=self._sequence)
+        return Observation(
+            source="synthetic.environment",
+            value={"entity": "test_object", "distance_m": 1.0, "state": "present"},
+            quality=1.0,
+            sequence=self._sequence,
+        )
 
 
 class BrainSupervisor:
@@ -275,13 +319,22 @@ class BrainSupervisor:
 
     def propose(self, proposal: ActionProposal) -> SafetyDecision:
         decision = self.safety.authorize(proposal)
-        self.events.publish("safety.decided", {"authorized": decision.authorized, "reason": decision.reason}, correlation_id=decision.correlation_id)
+        self.events.publish(
+            "safety.decided",
+            {"authorized": decision.authorized, "reason": decision.reason},
+            correlation_id=decision.correlation_id,
+        )
         return decision
 
     def execute(self, proposal: ActionProposal, decision: SafetyDecision) -> ActionOutcome:
         outcome = self.body.execute(proposal, decision)
         self.last_outcome = outcome
-        self.events.publish("action.completed", {"action": outcome.action, "success": outcome.success, "detail": outcome.detail}, correlation_id=outcome.correlation_id, causation_id=proposal.correlation_id)
+        self.events.publish(
+            "action.completed",
+            {"action": outcome.action, "success": outcome.success, "detail": outcome.detail},
+            correlation_id=outcome.correlation_id,
+            causation_id=proposal.correlation_id,
+        )
         return outcome
 
     def cycle(self) -> ActionOutcome:
@@ -289,16 +342,40 @@ class BrainSupervisor:
             raise RuntimeErrorBase(f"cannot cycle while {self.lifecycle.value}")
         observation = self.sensor.read()
         self.last_observation = observation
-        observed = self.events.publish("observation.received", {"source": observation.source, "value": observation.value, "quality": observation.quality, "sequence": observation.sequence})
-        proposal = ActionProposal(action="inspect", parameters={"entity": observation.value["entity"]}, reason="synthetic observation requires inspection", correlation_id=observed.correlation_id)
-        self.events.publish("action.proposed", {"action": proposal.action, "parameters": proposal.parameters}, correlation_id=proposal.correlation_id, causation_id=observed.correlation_id)
+        observed = self.events.publish(
+            "observation.received",
+            {
+                "source": observation.source,
+                "value": observation.value,
+                "quality": observation.quality,
+                "sequence": observation.sequence,
+            },
+        )
+        proposal = ActionProposal(
+            action="inspect",
+            parameters={"entity": observation.value["entity"]},
+            reason="synthetic observation requires inspection",
+            correlation_id=observed.correlation_id,
+        )
+        self.events.publish(
+            "action.proposed",
+            {"action": proposal.action, "parameters": proposal.parameters},
+            correlation_id=proposal.correlation_id,
+            causation_id=observed.correlation_id,
+        )
         decision = self.propose(proposal)
         return self.execute(proposal, decision)
 
     def shutdown(self) -> None:
         if self.lifecycle is Lifecycle.SHUTTING_DOWN:
             return
-        if self.lifecycle in {Lifecycle.READY, Lifecycle.ACTIVE, Lifecycle.DEGRADED, Lifecycle.SAFE_STOP, Lifecycle.FAILED}:
+        if self.lifecycle in {
+            Lifecycle.READY,
+            Lifecycle.ACTIVE,
+            Lifecycle.DEGRADED,
+            Lifecycle.SAFE_STOP,
+            Lifecycle.FAILED,
+        }:
             self.transition(Lifecycle.SHUTTING_DOWN)
             return
         raise InvalidLifecycleTransition(f"cannot shutdown from {self.lifecycle.value}")

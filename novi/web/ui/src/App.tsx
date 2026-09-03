@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ChatDrawer } from './components/ChatDrawer'
 import { ConnectionBanner } from './components/ConnectionBanner'
 import { RailNav } from './components/RailNav'
@@ -39,13 +39,23 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false)
 
   const { connected, reportConnection } = useConnection()
+  // Page-local polling (plan 02, Phase 4): each feature polls only while a
+  // page that displays it is active. Shared chrome (TopBar/StatusBar) consumes
+  // brain state + identity on every page, so those stay global — each still a
+  // single producer. Preview (300ms base64) is the biggest win: it runs only
+  // on the three pages that render the frame.
+  const { pathname } = useLocation()
+  const onPreviewPage = pathname === '/camera' || pathname === '/perception' || pathname === '/preview'
+  const onEventsPage = pathname === '/events' || pathname === '/overview'
+  const onAttentionPage = pathname === '/overview' || pathname === '/cognition'
+  const onContextPage = pathname === '/cognition'
   const brain = useBrainState(reportConnection)
   const { models, current, setModel } = useModels(reportConnection)
-  const chat = useChat(reportConnection, () => current ?? 'model')
-  const preview = usePreview(reportConnection)
-  const events = useEvents(reportConnection)
-  const attention = useAttention(reportConnection)
-  const contextData = useContextData(reportConnection)
+  const chat = useChat(reportConnection, () => current ?? 'model', { enabled: chatOpen })
+  const preview = usePreview(reportConnection, { enabled: onPreviewPage })
+  const events = useEvents(reportConnection, { enabled: onEventsPage })
+  const attention = useAttention(reportConnection, { enabled: onAttentionPage })
+  const contextData = useContextData(reportConnection, { enabled: onContextPage })
   const identity = useIdentity(reportConnection)
   const now = useNow(1000)
 

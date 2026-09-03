@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { jsonFetch } from '../test/helpers'
 import { MockEventSource } from '../test/helpers'
-import { useEvents } from './useEvents'
+import { EventDedup, useEvents } from './useEvents'
 
 function chunk(after: number, events: unknown[]) {
   return JSON.stringify({ after, events })
@@ -102,5 +102,129 @@ describe('useEvents', () => {
     expect(report).toHaveBeenLastCalledWith(true)
     act(() => es.emitError())
     expect(report).toHaveBeenLastCalledWith(false)
+  })
+
+  it('does not open SSE or poll when disabled', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('EventSource', MockEventSource)
+    const fetchMock = jsonFetch({ after: 0, events: [] })
+    vi.stubGlobal('fetch', fetchMock)
+    renderHook(() => useEvents(() => undefined, { enabled: false }))
+    await act(async () => {})
+    act(() => vi.advanceTimersByTime(10000))
+    await act(async () => {})
+    expect(MockEventSource.instances).toHaveLength(0)
+    expect(fetchMock.mock.calls.length).toBe(0)
+  })
+
+  it('resyncs the local window on a server gap signal', async () => {
+    vi.stubGlobal('EventSource', MockEventSource)
+    const { result } = renderHook(() => useEvents(() => undefined))
+    await act(async () => {})
+    const es = MockEventSource.instances[0]
+    act(() => {
+      es.emitMessage(chunk(2, [{ seq: 1, ts: 1, event: { event_type: 'old' } }]))
+    })
+    expect(result.current.events).toHaveLength(1)
+    act(() => {
+      es.emitMessage(
+        JSON.stringify({
+          after: 9500,
+          gap: true,
+          events: [{ seq: 9500, ts: 2, event: { event_type: 'fresh' } }],
+        }),
+      )
+    })
+    expect(result.current.events).toHaveLength(1)
+    expect(result.current.events[0].event.event_type).toBe('fresh')
+  })
+
+  it('resyncs when the server epoch changes (server restart)', async () => {
+    vi.stubGlobal('EventSource', MockEventSource)
+    const { result } = renderHook(() => useEvents(() => undefined))
+    await act(async () => {})
+    const es = MockEventSource.instances[0]
+    act(() => {
+      es.emitMessage(
+        JSON.stringify({ after: 100, epoch: 'aaa', events: [{ seq: 100, ts: 1, event: { event_type: 'old' } }] }),
+      )
+    })
+    expect(result.current.events).toHaveLength(1)
+    // server restarted: seqs reset, epoch differs — old cursor must not
+    // swallow the fresh stream, and the stale window is replaced
+    act(() => {
+      es.emitMessage(
+        JSON.stringify({ after: 2, epoch: 'bbb', events: [{ seq: 2, ts: 2, event: { event_type: 'new' } }] }),
+      )
+    })
+    expect(result.current.events).toHaveLength(1)
+    expect(result.current.events[0].event.event_type).toBe('new')
+    // same epoch afterwards: normal cursor delivery continues
+    act(() => {
+      es.emitMessage(
+        JSON.stringify({ after: 3, epoch: 'bbb', events: [{ seq: 3, ts: 3, event: { event_type: 'newer' } }] }),
+      )
+    })
+    expect(result.current.events).toHaveLength(2)
+  })
+
+  it('ignores stale re-deliveries after a gap resync', async () => {
+    vi.stubGlobal('EventSource', MockEventSource)
+    const { result } = renderHook(() => useEvents(() => undefined))
+    await act(async () => {})
+    const es = MockEventSource.instances[0]
+    act(() => {
+      es.emitMessage(
+        JSON.stringify({
+          after: 5000,
+          gap: true,
+          events: [{ seq: 5000, ts: 1, event: { event_type: 'snap' } }],
+        }),
+      )
+    })
+    act(() => {
+      es.emitMessage(chunk(5000, [{ seq: 42, ts: 2, event: { event_type: 'stale' } }]))
+    })
+    expect(result.current.events).toHaveLength(1)
+    expect(result.current.events[0].event.event_type).toBe('snap')
+  })
+})
+
+describe('EventDedup', () => {
+  it('renders 100k in-order events exactly once in O(1) state', () => {
+    const d = new EventDedup()
+    let rendered = 0
+    for (let i = 1; i <= 100000; i++) {
+      if (d.isFresh(i)) {
+        d.remember(i)
+        rendered++
+      }
+      // duplicate delivery of an older sequence is dropped
+      if (i % 10 === 0) expect(d.isFresh(i - 5)).toBe(false)
+    }
+    expect(rendered).toBe(100000)
+    expect(d.lastSeq).toBe(100000)
+    // O(1) state: only the cursor, no per-sequence retention
+    expect(Object.keys(d)).toHaveLength(1)
+  })
+
+  it('drops duplicates and stale below-cursor sequences', () => {
+    const d = new EventDedup()
+    for (const s of [1, 2, 3]) d.remember(s)
+    expect(d.isFresh(2)).toBe(false)
+    expect(d.isFresh(3)).toBe(false)
+    expect(d.isFresh(1)).toBe(false)
+    expect(d.isFresh(4)).toBe(true)
+    // a never-seen sequence below the cursor is stale tail data, not news
+    expect(d.isFresh(0)).toBe(false)
+  })
+
+  it('resync adopts the fresh snapshot cursor', () => {
+    const d = new EventDedup()
+    for (let i = 1; i <= 5000; i++) d.remember(i)
+    d.resync(9000)
+    expect(d.lastSeq).toBe(9000)
+    expect(d.isFresh(8501)).toBe(false)
+    expect(d.isFresh(9001)).toBe(true)
   })
 })

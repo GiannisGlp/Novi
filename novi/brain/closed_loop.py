@@ -41,16 +41,20 @@ OUTCOME_TIMEOUT = "TIMEOUT"
 OUTCOME_DENIED = "DENIED"  # action was not executed (governance denial / held)
 OUTCOME_UNKNOWN = "UNKNOWN"
 
-ALL_OUTCOMES = frozenset({OUTCOME_SUCCESS, OUTCOME_FAILURE, OUTCOME_PARTIAL, OUTCOME_TIMEOUT, OUTCOME_DENIED, OUTCOME_UNKNOWN})
+ALL_OUTCOMES = frozenset(
+    {OUTCOME_SUCCESS, OUTCOME_FAILURE, OUTCOME_PARTIAL, OUTCOME_TIMEOUT, OUTCOME_DENIED, OUTCOME_UNKNOWN}
+)
 
 
 # ---------------------------------------------------------------------------
 # LoopStep — one step in the closed loop
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LoopStep:
     """One step in the closed-loop cycle."""
+
     step_id: str
     phase: str  # OBSERVE | PLAN | ACT | VERIFY | RECOVER | ASK | STOP
     cycle: int
@@ -73,6 +77,14 @@ class LoopStep:
 # ClosedLoopRuntime — the first-class VERIFY loop
 # ---------------------------------------------------------------------------
 
+#: Maximum retained loop steps (~100 cycles of OBSERVE/PLAN/ACT/VERIFY).
+#: The runtime is a per-cycle VERIFY loop, not a history database: only the
+#: current cycle and recent history are ever consulted, so the tail window is
+#: the complete working set. Bounds memory under indefinite autonomous runs
+#: (plan 02, Rule 1/Rule 3).
+MAX_LOOP_STEPS = 400
+
+
 class ClosedLoopRuntime:
     """Implements the closed-loop cycle: OBSERVE -> PLAN -> ACT -> VERIFY ->
     RECOVER/ASK/STOP.
@@ -82,14 +94,25 @@ class ClosedLoopRuntime:
     help, or stop.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, max_steps: int = MAX_LOOP_STEPS) -> None:
         self._steps: list[LoopStep] = []
+        self._max_steps = max(1, int(max_steps))
         self._cycle: int = 0
         self._current_phase: str = OBSERVE
         self._action_outcome: str = OUTCOME_UNKNOWN
         self._verify_result: dict[str, Any] = {}
         self._recovery_attempts: int = 0
         self._max_recovery: int = 3
+
+    def _append_step(self, step: LoopStep) -> None:
+        """Single insertion point; enforces the bounded tail window."""
+        self._steps.append(step)
+        if len(self._steps) > self._max_steps:
+            del self._steps[: len(self._steps) - self._max_steps]
+
+    @property
+    def max_steps(self) -> int:
+        return self._max_steps
 
     @property
     def cycle(self) -> int:
@@ -107,31 +130,40 @@ class ClosedLoopRuntime:
         """OBSERVE phase: collect sensor data and world state."""
         self._cycle += 1
         step = LoopStep(
-            step_id=str(uuid4()), phase=OBSERVE, cycle=self._cycle,
-            data=observation, timestamp=observation.get("timestamp", ""),
+            step_id=str(uuid4()),
+            phase=OBSERVE,
+            cycle=self._cycle,
+            data=observation,
+            timestamp=observation.get("timestamp", ""),
         )
-        self._steps.append(step)
+        self._append_step(step)
         self._current_phase = PLAN
         return step
 
     def plan(self, plan_data: dict[str, Any]) -> LoopStep:
         """PLAN phase: generate a plan for the current goal."""
         step = LoopStep(
-            step_id=str(uuid4()), phase=PLAN, cycle=self._cycle,
-            data=plan_data, timestamp=plan_data.get("timestamp", ""),
+            step_id=str(uuid4()),
+            phase=PLAN,
+            cycle=self._cycle,
+            data=plan_data,
+            timestamp=plan_data.get("timestamp", ""),
         )
-        self._steps.append(step)
+        self._append_step(step)
         self._current_phase = ACT
         return step
 
     def act(self, action_data: dict[str, Any]) -> LoopStep:
         """ACT phase: execute the planned action (through governance)."""
         step = LoopStep(
-            step_id=str(uuid4()), phase=ACT, cycle=self._cycle,
-            data=action_data, outcome=action_data.get("outcome", OUTCOME_UNKNOWN),
+            step_id=str(uuid4()),
+            phase=ACT,
+            cycle=self._cycle,
+            data=action_data,
+            outcome=action_data.get("outcome", OUTCOME_UNKNOWN),
             timestamp=action_data.get("timestamp", ""),
         )
-        self._steps.append(step)
+        self._append_step(step)
         self._action_outcome = step.outcome
         self._current_phase = VERIFY
         return step
@@ -168,11 +200,13 @@ class ClosedLoopRuntime:
 
         self._verify_result = {"met": met, "unmet": unmet, "outcome": outcome}
         step = LoopStep(
-            step_id=str(uuid4()), phase=VERIFY, cycle=self._cycle,
+            step_id=str(uuid4()),
+            phase=VERIFY,
+            cycle=self._cycle,
             data={"success_criteria": list(success_criteria), "observed_state": observed_state},
             outcome=outcome,
         )
-        self._steps.append(step)
+        self._append_step(step)
 
         if outcome in (OUTCOME_SUCCESS, OUTCOME_DENIED):
             # A fresh cycle begins: either the action succeeded or it was
@@ -189,10 +223,13 @@ class ClosedLoopRuntime:
         """RECOVER phase: attempt to recover from a failed action."""
         self._recovery_attempts += 1
         step = LoopStep(
-            step_id=str(uuid4()), phase=RECOVER, cycle=self._cycle,
-            data=recovery_data, outcome=recovery_data.get("outcome", OUTCOME_UNKNOWN),
+            step_id=str(uuid4()),
+            phase=RECOVER,
+            cycle=self._cycle,
+            data=recovery_data,
+            outcome=recovery_data.get("outcome", OUTCOME_UNKNOWN),
         )
-        self._steps.append(step)
+        self._append_step(step)
         # After recovery attempt, go back to PLAN to try again.
         self._current_phase = PLAN
         return step
@@ -200,20 +237,24 @@ class ClosedLoopRuntime:
     def ask(self, ask_data: dict[str, Any]) -> LoopStep:
         """ASK phase: ask for human help after max recovery attempts."""
         step = LoopStep(
-            step_id=str(uuid4()), phase=ASK, cycle=self._cycle,
+            step_id=str(uuid4()),
+            phase=ASK,
+            cycle=self._cycle,
             data=ask_data,
         )
-        self._steps.append(step)
+        self._append_step(step)
         self._current_phase = STOP
         return step
 
     def stop(self, reason: str = "") -> LoopStep:
         """STOP phase: stop the loop."""
         step = LoopStep(
-            step_id=str(uuid4()), phase=STOP, cycle=self._cycle,
+            step_id=str(uuid4()),
+            phase=STOP,
+            cycle=self._cycle,
             data={"reason": reason},
         )
-        self._steps.append(step)
+        self._append_step(step)
         self._current_phase = STOP
         return step
 
@@ -251,9 +292,11 @@ class ClosedLoopRuntime:
 # Cross-system acceptance test
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class CrossSystemTestResult:
     """Result of a cross-system acceptance test."""
+
     test_id: str
     name: str
     systems_tested: tuple[str, ...]
@@ -283,82 +326,117 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
 
     # Test 1: Soul -> Cognition (identity question doesn't bypass cognition)
     from novi.brain.soul_acceptance import CommunicationDecision
+
     cd = CommunicationDecision()
     should_speak, _ = cd.should_speak(has_communicative_reason=True)
-    results.append(CrossSystemTestResult(
-        test_id="cross_1", name="soul_to_cognition",
-        systems_tested=("soul", "cognition"),
-        passed=should_speak,
-        results={"should_speak": should_speak},
-        reason="soul communication decision feeds cognition correctly",
-    ))
+    results.append(
+        CrossSystemTestResult(
+            test_id="cross_1",
+            name="soul_to_cognition",
+            systems_tested=("soul", "cognition"),
+            passed=should_speak,
+            results={"should_speak": should_speak},
+            reason="soul communication decision feeds cognition correctly",
+        )
+    )
 
     # Test 2: Cognition -> Memory (observed evidence is stored correctly)
     from novi.brain.memory_hardening import DIRECT_SENSOR, OBSERVED, HardenedMemoryManager
+
     mgr = HardenedMemoryManager()
     admit_result = mgr.admit(
-        memory_type="perception", content="cup on table", confidence=0.85,
-        epistemic_status=OBSERVED, evidence_class=OBSERVED,
-        verification_status="UNVERIFIED", source_class=DIRECT_SENSOR,
-        privacy_class="unclassified", provenance={"source": "camera"},
+        memory_type="perception",
+        content="cup on table",
+        confidence=0.85,
+        epistemic_status=OBSERVED,
+        evidence_class=OBSERVED,
+        verification_status="UNVERIFIED",
+        source_class=DIRECT_SENSOR,
+        privacy_class="unclassified",
+        provenance={"source": "camera"},
         entity_refs=("cup",),
     )
     retrieve_result = mgr.retrieve_with_states("cup")
-    results.append(CrossSystemTestResult(
-        test_id="cross_2", name="cognition_to_memory",
-        systems_tested=("cognition", "memory"),
-        passed=admit_result.accepted and retrieve_result.state == "RESOLVED",
-        results={"admitted": admit_result.accepted, "retrieval_state": retrieve_result.state},
-        reason="cognition observation stored and retrieved correctly",
-    ))
+    results.append(
+        CrossSystemTestResult(
+            test_id="cross_2",
+            name="cognition_to_memory",
+            systems_tested=("cognition", "memory"),
+            passed=admit_result.accepted and retrieve_result.state == "RESOLVED",
+            results={"admitted": admit_result.accepted, "retrieval_state": retrieve_result.state},
+            reason="cognition observation stored and retrieved correctly",
+        )
+    )
 
     # Test 3: Memory -> Autonomy (simulated episode cannot become fact in autonomy)
     from novi.brain.memory_hardening import SIMULATED, SIMULATION, VERIFIED
+
     sim_admit = mgr.admit(
-        memory_type="simulation", content="cup at table", confidence=0.9,
-        epistemic_status=SIMULATED, evidence_class=SIMULATED,
-        verification_status="UNVERIFIED", source_class=SIMULATION,
-        privacy_class="unclassified", provenance={"source": "isaac_sim"},
+        memory_type="simulation",
+        content="cup at table",
+        confidence=0.9,
+        epistemic_status=SIMULATED,
+        evidence_class=SIMULATED,
+        verification_status="UNVERIFIED",
+        source_class=SIMULATION,
+        privacy_class="unclassified",
+        provenance={"source": "isaac_sim"},
     )
     fact_attempt = mgr.admit(
-        memory_type="perception", content="cup at table", confidence=0.9,
-        epistemic_status=VERIFIED, evidence_class=SIMULATED,
-        verification_status="USER_CONFIRMED", source_class=SIMULATION,
-        privacy_class="unclassified", provenance={"source": "isaac_sim"},
+        memory_type="perception",
+        content="cup at table",
+        confidence=0.9,
+        epistemic_status=VERIFIED,
+        evidence_class=SIMULATED,
+        verification_status="USER_CONFIRMED",
+        source_class=SIMULATION,
+        privacy_class="unclassified",
+        provenance={"source": "isaac_sim"},
     )
-    results.append(CrossSystemTestResult(
-        test_id="cross_3", name="memory_to_autonomy",
-        systems_tested=("memory", "autonomy"),
-        passed=sim_admit.accepted and not fact_attempt.accepted,
-        results={"sim_admitted": sim_admit.accepted, "fact_rejected": not fact_attempt.accepted},
-        reason="simulated episode stored as SIMULATED; cannot be recalled as fact",
-    ))
+    results.append(
+        CrossSystemTestResult(
+            test_id="cross_3",
+            name="memory_to_autonomy",
+            systems_tested=("memory", "autonomy"),
+            passed=sim_admit.accepted and not fact_attempt.accepted,
+            results={"sim_admitted": sim_admit.accepted, "fact_rejected": not fact_attempt.accepted},
+            reason="simulated episode stored as SIMULATED; cannot be recalled as fact",
+        )
+    )
 
     # Test 4: Autonomy -> Safety (governance guard gates action)
     from novi.brain.governance_guard import ActionProposal, GovernanceGuard
+
     guard = GovernanceGuard()
     proposal = ActionProposal(proposal_id="p1", action="wait", parameters={}, risk_class="R0")
     grant = guard.evaluate(proposal)
-    results.append(CrossSystemTestResult(
-        test_id="cross_4", name="autonomy_to_safety",
-        systems_tested=("autonomy", "safety"),
-        passed=grant.is_allowed,
-        results={"decision": grant.decision},
-        reason="autonomy action gated by safety governance guard",
-    ))
+    results.append(
+        CrossSystemTestResult(
+            test_id="cross_4",
+            name="autonomy_to_safety",
+            systems_tested=("autonomy", "safety"),
+            passed=grant.is_allowed,
+            results={"decision": grant.decision},
+            reason="autonomy action gated by safety governance guard",
+        )
+    )
 
     # Test 5: Safety -> Brain (System-0 safety gate works)
     from novi.brain.multi_speed_runtime import SYSTEM_0, MultiSpeedRuntime
+
     rt = MultiSpeedRuntime()
     rt.register(SYSTEM_0, "safety", lambda ctx: {"safe": True})
     rt.step()
-    results.append(CrossSystemTestResult(
-        test_id="cross_5", name="safety_to_brain",
-        systems_tested=("safety", "brain"),
-        passed=rt.system0_safety_clear,
-        results={"system0_safety_clear": rt.system0_safety_clear},
-        reason="System-0 safety gate clears for brain execution",
-    ))
+    results.append(
+        CrossSystemTestResult(
+            test_id="cross_5",
+            name="safety_to_brain",
+            systems_tested=("safety", "brain"),
+            passed=rt.system0_safety_clear,
+            results={"system0_safety_clear": rt.system0_safety_clear},
+            reason="System-0 safety gate clears for brain execution",
+        )
+    )
 
     # Test 6: Full cross-system (Soul -> Cognition -> Memory -> Autonomy -> Safety -> Brain)
     full_loop = ClosedLoopRuntime()
@@ -369,13 +447,16 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
         success_criteria=["object_grasped"],
         observed_state={"object_grasped": True},
     )
-    results.append(CrossSystemTestResult(
-        test_id="cross_6", name="full_cross_system",
-        systems_tested=("soul", "cognition", "memory", "autonomy", "safety", "brain"),
-        passed=len(loop_steps) == 4 and loop_steps[-1].outcome == OUTCOME_SUCCESS,
-        results={"steps": [s.snapshot() for s in loop_steps]},
-        reason="full closed-loop cycle completes with VERIFY success",
-    ))
+    results.append(
+        CrossSystemTestResult(
+            test_id="cross_6",
+            name="full_cross_system",
+            systems_tested=("soul", "cognition", "memory", "autonomy", "safety", "brain"),
+            passed=len(loop_steps) == 4 and loop_steps[-1].outcome == OUTCOME_SUCCESS,
+            results={"steps": [s.snapshot() for s in loop_steps]},
+            reason="full closed-loop cycle completes with VERIFY success",
+        )
+    )
 
     return tuple(results)
 
@@ -384,9 +465,11 @@ def run_cross_system_acceptance() -> tuple[CrossSystemTestResult, ...]:
 # Global completion gate
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class CompletionGateResult:
     """Result of the global completion-gate review."""
+
     passed: bool
     total_steps: int
     steps_passed: int

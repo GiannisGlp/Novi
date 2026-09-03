@@ -270,7 +270,8 @@ class IntegrationMixin:
                 kind = str(ev.get("kind", ""))
                 if _is_bus_event(kind):
                     self.brain.submit(
-                        "camera", kind,
+                        "camera",
+                        kind,
                         {k: v for k, v in ev.items() if k != "kind"},
                         coalesce_key=f"{kind}:{ev.get('person', ev.get('object', 'scene'))}",
                     )
@@ -297,9 +298,7 @@ class IntegrationMixin:
                 continue
             if any(_overlaps(d.bbox, pb) for pb in person_boxes):
                 with contextlib.suppress(Exception):  # co-occurrence is best-effort
-                    self.mm_runtime.note_person_holding(
-                        person, d.label, embedding=vec, frame_id=frame_id
-                    )
+                    self.mm_runtime.note_person_holding(person, d.label, embedding=vec, frame_id=frame_id)
 
     def voice_listen(self, seconds: float = 3.0) -> dict[str, Any]:
         """Record from the real mic → STT → brain → reply (+ optional speak-back).
@@ -516,7 +515,8 @@ class IntegrationMixin:
             )
             face_embedding = body.get("face_embedding")
             obs = self.mm_runtime.process_camera_frame(
-                frame, face_embedding=face_embedding,
+                frame,
+                face_embedding=face_embedding,
                 speaker_person_id=body.get("speaker_person_id"),
             )
             return {
@@ -524,8 +524,7 @@ class IntegrationMixin:
                 "detections": [{"label": d.label, "confidence": d.confidence} for d in obs.detections],
                 "tracks": [t.snapshot() for t in obs.tracks],
                 "identities": [
-                    {"tier": i.tier.value, "person": i.person_id, "reason": i.reason}
-                    for i in obs.identities
+                    {"tier": i.tier.value, "person": i.person_id, "reason": i.reason} for i in obs.identities
                 ],
                 "place": self.mm_runtime.current_place or None,
                 "proposal": self.mm_runtime.pending_enrollment_proposal,
@@ -662,11 +661,7 @@ class IntegrationMixin:
             if not canonical:
                 return {"error": "person required (or no recognized person in view)"}
             if action == "objects_with":
-                return {
-                    "associations": [
-                        a.as_dict() for a in assoc.objects_with(canonical, limit=limit)
-                    ]
-                }
+                return {"associations": [a.as_dict() for a in assoc.objects_with(canonical, limit=limit)]}
             if action == "seen_with":
                 object_ref = str(body.get("object", "") or "").strip()
                 if not object_ref:
@@ -683,9 +678,15 @@ class IntegrationMixin:
             oc = self._require_observations()
             rows = oc.all(kind=RecognitionKind.OBJECT)
             unresolved = [
-                {"entity_ref": o.entity_ref, "category": o.category or o.label,
-                 "label": o.label, "place": o.place, "seen_at": o.temporal_at}
-                for o in rows if o.entity_ref.startswith("object-unresolved-")
+                {
+                    "entity_ref": o.entity_ref,
+                    "category": o.category or o.label,
+                    "label": o.label,
+                    "place": o.place,
+                    "seen_at": o.temporal_at,
+                }
+                for o in rows
+                if o.entity_ref.startswith("object-unresolved-")
             ]
             return {"proposals": unresolved}
 
@@ -701,15 +702,20 @@ class IntegrationMixin:
         embedding = body.get("embedding")
         if not category or not name:
             return {"error": "category and name required"}
-        if (not isinstance(embedding, list) or not embedding
-                or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in embedding)):
+        if (
+            not isinstance(embedding, list)
+            or not embedding
+            or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in embedding)
+        ):
             with self.mm_lock:
                 embedding = self.mm_last_object_embeddings.get(category)
             if not embedding:
                 return {"error": f"embedding required — no recent sighting of '{category}'"}
         with self.mm_lock:
             result = self.mm_runtime.name_proposal_object(
-                category, name, embedding=[float(v) for v in embedding],
+                category,
+                name,
+                embedding=[float(v) for v in embedding],
                 frame_id=str(body.get("frame_id", "") or ""),
             )
             return {"ok": True, **result}
@@ -742,13 +748,26 @@ class IntegrationMixin:
     # ---- preview -----------------------------------------------------------------
 
     def preview_frame(self) -> dict[str, Any]:
-        """Latest camera snapshot for the /preview page."""
+        """Latest camera snapshot for the /preview page.
+
+        Latest-frame semantics (plan 02, Phase 5): exactly one frame is ever
+        retained. The payload budget caps the served base64: an over-budget
+        frame is withheld (with an explicit flag) rather than transferred,
+        so one misconfigured encoder cannot blow up browser memory.
+        """
+        from novi.web.runtime_budgets import DEFAULT_BUDGETS
+
         with self.mm_lock:
             feed = self.mm_camera_feed
             health = feed.health.value if feed else "offline"
             stale = feed.is_stale(stale_after_s=2.0) if feed else True
             snap = self.mm_runtime.snapshot()
             last_evt = snap["recent_events"][-1] if snap["recent_events"] else {}
+            budgets = getattr(self, "budgets", DEFAULT_BUDGETS)
+            image = self.mm_last_frame_b64
+            over_budget = image is not None and len(image) > budgets.preview_max_bytes
+            if over_budget:
+                image = None
             return {
                 "camera_health": health,
                 "stale": stale,
@@ -761,6 +780,9 @@ class IntegrationMixin:
                 "detector_backend": getattr(self, "detector_backend", "deterministic"),
                 "faces_backend": ("opencv:sface" if getattr(self, "_faces_real", False) else "deterministic"),
                 "objects": snap.get("objects", []),
-                "objects_backend": ("torchvision:resnet18" if getattr(self, "_objects_real", False) else "deterministic"),
-                "image_data_url": self.mm_last_frame_b64,
+                "objects_backend": (
+                    "torchvision:resnet18" if getattr(self, "_objects_real", False) else "deterministic"
+                ),
+                "image_data_url": image,
+                "preview_omitted_over_budget": over_budget,
             }

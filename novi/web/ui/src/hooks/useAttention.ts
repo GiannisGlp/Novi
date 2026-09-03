@@ -6,7 +6,10 @@ import { usePoll } from './usePoll'
 export const ATTENTION_POLL_MS = 1100
 
 /** 1.1s poll of /api/attention; keeps the last snapshot on failure. */
-export function useAttention(reportConnection: (ok: boolean) => void): {
+export function useAttention(
+  reportConnection: (ok: boolean) => void,
+  opts?: { enabled?: boolean },
+): {
   snapshot: AttentionSnapshot | null
   refresh: () => Promise<void>
 } {
@@ -24,6 +27,6 @@ export function useAttention(reportConnection: (ok: boolean) => void): {
     }
   }, [])
 
-  usePoll(refresh, ATTENTION_POLL_MS)
+  usePoll(refresh, ATTENTION_POLL_MS, opts?.enabled ?? true)
   return { snapshot, refresh }
 }
