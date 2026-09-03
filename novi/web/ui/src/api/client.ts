@@ -41,6 +41,13 @@ function postJson(body: object): RequestInit {
 }
 
 /**
+ * Hard cap on the buffered SSE stream: a broken endpoint must not be able to
+ * grow the tab's memory without bound by streaming tokens forever. 512KB is
+ * ~100x a normal reply.
+ */
+export const MAX_STREAM_BYTES = 512 * 1024
+
+/**
  * Streaming chat: POST /api/chat/stream yields SSE `data:` frames separated by
  * a blank line. Frames are either {token}, {done, user, novi}, {error}, or
  * {deduplicated}. Ported from the legacy console's fetch-stream loop.
@@ -59,45 +66,56 @@ export async function streamChat(
   const reader = resp.body.getReader()
   const dec = new TextDecoder()
   let buf = ''
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buf += dec.decode(value, { stream: true })
-    let idx: number
-    while ((idx = buf.indexOf('\n\n')) !== -1) {
-      const frame = buf.slice(0, idx)
-      buf = buf.slice(idx + 2)
-      for (const line of frame.split('\n')) {
-        if (!line.startsWith('data:')) continue
-        const jsonStr = line.slice(5).trim()
-        if (!jsonStr) continue
-        try {
-          const evt = JSON.parse(jsonStr)
-          if (evt.deduplicated) {
-            onEvent({
-              kind: 'deduplicated',
-              after: evt.after,
-              noviSeq: evt.novi?.seq,
-              userSeq: evt.user?.seq,
-            })
-          } else if (evt.token != null) {
-            onEvent({ kind: 'token', token: String(evt.token) })
-          } else if (evt.done) {
-            onEvent({
-              kind: 'done',
-              after: evt.after,
-              text: evt.novi?.text,
-              trace: evt.novi?.trace,
-              userSeq: evt.user?.seq,
-              noviSeq: evt.novi?.seq,
-            })
-          } else if (evt.error) {
-            onEvent({ kind: 'error', error: String(evt.error) })
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += dec.decode(value, { stream: true })
+      if (buf.length > MAX_STREAM_BYTES) throw new Error('stream too large')
+      let idx: number
+      while ((idx = buf.indexOf('\n\n')) !== -1) {
+        const frame = buf.slice(0, idx)
+        buf = buf.slice(idx + 2)
+        for (const line of frame.split('\n')) {
+          if (!line.startsWith('data:')) continue
+          const jsonStr = line.slice(5).trim()
+          if (!jsonStr) continue
+          try {
+            const evt = JSON.parse(jsonStr)
+            if (evt.deduplicated) {
+              onEvent({
+                kind: 'deduplicated',
+                after: evt.after,
+                noviSeq: evt.novi?.seq,
+                userSeq: evt.user?.seq,
+              })
+            } else if (evt.token != null) {
+              onEvent({ kind: 'token', token: String(evt.token) })
+            } else if (evt.done) {
+              onEvent({
+                kind: 'done',
+                after: evt.after,
+                text: evt.novi?.text,
+                trace: evt.novi?.trace,
+                userSeq: evt.user?.seq,
+                noviSeq: evt.novi?.seq,
+              })
+            } else if (evt.error) {
+              onEvent({ kind: 'error', error: String(evt.error) })
+            }
+          } catch {
+            /* skip malformed frame */
           }
-        } catch {
-          /* skip malformed frame */
         }
       }
+    }
+  } finally {
+    // Release the connection on every exit path (done, abort, oversize):
+    // otherwise an abandoned stream pins its socket + reader buffers.
+    try {
+      await reader.cancel()
+    } catch {
+      /* already closed */
     }
   }
 }

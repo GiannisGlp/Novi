@@ -59,8 +59,13 @@ describe('useBrainState', () => {
     vi.stubGlobal('fetch', fetchMock)
     const { result } = renderHook(() => useBrainState(() => undefined))
     await act(async () => {})
-    act(() => vi.advanceTimersByTime(120000))
-    await act(async () => {})
+    // Advance one interval at a time, flushing between ticks the way real
+    // time does: back-to-back synchronous ticks correctly count as overlap
+    // (the in-flight guard skips them) and would under-count here.
+    for (let i = 0; i < HISTORY_CAP + 5; i++) {
+      act(() => vi.advanceTimersByTime(2000))
+      await act(async () => {})
+    }
     expect(fetchMock.mock.calls.length).toBeGreaterThan(HISTORY_CAP)
     expect(result.current.confHist.length).toBeLessThanOrEqual(HISTORY_CAP)
     expect(result.current.memHist.length).toBeLessThanOrEqual(HISTORY_CAP)

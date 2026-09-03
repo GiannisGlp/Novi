@@ -13,7 +13,6 @@ import { useContextData } from './hooks/useContextData'
 import { useEvents } from './hooks/useEvents'
 import { useIdentity } from './hooks/useIdentity'
 import { useModels } from './hooks/useModels'
-import { useNow } from './hooks/useNow'
 import { usePreview } from './hooks/usePreview'
 import { CameraPage } from './pages/CameraPage'
 import { CognitionPage } from './pages/CognitionPage'
@@ -57,7 +56,6 @@ export default function App() {
   const attention = useAttention(reportConnection, { enabled: onAttentionPage })
   const contextData = useContextData(reportConnection, { enabled: onContextPage })
   const identity = useIdentity(reportConnection)
-  const now = useNow(1000)
 
   const state = brain.state
 
@@ -85,11 +83,6 @@ export default function App() {
     void attention.refresh()
     void contextData.refresh()
   }
-
-  const secsAgo = brain.lastUpdatedAt
-    ? Math.max(0, Math.round((now - brain.lastUpdatedAt) / 1000))
-    : null
-  const updatedLabel = secsAgo === null ? '—' : secsAgo <= 1 ? 'just now' : `${secsAgo}s ago`
 
   const cur = identity.detail?.current
   const identityLabel = !cur
@@ -183,7 +176,7 @@ export default function App() {
       </div>
       <StatusBar
         connected={connected}
-        updatedAt={updatedLabel}
+        lastUpdatedAt={brain.lastUpdatedAt || null}
         runId={shortRunId(state?.run_id)}
         cycle={state?.cycle ?? null}
         memCount={state?.memory?.active ?? null}

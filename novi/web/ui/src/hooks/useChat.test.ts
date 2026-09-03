@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { jsonResponse, streamResponse } from '../test/helpers'
-import { useChat } from './useChat'
+import { MAX_RENDERED_SEQS, pruneRenderedSeqs, useChat } from './useChat'
 
 /** Routes by URL: /api/chat/stream returns the given frames, everything else JSON. */
 function routedFetch(frames: string, extra?: Record<string, unknown>) {
@@ -268,6 +268,57 @@ describe('useChat', () => {
       await result.current.step()
     })
     expect(fetchMock).toHaveBeenCalledWith('/api/step', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('pruneRenderedSeqs drops stale seqs but keeps the visible window', () => {
+    const seen = new Set([1, 2, 3, 4, 5])
+    const out = pruneRenderedSeqs(seen, new Set([4, 5]), 3, 500)
+    expect(out.has(4)).toBe(true)
+    expect(out.has(5)).toBe(true)
+    expect(out.has(1)).toBe(false)
+    expect(out.has(2)).toBe(false)
+    // input is not mutated
+    expect(seen.size).toBe(5)
+  })
+
+  it('pruneRenderedSeqs hard-caps at the newest entries', () => {
+    const seen = new Set(Array.from({ length: MAX_RENDERED_SEQS + 50 }, (_, i) => i + 1))
+    const out = pruneRenderedSeqs(seen, new Set(), 0)
+    expect(out.size).toBe(MAX_RENDERED_SEQS)
+    expect(out.has(1)).toBe(false)
+    expect(out.has(MAX_RENDERED_SEQS + 50)).toBe(true)
+  })
+
+  it('dedup still filters re-delivered entries after heavy traffic', async () => {
+    // 600 seqs flow through refresh: the visible window caps at MAX_TURNS and
+    // the dedup set must stay bounded without re-accepting old seqs.
+    const total = 600
+    const fetchMock = vi.fn((url: string) => {
+      const m = /after=(\d+)/.exec(url)
+      const after = m ? Number(m[1]) : 0
+      const next = Math.min(after + 100, total)
+      const entries = Array.from({ length: next - after }, (_, i) => ({
+        seq: after + i + 1,
+        role: 'novi',
+        text: `m${after + i + 1}`,
+      }))
+      return Promise.resolve(jsonResponse({ after: next, entries }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderHook(() => useChat(() => undefined, undefined, { enabled: false }))
+    await act(async () => {})
+    for (let i = 0; i < 6; i++) {
+      await act(async () => {
+        await result.current.refresh()
+      })
+    }
+    expect(result.current.turns.length).toBeLessThanOrEqual(90)
+    // re-polling the tail re-delivers nothing new: no duplicates appended
+    const before = result.current.turns.length
+    await act(async () => {
+      await result.current.refresh()
+    })
+    expect(result.current.turns.length).toBe(before)
   })
 
   it('listen reports nothing-heard when no audio arrives', async () => {

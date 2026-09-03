@@ -185,8 +185,48 @@ class NoviWebServer(IntegrationMixin):
         self._seqs[""] = value
 
     def _chat_thread(self, person: str = "") -> list[dict[str, Any]]:
-        """The conversation thread for this person ("" = the web UI pane)."""
-        return self._threads.setdefault((person or "").lower(), [])
+        """The conversation thread for this person ("" = the web UI pane).
+
+        Thread creation is LRU-bounded by ``budgets.max_chat_threads``: the
+        "" pane is pinned and never evicted, the least-recently-used person
+        thread (with its seq counter) is dropped. Without this, every
+        distinct ``person`` key ever seen (remote-app users, face labels,
+        query params) pins up to ``max_chat_turns`` turns with full traces
+        forever — a slow unbounded leak in a long-lived server.
+        """
+        key = (person or "").lower()
+        thread = self._threads.get(key)
+        if thread is None:
+            thread = []
+            self._threads[key] = thread
+        self._touch_thread(key)
+        return thread
+
+    def _touch_thread(self, key: str) -> None:
+        """Mark a thread recently used and enforce the thread bound."""
+        order = self._thread_order
+        if key in order:
+            order.remove(key)
+        order.append(key)
+        self._evict_threads()
+
+    def _evict_threads(self) -> None:
+        """Drop LRU person threads (never "") until within budget.
+
+        Only the turn *data* is dropped; the per-key seq counter in
+        ``_seqs`` is intentionally retained process-wide. Sequence numbers
+        must stay monotonic per key: reusing them after an eviction would
+        collide with the client's rendered-seq dedup set and silently drop
+        the new generation's turns. One int per person ever seen is
+        negligible next to up to ``max_chat_turns`` traced turns.
+        """
+        limit = max(1, int(self.budgets.max_chat_threads))
+        while len(self._threads) > limit:
+            victim = next((k for k in self._thread_order if k != ""), None)
+            if victim is None:
+                return
+            self._thread_order.remove(victim)
+            self._threads.pop(victim, None)
 
     def _bump_seq(self, person: str = "") -> int:
         key = (person or "").lower()
@@ -326,6 +366,9 @@ class NoviWebServer(IntegrationMixin):
         # chat conversation (user <-> Novi reasoning responses), per person
         self._threads: dict[str, list[dict[str, Any]]] = {"": []}
         self._seqs: dict[str, int] = {"": 0}
+        # LRU order of thread keys (most-recent last); "" is pinned at all
+        # times and never evicted. Bounds _threads under max_chat_threads.
+        self._thread_order: list[str] = [""]
         # Length at the last chat summarization; used to gate summarization so the
         # LLM summarizer doesn't run on every single append past the threshold.
         self._last_summarized_len: int | None = None
@@ -1385,6 +1428,7 @@ class NoviWebServer(IntegrationMixin):
         with self._lock:
             self._threads[key] = []
             self._seqs[key] = 0
+            self._touch_thread(key)
             self._last_summarized_len = None
             self._persist_chat()
         return {"cleared": True}
@@ -1983,6 +2027,14 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def do_GET(self) -> None:
+        # Long-lived SSE streams are bounded by max_sse_clients, not the
+        # request budget: pinning a request slot for the stream's whole
+        # lifetime (potentially hours) would starve snapshot polls and push
+        # clients into retry storms. The streaming chat POST keeps its slot
+        # — it is an expensive LLM op where bounded concurrency is wanted.
+        if self.path.split("?")[0] == "/api/events/stream":
+            self._do_GET()
+            return
         if not self._admit():
             return
         try:

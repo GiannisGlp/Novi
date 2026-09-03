@@ -11,6 +11,8 @@ Ownership summary:
   current preview      -> latest frame only (integration_api)
   browser event window -> bounded UI window (frontend MAX_EVENTS)
   event dedup          -> cursor + bounded rolling window (frontend)
+  chat threads         -> LRU-bound dict, "" pinned (server _threads/_seqs)
+  object embeddings    -> FIFO-bound cache (camera loop)
   background workers   -> lifecycle owner (server start/stop)
 """
 
@@ -44,6 +46,9 @@ class WebRuntimeBudgets:
     max_event_payload_bytes: int = 65536  # per-entry guard at the web boundary
     # Chat
     max_chat_turns: int = 200  # per-thread conversation window (legacy cap)
+    max_chat_threads: int = 16  # distinct per-person threads retained ("" pinned, LRU-evicted)
+    # Object-embedding cache (camera loop, GAP-3 naming)
+    max_object_embeddings: int = 64  # label -> vector entries retained (FIFO-evicted)
     # Preview (latest-frame semantics; never a history)
     preview_max_bytes: int = 200000  # max base64 payload served per frame
     preview_fps: int = 3  # ~300ms poll; budgets network/encode rate
@@ -66,6 +71,8 @@ class WebRuntimeBudgets:
             event_batch_size=_env_int("NOVI_WEB_EVENT_BATCH_SIZE", 200),
             max_event_payload_bytes=_env_int("NOVI_WEB_MAX_EVENT_PAYLOAD_BYTES", 65536),
             max_chat_turns=_env_int("NOVI_WEB_MAX_CHAT_TURNS", 200),
+            max_chat_threads=_env_int("NOVI_WEB_MAX_CHAT_THREADS", 16),
+            max_object_embeddings=_env_int("NOVI_WEB_MAX_OBJECT_EMBEDDINGS", 64),
             preview_max_bytes=_env_int("NOVI_WEB_PREVIEW_MAX_BYTES", 200000),
             preview_fps=_env_int("NOVI_WEB_PREVIEW_FPS", 3),
             max_sse_clients=_env_int("NOVI_WEB_MAX_SSE_CLIENTS", 16),

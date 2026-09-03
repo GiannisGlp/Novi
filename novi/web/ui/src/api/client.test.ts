@@ -134,4 +134,16 @@ describe('streamChat — SSE data frame parser', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 200 })))
     await expect(streamChat('hi', 0.9, () => undefined)).rejects.toThrow()
   })
+
+  it('aborts an oversized stream instead of buffering forever', async () => {
+    const enc = new TextEncoder()
+    const big = 'x'.repeat(600 * 1024) // no frame delimiter: the buffer must trip the cap
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(enc.encode(big))
+      },
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(stream, { status: 200 })))
+    await expect(streamChat('hi', 0.9, () => undefined)).rejects.toThrow('stream too large')
+  })
 })

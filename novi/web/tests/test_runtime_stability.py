@@ -321,6 +321,70 @@ class MultimodalTrailBoundTests(unittest.TestCase):
             s.stop()
 
 
+class EmbeddingBoundTests(unittest.TestCase):
+    """The camera loop's label -> embedding cache stays capped (FIFO)."""
+
+    def test_cache_overflow_evicts_oldest_first(self) -> None:
+        from novi.web.camera_loop import _enforce_embedding_bound
+
+        class _Stub:
+            budgets = WebRuntimeBudgets(max_object_embeddings=4)
+
+        s = _Stub()
+        s.mm_last_object_embeddings = {}
+        for i in range(10):
+            s.mm_last_object_embeddings[f"obj{i}"] = [float(i)]
+        _enforce_embedding_bound(s)
+        cache = s.mm_last_object_embeddings
+        self.assertEqual(len(cache), 4)
+        self.assertNotIn("obj0", cache)
+        self.assertIn("obj9", cache)
+        self.assertEqual(
+            sorted(cache), ["obj6", "obj7", "obj8", "obj9"],
+        )
+
+    def test_budget_default_and_env_override(self) -> None:
+        import os
+        from unittest import mock
+
+        self.assertEqual(WebRuntimeBudgets().max_object_embeddings, 64)
+        self.assertEqual(WebRuntimeBudgets().max_chat_threads, 16)
+        with mock.patch.dict(os.environ, {"NOVI_WEB_MAX_OBJECT_EMBEDDINGS": "8", "NOVI_WEB_MAX_CHAT_THREADS": "5"}):
+            b = WebRuntimeBudgets.from_env()
+        self.assertEqual(b.max_object_embeddings, 8)
+        self.assertEqual(b.max_chat_threads, 5)
+
+
+class SSEBudgetTests(unittest.TestCase):
+    """Long-lived SSE streams must not pin request-budget slots."""
+
+    def test_sse_bypasses_request_budget(self) -> None:
+        from unittest import mock
+
+        from novi.web.server import Handler
+
+        s = _server()
+        try:
+            # Exhaust the request budget completely.
+            held = 0
+            while s.request_semaphore.acquire(blocking=False):
+                held += 1
+            self.assertGreater(held, 0)
+            try:
+                handler = Handler.__new__(Handler)
+                handler.path = "/api/events/stream?after=0"
+                handler.server = mock.Mock(novi=s)
+                called: list[bool] = []
+                handler._do_GET = lambda: called.append(True)  # type: ignore[method-assign]
+                handler.do_GET()
+                self.assertEqual(called, [True], "SSE must serve without a request slot")
+            finally:
+                for _ in range(held):
+                    s.request_semaphore.release()
+        finally:
+            s.stop()
+
+
 class VoiceAndIdentityTests(unittest.TestCase):
     """Single voice + face-bound identity (no hardware needed)."""
 

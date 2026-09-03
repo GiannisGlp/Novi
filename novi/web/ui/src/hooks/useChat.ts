@@ -7,12 +7,31 @@ export const CHAT_POLL_MS = 1200
 export const STREAM_TIMEOUT_MS = 125000
 export const DUPLICATE_WINDOW_MS = 15000
 export const MAX_TURNS = 90
+/** Cap for the rendered-seq dedup set (see rememberSeq). */
+export const MAX_RENDERED_SEQS = 500
 
 export interface ChatTurn {
   seq?: number
   role: 'user' | 'novi'
   text: string
   trace?: ReasoningTrace
+}
+
+/**
+ * Bound a rendered-seq dedup set: drop entries at or below `cutoff` unless
+ * they back a visible turn, then hard-cap at the newest entries. Pure (copies
+ * on prune) so the steady-state fast path mutates nothing.
+ */
+export function pruneRenderedSeqs(
+  seen: Set<number>,
+  keepSeqs: Set<number>,
+  cutoff: number,
+  cap: number = MAX_RENDERED_SEQS,
+): Set<number> {
+  const pruned = new Set(seen)
+  for (const v of pruned) if (v <= cutoff && !keepSeqs.has(v)) pruned.delete(v)
+  if (pruned.size <= cap) return pruned
+  return new Set([...pruned].sort((a, b) => a - b).slice(-cap))
 }
 
 export interface StreamingState {
@@ -52,6 +71,7 @@ export function useChat(
 
   const chatAfterRef = useRef(0)
   const renderedSeqRef = useRef(new Set<number>())
+  const turnsRef = useRef<ChatTurn[]>([])
   const epochRef = useRef(0)
   const refreshingRef = useRef(false)
   const streamingRef = useRef(false)
@@ -64,13 +84,35 @@ export function useChat(
   modelNameRef.current = getModelName
 
   const pushTurns = useCallback((...newTurns: ChatTurn[]) => {
-    setTurns((prev) => [...prev, ...newTurns].slice(-MAX_TURNS))
+    setTurns((prev) => {
+      const next = [...prev, ...newTurns].slice(-MAX_TURNS)
+      turnsRef.current = next
+      return next
+    })
+  }, [])
+
+  /**
+   * Record a rendered seq in the dedup set, pruning stale entries past the
+   * cap. The set previously grew by one entry per message forever — a slow
+   * leak in a long-lived tab. Pruning keeps every seq backing the visible
+   * window plus the recent cursor tail; anything older can no longer arrive
+   * as "fresh" (the server thread window is shorter), so dropping it is safe.
+   */
+  const rememberSeq = useCallback((seq: number | null | undefined) => {
+    if (seq == null) return
+    const seen = renderedSeqRef.current
+    seen.add(seq)
+    if (seen.size <= MAX_RENDERED_SEQS) return
+    const keep = new Set<number>()
+    for (const t of turnsRef.current) if (t.seq != null) keep.add(t.seq)
+    renderedSeqRef.current = pruneRenderedSeqs(seen, keep, chatAfterRef.current - MAX_TURNS)
   }, [])
 
   const removeOptimistic = useCallback(() => {
     const opt = optimisticRef.current
     if (opt) {
       setTurns((prev) => prev.filter((t) => t !== opt))
+      turnsRef.current = turnsRef.current.filter((t) => t !== opt)
       optimisticRef.current = null
     }
   }, [])
@@ -85,14 +127,14 @@ export function useChat(
       chatAfterRef.current = r.after
       reportRef.current(true)
       const fresh = (r.entries ?? []).filter((it) => it.seq == null || !renderedSeqRef.current.has(it.seq))
-      for (const it of fresh) if (it.seq != null) renderedSeqRef.current.add(it.seq)
+      for (const it of fresh) rememberSeq(it.seq)
       if (fresh.length) pushTurns(...fresh)
     } catch {
       reportRef.current(false)
     } finally {
       refreshingRef.current = false
     }
-  }, [pushTurns])
+  }, [pushTurns, rememberSeq])
 
   const send = useCallback(
     async (text: string, confidence: number) => {
@@ -134,8 +176,8 @@ export function useChat(
                 streamState.doneEvt = { after: e.after }
                 streamState.gotToken = true
                 if (e.after != null) chatAfterRef.current = e.after
-                if (e.noviSeq != null) renderedSeqRef.current.add(e.noviSeq)
-                if (e.userSeq != null) renderedSeqRef.current.add(e.userSeq)
+                rememberSeq(e.noviSeq)
+                rememberSeq(e.userSeq)
               } else if (e.kind === 'token') {
                 streamState.gotToken = true
                 streamState.full += e.token
@@ -146,8 +188,8 @@ export function useChat(
                 setStreaming(null)
                 streamState.full = e.text ?? streamState.full
                 pushTurns({ seq: e.noviSeq, role: 'novi', text: streamState.full, trace: e.trace })
-                if (e.userSeq != null) renderedSeqRef.current.add(e.userSeq)
-                if (e.noviSeq != null) renderedSeqRef.current.add(e.noviSeq)
+                rememberSeq(e.userSeq)
+                rememberSeq(e.noviSeq)
                 if (e.after != null) chatAfterRef.current = e.after
               } else if (e.kind === 'error') {
                 setStreaming({ text: streamState.full, error: e.error })
@@ -207,7 +249,7 @@ export function useChat(
         void refresh()
       }
     },
-    [pushTurns, refresh, removeOptimistic],
+    [pushTurns, refresh, removeOptimistic, rememberSeq],
   )
 
   const clear = useCallback(async () => {
@@ -220,6 +262,7 @@ export function useChat(
     epochRef.current++
     chatAfterRef.current = 0
     renderedSeqRef.current.clear()
+    turnsRef.current = []
     setTurns([])
   }, [])
 

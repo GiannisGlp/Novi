@@ -158,6 +158,7 @@ def process_record(server, rec) -> None:
                 with server.mm_lock:
                     for label, vec in pairs:
                         server.mm_last_object_embeddings[label] = vec
+                    _enforce_embedding_bound(server)
             server._note_person_holding(obs.detections, face_bbox, vecs, rec.frame.frame_id)
             budget.add_sample("object_embed", _now_ms() - t0)
             budget.record_run("object_embed")
@@ -185,6 +186,22 @@ def process_record(server, rec) -> None:
         budget.mark_scene_change()
     server._forward_bus_events(events)
     budget.mark_processed()
+
+
+def _enforce_embedding_bound(server, default_limit: int = 64) -> None:
+    """FIFO-cap the label -> embedding cache used for GAP-3 naming.
+
+    Each entry pins a full embedding vector; without a cap, every distinct
+    label ever seen accumulates forever in a long-lived camera process. The
+    cap comes from the server budgets so desktop/Jetson differ without code
+    changes; servers without budgets (tests) use the default. Must run under
+    ``server.mm_lock``.
+    """
+    budgets = getattr(server, "budgets", None)
+    limit = max(1, int(getattr(budgets, "max_object_embeddings", default_limit)))
+    cache = server.mm_last_object_embeddings
+    while len(cache) > limit:
+        cache.pop(next(iter(cache)))
 
 
 def _embed_face(server, work) -> tuple[list[float] | None, tuple[int, int, int, int] | None]:

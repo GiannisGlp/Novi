@@ -26,26 +26,36 @@ export function CameraOverlay({
   const stageRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const [boxes, setBoxes] = useState<OverlayBox[]>([])
-  const [, setImgTick] = useState(0)
+  const [imgTick, setImgTick] = useState(0)
+  // The frame arrives up to ~3x/sec; keep it in a ref so the overlay math and
+  // the ResizeObserver below stay stable instead of being recreated per frame.
+  const frameRef = useRef(frame)
+  frameRef.current = frame
 
   const recompute = useCallback(() => {
     const stage = stageRef.current
     if (!stage) return
+    const f = frameRef.current
     const img = imgRef.current
     const cw = stage.clientWidth
     const ch = stage.clientHeight
     const iw = img ? img.naturalWidth : 0
     const ih = img ? img.naturalHeight : 0
     setBoxes(
-      computeOverlayBoxes(frame?.detections, frame?.face, frame?.tracks, iw, ih, cw, ch),
+      computeOverlayBoxes(f?.detections, f?.face, f?.tracks, iw, ih, cw, ch),
     )
-  }, [frame])
+  }, [])
 
+  // Recompute when the frame content or the loaded image changes.
   useLayoutEffect(() => {
     recompute()
+  }, [frame, imgTick, recompute])
+
+  // Observe stage resizes once for the component's lifetime.
+  useLayoutEffect(() => {
     const stage = stageRef.current
     if (!stage || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(recompute)
+    const ro = new ResizeObserver(() => recompute())
     ro.observe(stage)
     return () => ro.disconnect()
   }, [recompute])

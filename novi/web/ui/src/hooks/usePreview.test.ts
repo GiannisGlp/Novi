@@ -90,6 +90,38 @@ describe('usePreview', () => {
     expect(signals[0].aborted).toBe(true)
   })
 
+  it('skips state updates for byte-identical frames', async () => {
+    vi.useFakeTimers()
+    const body = { camera_health: 'healthy', image_data_url: 'data:image/jpeg;base64,abc', detections: [] }
+    vi.stubGlobal('fetch', jsonFetch(body))
+    const { result } = renderHook(() => usePreview(() => undefined))
+    await act(async () => {})
+    const first = result.current.frame
+    expect(first?.image_data_url).toBe('data:image/jpeg;base64,abc')
+    // several identical polls: no new state object, no re-render trigger
+    for (let i = 0; i < 4; i++) {
+      act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS))
+      await act(async () => {})
+    }
+    expect(result.current.frame).toBe(first)
+  })
+
+  it('applies frames whose content actually changed', async () => {
+    vi.useFakeTimers()
+    const fetchMock = jsonFetch({ camera_health: 'healthy', image_data_url: 'data:image/jpeg;base64,abc' })
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderHook(() => usePreview(() => undefined))
+    await act(async () => {})
+    const first = result.current.frame
+    fetchMock.mockImplementation(() =>
+      jsonResponse({ camera_health: 'healthy', image_data_url: 'data:image/jpeg;base64,xyz' }),
+    )
+    act(() => vi.advanceTimersByTime(PREVIEW_POLL_MS))
+    await act(async () => {})
+    expect(result.current.frame).not.toBe(first)
+    expect(result.current.frame?.image_data_url).toBe('data:image/jpeg;base64,xyz')
+  })
+
   it('keeps the last frame on a fetch error without reporting disconnection', async () => {
     const fetchMock = jsonFetch({ image_data_url: 'data:image/jpeg;base64,abc' })
     vi.stubGlobal('fetch', fetchMock)

@@ -6,6 +6,27 @@ import { usePoll } from './usePoll'
 export const PREVIEW_POLL_MS = 300
 const HIDE_AFTER_MISSES = 3
 
+/**
+ * Signature of every metadata field the camera/perception pages render.
+ * The image bytes are compared separately with `===` (a memcmp with no
+ * allocation) so identical-frame detection never copies the base64 payload.
+ */
+export function frameMetaSignature(d: PreviewFrame): string {
+  return JSON.stringify([
+    d.camera_health ?? null,
+    d.stale ?? null,
+    d.person ?? null,
+    d.tier ?? null,
+    d.place ?? null,
+    d.detector_backend ?? null,
+    d.faces_backend ?? null,
+    d.preview_omitted_over_budget ?? null,
+    d.detections ?? null,
+    d.face ?? null,
+    d.tracks ?? null,
+  ])
+}
+
 export interface PreviewData {
   frame: PreviewFrame | null
   showImage: boolean
@@ -32,6 +53,8 @@ export function usePreview(
   const missesRef = useRef(0)
   const requestIdRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
+  const lastImgRef = useRef<string | null | undefined>(undefined)
+  const lastMetaRef = useRef<string | null>(null)
   const reportRef = useRef(reportConnection)
   reportRef.current = reportConnection
 
@@ -47,7 +70,18 @@ export function usePreview(
       const d = await api.preview(ctrl.signal)
       if (ctrl.signal.aborted || id !== requestIdRef.current) return
       reportRef.current(true)
-      setFrame(d)
+      // Skip identical frames: with no camera (or a static scene) the server
+      // returns an equivalent payload every 300ms, and each setFrame allocates
+      // a new state object + re-renders the camera/perception pages (including
+      // re-decoding the <img>). The image is compared by value with no copy
+      // and metadata via a small signature, so a skipped update renders
+      // pixel-identically to applying it. Miss/show bookkeeping still runs on
+      // every poll so the hide-after-misses logic keeps working.
+      const metaSig = frameMetaSignature(d)
+      const same = d.image_data_url === lastImgRef.current && metaSig === lastMetaRef.current
+      lastImgRef.current = d.image_data_url
+      lastMetaRef.current = metaSig
+      if (!same) setFrame(d)
       if (d.image_data_url) {
         missesRef.current = 0
         setShowImage(true)
