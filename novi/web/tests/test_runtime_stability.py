@@ -246,6 +246,42 @@ class RequestBudgetTests(unittest.TestCase):
         finally:
             s.stop()
 
+    def test_socket_deadline_follows_budgets(self) -> None:
+        """Handler.setup() applies budgets.request_timeout_s to the socket."""
+        import io
+
+        from novi.web.server import Handler
+
+        class FakeSocket:
+            def __init__(self) -> None:
+                self.timeout: float | None = None
+
+            def settimeout(self, timeout: float | None) -> None:
+                self.timeout = timeout
+
+            def makefile(self, mode: str, bufsize: int) -> io.BytesIO:
+                return io.BytesIO()
+
+        def make_handler(timeout_s: float) -> FakeSocket:
+            from unittest import mock
+
+            server = _server(budgets=WebRuntimeBudgets(request_timeout_s=timeout_s))
+            try:
+                handler = Handler.__new__(Handler)
+                handler.server = mock.Mock(novi=server)  # type: ignore[attr-defined]
+                sock = FakeSocket()
+                handler.request = sock  # type: ignore[attr-defined]
+                handler.rbufsize = -1  # type: ignore[attr-defined]
+                handler.wbufsize = 0  # type: ignore[attr-defined]
+                handler.disable_nagle_algorithm = False  # type: ignore[attr-defined]
+                handler.setup()
+                return sock
+            finally:
+                server.stop()
+
+        self.assertEqual(make_handler(7.5).timeout, 7.5)
+        self.assertEqual(make_handler(30.0).timeout, 30.0)
+
     def test_custom_budgets_size_the_server(self) -> None:
         s = _server(budgets=WebRuntimeBudgets(max_events=32, max_concurrent_requests=4))
         try:

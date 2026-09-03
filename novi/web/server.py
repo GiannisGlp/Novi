@@ -1849,6 +1849,17 @@ class Handler(BaseHTTPRequestHandler):
     server: "NoviWebHTTPServer"  # type: ignore[misc]
     protocol_version = "HTTP/1.1"
 
+    def setup(self) -> None:
+        # Transport deadline (plan 02 §12.4): socket I/O on this connection
+        # fails instead of stalling forever behind a slow client. Sizing comes
+        # from the owning server's budgets so tests can construct the server
+        # without binding a socket.
+        try:
+            self.timeout: float | None = self.server.novi.budgets.request_timeout_s
+        except Exception:  # noqa: BLE001 - fall back to blocking sockets
+            self.timeout = None
+        super().setup()
+
     def log_message(self, fmt: str, *args: Any) -> None:  # quieter logs
         pass
 
