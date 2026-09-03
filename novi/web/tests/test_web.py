@@ -497,6 +497,39 @@ class TrainedReplyTransportPreferenceTest(unittest.TestCase):
         self.assertEqual(s.brain.config.trained_dialogue_adapter, "/fake/dialogue")
         self.assertEqual(s.brain.config.trained_emotional_adapter, "/fake/emotional")
 
+    def test_trace_records_transport_error_when_trained_reply_fails(self) -> None:
+        # A dead trained transport must leave its error in the trace so the
+        # operator can see WHY the reply fell back instead of guessing.
+        s = self._server(
+            trained_reply_enabled=True,
+            trained_dialogue_adapter="/fake/dialogue",
+            chat_llm=False,
+        )
+        s.start()
+        try:
+
+            def dead_transport(*, system, user, temperature=0.5, timeout=120):
+                return None
+
+            dead_transport.last_error = "adapter exploded"  # type: ignore[attr-defined]
+            s.brain._override_llm_chat = dead_transport
+            r = s.chat_send("what is love?")
+        finally:
+            s.stop()
+        trace = r["novi"]["trace"]
+        self.assertFalse(r["llm"])
+        self.assertIn("adapter exploded", trace.get("llm_error", ""))
+
+    def test_trace_has_no_transport_error_key_when_transport_healthy(self) -> None:
+        s = self._server(chat_llm=False)
+        s.start()
+        try:
+            r = s.chat_send("alice moved the door")
+        finally:
+            s.stop()
+        self.assertEqual(r["novi"]["trace"]["route_reason"], "no_llm_transport")
+        self.assertNotIn("llm_error", r["novi"]["trace"])
+
 
 if __name__ == "__main__":
     unittest.main()

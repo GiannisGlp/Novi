@@ -158,15 +158,21 @@ class OpenCVFaceEmbedder:
                     self._download(self._sface_path, _SFACE_URL)
                 import cv2
 
-                self._recognizer = cv2.FaceRecognizerSF.create(
-                    str(self._sface_path), ""
-                )
-                self._detector = cv2.FaceDetectorYN.create(
-                    str(self._yunet_path),
-                    "",
-                    (320, 240),
-                    score_threshold=self.det_score_threshold,
-                )
+                from novi.brain.third_party_quiet import quiet_opencv_model_load
+
+                # The DNN backend warns (benign, CPU target is a no-op under the
+                # new graph engine) on model creation — scope the suppression to
+                # creation so inference warnings stay visible.
+                with quiet_opencv_model_load():
+                    self._recognizer = cv2.FaceRecognizerSF.create(
+                        str(self._sface_path), ""
+                    )
+                    self._detector = cv2.FaceDetectorYN.create(
+                        str(self._yunet_path),
+                        "",
+                        (320, 240),
+                        score_threshold=self.det_score_threshold,
+                    )
                 return True
             except Exception:  # noqa: BLE001 - offline/no-models => honest degrade
                 self._failed = True

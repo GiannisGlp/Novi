@@ -17,6 +17,7 @@ into cognition.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import time
 from typing import Any, Callable
@@ -30,6 +31,8 @@ from .dialogue import (
     _is_greeting,
     _is_thanks,
 )
+
+_LOG = logging.getLogger(__name__)
 
 # Emotional statement detectors (subset of the dialogue.py emotional bank).
 _EMOTIONAL_DISTRESS = re.compile(
@@ -233,6 +236,9 @@ def _load_adapters(
     own name (``dialogue`` / ``emotional``); the transport selects with
     ``set_adapter``. A single-adapter config attaches just that one.
     """
+    from .third_party_quiet import quiet_third_party_startup_noise  # noqa: PLC0415
+
+    quiet_third_party_startup_noise()
     import torch  # noqa: PLC0415
     from peft import PeftModel  # noqa: PLC0415
     from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: PLC0415
@@ -311,6 +317,18 @@ class TrainedReplyTransport:
         except Exception as exc:  # noqa: BLE001 - transport must never raise into cognition
             self._load_error = str(exc)
             self._load_attempted_at = now
+            # LOUD failure: a broken adapter config otherwise degrades to the
+            # deterministic fallbacks with no trace of why. Attempts are
+            # already cooldown-throttled, so this cannot spam per message.
+            _LOG.warning(
+                "TrainedReplyTransport: model/adapter load failed "
+                "(base=%s dialogue=%s emotional=%s): %s — "
+                "replies fall back to deterministic until it loads",
+                self.base_model,
+                self.dialogue_adapter or "-",
+                self.emotional_adapter or "-",
+                exc,
+            )
             return False
 
     def __call__(
@@ -364,4 +382,9 @@ class TrainedReplyTransport:
             return _strip_think(raw) or None
         except Exception as exc:  # noqa: BLE001 - degrade to the deterministic fallback
             self._last_error = f"{adapter_name}: {exc}"
+            _LOG.warning(
+                "TrainedReplyTransport: generation via '%s' adapter failed: %s — falling back",
+                adapter_name,
+                exc,
+            )
             return None

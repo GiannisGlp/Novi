@@ -289,6 +289,43 @@ class TrainedReplyTransportTest(unittest.TestCase):
             "I was thinking\nabout your\nresponse to that",
         )
 
+    def test_load_failure_warns_with_adapter_paths(self) -> None:
+        # A broken adapter config must be LOUD: the brain falls back to the
+        # deterministic replies, and the operator needs to know why instead
+        # of wondering why Novi deflects every question.
+        def bad_loader(*, base_model, dialogue_adapter, emotional_adapter, device="cpu"):
+            raise RuntimeError("no such adapter dir")
+
+        t = TrainedReplyTransport(
+            dialogue_adapter="/fake/dialogue", loader=bad_loader, device="cpu",
+        )
+        with self.assertLogs("novi.brain.trained_reply", level="WARNING") as logs:
+            self.assertIsNone(t(system="ignored", user=_payload("hello")))
+        self.assertIn("/fake/dialogue", logs.output[0])
+        self.assertIn("no such adapter dir", logs.output[0])
+
+    def test_generation_failure_warns_with_adapter_name(self) -> None:
+        class ExplodingModel(FakeModel):
+            def generate(self, **kwargs):
+                raise RuntimeError("MPS out of memory")
+
+        def exploding_loader(*, base_model, dialogue_adapter, emotional_adapter, device="cpu"):
+            return ExplodingModel(), FakeTokenizer()
+
+        t = TrainedReplyTransport(
+            dialogue_adapter="/fake/dialogue", loader=exploding_loader, device="cpu",
+        )
+        with self.assertLogs("novi.brain.trained_reply", level="WARNING") as logs:
+            self.assertIsNone(t(system="ignored", user=_payload("hello")))
+        self.assertIn("dialogue", logs.output[0])
+        self.assertIn("MPS out of memory", logs.output[0])
+        self.assertIn("MPS out of memory", t.last_error)
+
+    def test_successful_reply_stays_quiet(self) -> None:
+        t = self._transport()
+        with self.assertNoLogs("novi.brain.trained_reply", level="WARNING"):
+            self.assertIsNotNone(t(system="ignored", user=_payload("hello")))
+
 
 class DefaultLlmChatResolutionTest(unittest.TestCase):
     def _brain(self, **config_kw) -> MacBrain:

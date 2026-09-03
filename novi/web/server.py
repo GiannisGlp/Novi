@@ -841,6 +841,7 @@ class NoviWebServer(IntegrationMixin):
                 trace["route_reason"] = designed or (
                     "llm_reply_rejected" if transport is not None else "no_llm_transport"
                 )
+                self._note_transport_error(trace, transport)
                 trace["confidence"] = heard_conf
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
             self._append_chat({"role": "user", "text": text}, person)
@@ -923,6 +924,7 @@ class NoviWebServer(IntegrationMixin):
                 trace["route_reason"] = designed or (
                     "llm_reply_rejected" if transport is not None else "no_llm_transport"
                 )
+                self._note_transport_error(trace, transport)
                 trace["confidence"] = result.get("confidence", 0.8)
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
             self._append_chat({"role": "user", "text": f"[heard] {text}"})
@@ -1016,6 +1018,30 @@ class NoviWebServer(IntegrationMixin):
             if trained is not None:
                 return trained
         return self._llm_chat if (self.chat_llm and self._llm_up()) else None
+
+    @staticmethod
+    def _transport_error(transport: Any) -> str:
+        """Last reported error from a reply transport, if it exposes one.
+
+        Transports that fail (e.g. a trained adapter that never loaded) record
+        the reason on themselves; surfacing it in the trace tells the operator
+        WHY the reply fell back instead of leaving a bare rejection label.
+        """
+        for attr in ("last_error", "load_error"):
+            try:
+                err = getattr(transport, attr, "")
+            except Exception:  # noqa: BLE001 - a broken transport must not break tracing
+                err = ""
+            if err:
+                return str(err)[:200]
+        return ""
+
+    def _note_transport_error(self, trace: dict[str, Any], transport: Any) -> None:
+        """Attach the transport's last error to a fallback trace (when any)."""
+        if transport is not None:
+            err = self._transport_error(transport)
+            if err:
+                trace["llm_error"] = err
 
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
         from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
@@ -1222,6 +1248,7 @@ class NoviWebServer(IntegrationMixin):
                 trace["route"] = "deterministic"
                 designed = (full_reply_obj.get("grounding") or {}).get("route") if full_reply_obj else None
                 trace["route_reason"] = designed or "llm_reply_rejected"
+                self._note_transport_error(trace, transport)
                 trace["confidence"] = heard_conf
                 novi_text = fb["text"]
                 for ch in [novi_text[i : i + 16] for i in range(0, len(novi_text), 16)]:
@@ -2456,6 +2483,11 @@ class NoviWebHTTPServer(ThreadingHTTPServer):
 
 
 def main() -> None:
+    # Silence verified-benign third-party startup noise (torchao import notes,
+    # transformers load bars) before any heavy component loads below.
+    from novi.brain.third_party_quiet import quiet_third_party_startup_noise
+
+    quiet_third_party_startup_noise()
     parser = argparse.ArgumentParser(description="Novi Mac Brain live web app")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)

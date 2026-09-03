@@ -1048,7 +1048,12 @@ _IDENTITY_RE = re.compile(
     r"when were you born\b|who (?:made|created|built) you\b|where do you (?:live|stay)\b|"
     r"are you a real person\b|what are you exactly\b|"
     r"tell me about (?:yourself|you)\b|describe yourself\b|"
-    r"introduce yourself\b|what (?:are|can) you do for me\b)\b",
+    r"introduce yourself\b|what (?:are|can) you do for me\b|"
+    # Questions ABOUT Novi by name ("who is Novi?") — without these the
+    # topic extractor picks "Novi" and asks the user for their angle on Novi.
+    r"who is novi\b|what is novi\b|tell me about novi\b|"
+    r"what do you think (?:about|of) novi\b|do you (?:like|love|know) novi\b|"
+    r"(?:is|does|can) novi\b)\b",
     re.IGNORECASE,
 )
 
@@ -1265,6 +1270,8 @@ def _extract_topic(text: str) -> str:
         if not w or w.isdigit():
             continue
         n = w.lower().replace("'", "")  # "what's" -> "whats", "it's" -> "its"
+        if n in ("novi", "novis"):
+            continue  # the self-name is never a topic — never "angle on Novi"
         if n in _STOPWORDS or n[:-1] in _STOPWORDS:  # "whats" -> "what", "hows" -> "how"
             continue
         cands.append(w)

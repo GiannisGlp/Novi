@@ -79,6 +79,9 @@ class MiniLMEmbedding:
             return self._model
         self._tried_load = True
         try:
+            from .third_party_quiet import quiet_third_party_startup_noise
+
+            quiet_third_party_startup_noise()
             from sentence_transformers import SentenceTransformer  # type: ignore[import-not-found]
 
             # Device: prefer MPS on Apple Silicon, fall back to CPU.

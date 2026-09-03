@@ -532,6 +532,21 @@ class ComposeReplyTests(unittest.TestCase):
             self.assertTrue(_is_identity_question(s), s)
         self.assertFalse(_is_identity_question("what's the time?"))
 
+    def test_about_novi_questions_are_identity(self):
+        # Questions ABOUT Novi ("who is Novi?") must take the identity route —
+        # never "Good question — what's your angle on Novi?".
+        for s in ["who is Novi?", "what is Novi?", "tell me about Novi",
+                  "what do you think about Novi?", "what do you think of Novi?",
+                  "do you like Novi?", "do you know Novi?", "is Novi listening?"]:
+            self.assertTrue(_is_identity_question(s), s)
+        self.assertFalse(_is_identity_question("what's the time?"))
+
+    def test_followup_never_angles_on_novi(self):
+        # The self-name is never a topic: even the last-resort follow-up must
+        # not ask the user for their angle "on Novi".
+        for s in ["who is Novi?", "Novi is cool", "tell me about Novi"]:
+            self.assertNotIn("novi", followup_question(s).lower(), s)
+
     def test_farewell_detection(self):
         # "bye / i'm leaving now / see you later" are farewells, not intros/topics.
         for s in ["goodbye", "bye", "i'm leaving now", "i'm going home", "see you later"]:
@@ -748,6 +763,16 @@ class ComposeReplyTests(unittest.TestCase):
         rel = {"tier": "friend", "expression": {"warmth": 0.8, "formality": "low", "playful": True}}
         prompt = b._dialogue_system_prompt(st, rel, capabilities=b.self_model().get("capabilities"))
         self.assertNotIn("degraded or unavailable", prompt)
+
+    def test_about_novi_answered_with_identity_not_followup(self):
+        # End to end with no usable LLM transport: "who is Novi?" answers as
+        # Novi instead of deflecting with "what's your angle on Novi?".
+        b = self._brain()
+        dead = lambda *, system, user, temperature=0.5, timeout=120: None  # noqa: E731
+        r = b.compose_reply("who is Novi?", llm_chat=dead)
+        self.assertIn("Novi", r["text"])
+        self.assertNotIn("angle on", r["text"])
+        self.assertEqual((r.get("grounding") or {}).get("route"), "identity_honesty")
 
 
 class ExperienceLearningTests(unittest.TestCase):
