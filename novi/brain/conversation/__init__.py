@@ -54,5 +54,10 @@ def __getattr__(name: str):
         from novi.brain.conversation import response_critic as _critic
 
         return getattr(_critic, name)
+    if name in ("observe_routine", "matched_routine", "routine_signature",
+                "save_thread", "load_thread", "ROUTINE_PREFIX"):
+        from novi.brain.conversation import thread_store as _threads
+
+        return getattr(_threads, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

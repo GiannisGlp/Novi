@@ -1,7 +1,7 @@
 {
   "schema": "conversation-baseline/v1",
-  "timestamp": "2026-09-04T19:47:24.876845+00:00",
-  "git_sha": "26594a89063eb6b5e9815188320ee4023334573f",
+  "timestamp": "2026-09-04T22:46:56.883803+00:00",
+  "git_sha": "b8cf4595476c109d75824bfaec9b4bef78f9641a",
   "runtime": "mac-brain",
   "model": "deterministic",
   "configuration": {
@@ -47,8 +47,10 @@
       "C-101",
       "C-102",
       "C-111",
+      "C-112",
       "C-120",
       "C-121",
+      "C-122",
       "C-130",
       "C-131",
       "C-132",
@@ -56,9 +58,9 @@
     ]
   },
   "totals": {
-    "scenarios": 45,
-    "passed": 44,
-    "pass_rate": 0.978
+    "scenarios": 47,
+    "passed": 46,
+    "pass_rate": 0.979
   },
   "by_dimension": {
     "Capability honesty": {
@@ -72,13 +74,13 @@
       "pass_rate": 1.0
     },
     "Context continuity": {
-      "scenarios": 1,
-      "passed": 1,
+      "scenarios": 2,
+      "passed": 2,
       "pass_rate": 1.0
     },
     "Correction handling": {
-      "scenarios": 4,
-      "passed": 4,
+      "scenarios": 5,
+      "passed": 5,
       "pass_rate": 1.0
     },
     "Emotional appropriateness": {

@@ -3,8 +3,8 @@
   "scenario": "C-111",
   "title": "Durable facts survive restart",
   "dimension": "Memory retrieval",
-  "git_sha": "26594a89063eb6b5e9815188320ee4023334573f",
-  "timestamp": "2026-09-04T19:47:24.789203+00:00",
+  "git_sha": "b8cf4595476c109d75824bfaec9b4bef78f9641a",
+  "timestamp": "2026-09-04T22:46:56.742579+00:00",
   "runtime": "mac-brain",
   "model": "deterministic",
   "configuration": {
@@ -50,8 +50,10 @@
       "C-101",
       "C-102",
       "C-111",
+      "C-112",
       "C-120",
       "C-121",
+      "C-122",
       "C-130",
       "C-131",
       "C-132",
@@ -66,7 +68,7 @@
       "response_text": "You prefer dark interiors.",
       "reply_source": "fallback",
       "conversation_state": {
-        "turn": 0
+        "turn": 1
       },
       "intent": {
         "intent": "MEMORY_QUERY",
@@ -102,7 +104,8 @@
                 "generic filler"
               ],
               "required_evidence": [
-                "You prefer dark interiors."
+                "You prefer dark interiors.",
+                "Remember that I prefer dark interiors."
               ],
               "uncertainty_statement": "",
               "emotional_style": "",
@@ -124,7 +127,7 @@
               "repair_instruction": "",
               "needs_repair": false
             },
-            "turn": 0
+            "turn": 1
           }
         },
         "grounding": {
@@ -159,7 +162,9 @@
               "recent_correction": "",
               "emotional_context": ""
             },
-            "relevant_history": [],
+            "relevant_history": [
+              "user: Remember that I prefer dark interiors. / novi: Noted \u2014 I'll remember that."
+            ],
             "relevant_memories": [
               {
                 "content": "You prefer dark interiors.",
@@ -168,6 +173,14 @@
                 "source": "preferences",
                 "confidence": 0.3,
                 "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "Remember that I prefer dark interiors.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
               }
             ],
             "world_context": [
@@ -215,7 +228,8 @@
           "generic filler"
         ],
         "required_evidence": [
-          "You prefer dark interiors."
+          "You prefer dark interiors.",
+          "Remember that I prefer dark interiors."
         ],
         "uncertainty_statement": "",
         "emotional_style": "",
@@ -239,14 +253,14 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 1.6,
+      "latency_ms": 1.9,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
     }
   ],
   "state_before": {
-    "turn": 0
+    "turn": 1
   },
   "intent": {
     "intent": "MEMORY_QUERY",
@@ -282,7 +296,8 @@
             "generic filler"
           ],
           "required_evidence": [
-            "You prefer dark interiors."
+            "You prefer dark interiors.",
+            "Remember that I prefer dark interiors."
           ],
           "uncertainty_statement": "",
           "emotional_style": "",
@@ -304,7 +319,7 @@
           "repair_instruction": "",
           "needs_repair": false
         },
-        "turn": 0
+        "turn": 1
       }
     },
     "grounding": {
@@ -339,7 +354,9 @@
           "recent_correction": "",
           "emotional_context": ""
         },
-        "relevant_history": [],
+        "relevant_history": [
+          "user: Remember that I prefer dark interiors. / novi: Noted \u2014 I'll remember that."
+        ],
         "relevant_memories": [
           {
             "content": "You prefer dark interiors.",
@@ -348,6 +365,14 @@
             "source": "preferences",
             "confidence": 0.3,
             "why_selected": "learned preference matching turn"
+          },
+          {
+            "content": "Remember that I prefer dark interiors.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
           }
         ],
         "world_context": [
@@ -394,7 +419,8 @@
       "generic filler"
     ],
     "required_evidence": [
-      "You prefer dark interiors."
+      "You prefer dark interiors.",
+      "Remember that I prefer dark interiors."
     ],
     "uncertainty_statement": "",
     "emotional_style": "",
@@ -417,7 +443,7 @@
     "repair_instruction": "",
     "needs_repair": false
   },
-  "latency_ms": 1.6,
+  "latency_ms": 1.9,
   "result": "PASS",
   "failure_labels": [],
   "human_rating": null

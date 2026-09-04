@@ -334,8 +334,8 @@ def get_scenario(scenario_id: str) -> ConversationScenario:
 # on the replay camera (PERCEPTION_IGNORED baselines for on-device runs);
 # C-072 documents the one-pass repair limit (honest REPETITIVE fail);
 # C-133 documents the utterance-fact memory gap (honest CONTRADICTION
-# fail). C-112/C-122 are excluded: thread-continuation and cross-session
-# routines need store-backed conversation state not yet built.
+# fail). C-112/C-122 cover thread-continuation and cross-session routines
+# on store-backed conversation state.
 
 _CANNED_THERAPY = ["as an ai", "i understand exactly how you feel",
                    "seek professional", "talk to a therapist",
@@ -534,6 +534,16 @@ _GN_SCENARIOS: list[ConversationScenario] = [
                       params={"substrings": ["dark"]},
                       label="MEMORY_MISSED")],
     ),
+    ConversationScenario(
+        scenario_id="C-112", title="Conversation continues after restart",
+        dimension="Context continuity",
+        setup_turns=["Tell me about the Model Y."],
+        restart_after_turn=0,
+        turns=["What about the range?"],
+        checks=[Check(id="continues-thread", kind="contains", turn=0,
+                      params={"substrings": ["model y", "tesla"]},
+                      label="OUT_OF_CONTEXT")],
+    ),
     # ——— M. Learning ———
     ConversationScenario(
         scenario_id="C-120", title="Explicit preference learning",
@@ -553,6 +563,27 @@ _GN_SCENARIOS: list[ConversationScenario] = [
         checks=[Check(id="correction-applied", kind="contains", turn=2,
                       params={"substrings": ["dark"]},
                       label="FAILURE_TO_LEARN")],
+    ),
+    ConversationScenario(
+        scenario_id="C-122", title="Routine learned across sessions",
+        dimension="Correction handling",
+        # The control behavior (joke request) repeats twice in ONE session
+        # only: same-session repetition is never sufficient support, and it
+        # is anchor-neutral so it cannot steer the scored routine probe
+        # into clarification.
+        setup_turns=["I prefer dark interiors.",
+                     "Recommend an interior for my car.",
+                     "Recommend an interior for my car.",
+                     "Tell me a joke about robots."],
+        restart_after_turn=2,
+        turns=["Recommend an interior for my car.",
+               "Tell me a joke about robots."],
+        checks=[Check(id="routine-applied", kind="contains", turn=0,
+                      params={"substrings": ["usual"]},
+                      label="FAILURE_TO_LEARN"),
+                Check(id="no-unsupported-routine", kind="not_contains", turn=1,
+                      params={"substrings": ["usual"]},
+                      label="HALLUCINATION")],
     ),
     # ——— N. Reasoning quality ———
     ConversationScenario(

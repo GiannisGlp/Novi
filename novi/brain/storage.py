@@ -190,6 +190,25 @@ CREATE TABLE IF NOT EXISTS promotions (
 );
 """
 
+# Plan 03 C-112/C-122: per-speaker conversation-thread snapshots plus
+# cross-session routine records. Multi-row (unlike the single-row state
+# blobs above): one row per speaker / signature, ordered by updated_at.
+SCHEMA_CONVERSATION_THREADS = """
+CREATE TABLE IF NOT EXISTS conversation_threads (
+    speaker     TEXT PRIMARY KEY,
+    value       TEXT,
+    updated_at  TEXT
+);
+"""
+
+SCHEMA_CONVERSATION_ROUTINES = """
+CREATE TABLE IF NOT EXISTS conversation_routines (
+    signature   TEXT PRIMARY KEY,
+    value       TEXT,
+    updated_at  TEXT
+);
+"""
+
 SCHEMA_VECTORS = """
 CREATE TABLE IF NOT EXISTS vectors (
     memory_id   TEXT PRIMARY KEY,
@@ -251,7 +270,7 @@ CREATE TABLE IF NOT EXISTS schema_version (
 # Current schema version. Increment minor on additive migrations (new columns,
 # new tables). Increment major on breaking changes (removed/retyped columns).
 SCHEMA_MAJOR = 1
-SCHEMA_MINOR = 0
+SCHEMA_MINOR = 1
 
 
 def _json(value: Any) -> str | None:
@@ -314,6 +333,8 @@ class DurableMemoryStore:
         self._conn.executescript(SCHEMA_REFLECTIONS)
         self._conn.executescript(SCHEMA_LESSONS)
         self._conn.executescript(SCHEMA_PROMOTIONS)
+        self._conn.executescript(SCHEMA_CONVERSATION_THREADS)
+        self._conn.executescript(SCHEMA_CONVERSATION_ROUTINES)
         self._conn.executescript(SCHEMA_VECTORS)
         self._conn.executescript(SCHEMA_BODY)
         self._conn.executescript(SCHEMA_OBJECTS)
@@ -365,6 +386,9 @@ class DurableMemoryStore:
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS chat (seq INTEGER PRIMARY KEY, role TEXT NOT NULL, text TEXT NOT NULL, created_at TEXT NOT NULL)"
         )
+        # Conversation-thread/routine tables for DBs created before they existed.
+        self._conn.execute("CREATE TABLE IF NOT EXISTS conversation_threads (speaker TEXT PRIMARY KEY, value TEXT, updated_at TEXT)")
+        self._conn.execute("CREATE TABLE IF NOT EXISTS conversation_routines (signature TEXT PRIMARY KEY, value TEXT, updated_at TEXT)")
         # Dedicated learning tables for DBs created before they existed.
         self._conn.execute("CREATE TABLE IF NOT EXISTS routines (key TEXT PRIMARY KEY, value TEXT)")
         self._conn.execute("CREATE TABLE IF NOT EXISTS corrections (key TEXT PRIMARY KEY, value TEXT)")
@@ -1198,6 +1222,57 @@ class DurableMemoryStore:
         if row is None:
             return {}
         return _unjson(row["value"], {})
+
+    # ---- conversation threads + routines (plan 03 C-112/C-122) ----
+    # Per-speaker keys arrive from chat input, so every statement here is
+    # parameterized — never interpolated — against injection.
+    def save_conversation_thread(self, speaker: str, data: dict[str, Any]) -> None:
+        from datetime import datetime, timezone
+
+        self._conn.execute(
+            "INSERT OR REPLACE INTO conversation_threads (speaker, value, updated_at) VALUES (?, ?, ?)",
+            (speaker, _json(data), datetime.now(timezone.utc).isoformat()),
+        )
+        self._conn.commit()
+
+    def load_conversation_thread(self, speaker: str) -> dict[str, Any]:
+        row = self._conn.execute(
+            "SELECT value FROM conversation_threads WHERE speaker = ?",
+            (speaker,),
+        ).fetchone()
+        if row is None:
+            return {}
+        result = _unjson(row["value"], {})
+        return result if isinstance(result, dict) else {}
+
+    def trim_conversation_threads(self, keep: int) -> None:
+        self._conn.execute(
+            """DELETE FROM conversation_threads WHERE speaker NOT IN (
+                   SELECT speaker FROM conversation_threads
+                   ORDER BY updated_at DESC, speaker ASC LIMIT ?
+               )""",
+            (max(int(keep), 1),),
+        )
+        self._conn.commit()
+
+    def save_conversation_routine(self, signature: str, data: dict[str, Any]) -> None:
+        from datetime import datetime, timezone
+
+        self._conn.execute(
+            "INSERT OR REPLACE INTO conversation_routines (signature, value, updated_at) VALUES (?, ?, ?)",
+            (signature, _json(data), datetime.now(timezone.utc).isoformat()),
+        )
+        self._conn.commit()
+
+    def load_conversation_routine(self, signature: str) -> dict[str, Any]:
+        row = self._conn.execute(
+            "SELECT value FROM conversation_routines WHERE signature = ?",
+            (signature,),
+        ).fetchone()
+        if row is None:
+            return {}
+        result = _unjson(row["value"], {})
+        return result if isinstance(result, dict) else {}
 
     # ---- body pose ----
     def save_body(self, snapshot: dict[str, Any]) -> None:

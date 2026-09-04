@@ -3,8 +3,8 @@
   "scenario": "C-101",
   "title": "30-turn mixed conversation",
   "dimension": "Long-context stability",
-  "git_sha": "26594a89063eb6b5e9815188320ee4023334573f",
-  "timestamp": "2026-09-04T19:47:24.704208+00:00",
+  "git_sha": "b8cf4595476c109d75824bfaec9b4bef78f9641a",
+  "timestamp": "2026-09-04T22:46:56.634095+00:00",
   "runtime": "mac-brain",
   "model": "deterministic",
   "configuration": {
@@ -50,8 +50,10 @@
       "C-101",
       "C-102",
       "C-111",
+      "C-112",
       "C-120",
       "C-121",
+      "C-122",
       "C-130",
       "C-131",
       "C-132",
@@ -410,7 +412,7 @@
         "needs_repair": true
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.4,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -595,7 +597,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -792,7 +794,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -986,7 +988,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -1198,7 +1200,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -1400,7 +1402,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -1574,7 +1576,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -1771,7 +1773,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -1959,7 +1961,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.5,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -2141,7 +2143,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -2329,7 +2331,7 @@
         "needs_repair": true
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -2537,7 +2539,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.7,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -2738,7 +2740,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.7,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -2934,7 +2936,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.7,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -3147,7 +3149,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.7,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -3349,7 +3351,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -3529,7 +3531,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -3727,7 +3729,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -3915,7 +3917,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -4097,7 +4099,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -4285,7 +4287,7 @@
         "needs_repair": true
       },
       "repair_count": 0,
-      "latency_ms": 0.3,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -4493,7 +4495,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -4694,7 +4696,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.5,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -4890,7 +4892,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -5103,7 +5105,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -5305,7 +5307,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -5485,7 +5487,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -5683,7 +5685,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -5871,7 +5873,7 @@
         "needs_repair": false
       },
       "repair_count": 0,
-      "latency_ms": 0.4,
+      "latency_ms": 0.6,
       "failure_labels": [],
       "human_rating": null,
       "result": "PASS"
@@ -6052,7 +6054,7 @@
     "repair_instruction": "",
     "needs_repair": false
   },
-  "latency_ms": 0.4,
+  "latency_ms": 0.6,
   "result": "PASS",
   "failure_labels": [],
   "human_rating": null

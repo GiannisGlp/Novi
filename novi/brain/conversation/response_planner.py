@@ -236,36 +236,49 @@ def _select_memory(packet: ContextPacket) -> tuple[str, str]:
     Durable preferences outrank raw recent claims about the same topic
     (a learned preference supersedes the utterances that taught it);
     two distinct live claims signal a conflict the reply must name
-    (C-133) instead of silently picking one.
+    (C-133) instead of silently picking one. A supported cross-session
+    routine (C-122) annotates a confident preference/claim answer as
+    the user's usual — it never voices uncertainty admissions or
+    conflicts, and unsupported patterns never reach this point.
     """
+    from novi.brain.conversation.thread_store import ROUTINE_PREFIX
+
     prefs: list[str] = []
     claims: list[str] = []
     others: list[str] = []
+    routine_seen = False
     for mem in packet.relevant_memories:
         if not isinstance(mem, dict):
             continue
         content = str(mem.get("content", "")).strip()
         if not content:
             continue
-        if mem.get("fact_class") == "PREFERENCE":
+        if mem.get("memory_type") == "routine":
+            routine_seen = True
+        elif mem.get("fact_class") == "PREFERENCE":
             prefs.append(content)
         elif mem.get("memory_type") == "recent_claim":
             claims.append(content)
         else:
             others.append(content)
     if prefs:
-        return prefs[0].rstrip(".") + ".", "preference"
-    unique_claims = list(dict.fromkeys(claims))
-    if len(unique_claims) >= 2:
-        latest = unique_claims[-1].rstrip(".")
-        quoted = " and ".join(f"'{c.rstrip('.')}'" for c in unique_claims)
-        return (f"You mentioned both {quoted} — going by the latest, "
-                f"'{latest}'.", "conflict")
-    if unique_claims:
-        return unique_claims[0].rstrip(".") + ".", "claim"
-    if others:
-        return others[0].rstrip(".") + ".", "memory"
-    return "", ""
+        answer, kind = prefs[0].rstrip(".") + ".", "preference"
+    else:
+        unique_claims = list(dict.fromkeys(claims))
+        if len(unique_claims) >= 2:
+            latest = unique_claims[-1].rstrip(".")
+            quoted = " and ".join(f"'{c.rstrip('.')}'" for c in unique_claims)
+            return (f"You mentioned both {quoted} — going by the latest, "
+                    f"'{latest}'.", "conflict")
+        if unique_claims:
+            answer, kind = unique_claims[0].rstrip(".") + ".", "claim"
+        elif others:
+            answer, kind = others[0].rstrip(".") + ".", "memory"
+        else:
+            return "", ""
+    if routine_seen and kind in ("preference", "claim"):
+        return f"{ROUTINE_PREFIX}{answer}", "routine"
+    return answer, kind
 
 
 def render_deterministic(plan: ResponsePlan, packet: ContextPacket) -> str:

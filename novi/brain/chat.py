@@ -1118,7 +1118,12 @@ class ChatMixin:
             key = (speaker or "").strip() or "user"
             state = convos.get(key)
             if state is None:
-                state = ConversationState()
+                # Plan 03 C-112: a cold cache restores the speaker's
+                # persisted thread so the conversation continues across
+                # restarts instead of starting over.
+                state = self._restored_conversation_state(key)
+                if state is None:
+                    state = ConversationState()
                 convos[key] = state
             transition = classify_topic_transition(text, state)
             if discourse_topic:
@@ -1149,18 +1154,102 @@ class ChatMixin:
                     state.anchor.active_entity = mentions[-1]
             packet = build_packet(text, state, intent, referents, self)
             packet.ambiguous_referents = list(referents.ambiguous)
+            # Plan 03 C-122: the current turn counts as routine evidence
+            # (observe-then-apply), so a pattern completing support now is
+            # voiced now.
+            routine = self._observe_conversation_routine(
+                key, intent=intent.intent, text=text)
             self._supplement_preference_memories(
                 packet, speaker=key, addressee=addressee, intent=intent)
             self._supplement_recent_claims(packet, state)
+            self._supplement_routine_memories(packet, routine)
             plan = plan_response(packet)
             rendered = render_deterministic(plan, packet)
-            return {"state": state, "intent": intent,
+            return {"state": state, "speaker": key, "intent": intent,
                     "referents": referents, "packet": packet,
                     "plan": plan, "rendered": rendered,
+                    "routine": routine,
                     "closed_slot": closed, "mentions": mentions,
                     "anchor_entity": anchor_entity}
         except Exception:
             return {}
+
+    def _restored_conversation_state(self, speaker: str) -> Any | None:
+        """Reload a speaker's persisted thread (C-112; None when absent).
+
+        Fail-closed: a missing store, missing row, or corrupt snapshot
+        yields None and the turn starts a fresh thread. Never raises.
+        """
+        try:
+            from .conversation.conversation_state import ConversationState
+            from .conversation.thread_store import load_thread
+
+            store = getattr(self, "memory", None)
+            if store is None:
+                return None
+            snapshot = load_thread(store, speaker)
+            if not snapshot:
+                return None
+            return ConversationState.from_dict(snapshot)
+        except Exception:
+            return None
+
+    def _observe_conversation_routine(self, speaker: str, *, intent: str,
+                                     text: str) -> dict[str, Any]:
+        """Fold this turn into the speaker's routine evidence (C-122).
+
+        Immediate durable write per turn, so routines survive kill -9
+        like the learning subsystems. Never raises.
+        """
+        try:
+            from .conversation.thread_store import observe_routine
+
+            store = getattr(self, "memory", None)
+            if store is None:
+                return {}
+            return observe_routine(
+                store, speaker=speaker,
+                session_id=str(getattr(self, "run_id", "") or ""),
+                intent=intent, text=text)
+        except Exception:
+            return {}
+
+    def _supplement_routine_memories(self, packet: Any,
+                                    routine: dict[str, Any]) -> None:
+        """Surface a supported routine as cited packet memory (C-122).
+
+        The routine record itself is the evidence — the renderer voices
+        it as an acknowledged pattern, never as an assumed fact about
+        the world. Unsupported patterns add nothing. Never raises.
+        """
+        try:
+            if not isinstance(routine, dict) or not routine.get("supported"):
+                return
+            sessions = len(routine.get("sessions") or [])
+            label = str(routine.get("label") or "").strip() or "this"
+            packet.relevant_memories.append({
+                "content": (f"Routine ({sessions} sessions): you usually "
+                            f"ask about {label}."),
+                "fact_class": "MEMORY",
+                "memory_type": "routine",
+                "source": "conversation_routines",
+                "confidence": 0.7,
+                "why_selected": "supported cross-session routine matching turn",
+            })
+        except Exception:
+            pass
+
+    def _save_conversation_thread(self, speaker: str, state: Any) -> None:
+        """Persist a speaker's thread snapshot (C-112; never raises)."""
+        try:
+            from .conversation.thread_store import save_thread
+
+            store = getattr(self, "memory", None)
+            if store is None or state is None:
+                return
+            save_thread(store, speaker, state.to_dict())
+        except Exception:
+            pass
 
     def _supplement_preference_memories(self, packet: Any, *, speaker: str,
                                         intent: Any,
@@ -1310,6 +1399,11 @@ class ChatMixin:
                               intent=conv["intent"].intent,
                               dialogue_act=conv["intent"].dialogue_act,
                               entities=entities, question_asked=question)
+            # Plan 03 C-112: the completed turn lands in the durable
+            # store immediately — a restart (or kill -9) keeps the
+            # thread, mirroring the learning subsystems' write pattern.
+            self._save_conversation_thread(
+                str(conv.get("speaker") or "user"), state)
         except Exception:
             pass
 
