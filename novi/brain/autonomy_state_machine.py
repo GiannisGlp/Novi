@@ -29,6 +29,14 @@ from enum import Enum
 from typing import Any, Callable
 from uuid import uuid4
 
+from .canonical_autonomy import (
+    CanonicalAutonomyState,
+    IllegalAutonomyTransition,
+    coerce_canonical,
+    is_canonical_transition_legal,
+    project_engine_state,
+)
+
 # ---------------------------------------------------------------------------
 # States (docs/02-autonomy/07)
 # ---------------------------------------------------------------------------
@@ -465,6 +473,64 @@ class AutonomyStateMachine:
         return record
 
     @property
+    def canonical_state(self) -> CanonicalAutonomyState:
+        """Current state in the ONE canonical enum (engine/supervisor agreement point)."""
+        return project_engine_state(self._state)
+
+    def request_canonical(self, destination: object, *, timestamp: str = "") -> TransitionRecord:
+        """Request a state from the ONE canonical enum.
+
+        Fail-closed: an unknown destination, an illegal canonical
+        transition, or a legal-but-unrealizable one returns a rejected
+        record and leaves the state unchanged. ``EMERGENCY_STOP`` routes
+        to :meth:`emergency_stop` (fail-safe override); requesting the
+        current canonical state is an accepted no-op.
+        """
+        try:
+            dest = coerce_canonical(destination)
+        except IllegalAutonomyTransition as exc:
+            return self._rejected_record("canonical_request", str(exc), timestamp)
+        current = self.canonical_state
+        if dest == current:
+            return TransitionRecord(
+                transition_id=str(uuid4()),
+                source=self._state.value, event="canonical_request",
+                guard="already_in_state", destination=self._state.value,
+                side_effects=(), timestamp=timestamp, accepted=True,
+                reason=f"already in {current.value}",
+            )
+        if dest is CanonicalAutonomyState.EMERGENCY_STOP:
+            return self.emergency_stop(timestamp=timestamp)
+        if not is_canonical_transition_legal(current, dest):
+            return self._rejected_record(
+                "canonical_request",
+                f"illegal canonical transition {current.value} -> {dest.value}",
+                timestamp,
+            )
+        for candidate in self.transitions_from(self._state):
+            if candidate.event in ("emergency", "shutdown_requested"):
+                continue  # never auto-route into safety-override side effects
+            if project_engine_state(candidate.destination) != dest:
+                continue
+            return self.transition(candidate.event, timestamp=timestamp)
+        return self._rejected_record(
+            "canonical_request",
+            f"no concrete transition realizes {current.value} -> {dest.value}",
+            timestamp,
+        )
+
+    def _rejected_record(self, event: str, reason: str, timestamp: str) -> TransitionRecord:
+        """Fail-closed rejection: state unchanged, explicit reason recorded."""
+        record = TransitionRecord(
+            transition_id=str(uuid4()),
+            source=self._state.value, event=event,
+            guard="canonical_guard", destination=self._state.value,
+            side_effects=(), timestamp=timestamp, accepted=False, reason=reason,
+        )
+        self._transitions.append(record)
+        return record
+
+    @property
     def transition_history(self) -> tuple[TransitionRecord, ...]:
         return tuple(self._transitions)
 
@@ -537,10 +603,9 @@ class AutonomyStateMachine:
         }
 
     def snapshot(self) -> dict[str, Any]:
-        from .canonical_autonomy import project_engine_state
         return {
             "state": self._state.value,
-            "canonical_state": project_engine_state(self._state),
+            "canonical_state": self.canonical_state,
             "is_operational": self.is_operational,
             "is_emergency": self.is_emergency,
             "is_degraded": self.is_degraded,

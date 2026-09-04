@@ -70,6 +70,7 @@ from .safety_policy import (
     default_engine_safety_invariants,
 )
 from .salience import EventSaliencePolicy, SurgeSalienceEvaluator
+from .security import classify_input as _classify_trust_tier
 from .self_model import build_self_model
 from .situation_model import SituationModel
 from .skill_contract import SUCCESS as SKILL_SUCCESS
@@ -171,6 +172,56 @@ class MacBrainConfig:
     # power budgets. 1 = every cycle (default, unchanged). The loop still steps
     # every cycle; only the perception backend is throttled.
     perception_every_n_cycles: int = 1
+
+
+def _trace_option_scores(reasoning: Any, deliberation: Any) -> dict[str, dict[str, Any]]:
+    """JSON-safe option scores for the reasoning trace.
+
+    Reads typed OptionScore objects first (a directly-injected deliberative
+    provider, the router's deterministic provider, or its LLM provider), then
+    falls back to the deliberation's persisted JSON scores. Returns {} when no
+    scores exist so the trace shape stays stable.
+    """
+    objs = (
+        getattr(reasoning, "last_option_scores", None)
+        or getattr(getattr(reasoning, "deterministic", None), "last_option_scores", {})
+        or getattr(getattr(reasoning, "llm", None), "last_option_scores", {})
+        or {}
+    )
+    if objs:
+        out: dict[str, dict[str, Any]] = {}
+        for action, s in objs.items():
+            try:
+                out[str(action)] = {
+                    "action": str(action),
+                    "expected_success": round(float(s.expected_success), 4),
+                    "cost": round(float(s.cost), 4),
+                    "risk": round(float(s.risk), 4),
+                    "total": round(float(s.total()), 4),
+                }
+            except (AttributeError, TypeError, ValueError):
+                continue
+        if out:
+            return out
+    if isinstance(deliberation, dict):
+        raw = deliberation.get("scores") or {}
+        if isinstance(raw, dict):
+            out = {}
+            for action, v in raw.items():
+                if not isinstance(v, dict):
+                    continue
+                try:
+                    out[str(action)] = {
+                        "action": str(action),
+                        "expected_success": round(float(v.get("expected_success", 0.0)), 4),
+                        "cost": round(float(v.get("cost", 0.0)), 4),
+                        "risk": round(float(v.get("risk", 0.0)), 4),
+                        "total": round(float(v.get("total", 0.0)), 4),
+                    }
+                except (TypeError, ValueError):
+                    continue
+            return out
+    return {}
 
 
 class MacBrain(ChatMixin):
@@ -1223,6 +1274,8 @@ class MacBrain(ChatMixin):
                     },
                 )
                 self._promote_routine_to_knowledge(routine)
+            # Learning changed mid-cycle: checkpoint immediately (WAL-backed).
+            self.persist_learning()
 
         # Multimodal fusion: combine vision detections + pending speech into fused events.
         vision_obs = [
@@ -1250,11 +1303,18 @@ class MacBrain(ChatMixin):
             plan_ctx = self._plans[self.goals.active.goal.goal_id].snapshot()
         situation = self._situation_dict(cognitive)
         if plan_ctx is not None:
+            # Promoted routines are visible to planning: the active plan's
+            # context carries the learned patterns alongside the plan.
+            plan_ctx["learned_routines"] = [list(routine.pattern) for routine in self.routines.routines()]
             situation["plan"] = plan_ctx
         situation["narrative"] = self._episodic_narrative()
         # Phase 4c: learned routines shape action selection — persisted
         # routines survive restart and feed the deliberator's evidence.
         situation["routines"] = [list(routine.pattern) for routine in self.routines.routines()]
+        # Corrections bias the reasoning situation so a corrected behavior is
+        # not repeated: the deliberator demotes the corrected-away action and
+        # prefers the corrected one (see correction_action_bias).
+        situation["corrections"] = self.corrections.snapshot()
         last_reflection = self.reflection.last()
         if last_reflection is not None:
             situation["reflection"] = last_reflection.snapshot()
@@ -1335,21 +1395,10 @@ class MacBrain(ChatMixin):
             # Phase 3b: explicit alternative evaluation persisted with the
             # decision so reasoning traces can cite scored comparisons. The
             # default router delegates to its deterministic provider, so read
-            # the scores through it.
-            "option_scores": {
-                action: {
-                    "action": action,
-                    "expected_success": round(s.expected_success, 4),
-                    "cost": round(s.cost, 4),
-                    "risk": round(s.risk, 4),
-                    "total": round(s.total(), 4),
-                }
-                for action, s in (
-                    getattr(self.reasoning, "last_option_scores", None)
-                    or getattr(getattr(self.reasoning, "deterministic", None), "last_option_scores", {})
-                    or {}
-                ).items()
-            },
+            # the scores through it; the LLM deliberative path persists its
+            # own scores on last_deliberation (read through last_option_scores
+            # first, then the deliberation's JSON scores).
+            "option_scores": _trace_option_scores(self.reasoning, deliberation),
         }
 
         novel_spawned = self._spawn_curiosity_goals(evidence.detections)
@@ -1778,6 +1827,8 @@ class MacBrain(ChatMixin):
             note=self._reflection_note(action, effective),
         )
         self._emit("reasoning.reflection", {"cycle": self._cycle, **reflection.snapshot()})
+        # Reflection is learning state: checkpoint it immediately.
+        self.persist_learning()
 
         # Closed-loop ACT + VERIFY: first-class verification of the action outcome.
         # A denied action (not authorized) is recorded as DENIED, not FAILURE, so
@@ -1876,6 +1927,10 @@ class MacBrain(ChatMixin):
                 },
             )
         initiative = self._maybe_initiate(person, has_active_goal=self.goals.has_active)
+        if initiative is not None:
+            # Promoted routines are visible to initiative: proposals carry the
+            # learned patterns so consumers can ground them in habit context.
+            initiative["routines"] = [list(routine.pattern) for routine in self.routines.routines()]
         # Plan 20: event-driven autonomous speech (GAP-A/B/C). If neglect-driven
         # initiative stayed silent, let a salient drained event seed a proactive
         # remark — gated by the same speaking-lease and social budget.
@@ -2009,29 +2064,64 @@ class MacBrain(ChatMixin):
         self.persist_learning()
 
     def _restore_learning(self) -> None:
-        """Phase 4c: reload learned state from the durable store at startup."""
+        """Phase 4c: reload learned state from the durable store at startup.
+
+        Dedicated tables are the source of truth; the legacy composite blob
+        fills gaps for databases written before the split. Any corrupt payload
+        fails closed (fresh learning), never crashing the brain.
+        """
         if not isinstance(self.memory, DurableMemoryStore):
             return
         try:
             snapshot = self.memory.load_learning()
         except Exception:
-            return  # corrupt blob: fail closed (fresh learning), never crash
-        if not isinstance(snapshot, dict) or not snapshot:
-            return  # empty or unparseable payload: fresh learning
-        routines = snapshot.get("routines")
-        if isinstance(routines, dict):
+            snapshot = {}  # corrupt blob: fail closed (fresh learning), never crash
+        if not isinstance(snapshot, dict):
+            snapshot = {}
+        try:
+            dedicated_routines = self.memory.load_routines()
+        except Exception:
+            dedicated_routines = {}
+        try:
+            dedicated_corrections = self.memory.load_corrections()
+        except Exception:
+            dedicated_corrections = []
+        try:
+            dedicated_reflections = self.memory.load_reflections()
+        except Exception:
+            dedicated_reflections = []
+        try:
+            dedicated_lessons = self.memory.load_lessons()
+        except Exception:
+            dedicated_lessons = {}
+        try:
+            dedicated_promotions = self.memory.load_promotions()
+        except Exception:
+            dedicated_promotions = {}
+        routines = dedicated_routines
+        if (not isinstance(routines, dict) or not routines) and isinstance(snapshot.get("routines"), dict):
+            routines = snapshot.get("routines")
+        if isinstance(routines, dict) and routines:
             self.routines.from_snapshot(routines)
-        corrections = snapshot.get("corrections")
-        if isinstance(corrections, list):
+        corrections = dedicated_corrections
+        if (not isinstance(corrections, list) or not corrections) and isinstance(snapshot.get("corrections"), list):
+            corrections = snapshot.get("corrections")
+        if isinstance(corrections, list) and corrections:
             self.corrections.restore(corrections)
-        reflections = snapshot.get("reflections")
+        reflections = dedicated_reflections
+        if (not isinstance(reflections, list) or not reflections) and isinstance(snapshot.get("reflections"), list):
+            reflections = snapshot.get("reflections")
         if isinstance(reflections, list) and reflections:
             restored_reflection = ReflectionEngine.from_snapshot(reflections)
             self.reflection = restored_reflection
-        lessons = snapshot.get("lessons")
+        lessons = dedicated_lessons
+        if (not isinstance(lessons, dict) or not lessons) and isinstance(snapshot.get("lessons"), dict):
+            lessons = snapshot.get("lessons")
         if isinstance(lessons, dict) and lessons:
             self.lessons.from_snapshot(lessons)
-        promotions = snapshot.get("promotions")
+        promotions = dedicated_promotions
+        if (not isinstance(promotions, dict) or not promotions) and isinstance(snapshot.get("promotions"), dict):
+            promotions = snapshot.get("promotions")
         if isinstance(promotions, dict) and promotions:
             self.learning.from_snapshot(promotions)
         counterfactuals = snapshot.get("counterfactuals")
@@ -2047,20 +2137,38 @@ class MacBrain(ChatMixin):
             )
 
     def persist_learning(self) -> None:
-        """Phase 4c: write the learning subsystems' snapshots to the store."""
+        """Phase 4c: write the learning subsystems' snapshots to the store.
+
+        Mirrors the _persist_knowledge immediate-WAL-write pattern: every
+        learning update lands in the durable store right away, so a crash or
+        hard kill cannot lose recently-learned routines, corrections,
+        reflections, lessons, or promotion history. The composite blob is
+        kept as a backward-compatible fallback; the dedicated tables are the
+        source of truth on reload.
+        """
         if not isinstance(self.memory, DurableMemoryStore):
             return
+        routines = self.routines.snapshot()
+        corrections = self.corrections.snapshot()
+        reflections = self.reflection.snapshot()
+        lessons = self.lessons.snapshot()
+        promotions = self.learning.snapshot()
         self.memory.save_learning(
             {
                 "cycle": self._cycle,
-                "routines": self.routines.snapshot(),
-                "corrections": self.corrections.snapshot(),
-                "reflections": self.reflection.snapshot(),
-                "lessons": self.lessons.snapshot(),
-                "promotions": self.learning.snapshot(),
+                "routines": routines,
+                "corrections": corrections,
+                "reflections": reflections,
+                "lessons": lessons,
+                "promotions": promotions,
                 "counterfactuals": self.counterfactuals.snapshot(),
             }
         )
+        self.memory.save_routines(routines)
+        self.memory.save_corrections(corrections)
+        self.memory.save_reflections(reflections)
+        self.memory.save_lessons(lessons)
+        self.memory.save_promotions(promotions)
 
     def set_goal(self, goal: Goal, *, cycle: int | None = None) -> GoalState:
         """Adopt a bounded goal for the autonomy layer to pursue."""
@@ -2307,6 +2415,11 @@ class MacBrain(ChatMixin):
         # around here." remarks never interrupt an active conversation.
         self._last_user_utterance_cycle = self._cycle
         entity_refs = self._entities_in_text(transcription.text)
+        # Brain security threat model: STT transcripts are untrusted
+        # user-controlled input. The tier is recorded, never enforced here.
+        trust_tier = _classify_trust_tier(
+            transcription.text, {"source": "audio.stt", "provider": transcription.provider}
+        )
         # Only a speech self-introduction ("i am Maya", "my name is Maya") binds
         # the speaker's name — mentioning a third party does not invent an
         # identity (gap-audit Phase A2).
@@ -2346,6 +2459,7 @@ class MacBrain(ChatMixin):
                     "model_id": transcription.model_id,
                     "audio_path": transcription.audio_path,
                     "memory_class": mem_class,
+                    "trust_tier": trust_tier,
                 },
                 entity_refs=entity_refs,
                 temporal_context=self._temporal_context(),
@@ -2364,6 +2478,14 @@ class MacBrain(ChatMixin):
         if admission is not None and admission.accepted and admission.memory_id:
             self.governance.govern(
                 admission.memory_id, privacy_class=classification.privacy_class, purpose=self.governance.default_purpose
+            )
+            self._emit(
+                "security.trust_classified",
+                {
+                    "memory_id": admission.memory_id,
+                    "trust_tier": trust_tier,
+                    "source": "audio.stt",
+                },
             )
 
         speech = SensorObservation(
@@ -3732,7 +3854,23 @@ class MacBrain(ChatMixin):
                 {"entity": e.entity, "state": e.state, "location": e.location, "confidence": e.confidence}
                 for e in sit.entities
             ],
+            # Non-isolated dialogue reasoning: the next turn's decision input
+            # carries the discourse topic plus bounded prior-turn conclusions.
+            "dialogue": self._dialogue_situation_context(),
         }
+
+    def _dialogue_situation_context(self) -> dict[str, Any]:
+        """Bounded discourse context for the reasoning situation (never breaks step)."""
+        try:
+            disc = getattr(self, "discourse", None)
+            if disc is None:
+                return {"topic": "", "prior_conclusions": []}
+            return {
+                "topic": str(disc.topic or ""),
+                "prior_conclusions": [str(c)[:160] for c in disc.prior_conclusions(limit=3)][:3],
+            }
+        except Exception:  # noqa: BLE001 - dialogue context is best-effort
+            return {"topic": "", "prior_conclusions": []}
 
     def recall_semantic(self, query: str, *, limit: int = 5) -> dict[str, Any]:
         """Semantic (vector) memory recall; falls back to empty when unavailable."""
@@ -3844,12 +3982,16 @@ class MacBrain(ChatMixin):
         options = list(deliberation.get("options", []) or [])
         chosen = str(getattr(intent, "action", decision.get("action", "")))
         rejected = [o for o in options if str(o) != chosen]
+        scores = deliberation.get("scores") or {}
         content = {
             "situation": situation if isinstance(situation, dict) else str(situation),
             "chosen_action": chosen,
             "rejected_alternatives": rejected,
             "reason": str(decision.get("rationale", "") or getattr(intent, "rationale", "")),
             "analysis": str(deliberation.get("analysis", "")),
+            # Explicit option scores persist with the decision record so the
+            # winning rationale cites scored comparisons.
+            "scores": dict(scores) if isinstance(scores, dict) else {},
         }
         try:
             admission = self.memory.admit(
@@ -4313,6 +4455,7 @@ class MacBrain(ChatMixin):
                     "status": "hypothetical",
                 },
             )
+            self.persist_learning()
             return False
         promoted = self.learning.promote(cand, self.knowledge, cycle=self._cycle)
         self._emit(
@@ -4326,6 +4469,7 @@ class MacBrain(ChatMixin):
                 "evidence_count": cand.evidence_count,
             },
         )
+        self.persist_learning()
         return promoted
 
     def correct_knowledge(
@@ -4361,6 +4505,7 @@ class MacBrain(ChatMixin):
                 "changed": changed,
             },
         )
+        self.persist_learning()
         return changed
 
     def observe_routine(self, events: set[str]) -> None:
@@ -4378,6 +4523,26 @@ class MacBrain(ChatMixin):
                 },
             )
             self._promote_routine_to_knowledge(routine)
+        self.persist_learning()
+
+    def promote_lesson(self, lesson: Any, *, regression_scenario: str) -> bool:
+        """Promote a verified lesson, emitting and persisting immediately.
+
+        Gives lesson learning the same load-on-start / persist-on-update /
+        emit treatment as the other learning subsystems.
+        """
+        promoted = bool(self.lessons.promote(lesson, regression_scenario=regression_scenario))
+        self._emit(
+            "learning.lesson_promoted",
+            {
+                "cycle": self._cycle,
+                "lesson_id": getattr(lesson, "lesson_id", ""),
+                "regression_scenario": regression_scenario,
+                "promoted": promoted,
+            },
+        )
+        self.persist_learning()
+        return promoted
 
     def _promote_routine_to_knowledge(self, routine: Any) -> None:
         """Promote a stable co-occurrence routine into an inferred relation.
@@ -4416,6 +4581,7 @@ class MacBrain(ChatMixin):
             confidence=confidence,
         )
         self._emit("learning.counterfactual", {"cycle": self._cycle, **result})
+        self.persist_learning()
         return result
 
     def learning_state(self) -> dict[str, Any]:
@@ -4472,6 +4638,7 @@ class MacBrain(ChatMixin):
             self.memory.save_identity(self.identity.snapshot())
             self.memory.save_knowledge(self.knowledge.snapshot())
             self.memory.save_plans([p.snapshot() for p in self._plans.values()])
+            self.persist_learning()
             self.memory.save_body(
                 {
                     "x_m": self.body.x_m,

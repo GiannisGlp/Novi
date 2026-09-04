@@ -891,6 +891,19 @@ class ChatMixin:
             "status": resolution.status,
         }
 
+    def _dialogue_prior_context(self, limit: int = 3) -> dict[str, Any]:
+        """Bounded prior-turn dialogue context for the next turn's input.
+
+        Returns {"topic", "prior_conclusions"} (each conclusion ≤160 chars,
+        at most ``limit``). Best-effort: discourse must never break chat.
+        """
+        try:
+            topic = str(self.discourse.topic or "")
+            conclusions = [str(c)[:160] for c in self.discourse.prior_conclusions(limit=limit)]
+        except Exception:  # noqa: BLE001 - grounding must never break chat
+            return {"topic": "", "prior_conclusions": []}
+        return {"topic": topic, "prior_conclusions": conclusions[: max(1, int(limit))]}
+
     def respond(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
                 llm_chat: Any = None, last_novi_text: str = "", recent_novi: list[str] | None = None,
                 learn: bool = True) -> dict[str, Any]:
@@ -928,6 +941,12 @@ class ChatMixin:
                 last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
                 topic_hint=discourse_hint,
             )
+            # Non-isolated dialogue reasoning: record this turn's outcome so
+            # the next turn's input carries prior-turn conclusions (bounded).
+            with contextlib.suppress(Exception):
+                _gist = str(reply_obj.get("text") or reply_obj.get("reason") or "")[:160].strip()
+                if _gist:
+                    self.discourse.record_conclusion(_gist, cycle=cycle)
             reply = reply_obj.get("text")
             # Plan 22 Phase 18.1: record the interaction outcome (input,
             # decision, act, response) — explicit corrections become learning
@@ -1155,8 +1174,13 @@ class ChatMixin:
             triple = " ".join(str(d.get(k)) for k in ("subject", "predicate", "object") if d.get(k))
             if triple and triple not in facts:
                 facts.append(triple)
+        # Non-isolated dialogue reasoning: the ongoing topic plus bounded
+        # prior-turn conclusions ground this turn instead of reasoning blank.
+        dialogue_ctx = self._dialogue_prior_context()
         if topic_hint:
             facts.append(f"(Continuing the conversation about: {topic_hint})")
+        for prior in dialogue_ctx["prior_conclusions"]:
+            facts.append(f"(Earlier we concluded: {prior})")
         pkg_summaries = [str((m.get("data") or {}).get("content") or "")[:400] for m in memory_items]
         pkg_summaries = [s for s in pkg_summaries if s]
         facts.extend(pkg_summaries[:3] if pkg_summaries else self._chat_memory_summaries())
@@ -1340,6 +1364,7 @@ class ChatMixin:
             "experience": experience,
             "world_context": world_context,
             "vocabulary_scope": self._vocabulary_scope_for(person or addressee_name),
+            "dialogue_context": dialogue_ctx,
         }
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")

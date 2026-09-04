@@ -212,7 +212,12 @@ class KnowledgePromotionPipeline:
         for entry in snapshot.get("promotions", []):
             if isinstance(entry, dict) and entry:
                 self._store_promotion(entry)
-        self._promoted_keys.update(str(k) for k in snapshot.get("promoted_keys", []))
+        # JSON round-trips turn the (subject, predicate, object) tuples into
+        # lists; restore them as tuples so the already-promoted dedup check in
+        # promote() keeps working after a restart (never re-promote history).
+        for k in snapshot.get("promoted_keys", []):
+            if isinstance(k, (list, tuple)) and len(k) == 3:
+                self._promoted_keys.add((str(k[0]), str(k[1]), str(k[2])))
         return self
 
 

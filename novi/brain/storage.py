@@ -150,6 +150,46 @@ CREATE TABLE IF NOT EXISTS learning (
 );
 """
 
+# Dedicated learning-subsystem tables (each mirrors the single-row blob
+# pattern of soul/identity/knowledge: one row under key='state', written
+# immediately on every learning update so learning survives kill -9).
+# Split out from the composite `learning` blob so routines, corrections,
+# reflections, lessons, and promotion history load/save independently.
+SCHEMA_ROUTINES = """
+CREATE TABLE IF NOT EXISTS routines (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_CORRECTIONS = """
+CREATE TABLE IF NOT EXISTS corrections (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_REFLECTIONS = """
+CREATE TABLE IF NOT EXISTS reflections (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_LESSONS = """
+CREATE TABLE IF NOT EXISTS lessons (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
+SCHEMA_PROMOTIONS = """
+CREATE TABLE IF NOT EXISTS promotions (
+    key         TEXT PRIMARY KEY,
+    value       TEXT
+);
+"""
+
 SCHEMA_VECTORS = """
 CREATE TABLE IF NOT EXISTS vectors (
     memory_id   TEXT PRIMARY KEY,
@@ -269,6 +309,11 @@ class DurableMemoryStore:
         self._conn.executescript(SCHEMA_TEMPORAL)
         self._conn.executescript(SCHEMA_FUSION)
         self._conn.executescript(SCHEMA_LEARNING)
+        self._conn.executescript(SCHEMA_ROUTINES)
+        self._conn.executescript(SCHEMA_CORRECTIONS)
+        self._conn.executescript(SCHEMA_REFLECTIONS)
+        self._conn.executescript(SCHEMA_LESSONS)
+        self._conn.executescript(SCHEMA_PROMOTIONS)
         self._conn.executescript(SCHEMA_VECTORS)
         self._conn.executescript(SCHEMA_BODY)
         self._conn.executescript(SCHEMA_OBJECTS)
@@ -320,6 +365,12 @@ class DurableMemoryStore:
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS chat (seq INTEGER PRIMARY KEY, role TEXT NOT NULL, text TEXT NOT NULL, created_at TEXT NOT NULL)"
         )
+        # Dedicated learning tables for DBs created before they existed.
+        self._conn.execute("CREATE TABLE IF NOT EXISTS routines (key TEXT PRIMARY KEY, value TEXT)")
+        self._conn.execute("CREATE TABLE IF NOT EXISTS corrections (key TEXT PRIMARY KEY, value TEXT)")
+        self._conn.execute("CREATE TABLE IF NOT EXISTS reflections (key TEXT PRIMARY KEY, value TEXT)")
+        self._conn.execute("CREATE TABLE IF NOT EXISTS lessons (key TEXT PRIMARY KEY, value TEXT)")
+        self._conn.execute("CREATE TABLE IF NOT EXISTS promotions (key TEXT PRIMARY KEY, value TEXT)")
         # Record current schema version after applying migrations.
         from datetime import datetime, timezone
         self._conn.execute(
@@ -1089,6 +1140,61 @@ class DurableMemoryStore:
 
     def load_learning(self) -> dict[str, Any]:
         row = self._conn.execute("SELECT value FROM learning WHERE key='state'").fetchone()
+        if row is None:
+            return {}
+        return _unjson(row["value"], {})
+
+    # ---- dedicated learning-subsystem tables ----
+    # Each pair mirrors the _persist_knowledge immediate-WAL-write pattern
+    # (single statement + commit, no batching), so every learning update is
+    # durable before the caller continues. The composite learning blob above
+    # is kept as a backward-compatible fallback for older databases.
+    def save_routines(self, data: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO routines (key, value) VALUES ('state', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_routines(self) -> dict[str, Any]:
+        row = self._conn.execute("SELECT value FROM routines WHERE key='state'").fetchone()
+        if row is None:
+            return {}
+        return _unjson(row["value"], {})
+
+    def save_corrections(self, rows: list[dict[str, Any]]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO corrections (key, value) VALUES ('state', ?)", (_json(rows),))
+        self._conn.commit()
+
+    def load_corrections(self) -> list[dict[str, Any]]:
+        row = self._conn.execute("SELECT value FROM corrections WHERE key='state'").fetchone()
+        if row is None:
+            return []
+        return _unjson(row["value"], [])
+
+    def save_reflections(self, rows: list[dict[str, Any]]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO reflections (key, value) VALUES ('state', ?)", (_json(rows),))
+        self._conn.commit()
+
+    def load_reflections(self) -> list[dict[str, Any]]:
+        row = self._conn.execute("SELECT value FROM reflections WHERE key='state'").fetchone()
+        if row is None:
+            return []
+        return _unjson(row["value"], [])
+
+    def save_lessons(self, data: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO lessons (key, value) VALUES ('state', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_lessons(self) -> dict[str, Any]:
+        row = self._conn.execute("SELECT value FROM lessons WHERE key='state'").fetchone()
+        if row is None:
+            return {}
+        return _unjson(row["value"], {})
+
+    def save_promotions(self, data: dict[str, Any]) -> None:
+        self._conn.execute("INSERT OR REPLACE INTO promotions (key, value) VALUES ('state', ?)", (_json(data),))
+        self._conn.commit()
+
+    def load_promotions(self) -> dict[str, Any]:
+        row = self._conn.execute("SELECT value FROM promotions WHERE key='state'").fetchone()
         if row is None:
             return {}
         return _unjson(row["value"], {})

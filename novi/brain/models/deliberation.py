@@ -26,6 +26,36 @@ DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "nemotron-3.5-lightning"
 DEFAULT_ALLOWED = frozenset({"inspect", "observe", "wait", "stop", "move_forward", "turn_left", "turn_right"})
 
+# Documented fixed decision weights for the deliberative path (shared by the
+# deterministic and LLM providers): maximize expected success, punish cost and
+# risk. Module constants so traces can cite them; changing them is a deliberate
+# auditable act, not a per-call tweak.
+SUCCESS_WEIGHT = 0.5
+COST_WEIGHT = 0.25
+RISK_WEIGHT = 0.25
+
+# Canonical per-action cost/risk budgets (0..1), shared with
+# DeliberativeReasoningProvider as its base tables (that provider additionally
+# applies user-correction bias on top; see correction_action_bias).
+BASE_ACTION_COST = {
+    "observe": 0.1,
+    "wait": 0.05,
+    "inspect": 0.15,
+    "move_forward": 0.35,
+    "turn_left": 0.25,
+    "turn_right": 0.25,
+}
+BASE_ACTION_RISK = {
+    "observe": 0.05,
+    "wait": 0.02,
+    "inspect": 0.1,
+    "move_forward": 0.3,
+    "turn_left": 0.2,
+    "turn_right": 0.2,
+}
+DEFAULT_ACTION_COST = 0.2
+DEFAULT_ACTION_RISK = 0.1
+
 
 @dataclass(frozen=True)
 class OptionScore:
@@ -48,7 +78,13 @@ class OptionScore:
     def _c(v: float) -> float:
         return max(0.0, min(1.0, float(v)))
 
-    def total(self, *, success_weight: float = 0.5, cost_weight: float = 0.25, risk_weight: float = 0.25) -> float:
+    def total(
+        self,
+        *,
+        success_weight: float = SUCCESS_WEIGHT,
+        cost_weight: float = COST_WEIGHT,
+        risk_weight: float = RISK_WEIGHT,
+    ) -> float:
         raw = (
             self._c(self.expected_success) * success_weight
             - self._c(self.cost) * cost_weight
@@ -64,7 +100,13 @@ class AlternativeEvaluator:
     returns ``(best_action, scores)`` with typed evidence for persistence.
     """
 
-    def __init__(self, *, success_weight: float = 0.5, cost_weight: float = 0.25, risk_weight: float = 0.25) -> None:
+    def __init__(
+        self,
+        *,
+        success_weight: float = SUCCESS_WEIGHT,
+        cost_weight: float = COST_WEIGHT,
+        risk_weight: float = RISK_WEIGHT,
+    ) -> None:
         self.success_weight = float(success_weight)
         self.cost_weight = float(cost_weight)
         self.risk_weight = float(risk_weight)
@@ -81,6 +123,49 @@ class AlternativeEvaluator:
             key=lambda a: (known[a].total(success_weight=self.success_weight, cost_weight=self.cost_weight, risk_weight=self.risk_weight), a),
         )
         return best, {a: known[a] for a in sorted(known)}
+
+
+def deterministic_option_scores(
+    success: dict[str, float],
+    confidence: float,
+    situation: dict[str, Any] | None,
+) -> dict[str, OptionScore]:
+    """Turn per-action success evidence into explicit success/cost/risk triples.
+
+    Base scorer shared by the deterministic and LLM deliberative paths (same
+    tables, same SUCCESS_WEIGHT/COST_WEIGHT/RISK_WEIGHT; the deterministic
+    provider layers user-correction bias on top):
+
+    - expected_success: accumulated evidence, gated by cognitive confidence
+      (an uncertain world caps every option);
+    - cost: declared per-action budget; repeating a just-FAILED action costs
+      more (self-correction), and looking around is cheap;
+    - risk: base exposure per action class, scaled up by uncertainty.
+    """
+    situation = situation or {}
+    reflection = situation.get("reflection")
+    c = max(0.0, min(1.0, float(confidence)))
+    # Phase 4c (behavior link): a LEARNED routine whose pattern overlaps the
+    # current situation raises the success evidence of the attention options.
+    salient = {str(e).lower() for e in (situation.get("salient_entities") or [])}
+    routine_boost = 0.0
+    for pattern in situation.get("routines") or []:
+        members = {str(m).lower() for m in (pattern or [])}
+        if members & salient:
+            routine_boost = max(routine_boost, 0.4)
+    scored: dict[str, OptionScore] = {}
+    for action, evidence in success.items():
+        expected_success = max(0.0, min(1.0, evidence * (0.6 + 0.4 * c)))
+        cost = BASE_ACTION_COST.get(action, DEFAULT_ACTION_COST)
+        risk = min(1.0, BASE_ACTION_RISK.get(action, DEFAULT_ACTION_RISK) + (1.0 - c) * 0.2)
+        if reflection and not reflection.get("effective", True) and str(reflection.get("action", "")) == action:
+            # Repeating a just-failed action is expensive.
+            cost = min(1.0, cost + 0.5)
+            expected_success = max(0.0, expected_success - 0.2)
+        if routine_boost and action in ("observe", "inspect"):
+            expected_success = min(1.0, expected_success + routine_boost)
+        scored[action] = OptionScore(action=action, expected_success=expected_success, cost=cost, risk=risk)
+    return scored
 
 
 def _deliberation_prompt(situation: dict[str, Any], recall: Any, allowed: frozenset[str]) -> str:
@@ -134,6 +219,13 @@ class DeliberativeLLMReasoningProvider:
     its own choice and either confirms it or revises it, up to ``max_rounds``
     total rounds. The loop is bounded and the final decision is re-validated
     against the allowlist.
+
+    Explicit scoring: the model's pick is evidence, not the verdict. Every
+    allowlisted candidate (options listed across rounds plus the final pick)
+    is scored deterministically on expected-success/cost/risk under
+    SUCCESS_WEIGHT/COST_WEIGHT/RISK_WEIGHT, the winner is the score argmax,
+    and the scores persist on ``last_deliberation`` (and ``last_option_scores``)
+    for the reasoning trace.
     """
 
     def __init__(
@@ -154,6 +246,10 @@ class DeliberativeLLMReasoningProvider:
         self.max_rounds = max(1, int(max_rounds))
         self.max_tokens = max(1, int(max_tokens))
         self.timeout = max(1.0, float(timeout))
+        self.evaluator = AlternativeEvaluator(
+            success_weight=SUCCESS_WEIGHT, cost_weight=COST_WEIGHT, risk_weight=RISK_WEIGHT
+        )
+        self.last_option_scores: dict[str, OptionScore] = {}
         self.last_deliberation: dict[str, Any] | None = None
 
     def decide(self, *, conclusion: str, confidence: float, situation: Any, recall: Any = ()) -> ActionIntent:
@@ -189,21 +285,76 @@ class DeliberativeLLMReasoningProvider:
             if revised.get("action"):
                 decision = revised
 
-        action = str(decision.get("action", ""))
-        if action not in self.allowed_actions:
-            action = self.default_action
-            parameters: dict[str, Any] = {}
+        llm_action = str(decision.get("action", ""))
+        # Explicit option scoring on expected-success/cost/risk: every
+        # allowlisted candidate the model listed (across rounds) plus its final
+        # pick is scored deterministically; the winner is the score argmax, so
+        # a riskier LLM pick loses to a safer-best alternative. An invalid or
+        # missing decision falls back to the safe default action.
+        candidates: list[str] = []
+        for rnd in rounds:
+            for opt in rnd.get("options", []) or []:
+                if not isinstance(opt, dict):
+                    continue
+                name = str(opt.get("action", ""))
+                if name in self.allowed_actions and name not in candidates:
+                    candidates.append(name)
+        if llm_action in self.allowed_actions and llm_action not in candidates:
+            candidates.append(llm_action)
+        # The model's endorsement is evidence (final pick 1.0, listed option
+        # 0.7), gated by confidence; cost/risk tables and the just-failed
+        # reflection penalty can still overturn it.
+        evidence = {name: 0.7 for name in candidates}
+        if llm_action in evidence:
+            evidence[llm_action] = 1.0
+        scored = deterministic_option_scores(evidence, confidence, situation) if candidates else {}
+        if scored:
+            action, self.last_option_scores = self.evaluator.select(
+                sorted(scored), scored, fallback=self.default_action
+            )
         else:
-            parameters = dict(decision.get("parameters", {}) or {})
+            action = self.default_action
+            self.last_option_scores = {}
+        if action == llm_action:
+            parameters: dict[str, Any] = dict(decision.get("parameters", {}) or {})
+        else:
+            # Never apply parameters meant for a different (overruled) action.
+            parameters = {}
+        llm_rationale = str(decision.get("rationale", ""))
         self.last_deliberation = {
             "analysis": str(deliberation.get("analysis", "")),
             "options": list(deliberation.get("options", []) or []),
-            "decision": {"action": action, "parameters": parameters, "rationale": str(decision.get("rationale", ""))},
+            "decision": {"action": action, "parameters": parameters, "rationale": llm_rationale},
             "rounds": rounds,
+            "scores": {
+                name: {
+                    "action": name,
+                    "expected_success": round(s.expected_success, 4),
+                    "cost": round(s.cost, 4),
+                    "risk": round(s.risk, 4),
+                    "total": round(
+                        s.total(
+                            success_weight=self.evaluator.success_weight,
+                            cost_weight=self.evaluator.cost_weight,
+                            risk_weight=self.evaluator.risk_weight,
+                        ),
+                        4,
+                    ),
+                }
+                for name, s in sorted(self.last_option_scores.items())
+            },
+            "weights": {
+                "success": self.evaluator.success_weight,
+                "cost": self.evaluator.cost_weight,
+                "risk": self.evaluator.risk_weight,
+            },
+            "selected_by": "explicit_score:expected_success/cost/risk",
         }
         rationale = f"deliberated:{conclusion} -> {action} ({len(rounds)} rounds)"
-        if decision.get("rationale"):
-            rationale += f" ({decision['rationale']})"
+        if llm_rationale:
+            rationale += f" ({llm_rationale})"
+        if action != llm_action and llm_action:
+            rationale += f" [score_override:{llm_action}]"
         return ActionIntent(action=action, parameters=parameters, rationale=rationale)
 
     def _invoke(self, user_prompt: str) -> str:

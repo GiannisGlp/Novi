@@ -58,6 +58,40 @@ class DeterministicReasoningProvider:
         return ActionIntent(action=action, parameters={}, rationale=rationale)
 
 
+_REASONING_ACTIONS = frozenset({"inspect", "observe", "wait", "move_forward", "turn_left", "turn_right"})
+
+
+def correction_action_bias(situation: dict[str, Any]) -> tuple[set[str], set[str]]:
+    """Derive (avoid, prefer) actions from explicit user corrections.
+
+    A correction supersedes a prior claim: when its old/new object names a
+    known action, the corrected-away behavior is avoided and the corrected
+    behavior is preferred, so a corrected behavior is not repeated. Unknown
+    shapes are ignored (never crash reasoning on learning data).
+    """
+    avoid: set[str] = set()
+    prefer: set[str] = set()
+    if not isinstance(situation, dict):
+        return avoid, prefer
+    corrections = situation.get("corrections") or []
+    if isinstance(corrections, dict):
+        corrections = [corrections]
+    for entry in corrections:
+        if not isinstance(entry, dict):
+            continue
+        old = str(entry.get("old_object") or "").strip().lower()
+        new = str(entry.get("new_object") or "").strip().lower()
+        if old in _REASONING_ACTIONS:
+            avoid.add(old)
+        if new in _REASONING_ACTIONS:
+            prefer.add(new)
+    for action in situation.get("avoid_actions") or []:
+        name = str(action).strip().lower()
+        if name in _REASONING_ACTIONS:
+            avoid.add(name)
+    return avoid, prefer
+
+
 class DeliberativeReasoningProvider:
     """Situation-aware reasoning (Reasoning 2.0).
 
@@ -120,6 +154,7 @@ class DeliberativeReasoningProvider:
             members = {str(m).lower() for m in (pattern or [])}
             if members & salient:
                 routine_boost = max(routine_boost, 0.4)
+        avoid, prefer = correction_action_bias(situation)
         scored: dict[str, Any] = {}
         for action, evidence in success.items():
             expected_success = max(0.0, min(1.0, evidence * (0.6 + 0.4 * c)))
@@ -129,6 +164,13 @@ class DeliberativeReasoningProvider:
                 # Phase 3b: repeating a just-failed action is expensive.
                 cost = min(1.0, cost + 0.5)
                 expected_success = max(0.0, expected_success - 0.2)
+            if action in avoid:
+                # A corrected-away behavior is expensive and demoted, so an
+                # explicit user correction changes the next decision.
+                cost = min(1.0, cost + 0.5)
+                expected_success = max(0.0, expected_success - 0.2)
+            if action in prefer:
+                expected_success = min(1.0, expected_success + 0.3)
             if routine_boost and action in ("observe", "inspect"):
                 # Learning changes behavior: a persisted routine gives its
                 # follow-up attention action a success bump ( observable even
@@ -179,6 +221,15 @@ class DeliberativeReasoningProvider:
             if prev in scores:
                 scores[prev] -= 1.0
             scores["observe"] += 0.5
+        # User corrections bias future decisions: the corrected-away action
+        # loses evidence, the corrected action gains it.
+        avoid, prefer = correction_action_bias(situation)
+        for action in avoid:
+            if action in scores:
+                scores[action] -= 1.0
+        for action in prefer:
+            if action in scores:
+                scores[action] += 0.5
         return scores
 
 

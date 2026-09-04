@@ -441,6 +441,11 @@ class AutonomySupervisor:
     def health(self) -> AutonomyHealth | None:
         return self._health
 
+    @property
+    def canonical_state(self):  # -> CanonicalAutonomyState (typed canonical view)
+        from .canonical_autonomy import project_supervisor_state
+        return project_supervisor_state(self.state)
+
     # ---- state machine (doc 01 Step 1: legal transitions only) ----
 
     def _transition(self, destination: AutonomyState, *, reason: str, producer: str) -> bool:
@@ -453,6 +458,11 @@ class AutonomySupervisor:
         self.state = destination
         self._emit("STATE_CHANGED", reason=reason, producer=producer)
         return True
+
+    def request_canonical(self, destination, *, reason="canonical_request", producer="supervisor") -> bool:
+        """Request a canonical-enum state; fail-closed (False + TRANSITION_REJECTED) when illegal."""
+        from .canonical_autonomy import request_supervisor_canonical
+        return request_supervisor_canonical(self, destination, reason=reason, producer=producer)
 
     # ---- cancellation (doc 01 Step 7) ----
 
@@ -610,8 +620,7 @@ class AutonomySupervisor:
             except Exception as exc:
                 self._planner_failures += 1
                 if self._planner_failures >= 3:
-                    # Planner is persistently unavailable for this goal: fail the
-                    # goal so the loop stays bounded (RECOVERING is not a loop).
+                    # Persistently unavailable: fail the goal to stay bounded.
                     self.goals.complete_goal(goal.goal_id, "failed", cycle=cycle)
                     self._transition(AutonomyState.RECOVERING, reason="planner_unavailable", producer="planner")
                 else:
@@ -726,9 +735,7 @@ class AutonomySupervisor:
             self._emit("ACTION_RETRY", reason=result.error or result.outcome, producer="supervisor",
                        goal_id=goal.goal_id, action_ref=authorized.authorization_id)
         else:
-            # Retry budget exhausted, verification failed, or outcome unverifiable:
-            # fail the plan and the goal so the loop stays bounded (doc 07 Step 5:
-            # repeating a failed action without new information is forbidden).
+            # Budget exhausted or unverified: fail plan+goal to stay bounded (doc 07 Step 5).
             self.planner.fail(self._plan, reason=result.error or verification.error or "retry_budget_exhausted")
             self.goals.complete_goal(goal.goal_id, "failed", cycle=cycle)
             self._transition(AutonomyState.RECOVERING, reason="goal_failed", producer="supervisor")
@@ -773,11 +780,10 @@ class AutonomySupervisor:
     # ---- observation ----
 
     def snapshot(self) -> dict[str, Any]:
-        from .canonical_autonomy import project_supervisor_state
         return {
             "cycle": self.clock.cycle,
             "state": self.state.value,
-            "canonical_state": project_supervisor_state(self.state),
+            "canonical_state": self.canonical_state,
             "authority": self.authority,
             "goal_id": self._goal.goal_id if self._goal is not None else None,
             "plan_id": self._plan.plan_id if self._plan is not None else None,

@@ -40,6 +40,29 @@ def _uncertainty(confidence: float) -> Uncertainty:
     return Uncertainty(confidence=confidence)
 
 
+def _competing_alternatives(idx: int, hypotheses: Any, inferences: Any = ()) -> list[str]:
+    """Real competing hypotheses for hypothesis ``idx`` (never hard-coded empty).
+
+    Each IntentHypothesis carries the other candidate explanations as its
+    alternatives so downstream consumers can weigh rivals; confidence and
+    provenance ride on the hypothesis itself (confidence/uncertainty/provenance
+    plus supporting_evidence_ids). Bounded to 3 rivals, topped up from causal
+    inferences when fewer rivals exist, with a deterministic honest fallback
+    when the cycle produced a single hypothesis.
+    """
+    texts = [str(h.get("hypothesis", "")) for h in (hypotheses or [])]
+    alts = [t[:80] for j, t in enumerate(texts) if j != idx and t][:3]
+    for inf in inferences or ():
+        if len(alts) >= 3:
+            break
+        s = str(inf)[:80]
+        if s and s not in alts:
+            alts.append(s)
+    if not alts:
+        alts = ["no_competing_hypothesis_observed"]
+    return alts
+
+
 class TypedCognitionOutput:
     """Container for one cycle's typed cognitive contracts."""
 
@@ -152,7 +175,7 @@ def emit_cognitive_typed(
             intent=hyp.get("hypothesis", "unknown")[:80],
             confidence=round(min(1.0, max(0.0, float(hyp.get("confidence", 0.5)))), 3),
             uncertainty=_uncertainty(float(hyp.get("confidence", 0.5))),
-            alternatives=[],
+            alternatives=_competing_alternatives(idx, reasoning.hypotheses, reasoning.inferences),
             supporting_evidence_ids=[e.source for e in situation.evidence][:3],
             source="cognition",
             provenance=_provenance(),

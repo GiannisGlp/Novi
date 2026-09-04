@@ -52,6 +52,7 @@ class DiscourseTurn:
     topic: str
     entities: tuple[str, ...] = ()
     intent: str = ""
+    conclusion: str = ""  # short outcome summary recorded after the turn resolves
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -60,6 +61,7 @@ class DiscourseTurn:
             "topic": self.topic,
             "entities": list(self.entities),
             "intent": self.intent,
+            "conclusion": self.conclusion,
         }
 
 
@@ -117,6 +119,7 @@ class DiscourseState:
         cycle: int = 0,
         entities: tuple[str, ...] = (),
         intent: str = "",
+        conclusion: str = "",
     ) -> dict[str, Any]:
         """Record a user turn. Returns the post-update snapshot.
 
@@ -125,10 +128,38 @@ class DiscourseState:
         """
         text = (text or "").strip()
         topic = "" if self.is_anaphoric(text) else (self._select_topic(text) or "")
-        self._turns.append(DiscourseTurn(cycle=cycle, utterance=text, topic=topic, entities=tuple(entities), intent=intent))
+        self._turns.append(DiscourseTurn(
+            cycle=cycle, utterance=text, topic=topic, entities=tuple(entities),
+            intent=intent, conclusion=str(conclusion or "")[:160],
+        ))
         snap = self.snapshot()
         snap["resolution"] = self.last_resolution_snapshot()
         return snap
+
+    def record_conclusion(self, conclusion: str, *, cycle: int = 0) -> bool:
+        """Attach a short outcome summary to the latest turn (bounded 160 chars).
+
+        Returns False when no turn exists yet. Powers non-isolated dialogue
+        reasoning: the next turn reads prior conclusions back via
+        ``prior_conclusions`` instead of reasoning from a blank slate.
+        """
+        if not self._turns:
+            return False
+        text = str(conclusion or "").strip()[:160]
+        if not text:
+            return False
+        self._turns[-1].conclusion = text
+        return True
+
+    def prior_conclusions(self, limit: int = 3) -> list[str]:
+        """Prior turns' outcome summaries, most recent first (bounded)."""
+        out: list[str] = []
+        for turn in reversed(self._turns):
+            if turn.conclusion:
+                out.append(turn.conclusion)
+            if len(out) >= max(1, int(limit)):
+                break
+        return out
 
     # ---- queries ----
 
@@ -145,6 +176,13 @@ class DiscourseState:
         for turn in reversed(self._turns):
             if turn.intent:
                 return turn.intent
+        return ""
+
+    @property
+    def last_conclusion(self) -> str:
+        for turn in reversed(self._turns):
+            if turn.conclusion:
+                return turn.conclusion
         return ""
 
     def recent_entities(self, limit: int = 6) -> list[str]:
@@ -196,6 +234,7 @@ class DiscourseState:
             "window": self._turns.maxlen,
             "topic": self.topic,
             "last_intent": self.last_intent,
+            "last_conclusion": self.last_conclusion,
             "entities": self.recent_entities(),
             "turns": [t.snapshot() for t in self._turns],
         }
@@ -209,4 +248,5 @@ class DiscourseState:
                 topic=str(t.get("topic", "")),
                 entities=tuple(t.get("entities", ()) or ()),
                 intent=str(t.get("intent", "")),
+                conclusion=str(t.get("conclusion", "") or "")[:160],
             ))
