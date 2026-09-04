@@ -50,3 +50,57 @@ class TestSayTTSAvailability:
         provider = SayTTSProvider(say_bin="/nonexistent/say-binary")
         with pytest.raises(RuntimeError):
             provider.synthesize("should fail")
+
+
+def _write_exe(path, body: str) -> str:
+    path.write_text(body)
+    path.chmod(0o755)
+    return str(path)
+
+
+class TestPiperTTS:
+    def test_missing_binaries_raise_honestly(self, tmp_path):
+        from novi.voice.tts import PiperTTSProvider
+
+        provider = PiperTTSProvider(
+            piper_bin=str(tmp_path / "no-piper"),
+            model=str(tmp_path / "no-model.onnx"),
+            player_bin=str(tmp_path / "no-player"),
+        )
+        assert provider.available() is False
+        with pytest.raises(RuntimeError):
+            provider.synthesize("hello")
+
+    def test_empty_text_rejected(self, tmp_path):
+        from novi.voice.tts import PiperTTSProvider
+
+        provider = PiperTTSProvider(
+            piper_bin=str(tmp_path / "piper"),
+            model=str(tmp_path / "voice.onnx"),
+            player_bin=str(tmp_path / "aplay"),
+        )
+        with pytest.raises(ValueError):
+            provider.synthesize("   ")
+
+    def test_synthesize_pipes_text_through_piper_to_player(self, tmp_path):
+        from novi.voice.tts import PiperTTSProvider
+
+        piper = _write_exe(
+            tmp_path / "piper",
+            "#!/bin/sh\n"
+            "while [ $# -gt 0 ]; do\n"
+            '  if [ "$1" = "-f" ]; then OUT=\"$2\"; shift 2; else shift; fi\n'
+            "done\n"
+            'cat > \"$OUT\"\n',
+        )
+        # Fake player keeps a copy of the wav file it is handed.
+        player = _write_exe(tmp_path / "aplay", "#!/bin/sh\ncp \"$1\" \"$0.spoke\"\n")
+        model = tmp_path / "voice.onnx"
+        model.write_bytes(b"fake-voice-model")
+        provider = PiperTTSProvider(piper_bin=piper, model=str(model), player_bin=player)
+        assert provider.available() is True
+        out = provider.synthesize("hello piper")
+        assert out.spoken is True
+        assert out.provider == "piper"
+        assert out.text == "hello piper"
+        assert (tmp_path / "aplay.spoke").read_bytes() == b"hello piper"

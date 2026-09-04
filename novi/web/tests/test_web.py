@@ -531,5 +531,157 @@ class TrainedReplyTransportPreferenceTest(unittest.TestCase):
         self.assertNotIn("llm_error", r["novi"]["trace"])
 
 
+class ServerVoiceSpeakBackTests(unittest.TestCase):
+    """Single-voice rule: the Mac `say` voice speaks every reply surface."""
+
+    def _server(self, **kw) -> NoviWebServer:
+        defaults = {"port": 0, "store_path": None, "auto_step": False, "chat_llm": False}
+        defaults.update(kw)
+        return NoviWebServer(**defaults)
+
+    def test_chat_send_speaks_reply_through_mac_voice(self) -> None:
+        s = self._server()
+        s.start()
+        try:
+            spoken: list[str] = []
+
+            class FakeSpeaker:
+                def speak(self, text):
+                    spoken.append(text)
+                    return {"spoken": True}
+
+            s._real_speaker = FakeSpeaker()
+            s.speak_back_enabled = True
+            r = s.chat_send("hello novi")
+            self.assertTrue(r["novi"]["text"])
+            self.assertEqual(spoken, [r["novi"]["text"]])
+            self.assertEqual(r.get("spoken"), {"spoken": True})
+        finally:
+            s.stop()
+
+    def test_chat_send_silent_without_speaker(self) -> None:
+        s = self._server()
+        s.start()
+        try:
+            s._real_speaker = None
+            r = s.chat_send("hello novi")
+            self.assertTrue(r["novi"]["text"])
+            self.assertFalse(r.get("spoken", {}).get("spoken", False))
+        finally:
+            s.stop()
+
+    def test_say_voice_flag_reaches_tts_provider(self) -> None:
+        s = self._server(say_voice="Samantha")
+        try:
+            self.assertEqual(s.say_voice, "Samantha")
+            s.real_enable(speaker=True)
+            self.assertEqual(s._real_speaker._tts._voice, "Samantha")
+        finally:
+            s.stop()
+
+    def test_tts_provider_piper_selection(self) -> None:
+        from novi.voice.tts import PiperTTSProvider
+
+        s = self._server(tts_provider="piper", tts_voice_model="/tmp/nope.onnx")
+        try:
+            s.real_enable(speaker=True)
+            self.assertIsInstance(s._real_speaker._tts, PiperTTSProvider)
+        finally:
+            s.stop()
+
+    def test_unknown_tts_provider_rejected(self) -> None:
+        s = self._server(tts_provider="bogus")
+        try:
+            with self.assertRaises(ValueError):
+                s.real_enable(speaker=True)
+        finally:
+            s.stop()
+
+
+class LLMServerDialectTests(unittest.TestCase):
+    """The web chat transport speaks the configured server dialect.
+
+    ``llm_server="ollama"`` (default) keeps the tuned native wire format;
+    ``"openai-compatible"`` speaks /v1 so llama.cpp/vLLM frontends work.
+    HTTP is mocked: these run anywhere.
+    """
+
+    def _server(self, **kw) -> NoviWebServer:
+        defaults = {
+            "port": 0,
+            "store_path": None,
+            "auto_step": False,
+            "chat_llm": False,
+            "llm_url": "http://127.0.0.1:11434",
+            "llm_model": "qwen3:8b",
+        }
+        defaults.update(kw)
+        return NoviWebServer(**defaults)
+
+    @staticmethod
+    def _resp(payload):
+        import json as _json
+        from unittest import mock as _mock
+
+        resp = _mock.MagicMock()
+        resp.read.return_value = _json.dumps(payload).encode("utf-8")
+        resp.__enter__.return_value = resp
+        return resp
+
+    def test_generic_chat_posts_v1(self) -> None:
+        import json as _json
+        from unittest import mock as _mock
+
+        s = self._server(llm_server="openai-compatible")
+        with _mock.patch(
+            "urllib.request.urlopen",
+            return_value=self._resp({"choices": [{"message": {"content": "hi v1"}}]}),
+        ) as opened:
+            self.assertEqual(s._llm_chat(system="s", user="u"), "hi v1")
+        req = opened.call_args.args[0]
+        self.assertTrue(req.full_url.endswith("/v1/chat/completions"))
+        body = _json.loads(req.data.decode("utf-8"))
+        self.assertEqual(body["model"], "qwen3:8b")
+
+    def test_ollama_chat_unchanged(self) -> None:
+        from unittest import mock as _mock
+
+        s = self._server()
+        with _mock.patch(
+            "urllib.request.urlopen",
+            return_value=self._resp({"message": {"content": "hi ollama"}}),
+        ) as opened:
+            self.assertEqual(s._llm_chat(system="s", user="u"), "hi ollama")
+        self.assertTrue(opened.call_args.args[0].full_url.endswith("/api/chat"))
+
+    def test_generic_probe_uses_v1_models(self) -> None:
+        from unittest import mock as _mock
+
+        s = self._server(llm_server="openai-compatible")
+        with _mock.patch(
+            "urllib.request.urlopen",
+            return_value=self._resp({"data": [{"id": "qwen3:8b"}]}),
+        ) as opened:
+            self.assertTrue(s._llm_up())
+        self.assertTrue(opened.call_args.args[0].full_url.endswith("/v1/models"))
+
+    def test_generic_stream_yields_deltas(self) -> None:
+        import io as _io
+        import json as _json
+        from unittest import mock as _mock
+
+        lines = "".join(
+            f'data: {_json.dumps({"choices": [{"delta": {"content": c}}]})}\n\n'
+            for c in ["he", "llo"]
+        )
+        stream = _io.BytesIO((lines + "data: [DONE]\n\n").encode("utf-8"))
+        resp = _mock.MagicMock()
+        resp.read.side_effect = lambda n=-1: stream.read(n)
+        resp.__enter__.return_value = resp
+        s = self._server(llm_server="openai-compatible")
+        with _mock.patch("urllib.request.urlopen", return_value=resp):
+            self.assertEqual(list(s._llm_chat_stream(system="s", user="u")), ["he", "llo"])
+
+
 if __name__ == "__main__":
     unittest.main()

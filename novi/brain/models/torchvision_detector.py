@@ -92,9 +92,15 @@ class TorchvisionSSDLiteDetector:
             return tensor
 
         try:
-            from PIL import Image
-            image = frame if isinstance(frame, Image.Image) else Image.fromarray(frame)
-        except Exception as exc:
-            raise TypeError("frame must be a PIL image, numpy array, or torch tensor") from exc
+            from io import BytesIO
 
-        return self._preprocess(image.convert("RGB"))
+            from PIL import Image
+            if isinstance(frame, (bytes, bytearray)):
+                # Encoded image bytes (e.g. a JPEG payload) decode to PIL first.
+                frame = Image.open(BytesIO(bytes(frame)))
+            image = frame if isinstance(frame, Image.Image) else Image.fromarray(frame)
+            return self._preprocess(image.convert("RGB"))
+        except Exception as exc:
+            raise TypeError(
+                "frame must be a PIL image, numpy array, torch tensor, or encoded image bytes"
+            ) from exc

@@ -8,6 +8,7 @@ providers implement the same protocol later.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import subprocess
 from dataclasses import dataclass
@@ -41,6 +42,61 @@ class DeterministicTTSProvider:
         out = AudioOut(text=cleaned, provider="deterministic", spoken=False)
         self.utterances.append(out)
         return out
+
+
+class PiperTTSProvider:
+    """Piper neural TTS via the `piper` command — the Jetson-body voice.
+
+    Pipes text into ``piper --model <voice.onnx> -f <wav>`` then plays the
+    file with an external player (``aplay`` on ALSA bodies). Same protocol
+    as every provider: honest degrade when binaries are missing.
+    """
+
+    def __init__(self, *, piper_bin: str = "piper", model: str = "", player_bin: str = "aplay") -> None:
+        self._piper_bin = piper_bin
+        self._model = model
+        self._player_bin = player_bin
+
+    def available(self) -> bool:
+        import shutil
+
+        return (
+            bool(self._model)
+            and os.path.isfile(self._model)
+            and shutil.which(self._piper_bin) is not None
+            and shutil.which(self._player_bin) is not None
+        )
+
+    def synthesize(self, text: str) -> AudioOut:
+        import shutil
+        import subprocess
+        import tempfile
+
+        cleaned = (text or "").strip()
+        if not cleaned:
+            raise ValueError("cannot synthesize empty speech")
+        if not self.available():
+            missing = [p for p in (self._piper_bin, self._player_bin) if shutil.which(p) is None]
+            if not self._model or not os.path.isfile(self._model):
+                missing.append(f"voice-model:{self._model or '-'}")
+            raise RuntimeError(
+                f"Piper TTS unavailable (missing: {', '.join(missing)}); "
+                "install piper + a voice model or use the say provider"
+            )
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            wav_path = tmp.name
+        try:
+            subprocess.run(
+                [self._piper_bin, "--model", self._model, "-f", wav_path],
+                input=cleaned.encode("utf-8"),
+                check=True,
+                timeout=60,
+            )
+            subprocess.run([self._player_bin, wav_path], check=True, timeout=60)
+        finally:
+            with contextlib.suppress(OSError):
+                os.unlink(wav_path)
+        return AudioOut(text=cleaned, provider="piper", spoken=True)
 
 
 class SayTTSProvider:

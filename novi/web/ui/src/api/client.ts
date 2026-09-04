@@ -143,7 +143,9 @@ export const api = {
   realStatus: () => request<RealIOStatus>('/api/real/status'),
   realEnable: () => request<OpaqueResult>('/api/real/enable', postJson({ camera: true, mic: true, speaker: true })),
   realSpeakback: (enabled: boolean) => request<OpaqueResult>('/api/real/speakback', postJson({ enabled })),
-  voiceListen: (seconds = 3, clientSpeaks = true) =>
+  // Single-voice rule: the Mac voice speaks server-side; the browser never
+  // renders audio, so clientSpeaks defaults to false.
+  voiceListen: (seconds = 3, clientSpeaks = false) =>
     request<OpaqueResult>('/api/voice/listen', postJson({ seconds, client_speaks: clientSpeaks })),
   voiceTurn: (text: string) => request<OpaqueResult>('/api/voice/turn', postJson({ text })),
   enrollFace: (name: string) => request<OpaqueResult>('/api/recognition/enroll-face', postJson({ name })),

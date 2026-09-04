@@ -47,6 +47,31 @@ class NeuralPerceptionBackendTests(unittest.TestCase):
         self.assertIsNone(backend.depth(object()))
         self.assertIsNone(backend.segment(object()))
 
+    def test_infer_failure_degrades_to_empty_not_raise(self) -> None:
+        """A bad frame (e.g. demo-camera bytes with --neural) must degrade to
+        no detections — never crash the cognition step."""
+
+        class ExplodingDetector:
+            def detect(self, frame):
+                raise TypeError("frame must be a PIL image, numpy array, or torch tensor")
+
+        backend = NeuralPerceptionBackend(detector=ExplodingDetector())
+        self.assertEqual(backend.detect(b"demo-frame"), ())
+
+    def test_bad_frame_through_specialist_perception_yields_nothing(self) -> None:
+        from novi.brain.b2_perception import SpecialistPerception
+
+        class ExplodingDetector:
+            def detect(self, frame):
+                raise TypeError("boom")
+
+        perception = SpecialistPerception(backend=NeuralPerceptionBackend(detector=ExplodingDetector()))
+        evidence = perception.process(
+            sensor_id="mac.camera.front", frame_id="f1",
+            timestamp="2026-01-01T00:00:00Z", frame=b"demo-frame",
+        )
+        self.assertEqual(evidence.detections, ())
+
 
 if __name__ == "__main__":
     unittest.main()

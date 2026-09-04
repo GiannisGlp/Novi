@@ -252,8 +252,12 @@ class NoviWebServer(IntegrationMixin):
         trained_dialogue_adapter: str = "",
         trained_emotional_adapter: str = "",
         trained_base_model: str = "Qwen/Qwen3-8B",
+        say_voice: str | None = None,
+        tts_provider: str = "say",
+        tts_voice_model: str = "",
         llm_url: str = DEFAULT_OLLAMA_URL,
         llm_model: str | None = None,
+        llm_server: str = "ollama",
         camera: str = "demo",
         reasoning: str = "router",
         route_threshold: float = 0.6,
@@ -286,7 +290,18 @@ class NoviWebServer(IntegrationMixin):
         self.trained_dialogue_adapter = trained_dialogue_adapter
         self.trained_emotional_adapter = trained_emotional_adapter
         self.trained_base_model = trained_base_model
+        # Mac `say` voice for speak-back (None = system default). The Mac
+        # voice is the single voice across terminal and web.
+        self.say_voice = say_voice
+        # TTS backend for speak-back: "say" (macOS) or "piper" (Jetson body
+        # voice; needs --tts-voice-model pointing at a .onnx voice).
+        self.tts_provider = tts_provider or "say"
+        self.tts_voice_model = tts_voice_model
         self.llm_url = llm_url
+        # Chat wire dialect: "ollama" speaks the native /api/* endpoints
+        # (tuned think/budget behavior); "openai-compatible" speaks /v1 so
+        # llama.cpp, vLLM, and TensorRT-LLM frontends are drop-in backends.
+        self.llm_server = llm_server or "ollama"
         self._persist_model = bool(persist_model)
         self.available_models = list(available_models)
         resolved_model = llm_model
@@ -889,7 +904,8 @@ class NoviWebServer(IntegrationMixin):
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
             self._append_chat({"role": "user", "text": text}, person)
             self._append_chat(novi, person)
-            return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": llm}
+            spoken = self._speak_back(novi_text)
+            return {"novi": novi, "accepted": bool(adm.accepted), "memory_id": adm.memory_id, "llm": llm, "spoken": spoken}
         finally:
             self.brain.release_speaking_lease(addressee)
 
@@ -972,7 +988,8 @@ class NoviWebServer(IntegrationMixin):
             novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": llm}
             self._append_chat({"role": "user", "text": f"[heard] {text}"})
             self._append_chat(novi)
-            return {"heard": text, "accepted": True, "novi": novi, "llm": llm}
+            spoken = self._speak_back(novi_text)
+            return {"heard": text, "accepted": True, "novi": novi, "llm": llm, "spoken": spoken}
         finally:
             self.brain.release_speaking_lease(addressee)
 
@@ -982,6 +999,19 @@ class NoviWebServer(IntegrationMixin):
         # reconnects automatically instead of staying offline forever.
         now = time.time()
         if self._llm_available is None or (now - self._llm_probed_at) > self._llm_probe_ttl:
+            if self.llm_server == "openai-compatible":
+                self._llm_available = self._generic_server().probe(self.llm_model)
+                if not self._llm_available:
+                    import sys as _sys
+
+                    print(
+                        f"[llm] availability probe failed for {self.llm_model} @ {self.llm_url} "
+                        f"({self.llm_server} dialect)",
+                        file=_sys.stderr,
+                        flush=True,
+                    )
+                self._llm_probed_at = now
+                return self._llm_available
             try:
                 req = urllib.request.Request(f"{self.llm_url}/api/tags", method="GET")
                 with urllib.request.urlopen(req, timeout=2) as response:
@@ -1048,6 +1078,12 @@ class NoviWebServer(IntegrationMixin):
             if fast is not None:
                 fast.model = self.llm_model  # type: ignore[attr-defined]
 
+    def _generic_server(self) -> Any:
+        """OpenAI-compatible (/v1) chat server for the configured URL."""
+        from novi.brain.models.chat_server import OpenAICompatibleChatServer
+
+        return OpenAICompatibleChatServer(self.llm_url)
+
     def _reply_transport(self) -> Any:
         """The chat reply transport: the trained adapters when configured, else
         the Ollama transport (when chat_llm is on and Ollama is up).
@@ -1089,6 +1125,30 @@ class NoviWebServer(IntegrationMixin):
     def _llm_chat(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
         from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
 
+        if self.llm_server == "openai-compatible":
+            # Generic dialect: no think control exists, so keep the tuned
+            # token budget (thought + answer) and rely on think-stripping.
+            reply = self._generic_server().chat(
+                model=self.llm_model,
+                system=system,
+                user=user,
+                temperature=temperature,
+                max_tokens=num_predict_for(self.llm_model, 320),
+                timeout=max(timeout, 300),
+            )
+            if reply:
+                import sys as _sys
+
+                print(f"[llm-debug] reply[{self.llm_model}] first80={reply[:80]!r}", file=_sys.stderr, flush=True)
+            else:
+                import sys as _sys
+
+                print(
+                    f"[llm] chat call failed for {self.llm_model} ({self.llm_server} dialect)",
+                    file=_sys.stderr,
+                    flush=True,
+                )
+            return reply
         options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 320)}
         payload: dict[str, Any] = {
             "model": self.llm_model,
@@ -1141,6 +1201,16 @@ class NoviWebServer(IntegrationMixin):
         """Yield token deltas from Ollama with stream=True (SSE-like)."""
         from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
 
+        if self.llm_server == "openai-compatible":
+            yield from self._generic_server().chat_stream(
+                model=self.llm_model,
+                system=system,
+                user=user,
+                temperature=temperature,
+                max_tokens=num_predict_for(self.llm_model, 320),
+                timeout=max(timeout, 300),
+            )
+            return
         options: dict[str, Any] = {"temperature": temperature, "num_predict": num_predict_for(self.llm_model, 320)}
         payload: dict[str, Any] = {
             "model": self.llm_model,
@@ -1260,6 +1330,7 @@ class NoviWebServer(IntegrationMixin):
                 novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": False}
                 user_stored = self._append_chat({"role": "user", "text": text}, person)
                 novi_stored = self._append_chat(novi, person)
+                spoken = self._speak_back(novi_text)
                 yield {
                     "done": True,
                     "user": user_stored,
@@ -1267,6 +1338,7 @@ class NoviWebServer(IntegrationMixin):
                     "accepted": bool(adm.accepted),
                     "memory_id": adm.memory_id,
                     "llm": False,
+                    "spoken": spoken,
                     "after": self._seq_for(person),
                 }
                 return
@@ -1299,6 +1371,7 @@ class NoviWebServer(IntegrationMixin):
                 novi = {"role": "novi", "text": novi_text, "trace": trace, "cycle": step.get("cycle"), "llm": False}
                 user_stored = self._append_chat({"role": "user", "text": text}, person)
                 novi_stored = self._append_chat(novi, person)
+                spoken = self._speak_back(novi_text)
                 yield {
                     "done": True,
                     "user": user_stored,
@@ -1306,6 +1379,7 @@ class NoviWebServer(IntegrationMixin):
                     "accepted": bool(adm.accepted),
                     "memory_id": adm.memory_id,
                     "llm": False,
+                    "spoken": spoken,
                     "after": self._seq_for(person),
                 }
                 return
@@ -1328,6 +1402,7 @@ class NoviWebServer(IntegrationMixin):
             novi = {"role": "novi", "text": full_reply, "trace": trace, "cycle": step.get("cycle"), "llm": True}
             user_stored = self._append_chat({"role": "user", "text": text}, person)
             novi_stored = self._append_chat(novi, person)
+            spoken = self._speak_back(full_reply)
             yield {
                 "done": True,
                 "user": user_stored,
@@ -1335,6 +1410,7 @@ class NoviWebServer(IntegrationMixin):
                 "accepted": bool(adm.accepted),
                 "memory_id": adm.memory_id,
                 "llm": True,
+                "spoken": spoken,
                 "after": self._seq_for(person),
             }
         finally:
@@ -2601,6 +2677,31 @@ def main() -> None:
         help="base model for the trained adapters (default: Qwen/Qwen3-8B)",
     )
     parser.add_argument(
+        "--say-voice",
+        type=str,
+        default=None,
+        help="macOS `say` voice for speak-back (default: system voice; same voice as terminal --say-voice)",
+    )
+    parser.add_argument(
+        "--llm-server",
+        choices=["ollama", "openai-compatible"],
+        default="ollama",
+        help="chat wire dialect: 'ollama' speaks the native /api/* endpoints (default); "
+        "'openai-compatible' speaks /v1 so llama.cpp, vLLM, and TensorRT-LLM frontends work",
+    )
+    parser.add_argument(
+        "--tts-provider",
+        choices=["say", "piper"],
+        default="say",
+        help="TTS backend for speak-back: 'say' (macOS) or 'piper' (Jetson-body neural voice)",
+    )
+    parser.add_argument(
+        "--tts-voice-model",
+        type=str,
+        default="",
+        help="Piper voice model (.onnx) for --tts-provider piper",
+    )
+    parser.add_argument(
         "--stt-model",
         type=str,
         default="base",
@@ -2641,6 +2742,10 @@ def main() -> None:
         trained_dialogue_adapter=args.trained_dialogue_adapter,
         trained_emotional_adapter=args.trained_emotional_adapter,
         trained_base_model=args.trained_base_model,
+        say_voice=args.say_voice,
+        tts_provider=args.tts_provider,
+        tts_voice_model=args.tts_voice_model,
+        llm_server=args.llm_server,
         stt_model=args.stt_model,
         persist_model=True,
         stt_device=args.stt_device,

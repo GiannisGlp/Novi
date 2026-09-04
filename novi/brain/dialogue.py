@@ -98,6 +98,23 @@ _FORBIDDEN = [
     )
 ]
 
+# Qwen chain-of-thought markup. The model wraps its private reasoning in
+# <think>…</think>; only what follows is the reply. Stripped (never shown),
+# on every transport path, before the guardrails run.
+_THINK_BLOCK_RE = re.compile(r"<think\b[^>]*>.*?</think\s*>", re.IGNORECASE | re.DOTALL)
+_THINK_OPEN_RE = re.compile(r"<think\b[^>]*>.*$", re.IGNORECASE | re.DOTALL)
+_THINK_CLOSE_RE = re.compile(r"</think\s*>", re.IGNORECASE)
+
+
+def _strip_think_blocks(text: str) -> str:
+    """Remove Qwen ``<think>`` reasoning blocks, keeping only the reply."""
+    if not text or "<think" not in text.lower() and "</think" not in text.lower():
+        return text
+    text = _THINK_BLOCK_RE.sub("", text)
+    text = _THINK_OPEN_RE.sub("", text)  # unclosed tag (truncated generation)
+    return _THINK_CLOSE_RE.sub("", text).strip()  # stray closer
+
+
 # Patterns that narrate/analyze the conversation itself rather than answering.
 # Natural people don't say "in our conversation…"; they just respond. A reply
 # that does this is rejected so compose_reply can nudge for a direct answer.
@@ -1405,9 +1422,13 @@ class DialogueEngine:
         raw = llm_chat(system=system, user=user) if llm_chat is not None else self._chat(system, user)
         if raw is None:
             return {"text": None, "silent": False, "rejected": False}
-        text = raw.strip()
+        # Qwen chain-of-thought never reaches the user or the guardrails:
+        # strip <think> blocks first so only the reply is judged and shown.
+        text = _strip_think_blocks(raw.strip())
         if not text:
-            return {"text": None, "silent": False, "rejected": False}
+            # Thinking stripped away with no reply left: the model never
+            # reached its answer — reject so compose nudges once for a reply.
+            return {"text": None, "silent": False, "rejected": bool(raw.strip())}
         low = text.lower().strip(" .!")
         if low == "[silence]" or low == "silence" or low == "(silence)":
             return {"text": None, "silent": True, "rejected": False}

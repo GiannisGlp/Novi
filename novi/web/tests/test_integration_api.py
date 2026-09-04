@@ -109,6 +109,55 @@ class IntegrationApiTests(unittest.TestCase):
         texts = [c.get("text", "") for c in getattr(self.s, "_chat", [])]
         self.assertTrue(any("[voice] hello novi" in t for t in texts))
 
+    def _with_speaker(self, speaker):
+        """Temporarily attach a fake speaker to the shared server."""
+        old_speaker, old_flag = self.s._real_speaker, self.s.speak_back_enabled
+        self.s._real_speaker = speaker
+        self.s.speak_back_enabled = True
+        self.addCleanup(setattr, self.s, "_real_speaker", old_speaker)
+        self.addCleanup(setattr, self.s, "speak_back_enabled", old_flag)
+        return speaker
+
+    def test_voice_turn_speaks_through_mac_voice(self) -> None:
+        class FakeSpeaker:
+            def __init__(self) -> None:
+                self.spoken: list[str] = []
+
+            def speak(self, text: str):
+                self.spoken.append(text)
+                return {"spoken": True}
+
+        speaker = self._with_speaker(FakeSpeaker())
+        res = self.s.voice_turn({"text": "hello novi"})
+        self.assertTrue(res.get("reply"))
+        self.assertEqual(speaker.spoken, [res["reply"]])
+        self.assertEqual(res.get("spoken"), {"spoken": True})
+
+    def test_voice_turn_silent_when_speakback_off(self) -> None:
+        class FakeSpeaker:
+            def __init__(self) -> None:
+                self.spoken: list[str] = []
+
+            def speak(self, text: str):
+                self.spoken.append(text)
+                return {"spoken": True}
+
+        speaker = self._with_speaker(FakeSpeaker())
+        self.s.speak_back_enabled = False
+        res = self.s.voice_turn({"text": "hello novi"})
+        self.assertEqual(speaker.spoken, [])
+        self.assertFalse(res.get("spoken", {}).get("spoken", False))
+
+    def test_speak_back_never_raises(self) -> None:
+        class ExplodingSpeaker:
+            def speak(self, text: str):
+                raise RuntimeError("no audio device")
+
+        self._with_speaker(ExplodingSpeaker())
+        res = self.s._speak_back("hello novi")
+        self.assertFalse(res.get("spoken", False))
+        self.assertEqual(self.s._speak_back("   "), {"spoken": False})
+
     def test_recognize_person_then_preview_shows_them(self) -> None:
         r = self.s.recognize_person({
             "name": "Preview Person",

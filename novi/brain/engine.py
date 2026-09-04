@@ -152,6 +152,10 @@ class MacBrainConfig:
     brain_llm_url: str = "http://localhost:11434"
     brain_llm_model: str = ""
     brain_llm_probe_cooldown_s: float = 60.0
+    # Chat wire dialect for the brain-owned transport: "ollama" speaks the
+    # native /api/* endpoints; "openai-compatible" speaks /v1 so llama.cpp,
+    # vLLM, and TensorRT-LLM frontends are drop-in backends.
+    brain_llm_server: str = "ollama"
     # Plan 25: trained-adapter reply (talk with the trained data). When enabled
     # and an adapter dir is configured, the brain's default transport renders
     # replies through the plan-23/24 LoRA adapters in the training prompt format
@@ -2833,6 +2837,12 @@ class MacBrain(ChatMixin):
         return self._brain_llm_chat
 
     def _brain_llm_reachable(self) -> bool:
+        if (self.config.brain_llm_server or "ollama") == "openai-compatible":
+            from .models.chat_server import OpenAICompatibleChatServer
+
+            return OpenAICompatibleChatServer(self.config.brain_llm_url).probe(
+                self.config.brain_llm_model or "brain-default"
+            )
         import urllib.request
 
         try:
@@ -2843,11 +2853,23 @@ class MacBrain(ChatMixin):
             return False
 
     def _brain_llm_call(self, *, system: str, user: str, temperature: float = 0.5, timeout: int = 120) -> str | None:
-        """One Ollama chat call through the brain's own transport.
+        """One chat call through the brain's own transport.
 
-        Returns None on any failure — the reply pipeline's deterministic
-        fallback applies (never raises into cognition).
+        Speaks the configured dialect (native Ollama /api/* by default,
+        OpenAI-compatible /v1 when selected). Returns None on any failure —
+        the reply pipeline's deterministic fallback applies (never raises
+        into cognition).
         """
+        if (self.config.brain_llm_server or "ollama") == "openai-compatible":
+            from .models.chat_server import OpenAICompatibleChatServer
+
+            return OpenAICompatibleChatServer(self.config.brain_llm_url).chat(
+                model=self.config.brain_llm_model or "brain-default",
+                system=system,
+                user=user,
+                temperature=temperature,
+                timeout=timeout,
+            )
         import json
         import urllib.request
 

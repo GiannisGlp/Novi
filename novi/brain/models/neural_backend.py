@@ -31,7 +31,10 @@ class NeuralPerceptionBackend:
         return self._detector
 
     def detect(self, frame: Any) -> tuple[BrainDetection, ...]:
-        mac_detections: tuple[MacDetection, ...] = self._detector.detect(frame)
+        try:
+            mac_detections: tuple[MacDetection, ...] = self._detector.detect(frame)
+        except Exception:  # noqa: BLE001 - a bad frame degrades to no detections, never crashes step()
+            return ()
         return tuple(
             BrainDetection(label=d.label, confidence=d.confidence, bbox_xyxy=d.bbox)
             for d in mac_detections

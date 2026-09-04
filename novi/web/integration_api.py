@@ -217,10 +217,22 @@ class IntegrationMixin:
             import shutil
 
             from novi.integration.real_io import RealSpeaker
-            from novi.voice.tts import SayTTSProvider
+            from novi.voice.tts import PiperTTSProvider, SayTTSProvider
 
-            say_bin = "/usr/bin/say" if shutil.which("say") else "/nonexistent/say"
-            self._real_speaker = RealSpeaker(SayTTSProvider(say_bin=say_bin))
+            provider_name = getattr(self, "tts_provider", None) or "say"
+            if provider_name == "piper":
+                tts = PiperTTSProvider(
+                    model=getattr(self, "tts_voice_model", None) or "",
+                    player_bin=getattr(self, "tts_player_bin", None) or "aplay",
+                )
+            elif provider_name == "say":
+                say_bin = "/usr/bin/say" if shutil.which("say") else "/nonexistent/say"
+                tts = SayTTSProvider(say_bin=say_bin, voice=getattr(self, "say_voice", None))
+            else:
+                raise ValueError(
+                    f"unknown tts provider {provider_name!r} (expected 'say' or 'piper')"
+                )
+            self._real_speaker = RealSpeaker(tts)
             self.real_io["speaker"] = True
             results["speaker"] = True
 
@@ -303,11 +315,10 @@ class IntegrationMixin:
     def voice_listen(self, seconds: float = 3.0, *, client_speaks: bool = False) -> dict[str, Any]:
         """Record from the real mic → STT → brain → reply (+ optional speak-back).
 
-        Single-voice rule: exactly one renderer speaks each reply. Browser
-        clients render audio themselves (speechSynthesis) and pass
-        ``client_speaks=True``; the server then stays silent. Server-side
-        speech fires only for callers that cannot render audio. Deliberate
-        server speech always goes through the explicit /api/voice/tts path.
+        Single-voice rule: exactly one renderer speaks each reply, and it is
+        always the Mac voice — browser clients never render audio themselves.
+        ``client_speaks=True`` (legacy browser-TTS callers) keeps the server
+        silent; otherwise the reply goes through Mac speak-back when enabled.
 
         When a RealSpeakerRecognizer is wired, the same recording is also
         voice-matched: the recognized speaker becomes the addressee.
@@ -344,9 +355,7 @@ class IntegrationMixin:
             recent_novi=tuple(self._recent_novi(4)),
         )
         reply_text = str(turn.get("reply", ""))
-        spoken: dict[str, Any] = {"spoken": False}
-        if not client_speaks and self.speak_back_enabled and self._real_speaker is not None and reply_text:
-            spoken = self._real_speaker.speak(reply_text)
+        spoken = self._speak_back(reply_text) if not client_speaks else {"spoken": False}
         out = {
             **tr,
             "reply": reply_text,
@@ -513,6 +522,28 @@ class IntegrationMixin:
         assert self._real_speaker is not None
         return {**self._real_speaker.speak(text)}
 
+    def _speak_back(self, text: str) -> dict[str, Any]:
+        """Best-effort Mac-voice speak-back for a reply (single-voice rule).
+
+        Exactly one renderer speaks each reply, and it is always the Mac
+        voice — browser clients never render audio themselves. Speaks when
+        speak-back is on and a speaker is attached; otherwise returns
+        ``{"spoken": False}``. Never raises: reply paths must keep flowing
+        when audio is unavailable.
+        """
+        if not (text or "").strip():
+            return {"spoken": False}
+        if not self.speak_back_enabled:
+            return {"spoken": False, "reason": "speak-back-off"}
+        speaker = self._real_speaker
+        if speaker is None:
+            return {"spoken": False, "reason": "no-speaker"}
+        try:
+            result = speaker.speak(text.strip())
+        except Exception as exc:  # noqa: BLE001 - audio must not break replies
+            return {"spoken": False, "reason": f"{type(exc).__name__}: {exc}"}
+        return result if isinstance(result, dict) else {"spoken": bool(result)}
+
     # ---- perception -------------------------------------------------------
 
     def perception_frame(self, body: dict[str, Any]) -> dict[str, Any]:
@@ -577,6 +608,7 @@ class IntegrationMixin:
                     self._append_chat({"role": "novi", "text": str(res["reply"])})
             except Exception:  # noqa: BLE001 - chat mirroring is best-effort
                 pass
+            res["spoken"] = self._speak_back(str(res.get("reply", "")))
             return res
 
     # ---- recognition ------------------------------------------------------------

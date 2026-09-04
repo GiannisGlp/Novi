@@ -18,9 +18,8 @@ Acceptance:
 from __future__ import annotations
 
 import json
-import threading
 import unittest
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from unittest import mock
 
 from novi.brain.b2_perception import SpecialistPerception
 from novi.brain.engine import MacBrain, MacBrainConfig
@@ -55,48 +54,44 @@ def _brain(config: MacBrainConfig | None = None, llm_chat=None) -> MacBrain:
     )
 
 
+def _resp(payload: object, status: int = 200):
+    resp = mock.MagicMock()
+    resp.read.return_value = json.dumps(payload).encode("utf-8")
+    resp.status = status
+    resp.__enter__.return_value = resp
+    return resp
+
+
 class _FakeOllama:
-    """Minimal stand-in for Ollama's /api/chat and /api/tags endpoints."""
+    """Socket-free stand-in for Ollama's /api/tags and /api/chat endpoints.
+
+    Patches ``urllib.request.urlopen`` (repo convention: unit tests run
+    anywhere with no server and no sockets — cf. test_chat_server.py).
+    """
 
     def __init__(self, reply: str = "I stored that near your desk notes.") -> None:
         self.reply = reply
         self.received: list[dict] = []
-        self._server: HTTPServer | None = None
-        self._thread: threading.Thread | None = None
+        self._patcher: mock._patch | None = None
 
     def start(self) -> str:
         outer = self
 
-        class Handler(BaseHTTPRequestHandler):
-            def do_GET(self):  # noqa: N802
-                body = json.dumps({"models": [{"name": "brain-default"}]}).encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(body)
+        def _fake_urlopen(req, timeout=None):
+            url = req.full_url if hasattr(req, "full_url") else str(req)
+            if url.endswith("/api/tags"):
+                return _resp({"models": [{"name": "brain-default"}]})
+            outer.received.append(json.loads(req.data.decode("utf-8")))
+            return _resp({"message": {"role": "assistant", "content": outer.reply}})
 
-            def do_POST(self):  # noqa: N802
-                payload = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-                outer.received.append(payload)
-                body = json.dumps({"message": {"role": "assistant", "content": outer.reply}}).encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(body)
-
-            def log_message(self, *args):  # silence test output
-                return
-
-        self._server = HTTPServer(("127.0.0.1", 0), Handler)
-        port = self._server.server_address[1]
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
-        self._thread.start()
-        return f"http://127.0.0.1:{port}"
+        self._patcher = mock.patch("urllib.request.urlopen", side_effect=_fake_urlopen)
+        self._patcher.start()
+        return "http://fake-ollama"
 
     def stop(self) -> None:
-        if self._server is not None:
-            self._server.shutdown()
-            self._server.server_close()
+        if self._patcher is not None:
+            self._patcher.stop()
+            self._patcher = None
 
 
 class BrainOwnedTransportTests(unittest.TestCase):
@@ -167,6 +162,11 @@ class BrainOwnedTransportTests(unittest.TestCase):
             brain.stop()
 
     def test_unreachable_endpoint_degrades_without_raising(self):
+        import urllib.error
+
+        # The setUp fake patches urlopen globally: stop it so this endpoint
+        # is genuinely unreachable, and fail fast without real sockets.
+        self.fake.stop()
         cfg = MacBrainConfig(
             curiosity_enabled=False,
             brain_llm_enabled=True,
@@ -175,13 +175,91 @@ class BrainOwnedTransportTests(unittest.TestCase):
         brain = _brain(config=cfg)
         brain.start()
         try:
-            resp = brain.respond("anything at all")
+            with mock.patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.URLError("nothing listens here"),
+            ):
+                resp = brain.respond("anything at all")
             # Model unreachable -> the brain degrades to the deterministic
             # fallback (never raises, never fabricates).
             self.assertNotEqual(resp.get("reply_source"), "dialogue")
             self.assertTrue(resp["text"])
         finally:
             brain.stop()
+
+
+class BrainLLMServerDialectTests(unittest.TestCase):
+    """The brain-owned transport speaks the configured server dialect.
+
+    ``brain_llm_server="ollama"`` (default) keeps the native /api/chat wire
+    format; ``"openai-compatible"`` speaks /v1 so llama.cpp/vLLM frontends
+    are drop-in backends. HTTP is mocked: these run anywhere.
+    """
+
+    def _brain(self, **cfg_kw) -> MacBrain:
+        cfg = MacBrainConfig(curiosity_enabled=False, brain_llm_enabled=True, **cfg_kw)
+        return _brain(config=cfg)
+
+    def test_generic_dialect_posts_v1_chat(self) -> None:
+        from unittest import mock as _mock
+
+        from novi.brain.models.chat_server import OpenAICompatibleChatServer
+
+        seen: dict[str, object] = {}
+
+        class _FakeServer(OpenAICompatibleChatServer):
+            def chat(self, **kw):  # type: ignore[override]
+                seen.update(kw)
+                return "generic hello"
+
+        brain = self._brain(
+            brain_llm_server="openai-compatible", brain_llm_model="qwen3:8b"
+        )
+        with _mock.patch(
+            "novi.brain.models.chat_server.OpenAICompatibleChatServer", return_value=_FakeServer("http://x")
+        ):
+            reply = brain._brain_llm_call(system="s", user="hi")
+        self.assertEqual(reply, "generic hello")
+        self.assertEqual(seen.get("model"), "qwen3:8b")
+
+    def test_ollama_dialect_unchanged(self) -> None:
+        import json as _json
+        from unittest import mock as _mock
+
+        def _resp(payload: object):
+            resp = _mock.MagicMock()
+            resp.read.return_value = _json.dumps(payload).encode("utf-8")
+            resp.__enter__.return_value = resp
+            return resp
+
+        brain = self._brain(brain_llm_model="qwen3:8b")
+        with _mock.patch(
+            "urllib.request.urlopen",
+            return_value=_resp({"message": {"content": "ollama hello"}}),
+        ) as opened:
+            reply = brain._brain_llm_call(system="s", user="hi")
+        self.assertEqual(reply, "ollama hello")
+        self.assertTrue(opened.call_args.args[0].full_url.endswith("/api/chat"))
+
+    def test_generic_probe_uses_v1_models(self) -> None:
+        import json as _json
+        from unittest import mock as _mock
+
+        def _resp(payload: object):
+            resp = _mock.MagicMock()
+            resp.read.return_value = _json.dumps(payload).encode("utf-8")
+            resp.__enter__.return_value = resp
+            return resp
+
+        brain = self._brain(
+            brain_llm_server="openai-compatible", brain_llm_model="qwen3:8b"
+        )
+        with _mock.patch(
+            "urllib.request.urlopen",
+            return_value=_resp({"data": [{"id": "qwen3:8b"}]}),
+        ) as opened:
+            self.assertTrue(brain._brain_llm_reachable())
+        self.assertTrue(opened.call_args.args[0].full_url.endswith("/v1/models"))
 
 
 if __name__ == "__main__":  # pragma: no cover

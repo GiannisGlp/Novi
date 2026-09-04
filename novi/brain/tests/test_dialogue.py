@@ -523,6 +523,37 @@ class ComposeReplyTests(unittest.TestCase):
             self.assertTrue(_is_capability_question(s), s)
         self.assertFalse(_is_capability_question("what's the time?"))
 
+    def test_strip_think_blocks_removes_qwen_thinking(self):
+        from novi.brain.dialogue import _strip_think_blocks
+
+        self.assertEqual(
+            _strip_think_blocks("<think>Let me reason about this.</think>I'm here for you."),
+            "I'm here for you.",
+        )
+        # multiline thinking, attributes, stray closer, unclosed tag
+        self.assertEqual(
+            _strip_think_blocks("<think>\nline one\nline two\n</think>\nHi there."),
+            "Hi there.",
+        )
+        self.assertEqual(_strip_think_blocks("Hi there.</think>"), "Hi there.")
+        self.assertEqual(_strip_think_blocks("<think>hmm, let me see"), "")
+        # plain prose untouched
+        self.assertEqual(
+            _strip_think_blocks("I was thinking about your question."),
+            "I was thinking about your question.",
+        )
+
+    def test_reply_strips_thinking_and_keeps_response(self):
+        # End to end through the guardrails: an Ollama/Qwen reply wrapped in
+        # <think> tags must surface only the response — never the thinking.
+        b = self._brain()
+        thinky = lambda *, system, user, temperature=0.5, timeout=120: (  # noqa: E731
+            "<think>The user wants me to continue; keep it short.</think>Got it — tell me more."
+        )
+        out = b.dialogue.reply(system="sys", user="hello", llm_chat=thinky)
+        self.assertEqual(out["text"], "Got it — tell me more.")
+        self.assertFalse(out["rejected"])
+
     def test_identity_question_detection(self):
         # "are you a robot? / do you have hands? / who made you?" are identity
         # questions that must answer honestly, not "no good answer on <word>".

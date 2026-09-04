@@ -281,6 +281,19 @@ class TrainedReplyTransportTest(unittest.TestCase):
         self.assertIsNone(t(system="ignored", user=_payload("hello")))
         self.assertEqual(calls["n"], 1, "second call must not retry the load during cooldown")
 
+    def test_strips_think_tag_blocks(self) -> None:
+        class TagTokenizer(FakeTokenizer):
+            def decode(self, ids, skip_special_tokens: bool = True) -> str:
+                return "<think>The user is sad; respond with care.</think>I'm here for you."
+
+        def tag_loader(*, base_model, dialogue_adapter, emotional_adapter, device="cpu"):
+            return FakeModel(), TagTokenizer()
+
+        t = TrainedReplyTransport(
+            dialogue_adapter="/fake/dialogue", loader=tag_loader, device="cpu",
+        )
+        self.assertEqual(t(system="ignored", user=_payload("hello")), "I'm here for you.")
+
     def test_strip_think_does_not_over_match_prose(self) -> None:
         from novi.brain.trained_reply import _strip_think
 
@@ -325,6 +338,81 @@ class TrainedReplyTransportTest(unittest.TestCase):
         t = self._transport()
         with self.assertNoLogs("novi.brain.trained_reply", level="WARNING"):
             self.assertIsNotNone(t(system="ignored", user=_payload("hello")))
+
+    def test_loader_prefers_dtype_over_deprecated_torch_dtype(self) -> None:
+        # transformers deprecated `torch_dtype` (warns on every load); use
+        # `dtype` instead.
+        import sys
+        from unittest import mock
+
+        from novi.brain.trained_reply import _load_adapters
+
+        with mock.patch.dict(sys.modules, {
+            "torch": mock.MagicMock(),
+            "peft": mock.MagicMock(),
+            "transformers": mock.MagicMock(),
+        }):
+            import torch  # noqa: F401  (ensures the mock is-registered path works)
+            _load_adapters(
+                base_model="Qwen/Qwen3-8B",
+                dialogue_adapter="/fake/dialogue",
+                emotional_adapter="/fake/emotional",
+            )
+            from transformers import AutoModelForCausalLM
+
+            _, kwargs = AutoModelForCausalLM.from_pretrained.call_args
+            self.assertIn("dtype", kwargs)
+            self.assertNotIn("torch_dtype", kwargs)
+
+    def test_loader_rejects_bad_adapter_path_before_base_model(self) -> None:
+        # A typo'd adapter must fail with the path in the message WITHOUT
+        # loading the multi-GB base model first.
+        from unittest import mock
+
+        from novi.brain.trained_reply import _load_adapters
+
+        with (
+            mock.patch(
+                "transformers.AutoModelForCausalLM.from_pretrained",
+                side_effect=AssertionError("base model must not load for a bad adapter"),
+            ),
+            self.assertRaises(Exception) as ctx,
+        ):
+            _load_adapters(
+                base_model="Qwen/Qwen3-8B",
+                dialogue_adapter="/nonexistent/adapter-xyz",
+                emotional_adapter=None,
+                device="cpu",
+            )
+        self.assertIn("/nonexistent/adapter-xyz", str(ctx.exception))
+
+    def test_loader_falls_back_to_torch_dtype_on_old_transformers(self) -> None:
+        import sys
+        from unittest import mock
+
+        from novi.brain.trained_reply import _load_adapters
+
+        fake_causal = mock.MagicMock()
+        fake_causal.from_pretrained.side_effect = [
+            TypeError("unexpected keyword 'dtype'"),
+            mock.MagicMock(),
+        ]
+        fake_transformers = mock.MagicMock()
+        fake_transformers.AutoModelForCausalLM = fake_causal
+        with mock.patch.dict(sys.modules, {
+            "torch": mock.MagicMock(),
+            "peft": mock.MagicMock(),
+            "transformers": fake_transformers,
+        }):
+            _load_adapters(
+                base_model="Qwen/Qwen3-8B",
+                dialogue_adapter="/fake/d",
+                emotional_adapter=None,
+            )
+            calls = fake_causal.from_pretrained.call_args_list
+            self.assertEqual(len(calls), 2)
+            self.assertIn("dtype", calls[0].kwargs)
+            self.assertIn("torch_dtype", calls[1].kwargs)
 
 
 class DefaultLlmChatResolutionTest(unittest.TestCase):

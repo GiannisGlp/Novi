@@ -55,8 +55,14 @@ _THINK_RE = re.compile(r"^\s*thinking\s*\n.*?\n\s*response", re.DOTALL)
 
 
 def _strip_think(text: str) -> str:
-    """Remove Qwen3 ``thinking`` CoT blocks (the adapters should not narrate)."""
-    return _THINK_RE.sub("", text).strip()
+    """Remove Qwen3 thinking CoT blocks (the adapters should not narrate).
+
+    ``<think>`` tag blocks go first (shared helper); the legacy anchored
+    ``thinking``/``response`` split below covers older verbose formats.
+    """
+    from .dialogue import _strip_think_blocks  # noqa: PLC0415 - keep module import light
+
+    return _THINK_RE.sub("", _strip_think_blocks(text)).strip()
 
 
 def derive_dialogue_act(user_says: str) -> str:
@@ -240,11 +246,25 @@ def _load_adapters(
 
     quiet_third_party_startup_noise()
     import torch  # noqa: PLC0415
-    from peft import PeftModel  # noqa: PLC0415
+    from peft import PeftConfig, PeftModel  # noqa: PLC0415
     from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: PLC0415
 
+    # Validate the adapter ids FIRST: a typo'd path must fail here with the
+    # path in the message — not after loading the multi-GB base model.
+    for role, adapter in (("dialogue", dialogue_adapter), ("emotional", emotional_adapter)):
+        if adapter:
+            try:
+                PeftConfig.from_pretrained(adapter)
+            except Exception as exc:  # noqa: BLE001 - re-raised below with the path attached
+                raise OSError(f"trained {role} adapter {adapter!r}: {exc}") from exc
+
     tokenizer = AutoTokenizer.from_pretrained(base_model)
-    model = AutoModelForCausalLM.from_pretrained(base_model, torch_dtype=torch.float16).to(device)
+    try:
+        # `dtype` is the supported spelling; `torch_dtype` warns on every
+        # load in recent transformers.
+        model = AutoModelForCausalLM.from_pretrained(base_model, dtype=torch.float16).to(device)
+    except TypeError:
+        model = AutoModelForCausalLM.from_pretrained(base_model, torch_dtype=torch.float16).to(device)
     if dialogue_adapter:
         model = PeftModel.from_pretrained(model, dialogue_adapter, adapter_name="dialogue")
     if emotional_adapter:

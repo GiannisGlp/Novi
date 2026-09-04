@@ -40,7 +40,6 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
 
   const listeningRef = useRef(false)
   const autoRef = useRef(false)
-  const speakBackRef = useRef(true)
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const transcriptRef = useRef<HTMLDivElement>(null)
 
@@ -59,19 +58,9 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
     if (el) el.scrollTop = el.scrollHeight
   }, [transcript.length])
 
-  const speak = useCallback(
-    (text: string) => {
-      if (!speakBackRef.current || !('speechSynthesis' in window)) return
-      try {
-        window.speechSynthesis.cancel()
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text))
-      } catch {
-        /* speech synthesis is best-effort */
-      }
-    },
-    [],
-  )
-
+  // Single-voice rule: the browser never renders audio itself. The Mac
+  // voice speaks every reply server-side (when speak-back is on), so there
+  // is no speechSynthesis here — the toggle below only flips the server flag.
   const enableIO = async () => {
     setEnabling(true)
     setEnableMsg('Enabling…')
@@ -97,7 +86,8 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
     listeningRef.current = true
     setListening(true)
     try {
-      const res = await api.voiceListen(3)
+      // clientSpeaks=false: the Mac voice speaks the reply server-side.
+      const res = await api.voiceListen(3, false)
       const r = (res.result ?? res) as Record<string, unknown>
       const heard = String(r.text ?? '').trim()
       const replyText = String(r.reply ?? '').trim()
@@ -108,7 +98,6 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
         if (heard) addTurn('you', heard)
         if (replyText) {
           addTurn('novi', replyText)
-          speak(replyText)
         }
         setReply({
           heard,
@@ -129,7 +118,7 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
         void toggleListen()
       }, 400)
     }
-  }, [addTurn, speak])
+  }, [addTurn])
 
   const toggleAuto = (on: boolean) => {
     setAutoListen(on)
@@ -147,7 +136,6 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
 
   const toggleSpeakBack = async (v: boolean) => {
     setSpeakBackState(v)
-    speakBackRef.current = v
     try {
       await api.realSpeakback(v)
     } catch {
@@ -164,8 +152,8 @@ export function CameraPage({ reportConnection, frame, showImage }: CameraPagePro
       const res = await api.voiceTurn(text)
       const r = (res.result ?? res) as Record<string, unknown>
       if (r.reply) {
+        // Spoken server-side by the Mac voice; the browser stays silent.
         addTurn('novi', String(r.reply))
-        speak(String(r.reply))
       }
     } catch (e) {
       addTurn('sys', 'error: ' + (e instanceof Error ? e.message : String(e)))
