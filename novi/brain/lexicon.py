@@ -252,15 +252,29 @@ class LearnedPreferences:
         key = self._person_key(person, kind)
         pref = self._prefs.get(key)
         if pref is None:
+            # No exact-scope entry: adopt the existing active entry of the
+            # same kind instead of forking — but only when anonymous scope
+            # is involved on either side (C-034/C-121 restatement and
+            # correction semantics). Named persons never absorb each
+            # other's entries (S20 relationship isolation).
+            for (scope_person, scope_kind), candidate in self._prefs.items():
+                if scope_kind == kind and candidate.active and (
+                        not scope_person or not person):
+                    pref = candidate
+                    key = (scope_person, scope_kind)
+                    break
+        if pref is None:
             pref = CommunicationPreference(kind=kind, person=person, value=value, first_seen=now, last_seen=now)
             self._prefs[key] = pref
         else:
             pref.evidence_count += 1
             pref.confidence = _clamp01(pref.confidence + (0.25 if explicit else 0.1))
-            if explicit:
-                # explicit preference updates the value and marks older evidence superseded
+            # Restated preferences supersede: the newest statement wins even
+            # without correction framing (people update tastes by restating).
+            # History stays auditable via superseded_by.
+            if value != pref.value:
+                pref.superseded_by = f"{pref.person}:{kind}={pref.value}@{pref.last_seen}"
                 pref.value = value
-                pref.superseded_by = f"{person}:{kind}@{now}"
             pref.last_seen = now or pref.last_seen
         return pref
 

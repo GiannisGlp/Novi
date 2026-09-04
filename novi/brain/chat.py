@@ -107,6 +107,13 @@ def _is_correction_like(text: str) -> bool:
     return "that's not what" in low or "that is not what" in low
 
 
+def _mention_candidates(text: str) -> list[str]:
+    """Plan 03 mention extraction (implementation lives in conversation_state)."""
+    from .conversation.conversation_state import mention_candidates
+
+    return mention_candidates(text)
+
+
 class ChatMixin:
     """Chat and dialogue orchestration methods for MacBrain.
 
@@ -475,20 +482,23 @@ class ChatMixin:
         thresholds control when an expression is usable.
         """
         learned: list[tuple[str, str]] = []
+        # A correction-flavored statement supersedes the older value
+        # (explicit=True) instead of merely adding evidence for it.
+        explicit = _is_correction_like(text) or "correction" in text.lower()
         m = re.search(r"\bi (?:really )?(?:like|love|enjoy|am into|am a fan of) (.+?)(?:[.!?]|$)", text, re.I)
         if m and m.group(1).strip():
             value = m.group(1).strip()
-            self.preferences.learn(person or "", "likes", value)
+            self.preferences.learn(person or "", "likes", value, explicit=explicit)
             learned.append(("likes", value))
         m = re.search(r"\bi(?:'d| would)? prefer (.+?)(?:[.!?]|$)", text, re.I)
         if m and m.group(1).strip():
             value = m.group(1).strip()
-            self.preferences.learn(person or "", "prefers", value)
+            self.preferences.learn(person or "", "prefers", value, explicit=explicit)
             learned.append(("prefers", value))
         m = re.search(r"\bi (?:don'?t|do not) (?:like|care for|enjoy) (.+?)(?:[.!?]|$)", text, re.I)
         if m and m.group(1).strip():
             value = m.group(1).strip()
-            self.preferences.learn(person or "", "dislikes", value)
+            self.preferences.learn(person or "", "dislikes", value, explicit=explicit)
             learned.append(("dislikes", value))
         # Reminder/to-do requests ("remind me to X", "don't forget to X") are
         # persisted so Novi can bring them up later in conversation.
@@ -938,6 +948,12 @@ class ChatMixin:
             if wm is not None:
                 with contextlib.suppress(Exception):
                     wm.update(cycle=cycle, utterance=text, utterance_source="chat")
+            # Plan 03: first-class conversation pipeline — state, intent,
+            # referents, packet, plan. Soft-fails to today's path.
+            conv = self._conversation_turn(
+                text, addressee=addressee, cycle=cycle,
+                discourse_topic=discourse_hint, speaker=person,
+            )
             reply_obj = self.compose_reply(
                 text, person=addressee, history=history, llm_chat=llm_chat,
                 last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
@@ -993,18 +1009,32 @@ class ChatMixin:
                 except Exception:  # noqa: BLE001 - soul learning is best-effort
                     pass
             if reply is None:
-                fb = self.natural_reply_fallback(text=text, cycle=cycle)
-                # Honest label: distinguish "no transport at all" from "a
-                # transport existed but the LLM reply was rejected/empty".
-                transport_reason = "llm_reply_rejected" if llm_chat is not None else "llm_unavailable"
-                out = {
-                    "text": fb.get("text"),
-                    "reply_source": "fallback",
-                    "addressee": addressee,
-                    "reason": fb.get("reason") or "No LLM reply available; used a natural acknowledgement.",
-                    "grounding": reply_obj.get("grounding", {}),
-                    "trace": {"conclusion": None, "route": "deterministic", "route_reason": transport_reason},
-                }
+                # Plan 03: deterministic packet-based render first; the
+                # generic fallback remains if the pipeline is unavailable.
+                rendered = (conv.get("rendered") or "") if conv else ""
+                if rendered:
+                    out = {
+                        "text": rendered,
+                        "reply_source": "fallback",
+                        "addressee": addressee,
+                        "reason": "Deterministic reply planned from the conversation packet.",
+                        "grounding": reply_obj.get("grounding", {}),
+                        "trace": {"conclusion": None, "route": "deterministic",
+                                  "route_reason": "packet_render"},
+                    }
+                else:
+                    fb = self.natural_reply_fallback(text=text, cycle=cycle)
+                    # Honest label: distinguish "no transport at all" from "a
+                    # transport existed but the LLM reply was rejected/empty".
+                    transport_reason = "llm_reply_rejected" if llm_chat is not None else "llm_unavailable"
+                    out = {
+                        "text": fb.get("text"),
+                        "reply_source": "fallback",
+                        "addressee": addressee,
+                        "reason": fb.get("reason") or "No LLM reply available; used a natural acknowledgement.",
+                        "grounding": reply_obj.get("grounding", {}),
+                        "trace": {"conclusion": None, "route": "deterministic", "route_reason": transport_reason},
+                    }
             else:
                 out = {
                     "text": reply,
@@ -1015,6 +1045,12 @@ class ChatMixin:
                     "trace": {"conclusion": reply, "route": "local_llm",
                               "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
                 }
+            # Plan 03 Phase 9: deterministic critic on the final text with
+            # one bounded repair pass on the deterministic path only; the
+            # LLM path records the verdict without rewriting live quality.
+            self._conversation_critique(conv, out, deterministic=reply is None)
+            self._conversation_record(conv, user_text=text,
+                                      novi_text=str(out.get("text") or ""))
             self._log_interaction(text=text, addressee=addressee, cycle=cycle,
                                   topic=discourse_hint, reply_obj=reply_obj,
                                   result=out, latency_ms=(time.perf_counter() - started) * 1000.0)
@@ -1051,6 +1087,264 @@ class ChatMixin:
                 reply_source=str(result.get("reply_source", "")),
                 latency_ms=round(latency_ms, 1),
             ))
+        except Exception:
+            pass
+
+    def _conversation_turn(self, text: str, *, addressee: str, cycle: int,
+                           discourse_topic: str, speaker: str = "") -> dict[str, Any]:
+        """Plan 03 pipeline for one turn (never raises; {} when unavailable).
+
+        Owns one ConversationState per speaker (stable across turns —
+        deliberately NOT keyed by the resolved addressee, which may carry
+        topic words). Updates the topic without resetting the conversation,
+        closes answered slots (Step 1.5), extracts entity mentions,
+        classifies intent, resolves referents, records corrections
+        (Phase 10), supplements packet memories with learned preferences,
+        and builds the plan + deterministic render. Bridges DiscourseState
+        instead of re-tracking: the discourse topic seeds analytic state.
+        """
+        try:
+            from .conversation.context_manager import build_packet
+            from .conversation.conversation_state import (
+                ConversationState,
+                classify_topic_transition,
+                preferred_correction_entity,
+            )
+            from .conversation.intent import classify_intent
+            from .conversation.referent_resolution import resolve_referents
+            from .conversation.response_planner import plan_response, render_deterministic
+
+            convos = self.__dict__.setdefault("_conversations", {})
+            key = (speaker or "").strip() or "user"
+            state = convos.get(key)
+            if state is None:
+                state = ConversationState()
+                convos[key] = state
+            transition = classify_topic_transition(text, state)
+            if discourse_topic:
+                state.set_topic(discourse_topic, transition=transition)
+            if transition == "NEW_TOPIC" or getattr(transition, "value", "") == "NEW_TOPIC":
+                # A clean topic break expires the old anchor: answering the
+                # new topic with stale entities is WRONG_TOPIC contamination.
+                state.anchor.active_entity = ""
+            intent = classify_intent(text, state)
+            closed = state.answer_open_question(text)
+            referents = resolve_referents(text, state)
+            mentions = _mention_candidates(text)
+            for mention in mentions:
+                if mention.lower() not in {e.lower() for e in state.active_entities}:
+                    state.active_entities.append(mention)
+            del state.active_entities[:-8]
+            if intent.intent == "CORRECTION":
+                target = preferred_correction_entity(mentions, text)
+                anchor_entity = target
+                if target:
+                    state.anchor.active_entity = target
+                state.anchor.recent_correction = text[:200]
+                state.last_unresolved_item = ""
+                state.pending_clarifications.clear()
+            else:
+                anchor_entity = mentions[-1] if mentions else ""
+                if mentions:
+                    state.anchor.active_entity = mentions[-1]
+            packet = build_packet(text, state, intent, referents, self)
+            packet.ambiguous_referents = list(referents.ambiguous)
+            self._supplement_preference_memories(
+                packet, speaker=key, addressee=addressee, intent=intent)
+            self._supplement_recent_claims(packet, state)
+            plan = plan_response(packet)
+            rendered = render_deterministic(plan, packet)
+            return {"state": state, "intent": intent,
+                    "referents": referents, "packet": packet,
+                    "plan": plan, "rendered": rendered,
+                    "closed_slot": closed, "mentions": mentions,
+                    "anchor_entity": anchor_entity}
+        except Exception:
+            return {}
+
+    def _supplement_preference_memories(self, packet: Any, *, speaker: str,
+                                        intent: Any,
+                                        addressee: str = "") -> None:
+        """Surface learned preferences as cited packet memories.
+
+        The durable preference store lives outside FTS memory, so the
+        packet builder cannot see it — without this, MEMORY_QUERY turns
+        over known preferences render as gaps. Person scope mirrors the
+        learning path (preferences are recorded under the addressee the
+        learning hook saw). Bounded (3) and relevance filtered; never
+        raises.
+        """
+        try:
+            prefs = getattr(self, "preferences", None)
+            snapshot = prefs.snapshot() if prefs is not None else []
+            entities = " ".join(
+                list(getattr(packet.anchor, "active_entity", "") and [packet.anchor.active_entity])
+                + list(packet.resolved_entities.values())
+                + ([packet.anchor.topic] if packet.anchor.topic else [])
+            ).lower()
+            is_query = getattr(intent, "intent", "") in ("MEMORY_QUERY", "RECOMMENDATION")
+            verbs = {"likes": "like", "prefers": "prefer", "dislikes": "don't like",
+                     "reminders": "have a reminder to"}
+            allowed_persons = {speaker, addressee, ""}
+            import re as _re
+
+            def _stems(words: set[str]) -> set[str]:
+                out = set(words)
+                for word in words:
+                    if len(word) > 5 and word.endswith("s"):
+                        out.add(word[:-1])
+                return out
+
+            turn_words = _stems(
+                {w for w in _re.findall(r"[a-z0-9]+", packet.current_turn.lower())
+                 if len(w) > 4})
+            added = 0
+            for pref in snapshot:
+                if not isinstance(pref, dict) or not pref.get("active", True):
+                    continue
+                person = str(pref.get("person", "") or "")
+                if person not in allowed_persons:
+                    continue
+                value = str(pref.get("value", "") or "").strip()
+                if not value:
+                    continue
+                value_words = _stems(
+                    {w for w in _re.findall(r"[a-z0-9]+", value.lower())
+                     if len(w) > 4})
+                relevant = (is_query or (value.lower() in entities)
+                            or any(w in entities for w in value_words)
+                            or bool(value_words & turn_words))
+                if not relevant:
+                    continue
+                verb = verbs.get(str(pref.get("kind", "")), "prefer")
+                packet.relevant_memories.append({
+                    "content": f"You {verb} {value}.",
+                    "fact_class": "PREFERENCE",
+                    "memory_type": "preference",
+                    "source": "preferences",
+                    "confidence": float(pref.get("confidence", 0.5) or 0.5),
+                    "why_selected": "learned preference matching turn",
+                })
+                added += 1
+                if added >= 3:
+                    break
+        except Exception:
+            pass
+
+    def _supplement_recent_claims(self, packet: Any, state: Any) -> None:
+        """Surface recent user claims as cited packet memories.
+
+        Utterances are not ingested into FTS memory per turn, so without
+        this the packet is blind to facts stated minutes ago in the same
+        conversation (C-133 conflicting-evidence handling). Bounded (4),
+        relevance-filtered on word overlap, never raises.
+        """
+        try:
+            import re as _re
+
+            def _stems(words: set[str]) -> set[str]:
+                out = set(words)
+                for word in words:
+                    if len(word) > 5 and word.endswith("s"):
+                        out.add(word[:-1])
+                return out
+
+            turn_words = _stems(
+                {w for w in _re.findall(r"[a-z0-9]+", packet.current_turn.lower())
+                 if len(w) > 4})
+            if not turn_words:
+                return
+            recent = list(getattr(state, "recent_turns", None) or [])[-6:]
+            added = 0
+            for turn in recent:
+                if not isinstance(turn, dict):
+                    continue
+                claim = str(turn.get("user", "") or "").strip()
+                if len(claim) < 12:
+                    continue
+                claim_words = _stems(
+                    {w for w in _re.findall(r"[a-z0-9]+", claim.lower())
+                     if len(w) > 4})
+                if not (claim_words & turn_words):
+                    continue
+                packet.relevant_memories.append({
+                    "content": claim,
+                    "fact_class": "USER_STATED_FACT",
+                    "memory_type": "recent_claim",
+                    "source": "recent_turns",
+                    "confidence": 0.6,
+                    "why_selected": "recent user claim overlapping query",
+                })
+                added += 1
+                if added >= 4:
+                    break
+        except Exception:
+            pass
+
+    def _conversation_record(self, conv: dict[str, Any], *, user_text: str,
+                             novi_text: str) -> None:
+        """Fold the completed turn into the conversation state (never raises)."""
+        try:
+            if not conv:
+                return
+            state = conv["state"]
+            # Preferred entity trails last so _refresh_anchor lands on it:
+            # correction target > current mentions > prior anchor. Without
+            # this ordering the record path reverts corrections to the
+            # stale anchor via resolution-only entities.
+            entities = [v for v in dict.fromkeys(
+                conv["referents"].resolutions.values()) if v]
+            for mention in conv.get("mentions", []) or []:
+                if mention.lower() not in {e.lower() for e in entities}:
+                    entities.append(mention)
+            preferred = (conv.get("anchor_entity") or "").strip()
+            if preferred and (not entities
+                              or entities[-1].lower() != preferred.lower()):
+                entities = [e for e in entities
+                            if e.lower() != preferred.lower()]
+                entities.append(preferred)
+            if not entities and state.anchor.active_entity:
+                entities = [state.anchor.active_entity]
+            question = novi_text if "?" in (novi_text or "") else ""
+            state.record_turn(user_text=user_text, novi_text=novi_text,
+                              intent=conv["intent"].intent,
+                              dialogue_act=conv["intent"].dialogue_act,
+                              entities=entities, question_asked=question)
+        except Exception:
+            pass
+
+    def _conversation_critique(self, conv: dict[str, Any],
+                               result: dict[str, Any],
+                               *, deterministic: bool) -> None:
+        """Phase 9 critic: score, repair once (deterministic path), record."""
+        try:
+            if not conv:
+                return
+            from .conversation.response_critic import critique_draft, repair
+
+            packet, plan = conv["packet"], conv["plan"]
+            state = conv["state"]
+            draft = str(result.get("text") or "")
+            verdict = critique_draft(draft=draft, packet=packet, plan=plan,
+                                     last_novi=state.last_novi_claim)
+            if verdict.needs_repair and deterministic and draft:
+                fixed = repair(draft=draft, packet=packet, plan=plan,
+                               verdict=verdict, last_novi=state.last_novi_claim)
+                if fixed.strip():
+                    result["text"] = fixed
+                    result["trace"]["route_reason"] = "packet_render+repair"
+            trace = result.get("trace")
+            if isinstance(trace, dict):
+                trace["conversation"] = {
+                    "intent": conv["intent"].to_dict(),
+                    "referents": conv["referents"].to_dict(),
+                    "response_goal": plan.to_dict(),
+                    "critic": verdict.to_dict(),
+                    "turn": state.turn_count,
+                }
+            grounding = result.get("grounding")
+            if isinstance(grounding, dict):
+                grounding["packet"] = packet.to_dict()
         except Exception:
             pass
 

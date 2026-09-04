@@ -44,6 +44,7 @@ CHECK_KINDS = frozenset({
     "contains",
     "not_contains",
     "no_generic_filler",
+    "not_repeats_previous",
     "reply_source_in",
     "max_latency_ms",
     "min_words",
@@ -89,6 +90,9 @@ class ConversationScenario:
     setup_turns: list[str] = field(default_factory=list)
     checks: list[Check] = field(default_factory=list)
     person: str = ""
+    # Plan C-110/111: rebuild the brain on the same database after this
+    # setup-turn index (restart persistence probe). -1 = no restart.
+    restart_after_turn: int = -1
 
     def __post_init__(self) -> None:
         if not self.turns:
@@ -103,11 +107,20 @@ class ConversationScenario:
 
 
 def evaluate_check(check: Check, *, response: str, reply: dict[str, Any],
-                   latency_ms: float) -> tuple[bool, str]:
+                   latency_ms: float, previous: str = "") -> tuple[bool, str]:
     """Evaluate one check. Returns (passed, detail)."""
     text = (response or "").lower()
     words = (response or "").split()
     kind, params = check.kind, check.params
+    if kind == "not_repeats_previous":
+        ceiling = float(params.get("max_overlap", 0.5))
+        prev = set((previous or "").lower().split())
+        cur = set(text.split())
+        if not cur or not prev:
+            return True, "nothing to compare"
+        overlap = len(cur & prev) / max(len(cur), len(prev))
+        return (overlap <= ceiling,
+                f"overlap {overlap:.2f} vs ceiling {ceiling:.2f}")
     if kind == "contains":
         needles = [s.lower() for s in params.get("substrings", [])]
         hit = next((n for n in needles if n in text), None)
@@ -149,11 +162,19 @@ class ReplayHarness:
         brain = self._factory(db_path)
         brain.start()
         try:
-            for text in scenario.setup_turns:
+            for setup_index, text in enumerate(scenario.setup_turns):
                 with _suppress():
                     brain.respond(text, person=scenario.person)
+                if setup_index == scenario.restart_after_turn:
+                    # Plan C-110/111: restart persistence probe — rebuild on
+                    # the same database; durable facts must survive.
+                    with _suppress():
+                        brain.stop()
+                    brain = self._factory(db_path)
+                    brain.start()
             traces: list[AcceptanceTrace] = []
             failed_labels: list[str] = []
+            previous_response = ""
             for index, text in enumerate(scenario.turns):
                 started = time.perf_counter()
                 reply = brain.respond(text, person=scenario.person) or {}
@@ -167,20 +188,31 @@ class ReplayHarness:
                     if target != index:
                         continue
                     passed, _detail = evaluate_check(
-                        check, response=response, reply=reply, latency_ms=latency_ms)
+                        check, response=response, reply=reply,
+                        latency_ms=latency_ms, previous=previous_response)
                     if not passed:
                         turn_labels.append(check.label)
+                previous_response = response
                 failed_labels.extend(turn_labels)
+                conv = trace.get("conversation") or {}
                 traces.append(AcceptanceTrace(
                     scenario_id=scenario.scenario_id,
                     turn_index=index,
                     user_text=text,
                     response_text=response,
                     reply_source=str(reply.get("reply_source", "")),
+                    conversation_state={"turn": conv.get("turn")}
+                    if isinstance(conv, dict) else None,
+                    intent=conv.get("intent") if isinstance(conv, dict) else None,
+                    referents=(conv.get("referents") or {}).get("resolutions")
+                    if isinstance(conv, dict) else None,
                     retrieved_context={"trace": trace, "grounding": grounding},
                     memory_used=_as_str_list(grounding.get("recalled"))
                     + _as_str_list(trace.get("memories")),
                     model_route=str(trace.get("route", "")),
+                    response_goal=conv.get("response_goal")
+                    if isinstance(conv, dict) else None,
+                    critic=conv.get("critic") if isinstance(conv, dict) else None,
                     latency_ms=round(latency_ms, 1),
                     failure_labels=turn_labels,
                     result="PASS" if not turn_labels else "FAIL",
