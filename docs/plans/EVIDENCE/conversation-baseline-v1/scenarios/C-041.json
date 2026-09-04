@@ -1,0 +1,217 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-041",
+  "title": "Repeated correction",
+  "dimension": "Correction handling",
+  "git_sha": "8b702d91ff93040b6759a673d89f6c31d58cff69",
+  "timestamp": "2026-09-04T18:43:58.330765+00:00",
+  "runtime": "mac-brain",
+  "model": "deterministic",
+  "configuration": {
+    "brain_llm": false,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052"
+    ]
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-041",
+      "turn_index": 0,
+      "user_text": "Tell me about the Model Y.",
+      "response_text": "hey, i'm here.",
+      "reply_source": "fallback",
+      "conversation_state": null,
+      "intent": null,
+      "referents": null,
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "llm_unavailable"
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": null,
+      "model_route": "deterministic",
+      "critic": null,
+      "repair_count": 0,
+      "latency_ms": 1.6,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-041",
+      "turn_index": 1,
+      "user_text": "No, I meant the Model 3.",
+      "response_text": "hey, i'm here.",
+      "reply_source": "fallback",
+      "conversation_state": null,
+      "intent": null,
+      "referents": null,
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "llm_unavailable"
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": null,
+      "model_route": "deterministic",
+      "critic": null,
+      "repair_count": 0,
+      "latency_ms": 0.2,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-041",
+      "turn_index": 2,
+      "user_text": "What colors are available?",
+      "response_text": "hey, i'm here.",
+      "reply_source": "fallback",
+      "conversation_state": null,
+      "intent": null,
+      "referents": null,
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "llm_unavailable"
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": null,
+      "model_route": "deterministic",
+      "critic": null,
+      "repair_count": 0,
+      "latency_ms": 0.1,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-041",
+      "turn_index": 3,
+      "user_text": "And for the Model 3, what about the range?",
+      "response_text": "hey, i'm here.",
+      "reply_source": "fallback",
+      "conversation_state": null,
+      "intent": null,
+      "referents": null,
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "llm_unavailable"
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": null,
+      "model_route": "deterministic",
+      "critic": null,
+      "repair_count": 0,
+      "latency_ms": 0.2,
+      "failure_labels": [
+        "FAILURE_TO_LEARN"
+      ],
+      "human_rating": null,
+      "result": "FAIL"
+    }
+  ],
+  "state_before": null,
+  "intent": null,
+  "referents": null,
+  "context": {
+    "trace": {
+      "conclusion": null,
+      "route": "deterministic",
+      "route_reason": "llm_unavailable"
+    },
+    "grounding": {
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": null,
+  "response": "hey, i'm here.",
+  "critic": null,
+  "latency_ms": 0.2,
+  "result": "FAIL",
+  "failure_labels": [
+    "FAILURE_TO_LEARN"
+  ],
+  "human_rating": null
+}

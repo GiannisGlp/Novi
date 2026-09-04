@@ -1,0 +1,89 @@
+{
+  "schema": "conversation-baseline/v1",
+  "timestamp": "2026-09-04T18:43:58.378447+00:00",
+  "git_sha": "8b702d91ff93040b6759a673d89f6c31d58cff69",
+  "runtime": "mac-brain",
+  "model": "deterministic",
+  "configuration": {
+    "brain_llm": false,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052"
+    ]
+  },
+  "totals": {
+    "scenarios": 19,
+    "passed": 7,
+    "pass_rate": 0.368
+  },
+  "by_dimension": {
+    "Clarification quality": {
+      "scenarios": 3,
+      "passed": 2,
+      "pass_rate": 0.667
+    },
+    "Context continuity": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Correction handling": {
+      "scenarios": 2,
+      "passed": 0,
+      "pass_rate": 0.0
+    },
+    "Memory restraint": {
+      "scenarios": 2,
+      "passed": 1,
+      "pass_rate": 0.5
+    },
+    "Memory retrieval": {
+      "scenarios": 3,
+      "passed": 0,
+      "pass_rate": 0.0
+    },
+    "Naturalness": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Referent resolution": {
+      "scenarios": 4,
+      "passed": 0,
+      "pass_rate": 0.0
+    },
+    "Topic changes": {
+      "scenarios": 3,
+      "passed": 2,
+      "pass_rate": 0.667
+    }
+  },
+  "label_counts": {
+    "WRONG_REFERENT": 4,
+    "MEMORY_MISSED": 3,
+    "OUT_OF_CONTEXT": 1,
+    "MEMORY_HALLUCINATED": 1,
+    "FAILURE_TO_RECOVER": 1,
+    "FAILURE_TO_LEARN": 1,
+    "MISSING_CLARIFICATION": 1
+  },
+  "status": "FAIL"
+}

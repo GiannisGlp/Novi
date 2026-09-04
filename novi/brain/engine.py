@@ -157,6 +157,11 @@ class MacBrainConfig:
     # native /api/* endpoints; "openai-compatible" speaks /v1 so llama.cpp,
     # vLLM, and TensorRT-LLM frontends are drop-in backends.
     brain_llm_server: str = "ollama"
+    # Plan 03 Step 0.2: when set, every respond() call appends a complete
+    # interaction record (JSONL) for the real-conversation baseline corpus.
+    # Setting this path means consenting to log raw inputs — leave empty
+    # (default) for private operation.
+    interaction_log_path: str = ""
     # Plan 25: trained-adapter reply (talk with the trained data). When enabled
     # and an adapter dir is configured, the brain's default transport renders
     # replies through the plan-23/24 LoRA adapters in the training prompt format

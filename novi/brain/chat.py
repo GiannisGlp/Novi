@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import json
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -920,6 +921,7 @@ class ChatMixin:
         text = (text or "").strip()
         if not text:
             return {"text": None, "reply_source": "none", "addressee": person or "", "trace": {}}
+        started = time.perf_counter()
         addressee = self.resolve_addressee(text, person=person)
         # Phase 2: every reply holds the speaking lease for ITS addressee, so a
         # concurrent step can never fire a second stream at the same person
@@ -995,7 +997,7 @@ class ChatMixin:
                 # Honest label: distinguish "no transport at all" from "a
                 # transport existed but the LLM reply was rejected/empty".
                 transport_reason = "llm_reply_rejected" if llm_chat is not None else "llm_unavailable"
-                return {
+                out = {
                     "text": fb.get("text"),
                     "reply_source": "fallback",
                     "addressee": addressee,
@@ -1003,17 +1005,54 @@ class ChatMixin:
                     "grounding": reply_obj.get("grounding", {}),
                     "trace": {"conclusion": None, "route": "deterministic", "route_reason": transport_reason},
                 }
-            return {
-                "text": reply,
-                "reply_source": "fallback" if reply_obj.get("fallback") else "dialogue",
-                "addressee": addressee,
-                "reason": reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state.",
-                "grounding": reply_obj.get("grounding", {}),
-                "trace": {"conclusion": reply, "route": "local_llm",
-                          "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
-            }
+            else:
+                out = {
+                    "text": reply,
+                    "reply_source": "fallback" if reply_obj.get("fallback") else "dialogue",
+                    "addressee": addressee,
+                    "reason": reply_obj.get("reason") or "Natural reply grounded in recalled knowledge, relationships and self-state.",
+                    "grounding": reply_obj.get("grounding", {}),
+                    "trace": {"conclusion": reply, "route": "local_llm",
+                              "route_reason": "fallback" if reply_obj.get("fallback") else "local LLM"},
+                }
+            self._log_interaction(text=text, addressee=addressee, cycle=cycle,
+                                  topic=discourse_hint, reply_obj=reply_obj,
+                                  result=out, latency_ms=(time.perf_counter() - started) * 1000.0)
+            return out
         finally:
             self.release_speaking_lease(addressee)
+
+    def _log_interaction(self, *, text: str, addressee: str, cycle: int,
+                         topic: str, reply_obj: dict[str, Any],
+                         result: dict[str, Any], latency_ms: float) -> None:
+        """Plan 03 Step 0.2: append one interaction record (never raises)."""
+        path = getattr(getattr(self, "config", None), "interaction_log_path", "")
+        if not path:
+            return
+        try:
+            from .conversation_trace import InteractionRecord, append_interaction_record
+
+            grounding = result.get("grounding") or {}
+            recalled = grounding.get("recalled")
+            memories = [str(m) for m in recalled] if isinstance(recalled, list) else []
+            append_interaction_record(path, InteractionRecord(
+                conversation_id=f"chat-{addressee or 'user'}",
+                turn_id=cycle,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                modality="chat",
+                raw_input=text,
+                normalized_input=text.strip(),
+                conversation_state={"topic": topic or ""},
+                retrieved_memories=memories,
+                retrieved_world=dict(grounding) if isinstance(grounding, dict) else {},
+                referents=[str(addressee)] if addressee else [],
+                model=str((result.get("trace") or {}).get("route", "")),
+                response=str(result.get("text") or ""),
+                reply_source=str(result.get("reply_source", "")),
+                latency_ms=round(latency_ms, 1),
+            ))
+        except Exception:
+            pass
 
     def respond_event(self, initiative: Any, *, person: str = "", grounding: str = "") -> dict[str, Any]:
         """Autonomous-utterance variant of respond() (plan 20 §3B).
