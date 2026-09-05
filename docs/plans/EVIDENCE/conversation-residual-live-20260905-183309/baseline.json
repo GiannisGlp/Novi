@@ -1,0 +1,92 @@
+{
+  "schema": "conversation-baseline/v1",
+  "timestamp": "2026-09-05T17:37:25.658348+00:00",
+  "git_sha": "6f912625e11e50c1ef399fab58c349aa21f5a298",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-032",
+      "C-072",
+      "C-122",
+      "C-133",
+      "C-140",
+      "C-150",
+      "C-173"
+    ]
+  },
+  "totals": {
+    "scenarios": 7,
+    "passed": 4,
+    "pass_rate": 0.571
+  },
+  "by_dimension": {
+    "Clarification quality": {
+      "scenarios": 1,
+      "passed": 0,
+      "pass_rate": 0.0
+    },
+    "Context continuity": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Correction handling": {
+      "scenarios": 1,
+      "passed": 0,
+      "pass_rate": 0.0
+    },
+    "Memory restraint": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Non-repetition": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Recovery from mistakes": {
+      "scenarios": 1,
+      "passed": 0,
+      "pass_rate": 0.0
+    },
+    "Voice channel": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    }
+  },
+  "label_counts": {
+    "FAILURE_TO_LEARN": 1,
+    "CONTRADICTION": 1,
+    "UNNECESSARY_CLARIFICATION": 1
+  },
+  "metrics": {
+    "turns": 16,
+    "mean_stage_ms": {
+      "compose": 10985.03,
+      "critic": 0.04,
+      "intent": 0.1,
+      "packet": 0.57,
+      "plan_render": 0.03,
+      "referents": 0.17,
+      "route": 0.02,
+      "state": 0.03,
+      "supplements": 0.35
+    },
+    "mean_context_tokens": 467.0,
+    "mean_memories_per_turn": 0.94,
+    "mean_world_facts_per_turn": 1.0,
+    "clarification_rate": 0.062,
+    "critic_reject_rate": 0.438,
+    "repair_rate": 0.188,
+    "tier_distribution": {
+      "FAST": 15,
+      "NORMAL": 1
+    }
+  },
+  "status": "FAIL"
+}

@@ -1,0 +1,855 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-122",
+  "title": "Routine learned across sessions",
+  "dimension": "Correction handling",
+  "git_sha": "6f912625e11e50c1ef399fab58c349aa21f5a298",
+  "timestamp": "2026-09-05T17:35:50.329653+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-032",
+      "C-072",
+      "C-122",
+      "C-133",
+      "C-140",
+      "C-150",
+      "C-173"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-122",
+      "turn_index": 0,
+      "user_text": "Recommend an interior for my car.",
+      "heard_text": "",
+      "response_text": "I'd recommend a minimalist interior for your car \u2014 clean lines, neutral tones, and plenty of hidden storage to keep things uncluttered. It makes the space feel larger and more calming on longer drives. Do you have a preference for colour, or should I suggest something specific?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 4
+      },
+      "intent": {
+        "intent": "RECOMMENDATION",
+        "dialogue_act": "REQUEST",
+        "confidence": 0.85,
+        "reason": "asks for a recommendation",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I'd recommend a minimalist interior for your car \u2014 clean lines, neutral tones, and plenty of hidden storage to keep things uncluttered. It makes the space feel larger and more calming on longer drives. Do you have a preference for colour, or should I suggest something specific?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "RECOMMENDATION",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.85,
+              "reason": "asks for a recommendation",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "RECOMMEND",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "You prefer dark interiors.",
+                "I prefer dark interiors.",
+                "Routine (2 sessions): you usually ask about interior recommend."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "recommendation grounded in recalled preferences"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.0,
+                "non_repetition": 0.932,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "grounding"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "NORMAL",
+              "model": "qwen3:8b",
+              "signals": {
+                "task_complexity": 0.6,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.7
+              }
+            },
+            "stage_ms": {
+              "state": 0.01,
+              "intent": 0.08,
+              "referents": 0.06,
+              "packet": 0.53,
+              "supplements": 0.3,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 16023.29,
+              "critic": 0.04
+            },
+            "context_tokens": 819,
+            "context_counts": {
+              "memories": 3,
+              "world_facts": 1,
+              "history": 4
+            },
+            "turn": 4
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "NORMAL",
+            "model": "qwen3:8b",
+            "signals": {
+              "task_complexity": 0.6,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.7
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "grounding"
+            ],
+            "failed_after": [
+              "grounding"
+            ],
+            "accepted": false
+          },
+          "conv_block_chars": 812,
+          "text": "I'd recommend a minimalist interior for your car \u2014 clean lines, neutral tones, and plenty of hidden storage to keep things uncluttered. It makes the space feel larger and more calming on longer drives. Do you have a preference for colour, or should I suggest something specific?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Recommend an interior for my car.",
+            "intent": {
+              "intent": "RECOMMENDATION",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.85,
+              "reason": "asks for a recommendation",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "Why did the robot go on vacation? To recharge its batteries.",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I prefer dark interiors. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up.",
+              "user: Recommend an interior for my car. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up. Since you're looking for car interiors, I'm curious: are you after a full cabin makeover, or just some specific accents to shift the mood?",
+              "user: Recommend an interior for my car. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up. Since you're looking for car interiors, I'm curious: are you after a full cabin makeover, or just some specific accents to start?",
+              "user: Tell me a joke about robots. / novi: Why did the robot go on vacation? To recharge its batteries."
+            ],
+            "relevant_memories": [
+              {
+                "content": "You prefer dark interiors.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "I prefer dark interiors.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              },
+              {
+                "content": "Routine (2 sessions): you usually ask about interior recommend.",
+                "fact_class": "MEMORY",
+                "memory_type": "routine",
+                "source": "conversation_routines",
+                "confidence": 0.7,
+                "why_selected": "supported cross-session routine matching turn"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Recommend an interior for my car.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {
+              "relationships": [
+                {
+                  "boundary_knowledge": 0.0,
+                  "category": "unknown",
+                  "communication_preferences": {},
+                  "confidence": 0.0,
+                  "failed_patterns": [],
+                  "familiarity": 0.0,
+                  "interaction_count": 0,
+                  "interaction_frequency": 0.0,
+                  "interaction_history_summary": "",
+                  "interaction_quality": 0.0,
+                  "last_interaction_at": "",
+                  "person": "recommend",
+                  "preference_knowledge": 0.0,
+                  "preferred_directness": "balanced",
+                  "preferred_verbosity": "measured",
+                  "respect": 0.7,
+                  "shared_history": 0,
+                  "stability": 0.0,
+                  "successful_patterns": [],
+                  "trust": 0.0,
+                  "typical_interruptibility": 0.5
+                }
+              ]
+            },
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (prefers): dark interiors"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent RECOMMENDATION"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "RECOMMEND",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "You prefer dark interiors.",
+          "I prefer dark interiors.",
+          "Routine (2 sessions): you usually ask about interior recommend."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "recommendation grounded in recalled preferences"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.0,
+          "non_repetition": 0.932,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "grounding"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.01,
+        "intent": 0.08,
+        "referents": 0.06,
+        "packet": 0.53,
+        "supplements": 0.3,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 16023.29,
+        "critic": 0.04
+      },
+      "context_tokens": 819,
+      "latency_ms": 16026.4,
+      "failure_labels": [
+        "FAILURE_TO_LEARN"
+      ],
+      "human_rating": null,
+      "result": "FAIL"
+    },
+    {
+      "scenario_id": "C-122",
+      "turn_index": 1,
+      "user_text": "Tell me a joke about robots.",
+      "heard_text": "",
+      "response_text": "Why did the robot go on vacation? To recharge its batteries.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 5
+      },
+      "intent": {
+        "intent": "JOKE/HUMOR",
+        "dialogue_act": "REQUEST",
+        "confidence": 0.9,
+        "reason": "explicit joke request",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Why did the robot go on vacation? To recharge its batteries.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "JOKE/HUMOR",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.9,
+              "reason": "explicit joke request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.932,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.1,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.05,
+              "intent": 0.19,
+              "referents": 0.11,
+              "packet": 1.3,
+              "supplements": 0.7,
+              "plan_render": 0.02,
+              "route": 0.03,
+              "compose": 6772.68,
+              "critic": 0.05
+            },
+            "context_tokens": 771,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 5
+            },
+            "turn": 5
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.1,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 660,
+          "text": "Why did the robot go on vacation? To recharge its batteries.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me a joke about robots.",
+            "intent": {
+              "intent": "JOKE/HUMOR",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.9,
+              "reason": "explicit joke request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I'd recommend a minimalist interior for your car \u2014 clean lines, neutral tones, and plenty of hidden storage to keep things uncluttered. It makes the space feel larger and more calming on longer drives",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I prefer dark interiors. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up.",
+              "user: Recommend an interior for my car. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up. Since you're looking for car interiors, I'm curious: are you after a full cabin makeover, or just some specific accents to shift the mood?",
+              "user: Recommend an interior for my car. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up. Since you're looking for car interiors, I'm curious: are you after a full cabin makeover, or just some specific accents to start?",
+              "user: Tell me a joke about robots. / novi: Why did the robot go on vacation? To recharge its batteries.",
+              "user: Recommend an interior for my car. / novi: I'd recommend a minimalist interior for your car \u2014 clean lines, neutral tones, and plenty of hidden storage to keep things uncluttered. It makes the space feel larger and more calming on longer drives. Do you have a preference for colour, or should I suggest something specific?"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me a joke about robots.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {
+              "relationships": [
+                {
+                  "boundary_knowledge": 0.0,
+                  "category": "unknown",
+                  "communication_preferences": {},
+                  "confidence": 0.0,
+                  "failed_patterns": [],
+                  "familiarity": 0.0,
+                  "interaction_count": 0,
+                  "interaction_frequency": 0.0,
+                  "interaction_history_summary": "",
+                  "interaction_quality": 0.0,
+                  "last_interaction_at": "",
+                  "person": "recommend",
+                  "preference_knowledge": 0.0,
+                  "preferred_directness": "balanced",
+                  "preferred_verbosity": "measured",
+                  "respect": 0.7,
+                  "shared_history": 0,
+                  "stability": 0.0,
+                  "successful_patterns": [],
+                  "trust": 0.0,
+                  "typical_interruptibility": 0.5
+                }
+              ]
+            },
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (prefers): dark interiors"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent JOKE/HUMOR"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.932,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.05,
+        "intent": 0.19,
+        "referents": 0.11,
+        "packet": 1.3,
+        "supplements": 0.7,
+        "plan_render": 0.02,
+        "route": 0.03,
+        "compose": 6772.68,
+        "critic": 0.05
+      },
+      "context_tokens": 771,
+      "latency_ms": 6777.1,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 4
+  },
+  "intent": {
+    "intent": "JOKE/HUMOR",
+    "dialogue_act": "REQUEST",
+    "confidence": 0.9,
+    "reason": "explicit joke request",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "Why did the robot go on vacation? To recharge its batteries.",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "JOKE/HUMOR",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.9,
+          "reason": "explicit joke request",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [],
+          "confidence": 0.0
+        },
+        "response_goal": {
+          "goal": "CONTINUE_SOCIAL_CONVERSATION",
+          "must_include": [],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "warm",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "social intent: brief natural continuation"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.932,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.1,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.05,
+          "intent": 0.19,
+          "referents": 0.11,
+          "packet": 1.3,
+          "supplements": 0.7,
+          "plan_render": 0.02,
+          "route": 0.03,
+          "compose": 6772.68,
+          "critic": 0.05
+        },
+        "context_tokens": 771,
+        "context_counts": {
+          "memories": 0,
+          "world_facts": 1,
+          "history": 5
+        },
+        "turn": 5
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.1,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 660,
+      "text": "Why did the robot go on vacation? To recharge its batteries.",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "Tell me a joke about robots.",
+        "intent": {
+          "intent": "JOKE/HUMOR",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.9,
+          "reason": "explicit joke request",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [],
+        "active_entities": [],
+        "anchor": {
+          "topic": "",
+          "active_entity": "",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "I'd recommend a minimalist interior for your car \u2014 clean lines, neutral tones, and plenty of hidden storage to keep things uncluttered. It makes the space feel larger and more calming on longer drives",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: I prefer dark interiors. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up.",
+          "user: Recommend an interior for my car. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up. Since you're looking for car interiors, I'm curious: are you after a full cabin makeover, or just some specific accents to shift the mood?",
+          "user: Recommend an interior for my car. / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever spaces come up. Since you're looking for car interiors, I'm curious: are you after a full cabin makeover, or just some specific accents to start?",
+          "user: Tell me a joke about robots. / novi: Why did the robot go on vacation? To recharge its batteries.",
+          "user: Recommend an interior for my car. / novi: I'd recommend a minimalist interior for your car \u2014 clean lines, neutral tones, and plenty of hidden storage to keep things uncluttered. It makes the space feel larger and more calming on longer drives. Do you have a preference for colour, or should I suggest something specific?"
+        ],
+        "relevant_memories": [],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'Tell me a joke about robots.', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {
+          "relationships": [
+            {
+              "boundary_knowledge": 0.0,
+              "category": "unknown",
+              "communication_preferences": {},
+              "confidence": 0.0,
+              "failed_patterns": [],
+              "familiarity": 0.0,
+              "interaction_count": 0,
+              "interaction_frequency": 0.0,
+              "interaction_history_summary": "",
+              "interaction_quality": 0.0,
+              "last_interaction_at": "",
+              "person": "recommend",
+              "preference_knowledge": 0.0,
+              "preferred_directness": "balanced",
+              "preferred_verbosity": "measured",
+              "respect": 0.7,
+              "shared_history": 0,
+              "stability": 0.0,
+              "successful_patterns": [],
+              "trust": 0.0,
+              "typical_interruptibility": 0.5
+            }
+          ]
+        },
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories",
+          "preference (prefers): dark interiors"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent JOKE/HUMOR"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "CONTINUE_SOCIAL_CONVERSATION",
+    "must_include": [],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "warm",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "social intent: brief natural continuation"
+  },
+  "response": "Why did the robot go on vacation? To recharge its batteries.",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.932,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 6777.1,
+  "result": "FAIL",
+  "failure_labels": [
+    "FAILURE_TO_LEARN"
+  ],
+  "human_rating": null
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "conversation-baseline/v1",
+  "timestamp": "2026-09-05T17:38:36.375876+00:00",
+  "git_sha": "6f912625e11e50c1ef399fab58c349aa21f5a298",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-150"
+    ]
+  },
+  "totals": {
+    "scenarios": 1,
+    "passed": 1,
+    "pass_rate": 1.0
+  },
+  "by_dimension": {
+    "Clarification quality": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    }
+  },
+  "label_counts": {},
+  "metrics": {
+    "turns": 3,
+    "mean_stage_ms": {
+      "compose": 10483.6,
+      "critic": 0.04,
+      "intent": 0.5,
+      "packet": 0.68,
+      "plan_render": 0.03,
+      "referents": 0.2,
+      "route": 0.23,
+      "state": 0.07,
+      "supplements": 0.34
+    },
+    "mean_context_tokens": 424.67,
+    "mean_memories_per_turn": 0.33,
+    "mean_world_facts_per_turn": 1.0,
+    "clarification_rate": 0.333,
+    "critic_reject_rate": 0.0,
+    "repair_rate": 0.0,
+    "tier_distribution": {
+      "FAST": 3
+    }
+  },
+  "status": "PASS"
+}

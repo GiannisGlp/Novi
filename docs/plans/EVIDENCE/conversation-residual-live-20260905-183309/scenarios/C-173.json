@@ -1,0 +1,775 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-173",
+  "title": "Disfluent memory query",
+  "dimension": "Voice channel",
+  "git_sha": "6f912625e11e50c1ef399fab58c349aa21f5a298",
+  "timestamp": "2026-09-05T17:37:25.656149+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-032",
+      "C-072",
+      "C-122",
+      "C-133",
+      "C-140",
+      "C-150",
+      "C-173"
+    ],
+    "modality": "voice"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-173",
+      "turn_index": 0,
+      "user_text": "Remember that I prefer dark interiors.",
+      "heard_text": "Remember that I prefer dark interiors",
+      "response_text": "Got it \u2014 dark interiors it is. I'll keep that in mind whenever we talk about spaces or lighting.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "MEMORY_UPDATE",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.85,
+        "reason": "states durable personal fact/preference",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Got it \u2014 dark interiors it is. I'll keep that in mind whenever we talk about spaces or lighting.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "MEMORY_UPDATE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "states durable personal fact/preference",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "REMEMBER",
+              "must_include": [
+                "confirmation of what was stored"
+              ],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "memory update: confirm storage briefly"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.06,
+              "referents": 0.06,
+              "packet": 0.22,
+              "supplements": 0.12,
+              "plan_render": 0.01,
+              "route": 0.01,
+              "compose": 6670.09,
+              "critic": 0.02
+            },
+            "context_tokens": 363,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 477,
+          "text": "Got it \u2014 dark interiors it is. I'll keep that in mind whenever we talk about spaces or lighting.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Remember that I prefer dark interiors",
+            "intent": {
+              "intent": "MEMORY_UPDATE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "states durable personal fact/preference",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [
+              {
+                "content": "You prefer dark interiors.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Remember that I prefer dark interiors', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (prefers): dark interiors"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent MEMORY_UPDATE"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "REMEMBER",
+        "must_include": [
+          "confirmation of what was stored"
+        ],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "memory update: confirm storage briefly"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.06,
+        "referents": 0.06,
+        "packet": 0.22,
+        "supplements": 0.12,
+        "plan_render": 0.01,
+        "route": 0.01,
+        "compose": 6670.09,
+        "critic": 0.02
+      },
+      "context_tokens": 363,
+      "latency_ms": 6671.9,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-173",
+      "turn_index": 1,
+      "user_text": "What interiors do I prefer?",
+      "heard_text": "uh what interiors do I prefer",
+      "response_text": "That's a fair question \u2014 I've got it recorded that you prefer dark interiors. Is there a particular space you're thinking of, or were you just checking?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "MEMORY_QUERY",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.85,
+        "reason": "asks about remembered content",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "That's a fair question \u2014 I've got it recorded that you prefer dark interiors. Is there a particular space you're thinking of, or were you just checking?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "MEMORY_QUERY",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.85,
+              "reason": "asks about remembered content",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "You prefer dark interiors.",
+                "Remember that I prefer dark interiors"
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 1.0,
+                "non_repetition": 0.76,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.13,
+              "referents": 0.07,
+              "packet": 0.58,
+              "supplements": 0.43,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 7434.29,
+              "critic": 0.02
+            },
+            "context_tokens": 480,
+            "context_counts": {
+              "memories": 2,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 900,
+          "text": "That's a fair question \u2014 I've got it recorded that you prefer dark interiors. Is there a particular space you're thinking of, or were you just checking?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "uh what interiors do I prefer",
+            "intent": {
+              "intent": "MEMORY_QUERY",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.85,
+              "reason": "asks about remembered content",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Remember that I prefer dark interiors / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever we talk about spaces or lighting."
+            ],
+            "relevant_memories": [
+              {
+                "content": "You prefer dark interiors.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "Remember that I prefer dark interiors",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'uh what interiors do I prefer', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (prefers): dark interiors"
+            ],
+            "uncertainty": [
+              "no reliable memory found \u2014 say so honestly ('I don't have a reliable memory of MEMORY_QUERY interiors prefer uh.')"
+            ],
+            "response_requirements": [
+              "address intent MEMORY_QUERY"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "You prefer dark interiors.",
+          "Remember that I prefer dark interiors"
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 1.0,
+          "non_repetition": 0.76,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.13,
+        "referents": 0.07,
+        "packet": 0.58,
+        "supplements": 0.43,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 7434.29,
+        "critic": 0.02
+      },
+      "context_tokens": 480,
+      "latency_ms": 7436.9,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "MEMORY_QUERY",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.85,
+    "reason": "asks about remembered content",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "That's a fair question \u2014 I've got it recorded that you prefer dark interiors. Is there a particular space you're thinking of, or were you just checking?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "MEMORY_QUERY",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.85,
+          "reason": "asks about remembered content",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [],
+          "confidence": 0.0
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [
+            "You prefer dark interiors.",
+            "Remember that I prefer dark interiors"
+          ],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 1.0,
+            "non_repetition": 0.76,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.15,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 0.13,
+          "referents": 0.07,
+          "packet": 0.58,
+          "supplements": 0.43,
+          "plan_render": 0.02,
+          "route": 0.02,
+          "compose": 7434.29,
+          "critic": 0.02
+        },
+        "context_tokens": 480,
+        "context_counts": {
+          "memories": 2,
+          "world_facts": 1,
+          "history": 1
+        },
+        "turn": 1
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.15,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 900,
+      "text": "That's a fair question \u2014 I've got it recorded that you prefer dark interiors. Is there a particular space you're thinking of, or were you just checking?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "uh what interiors do I prefer",
+        "intent": {
+          "intent": "MEMORY_QUERY",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.85,
+          "reason": "asks about remembered content",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [],
+        "active_entities": [],
+        "anchor": {
+          "topic": "",
+          "active_entity": "",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: Remember that I prefer dark interiors / novi: Got it \u2014 dark interiors it is. I'll keep that in mind whenever we talk about spaces or lighting."
+        ],
+        "relevant_memories": [
+          {
+            "content": "You prefer dark interiors.",
+            "fact_class": "PREFERENCE",
+            "memory_type": "preference",
+            "source": "preferences",
+            "confidence": 0.3,
+            "why_selected": "learned preference matching turn"
+          },
+          {
+            "content": "Remember that I prefer dark interiors",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'uh what interiors do I prefer', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories",
+          "preference (prefers): dark interiors"
+        ],
+        "uncertainty": [
+          "no reliable memory found \u2014 say so honestly ('I don't have a reliable memory of MEMORY_QUERY interiors prefer uh.')"
+        ],
+        "response_requirements": [
+          "address intent MEMORY_QUERY"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [
+      "You prefer dark interiors.",
+      "Remember that I prefer dark interiors"
+    ],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "That's a fair question \u2014 I've got it recorded that you prefer dark interiors. Is there a particular space you're thinking of, or were you just checking?",
+  "critic": {
+    "scores": {
+      "grounding": 1.0,
+      "non_repetition": 0.76,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 7436.9,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}

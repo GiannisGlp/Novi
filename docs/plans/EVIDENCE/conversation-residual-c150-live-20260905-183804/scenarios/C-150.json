@@ -1,0 +1,1021 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-150",
+  "title": "One-word slot answer",
+  "dimension": "Clarification quality",
+  "git_sha": "6f912625e11e50c1ef399fab58c349aa21f5a298",
+  "timestamp": "2026-09-05T17:38:36.373864+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-150"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-150",
+      "turn_index": 0,
+      "user_text": "I'm comparing a Tesla and a BMW.",
+      "heard_text": "",
+      "response_text": "Tesla's all about the instant torque and tech, while BMW still leans into that driving feel and engine character. Have you driven both, or just looking at specs?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "SOCIAL_CHAT",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.55,
+        "reason": "statement with no discriminating cues",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Tesla's all about the instant torque and tech, while BMW still leans into that driving feel and engine character. Have you driven both, or just looking at specs?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.45,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.15,
+              "intent": 0.36,
+              "referents": 0.18,
+              "packet": 0.29,
+              "supplements": 0.18,
+              "plan_render": 0.01,
+              "route": 0.64,
+              "compose": 7473.35,
+              "critic": 0.04
+            },
+            "context_tokens": 323,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.45,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 522,
+          "text": "Tesla's all about the instant torque and tech, while BMW still leans into that driving feel and engine character. Have you driven both, or just looking at specs?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "I'm comparing a Tesla and a BMW.",
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla",
+              "BMW"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "BMW",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': \"I'm comparing a Tesla and a BMW.\", 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "low intent confidence (0.55) for SOCIAL_CHAT"
+            ],
+            "response_requirements": [
+              "address intent SOCIAL_CHAT",
+              "stay grounded on BMW"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.15,
+        "intent": 0.36,
+        "referents": 0.18,
+        "packet": 0.29,
+        "supplements": 0.18,
+        "plan_render": 0.01,
+        "route": 0.64,
+        "compose": 7473.35,
+        "critic": 0.04
+      },
+      "context_tokens": 323,
+      "latency_ms": 7482.0,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-150",
+      "turn_index": 1,
+      "user_text": "Would you choose it?",
+      "heard_text": "",
+      "response_text": "I remember we were comparing Tesla's instant torque and tech feel against BMW's driving feel and engine character. Do you mean the BMW i4 or i7 when you say 'it' \u2014 or are you thinking of a different model?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I remember we were comparing Tesla's instant torque and tech feel against BMW's driving feel and engine character. Do you mean the BMW i4 or i7 when you say 'it' \u2014 or are you thinking of a different model?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [
+                "it"
+              ],
+              "confidence": 0.35
+            },
+            "response_goal": {
+              "goal": "ASK_CLARIFICATION",
+              "must_include": [
+                "BMW",
+                "Tesla"
+              ],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": true,
+              "reason": "ambiguous referents: short specific question"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.647,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 1.03,
+              "referents": 0.28,
+              "packet": 1.06,
+              "supplements": 0.46,
+              "plan_render": 0.06,
+              "route": 0.03,
+              "compose": 7920.99,
+              "critic": 0.05
+            },
+            "context_tokens": 423,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 900,
+          "text": "I remember we were comparing Tesla's instant torque and tech feel against BMW's driving feel and engine character. Do you mean the BMW i4 or i7 when you say 'it' \u2014 or are you thinking of a different model?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Would you choose it?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [
+              "it"
+            ],
+            "active_entities": [
+              "Tesla",
+              "BMW"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "BMW",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "Tesla's all about the instant torque and tech, while BMW still leans into that driving feel and engine character. Have you driven both, or just looking at specs?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I'm comparing a Tesla and a BMW. / novi: Tesla's all about the instant torque and tech, while BMW still leans into that driving feel and engine character. Have you driven both, or just looking at specs?"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Would you choose it?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "ambiguous referent: it"
+            ],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on BMW",
+              "ask a short specific clarification only if ambiguity changes the answer"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ASK_CLARIFICATION",
+        "must_include": [
+          "BMW",
+          "Tesla"
+        ],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": true,
+        "reason": "ambiguous referents: short specific question"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.647,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 1.03,
+        "referents": 0.28,
+        "packet": 1.06,
+        "supplements": 0.46,
+        "plan_render": 0.06,
+        "route": 0.03,
+        "compose": 7920.99,
+        "critic": 0.05
+      },
+      "context_tokens": 423,
+      "latency_ms": 7925.9,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-150",
+      "turn_index": 2,
+      "user_text": "The Tesla.",
+      "heard_text": "",
+      "response_text": "I'm leaning toward the i4 \u2014 it's the one that really captures that electric driving feel while keeping the BMW character intact.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 2
+      },
+      "intent": {
+        "intent": "CLARIFICATION",
+        "dialogue_act": "CLARIFICATION_ANSWER",
+        "confidence": 0.75,
+        "reason": "short reply to Novi's open question",
+        "needs_clarification": false
+      },
+      "referents": {
+        "the tesla": "Tesla"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I'm leaning toward the i4 \u2014 it's the one that really captures that electric driving feel while keeping the BMW character intact.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "CLARIFICATION",
+              "dialogue_act": "CLARIFICATION_ANSWER",
+              "confidence": 0.75,
+              "reason": "short reply to Novi's open question",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "the tesla": "Tesla"
+              },
+              "ambiguous": [],
+              "confidence": 0.9
+            },
+            "response_goal": {
+              "goal": "SLOT_ANSWER",
+              "must_include": [
+                "Tesla",
+                "BMW"
+              ],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "user answered the open question; answer directly, no re-ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.824,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.25,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.11,
+              "referents": 0.13,
+              "packet": 0.7,
+              "supplements": 0.38,
+              "plan_render": 0.02,
+              "route": 0.03,
+              "compose": 16056.47,
+              "critic": 0.04
+            },
+            "context_tokens": 528,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 2
+            },
+            "turn": 2
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.25,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "clarification_safety"
+            ],
+            "failed_after": [
+              "clarification_safety"
+            ],
+            "accepted": false
+          },
+          "conv_block_chars": 900,
+          "text": "I'm leaning toward the i4 \u2014 it's the one that really captures that electric driving feel while keeping the BMW character intact.",
+          "fallback": true,
+          "grounding": {},
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "The Tesla.",
+            "intent": {
+              "intent": "CLARIFICATION",
+              "dialogue_act": "CLARIFICATION_ANSWER",
+              "confidence": 0.75,
+              "reason": "short reply to Novi's open question",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "the tesla": "Tesla"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla",
+              "BMW"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "BMW",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I remember we were comparing Tesla's instant torque and tech feel against BMW's driving feel and engine character. Do you mean the BMW i4 or i7 when you say 'it' \u2014 or are you thinking of a different m",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I'm comparing a Tesla and a BMW. / novi: Tesla's all about the instant torque and tech, while BMW still leans into that driving feel and engine character. Have you driven both, or just looking at specs?",
+              "user: Would you choose it? / novi: I remember we were comparing Tesla's instant torque and tech feel against BMW's driving feel and engine character. Do you mean the BMW i4 or i7 when you say 'it' \u2014 or are you thinking of a different model?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "I'm comparing a Tesla and a BMW.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'The Tesla.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent CLARIFICATION",
+              "stay grounded on Tesla"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "SLOT_ANSWER",
+        "must_include": [
+          "Tesla",
+          "BMW"
+        ],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "user answered the open question; answer directly, no re-ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.824,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.11,
+        "referents": 0.13,
+        "packet": 0.7,
+        "supplements": 0.38,
+        "plan_render": 0.02,
+        "route": 0.03,
+        "compose": 16056.47,
+        "critic": 0.04
+      },
+      "context_tokens": 528,
+      "latency_ms": 16059.1,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "CLARIFICATION",
+    "dialogue_act": "CLARIFICATION_ANSWER",
+    "confidence": 0.75,
+    "reason": "short reply to Novi's open question",
+    "needs_clarification": false
+  },
+  "referents": {
+    "the tesla": "Tesla"
+  },
+  "context": {
+    "trace": {
+      "conclusion": "I'm leaning toward the i4 \u2014 it's the one that really captures that electric driving feel while keeping the BMW character intact.",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "CLARIFICATION",
+          "dialogue_act": "CLARIFICATION_ANSWER",
+          "confidence": 0.75,
+          "reason": "short reply to Novi's open question",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {
+            "the tesla": "Tesla"
+          },
+          "ambiguous": [],
+          "confidence": 0.9
+        },
+        "response_goal": {
+          "goal": "SLOT_ANSWER",
+          "must_include": [
+            "Tesla",
+            "BMW"
+          ],
+          "may_include": [],
+          "must_not_include": [],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "user answered the open question; answer directly, no re-ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.824,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.25,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 0.11,
+          "referents": 0.13,
+          "packet": 0.7,
+          "supplements": 0.38,
+          "plan_render": 0.02,
+          "route": 0.03,
+          "compose": 16056.47,
+          "critic": 0.04
+        },
+        "context_tokens": 528,
+        "context_counts": {
+          "memories": 1,
+          "world_facts": 1,
+          "history": 2
+        },
+        "turn": 2
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.25,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": true,
+        "failed": [
+          "clarification_safety"
+        ],
+        "failed_after": [
+          "clarification_safety"
+        ],
+        "accepted": false
+      },
+      "conv_block_chars": 900,
+      "text": "I'm leaning toward the i4 \u2014 it's the one that really captures that electric driving feel while keeping the BMW character intact.",
+      "fallback": true,
+      "grounding": {},
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "The Tesla.",
+        "intent": {
+          "intent": "CLARIFICATION",
+          "dialogue_act": "CLARIFICATION_ANSWER",
+          "confidence": 0.75,
+          "reason": "short reply to Novi's open question",
+          "needs_clarification": false
+        },
+        "resolved_entities": {
+          "the tesla": "Tesla"
+        },
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Tesla",
+          "BMW"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "BMW",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "I remember we were comparing Tesla's instant torque and tech feel against BMW's driving feel and engine character. Do you mean the BMW i4 or i7 when you say 'it' \u2014 or are you thinking of a different m",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: I'm comparing a Tesla and a BMW. / novi: Tesla's all about the instant torque and tech, while BMW still leans into that driving feel and engine character. Have you driven both, or just looking at specs?",
+          "user: Would you choose it? / novi: I remember we were comparing Tesla's instant torque and tech feel against BMW's driving feel and engine character. Do you mean the BMW i4 or i7 when you say 'it' \u2014 or are you thinking of a different model?"
+        ],
+        "relevant_memories": [
+          {
+            "content": "I'm comparing a Tesla and a BMW.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'The Tesla.', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent CLARIFICATION",
+          "stay grounded on Tesla"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "SLOT_ANSWER",
+    "must_include": [
+      "Tesla",
+      "BMW"
+    ],
+    "may_include": [],
+    "must_not_include": [],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "user answered the open question; answer directly, no re-ask"
+  },
+  "response": "I'm leaning toward the i4 \u2014 it's the one that really captures that electric driving feel while keeping the BMW character intact.",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.824,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 16059.1,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}

@@ -1,0 +1,556 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-032",
+  "title": "Irrelevant memory",
+  "dimension": "Memory restraint",
+  "git_sha": "6f912625e11e50c1ef399fab58c349aa21f5a298",
+  "timestamp": "2026-09-05T17:34:02.648282+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-032",
+      "C-072",
+      "C-122",
+      "C-133",
+      "C-140",
+      "C-150",
+      "C-173"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-032",
+      "turn_index": 0,
+      "user_text": "What interior should I pick for the car?",
+      "heard_text": "",
+      "response_text": "That's a fun one \u2014 cars and interior style are a great combo. Since you like things a bit on the dim side, I'm guessing you'd want something that feels cozy and moody in there. Dark tones, warm lighting, maybe some soft textures to keep it from feeling too cave-like. What sort of vibe are you going for \u2014 sleek and modern, or more of a warm, lived-in feel?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 3
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "That's a fun one \u2014 cars and interior style are a great combo. Since you like things a bit on the dim side, I'm guessing you'd want something that feels cozy and moody in there. Dark tones, warm lighting, maybe some soft textures to keep it from feeling too cave-like. What sort of vibe are you going for \u2014 sleek and modern, or more of a warm, lived-in feel?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "You prefer dark interiors.",
+                "I prefer dark interiors."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.0,
+                "non_repetition": 0.867,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "grounding"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.18,
+              "referents": 1.12,
+              "packet": 1.03,
+              "supplements": 0.55,
+              "plan_render": 0.04,
+              "route": 0.03,
+              "compose": 17082.13,
+              "critic": 0.1
+            },
+            "context_tokens": 600,
+            "context_counts": {
+              "memories": 2,
+              "world_facts": 1,
+              "history": 3
+            },
+            "turn": 3
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "grounding"
+            ],
+            "failed_after": [
+              "grounding"
+            ],
+            "accepted": false
+          },
+          "conv_block_chars": 882,
+          "text": "That's a fun one \u2014 cars and interior style are a great combo. Since you like things a bit on the dim side, I'm guessing you'd want something that feels cozy and moody in there. Dark tones, warm lighting, maybe some soft textures to keep it from feeling too cave-like. What sort of vibe are you going for \u2014 sleek and modern, or more of a warm, lived-in feel?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "What interior should I pick for the car?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Porto"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "That's lovely \u2014 Porto's a beautiful city. I've always liked how the light hits the Douro there, especially in the morning. Does she spend a lot of time in the Ribeira, or more up in the hills?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I prefer dark interiors. / novi: I've got that \u2014 I like things a bit on the dim side myself. Makes a space feel cozier, you know?",
+              "user: My favorite pizza topping is mushrooms. / novi: Got it \u2014 mushrooms it is. I'm with you on that; they add such a nice earthy depth to a slice.",
+              "user: My sister lives in Porto. / novi: That's lovely \u2014 Porto's a beautiful city. I've always liked how the light hits the Douro there, especially in the morning. Does she spend a lot of time in the Ribeira, or more up in the hills?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "You prefer dark interiors.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "I prefer dark interiors.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'What interior should I pick for the car?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (prefers): dark interiors"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "You prefer dark interiors.",
+          "I prefer dark interiors."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.0,
+          "non_repetition": 0.867,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "grounding"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.18,
+        "referents": 1.12,
+        "packet": 1.03,
+        "supplements": 0.55,
+        "plan_render": 0.04,
+        "route": 0.03,
+        "compose": 17082.13,
+        "critic": 0.1
+      },
+      "context_tokens": 600,
+      "latency_ms": 17086.9,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 3
+  },
+  "intent": {
+    "intent": "INFORMATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "generic question shape",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "That's a fun one \u2014 cars and interior style are a great combo. Since you like things a bit on the dim side, I'm guessing you'd want something that feels cozy and moody in there. Dark tones, warm lighting, maybe some soft textures to keep it from feeling too cave-like. What sort of vibe are you going for \u2014 sleek and modern, or more of a warm, lived-in feel?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [],
+          "confidence": 0.0
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [
+            "You prefer dark interiors.",
+            "I prefer dark interiors."
+          ],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.0,
+            "non_repetition": 0.867,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [
+            "grounding"
+          ],
+          "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+          "needs_repair": true
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 0.18,
+          "referents": 1.12,
+          "packet": 1.03,
+          "supplements": 0.55,
+          "plan_render": 0.04,
+          "route": 0.03,
+          "compose": 17082.13,
+          "critic": 0.1
+        },
+        "context_tokens": 600,
+        "context_counts": {
+          "memories": 2,
+          "world_facts": 1,
+          "history": 3
+        },
+        "turn": 3
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": true,
+        "failed": [
+          "grounding"
+        ],
+        "failed_after": [
+          "grounding"
+        ],
+        "accepted": false
+      },
+      "conv_block_chars": 882,
+      "text": "That's a fun one \u2014 cars and interior style are a great combo. Since you like things a bit on the dim side, I'm guessing you'd want something that feels cozy and moody in there. Dark tones, warm lighting, maybe some soft textures to keep it from feeling too cave-like. What sort of vibe are you going for \u2014 sleek and modern, or more of a warm, lived-in feel?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "What interior should I pick for the car?",
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Porto"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "That's lovely \u2014 Porto's a beautiful city. I've always liked how the light hits the Douro there, especially in the morning. Does she spend a lot of time in the Ribeira, or more up in the hills?",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: I prefer dark interiors. / novi: I've got that \u2014 I like things a bit on the dim side myself. Makes a space feel cozier, you know?",
+          "user: My favorite pizza topping is mushrooms. / novi: Got it \u2014 mushrooms it is. I'm with you on that; they add such a nice earthy depth to a slice.",
+          "user: My sister lives in Porto. / novi: That's lovely \u2014 Porto's a beautiful city. I've always liked how the light hits the Douro there, especially in the morning. Does she spend a lot of time in the Ribeira, or more up in the hills?"
+        ],
+        "relevant_memories": [
+          {
+            "content": "You prefer dark interiors.",
+            "fact_class": "PREFERENCE",
+            "memory_type": "preference",
+            "source": "preferences",
+            "confidence": 0.3,
+            "why_selected": "learned preference matching turn"
+          },
+          {
+            "content": "I prefer dark interiors.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'What interior should I pick for the car?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories",
+          "preference (prefers): dark interiors"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent INFORMATION_REQUEST"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [
+      "You prefer dark interiors.",
+      "I prefer dark interiors."
+    ],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "That's a fun one \u2014 cars and interior style are a great combo. Since you like things a bit on the dim side, I'm guessing you'd want something that feels cozy and moody in there. Dark tones, warm lighting, maybe some soft textures to keep it from feeling too cave-like. What sort of vibe are you going for \u2014 sleek and modern, or more of a warm, lived-in feel?",
+  "critic": {
+    "scores": {
+      "grounding": 0.0,
+      "non_repetition": 0.867,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [
+      "grounding"
+    ],
+    "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+    "needs_repair": true
+  },
+  "latency_ms": 17086.9,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
