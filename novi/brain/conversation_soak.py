@@ -116,8 +116,33 @@ def _state_bounds(brain: Any) -> dict[str, Any]:
 
 def run_soak(*, turns: int = 120, probe_every: int = 30,
              brain_llm: bool = False, llm_url: str = "http://localhost:11434",
-             llm_model: str = "", db_path: Path | None = None) -> dict[str, Any]:
-    """Run the soak. Returns the soak report (never raises on brain errors)."""
+             llm_model: str = "", db_path: Path | None = None,
+             min_live_ratio: float | None = None,
+             ticks_between_turns: int = 3) -> dict[str, Any]:
+    """Run the soak. Returns the soak report (never raises on brain errors).
+
+    ``min_live_ratio`` (0..1, None = unchecked): when set, the soak fails
+    unless at least that fraction of script turns actually went through the
+    live model transport. Live is judged by the reply's grounding route ==
+    "dialogue" — the one label only the true LLM path sets (chat.py compose
+    attaches it with grounding.model_route). The deterministic social fast
+    paths (greetings/check-ins/skills) do not set it even in live mode, so a
+    backend that silently degrades can no longer report a meaningless PASS
+    (the 300-turn acceptance soak hit exactly this: 26/307 live turns, 0.5s
+    mean, yet "PASS").
+
+    ``ticks_between_turns`` models the real-surface cadence the soak would
+    otherwise lack: web/CLI surfaces call ``brain.step()`` around each user
+    message, which advances the CommunicationDecision fatigue cooldown. A
+    bare respond()-only loop never ticks, so after 20 recorded interactions
+    the brain goes permanently silent (social-fatigue budget) and every
+    later turn degrades to the deterministic path — a harness artifact, not
+    a product behavior. Ticking ``ticks_between_turns`` per script turn
+    simulates seconds elapsing between messages (1 tick ~= 1 engine cycle).
+    """
+    if min_live_ratio is not None and not 0.0 <= float(min_live_ratio) <= 1.0:
+        raise ValueError("min_live_ratio must be within [0, 1]")
+
     from novi.brain.conversation_trace import git_sha
 
     script = build_script(turns=turns)
@@ -130,6 +155,8 @@ def run_soak(*, turns: int = 120, probe_every: int = 30,
     latencies: list[float] = []
     probes: list[dict[str, Any]] = []
     errors = 0
+    live_turns = 0
+    route_counts: dict[str, int] = {}
     started = time.perf_counter()
     rss_start = _rss_mib()
     db_start = db_path.stat().st_size if db_path.exists() else 0
@@ -139,11 +166,38 @@ def run_soak(*, turns: int = 120, probe_every: int = 30,
             brain.respond(PROBE_TEACH)
             count = 0
             for text in script:
+                # Simulate seconds elapsing before the user's next message:
+                # real web/CLI surfaces step the engine (advancing the
+                # CommunicationDecision cooldown) between messages; without
+                # this the soak hits the 20-interaction social-fatigue wall
+                # and every later turn silently degrades to deterministic.
+                fatigue_clock = getattr(brain, "communication_decision", None)
+                if fatigue_clock is not None and ticks_between_turns > 0:
+                    try:
+                        for _ in range(ticks_between_turns):
+                            fatigue_clock.tick()
+                    except Exception:
+                        pass
                 turn_start = time.perf_counter()
                 try:
-                    brain.respond(text)
+                    reply = brain.respond(text) or {}
                 except Exception:
-                    errors += 1
+                    reply, errors = {}, errors + 1
+                route = str((reply.get("trace") or {}).get("route") or "")
+                source = str(reply.get("reply_source") or "")
+                # Live-engagement marker: ONLY the true LLM path labels its
+                # grounding route "dialogue" (chat.py compose sets it with
+                # grounding.model_route). trace.route is hardcoded to
+                # "local_llm" for every non-None reply and reply_source is
+                # "dialogue" for every fallback=False reply — including the
+                # deterministic social fast paths (greetings, check-ins,
+                # skills) that never invoke the model — so those two fields
+                # would over-count degraded runs. See code-review note.
+                grounding_route = str(((reply.get("grounding") or {}).get("route")) or "")
+                if grounding_route == "dialogue":
+                    live_turns += 1
+                bucket = grounding_route or route or source or "none"
+                route_counts[bucket] = route_counts.get(bucket, 0) + 1
                 latencies.append((time.perf_counter() - turn_start) * 1000.0)
                 count += 1
                 if probe_every > 0 and count % probe_every == 0:
@@ -172,6 +226,7 @@ def run_soak(*, turns: int = 120, probe_every: int = 30,
     last_mean = sum(latencies[-half:]) / half
     drift = (last_mean / first_mean) if first_mean > 0 else 1.0
     bounds = _state_bounds(brain)
+    live_ratio = round(live_turns / len(script), 3) if script else 0.0
     report = {
         "schema": "conversation-soak/v1",
         "timestamp": utc_now_iso(),
@@ -179,10 +234,19 @@ def run_soak(*, turns: int = 120, probe_every: int = 30,
         "runtime": "mac-brain",
         "model": llm_model or "deterministic",
         "configuration": {"turns": turns, "probe_every": probe_every,
-                          "brain_llm": brain_llm, "llm_url": llm_url},
+                          "brain_llm": brain_llm, "llm_url": llm_url,
+                          "min_live_ratio": min_live_ratio,
+                          "ticks_between_turns": ticks_between_turns},
         "duration_s": duration_s,
         "turns_run": len(script) + len(probes) + 1,
         "errors": errors,
+        "live_engagement": {
+            "script_turns": len(script),
+            "live_turns": live_turns,
+            "ratio": live_ratio,
+            "min_live_ratio": min_live_ratio,
+            "route_counts": dict(sorted(route_counts.items())),
+        },
         "latency_ms": {
             "mean": round(sum(latencies) / max(1, len(latencies)), 1),
             "max": round(max(latencies) if latencies else 0.0, 1),
@@ -206,6 +270,8 @@ def run_soak(*, turns: int = 120, probe_every: int = 30,
         "latency_bounded": drift <= LATENCY_DRIFT_FACTOR,
         "state_bounded": bool(bounds.get("within_bounds")),
     }
+    if min_live_ratio is not None:
+        checks["live_engaged"] = live_ratio >= min_live_ratio
     report["checks"] = checks
     report["status"] = "PASS" if all(checks.values()) else "FAIL"
     if tmpdir is not None:
@@ -225,6 +291,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--brain-llm", action="store_true")
     parser.add_argument("--llm-url", default="http://localhost:11434")
     parser.add_argument("--llm-model", default="")
+    parser.add_argument("--min-live-ratio", type=float, default=None,
+                        help="fail unless this fraction of script turns used the live "
+                             "model transport (default: 0.5 with --brain-llm, else unchecked)")
+    parser.add_argument("--ticks-between-turns", type=int, default=3,
+                        help="CommunicationDecision ticks before each script turn, "
+                             "simulating seconds between user messages (default: 3)")
     parser.add_argument("--ci", action="store_true",
                         help="short CI-safe soak (40 turns)")
     return parser
@@ -233,17 +305,24 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     turns = 40 if args.ci else args.turns
+    # A live acceptance soak must prove the model was actually engaged; a
+    # silently degraded (deterministic-fallback) run is a FAIL, not a PASS.
+    min_live_ratio = args.min_live_ratio
+    if min_live_ratio is None and args.brain_llm:
+        min_live_ratio = 0.5
     report = run_soak(turns=turns, probe_every=args.probe_every,
                       brain_llm=args.brain_llm, llm_url=args.llm_url,
                       llm_model=args.llm_model,
-                      db_path=Path(args.db_path) if args.db_path else None)
+                      db_path=Path(args.db_path) if args.db_path else None,
+                      min_live_ratio=min_live_ratio,
+                      ticks_between_turns=args.ticks_between_turns)
     if args.evidence_dir:
         out = Path(args.evidence_dir)
         out.mkdir(parents=True, exist_ok=True)
         (out / "soak.json").write_text(json.dumps(report, indent=2))
     print(json.dumps({key: report[key] for key in
-                      ("turns_run", "duration_s", "errors", "latency_ms",
-                       "memory_probes", "checks", "status")}, indent=2))
+                      ("turns_run", "duration_s", "errors", "live_engagement",
+                       "latency_ms", "memory_probes", "checks", "status")}, indent=2))
     return 0 if report["status"] == "PASS" else 1
 
 

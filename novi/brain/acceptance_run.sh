@@ -43,8 +43,19 @@ mkdir -p "$OUT"
 echo "== 1/4 live-model benchmark -> $OUT"
 # shellcheck disable=SC2086
 $PY -m novi.brain.conversation_replay --brain-llm --llm-url "$LLM_URL" \
-  --llm-model "$LLM_MODEL" --evidence-dir "$OUT" || {
-  echo "FAIL: live replay crashed; evidence (if any) left in $OUT"; exit 1; }
+  --llm-model "$LLM_MODEL" --evidence-dir "$OUT"
+REPLAY_STATUS=$?
+if [ "$REPLAY_STATUS" -ne 0 ]; then
+  if [ -f "$OUT/baseline.json" ]; then
+    # A measured FAIL (scenarios ran, checks failed) is a RESULT, not a
+    # crash: the gates/pairwise/soak legs still need to run so the
+    # evidence pack is complete. Only a genuine crash (no evidence
+    # written) aborts the chain here.
+    echo "note: replay finished with status $REPLAY_STATUS (measured FAIL); continuing with gates/pairwise/soak"
+  else
+    echo "FAIL: live replay crashed with no evidence; see $OUT"; exit 1
+  fi
+fi
 
 echo "== 2/4 quality gates"
 GATE_STATUS=0
