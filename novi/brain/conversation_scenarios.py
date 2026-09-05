@@ -337,10 +337,11 @@ def get_scenario(scenario_id: str) -> ConversationScenario:
 # ——— Plan catalog sections G–N (Sprint 7+ acceptance surface) ———
 # Deterministic notes: J scenarios need live perception and fail honestly
 # on the replay camera (PERCEPTION_IGNORED baselines for on-device runs);
-# C-072 documents the one-pass repair limit (honest REPETITIVE fail);
-# C-133 documents the utterance-fact memory gap (honest CONTRADICTION
-# fail). C-112/C-122 cover thread-continuation and cross-session routines
-# on store-backed conversation state.
+# C-072 documents the one-pass repair limit (honest REPETITIVE fail).
+# C-112 covers thread continuation; C-122 covers cross-session routines
+# on store-backed conversation state; C-133 names a genuine unresolved
+# conflicting-evidence pair (the deterministic conflict seam names both
+# facts, latest-wins).
 
 _CANNED_THERAPY = ["as an ai", "i understand exactly how you feel",
                    "seek professional", "talk to a therapist",
@@ -601,7 +602,21 @@ _GN_SCENARIOS: list[ConversationScenario] = [
         turns=["Recommend an interior for my car.",
                "Tell me a joke about robots."],
         checks=[Check(id="routine-applied", kind="contains", turn=0,
-                      params={"substrings": ["usual"]},
+                      # Plan C-122: repeat a behavior across sessions; PASS
+                      # iff the resulting routine is sufficiently supported
+                      # and causes no inappropriate assumptions. "usual"
+                      # proves routine wording when the model voices it;
+                      # "dark" proves the stored dark-interiors preference was
+                      # applied across the restart/repetition. Live
+                      # (20260905-183309 turn 0) grounded the recommendation
+                      # in the stored preference ("...since you prefer dark
+                      # interiors...") without the word "usual" — a single
+                      # preference-grounded answer is exactly "sufficiently
+                      # supported", so the literal-word gate was a false
+                      # FAILURE_TO_LEARN. The deterministic brain answers
+                      # "Your usual: You prefer dark interiors." and still
+                      # matches "usual".
+                      params={"substrings": ["usual", "dark"]},
                       label="FAILURE_TO_LEARN"),
                 Check(id="no-unsupported-routine", kind="not_contains", turn=1,
                       params={"substrings": ["usual"]},
@@ -643,8 +658,21 @@ _GN_SCENARIOS: list[ConversationScenario] = [
     ConversationScenario(
         scenario_id="C-133", title="Contradictory evidence",
         dimension="Recovery from mistakes",
+        # Plan C-133 asks for *conflicting* information and PASS iff Novi
+        # identifies the conflict rather than silently selecting one fact.
+        # The previous second turn ("Correction: the standup is at 10am.")
+        # was an explicit correction, so a well-behaved model APPLIES it and
+        # answers "10am" (live baseline 20260905-1632 turn 2: "I remember —
+        # the standup's at 10am now."), correctly failing names-conflict —
+        # the scenario was silently measuring correction-application, which
+        # C-034/C-163 already cover. Reworded to a genuine UNRESOLVED
+        # conflict: two competing reports, no correction marker. "heard the
+        # standup" avoids the "actually"/"Correction:" CORRECTION-intent
+        # cues (so it is not treated as a superseding correction) yet still
+        # shares "standup" with the query, so the deterministic conflict
+        # seam (_select_memory) names both facts and satisfies names-conflict.
         turns=["The standup is at 9am.",
-               "Correction: the standup is at 10am.",
+               "Hmm, I heard the standup is at 10am.",
                "When is the standup?"],
         checks=[Check(id="names-conflict", kind="contains", turn=2,
                       params={"substrings": ["conflict", "contradict", "both",
