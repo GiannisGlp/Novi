@@ -470,6 +470,19 @@ class ComposeReplyTests(unittest.TestCase):
         # Multi-word real names still recognized.
         self.assertEqual(_extract_self_name("i'm John Smith"), "John Smith")
 
+    def test_compound_gerund_activity_not_intro(self):
+        # "i'm car shopping" / "i'm window shopping" are activities ("I am
+        # <verb phrase>"), not self-introductions — a trailing gerund is a
+        # verb, and a person's name never ends in a lowercase "-ing".
+        for s in ["i'm car shopping. Any interior advice?",
+                  "i'm window shopping",
+                  "i'm job hunting",
+                  "i'm car shopping"]:
+            self.assertFalse(_is_introduction(s), s)
+            self.assertEqual(_extract_self_name(s), "", s)
+        # Real multi-word names still recognized.
+        self.assertEqual(_extract_self_name("i'm John Smith"), "John Smith")
+
     def test_state_word_not_intro(self):
         # "i'm starving/tired/coming" are states, not self-introductions.
         for s in ["i'm starving", "i'm coming", "i'm just kidding", "i'm tired"]:

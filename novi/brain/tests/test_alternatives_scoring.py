@@ -209,7 +209,11 @@ class PriorTurnContextTests(unittest.TestCase):
             self.assertIsNotNone(second["text"])
         finally:
             brain.stop()
-        self.assertEqual(len(users), 2)
+        # The stub verbatim-repeats its reply on the second turn, so the
+        # plan-03 repetition critic (which now compares against the prior
+        # turn's recorded reply) fires one bounded repair call. Prior-context
+        # carryover is asserted on the first two payloads below.
+        self.assertGreaterEqual(len(users), 2)
         first_payload = json.loads(users[0])
         second_payload = json.loads(users[1])
         self.assertEqual(first_payload["dialogue_context"]["prior_conclusions"], [])

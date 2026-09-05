@@ -650,6 +650,12 @@ def _extract_self_name(text: str) -> str:
     # "i'm trying to work") is a state/verb phrase, not a name.
     if len(words) >= 2 and words[0].lower().endswith("ing") and not words[0][0].isupper():
         return ""
+    # A trailing gerund ("i'm car shopping", "i'm window shopping", "i'm job
+    # hunting") is an activity phrase, not a name: a person's name never ends
+    # in a lowercase "-ing" verb. Catches the "I'm <noun> <verb-ing>" pattern
+    # the first-word check misses (C-031 misparse).
+    if words[-1].lower().endswith("ing") and not words[-1][0].isupper():
+        return ""
     if not all(w.replace("-", "").replace("'", "").isalpha() for w in words):
         return ""
     return name

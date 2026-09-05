@@ -40,6 +40,72 @@ def _conv_parts(conv: Any) -> tuple[Any, Any, Any, Any]:
             conv.get("packet"), conv.get("plan"))
 
 
+def _grounding_lines(packet: Any, plan: Any) -> list[str]:
+    """Verified facts the model must prefer over its own general knowledge.
+
+    Pulls the fact-class-labelled packet memories first (richer than the
+    plan's flat evidence list), then any required-evidence phrases that were
+    not already captured. Bounded and de-duplicated.
+    """
+    lines: list[str] = []
+    seen: set[str] = set()
+    for mem in (getattr(packet, "relevant_memories", None) or []) if packet is not None else []:
+        if not isinstance(mem, dict):
+            continue
+        content = str(mem.get("content", "")).strip()
+        if not content or content.lower() in seen:
+            continue
+        seen.add(content.lower())
+        cls = str(mem.get("fact_class", "")).strip()
+        tag = f" [{cls}]" if cls else ""
+        lines.append(f"{content[:160]}{tag}")
+    for evidence in (getattr(plan, "required_evidence", []) or []):
+        content = str(evidence).strip()
+        if content and content.lower() not in seen:
+            seen.add(content.lower())
+            lines.append(content[:160])
+    return lines[:3]
+
+
+def _conflict_line(packet: Any) -> str:
+    """Conflicting live claims → name them and prefer the LATEST (C-133)."""
+    claims: list[str] = []
+    for mem in (getattr(packet, "relevant_memories", None) or []) if packet is not None else []:
+        if not isinstance(mem, dict):
+            continue
+        if mem.get("memory_type") == "recent_claim":
+            content = str(mem.get("content", "")).strip()
+            if content:
+                claims.append(content)
+    unique = list(dict.fromkeys(claims))
+    if len(unique) < 2:
+        return ""
+    earlier = "', '".join(unique[:-1])
+    return (f"- conflicting claims — acknowledge briefly, then use the LATEST: "
+            f"latest='{unique[-1][:120]}' (earlier: '{earlier[:120]}')")
+
+
+def _goal_directive(intent: Any, plan: Any) -> str:
+    """A hard, goal-specific instruction the model must obey (Phase 7/9)."""
+    goal = str(getattr(plan, "goal", "") or "")
+    name = (str(getattr(intent, "intent", "") or "").upper()
+            if intent is not None else "")
+    if goal == "ASK_CLARIFICATION":
+        return ("- ASK_CLARIFICATION: ask ONE short question naming the options "
+                "(e.g. 'Do you mean Rex or Max?'). Do NOT answer as if you "
+                "already know which one.")
+    if goal == "ADMIT_UNCERTAINTY":
+        if name in ("OBSERVATION_QUERY", "PERCEPTION_QUERY"):
+            return ("- You cannot see right now (no camera feed). Do NOT "
+                    "describe a scene or invent what is in front of you — say "
+                    "plainly that you can't reliably see.")
+        return "- ADMIT_UNCERTAINTY: do not invent an answer; state the uncertainty plainly."
+    if goal in ("RECOMMEND", "ANSWER_DIRECTLY", "EXPLAIN", "COMPARE"):
+        return ("- Ground your answer in the verified facts above; do not "
+                "substitute generic knowledge for them.")
+    return ""
+
+
 def render_conversation_block(conv: Any) -> str:
     """Render the turn's cognitive state as a compact prompt block."""
     try:
@@ -71,17 +137,36 @@ def render_conversation_block(conv: Any) -> str:
             lines.append(f"- must include: {'; '.join(must)}")
         if must_not:
             lines.append(f"- must NOT include: {'; '.join(must_not)}")
+        grounding = _grounding_lines(packet, plan)
+        if grounding:
+            lines.append("- verified facts (prefer these over general knowledge):")
+            lines.extend(f"    - {g}" for g in grounding)
+        correction = (getattr(anchor, "recent_correction", "") or "").strip()
+        if correction:
+            lines.append(f"- correction applied (prefer the corrected value; do not "
+                         f"repeat the superseded one): {correction[:160]}")
+        conflict = _conflict_line(packet)
+        if conflict:
+            lines.append(conflict)
+        directive = _goal_directive(intent, plan)
+        if directive:
+            lines.append(directive)
         uncertainty = str(getattr(plan, "uncertainty_statement", "") or "").strip()
         if uncertainty:
             lines.append(f"- uncertainty: {uncertainty[:160]}")
         packet_uncertainty = getattr(packet, "uncertainty", []) if packet is not None else []
         for item in list(packet_uncertainty or [])[:2]:
             lines.append(f"- uncertainty: {str(item)[:160]}")
+        requirements = [str(r)[:100] for r in (getattr(packet, "response_requirements", []) or [])[:3] if r]
+        if requirements:
+            lines.append(f"- requirements: {'; '.join(requirements)}")
         style = str(getattr(plan, "emotional_style", "") or "").strip()
         if style:
             lines.append(f"- emotional style: {style[:80]}")
         if getattr(plan, "question_allowed", False) is False:
             lines.append("- do not ask a clarification question; answer directly")
+        lines.append("- do not repeat your previous reply verbatim or near-verbatim; "
+                     "vary your wording")
         block = "\n".join(lines)
         return block[:MAX_CONVERSATION_BLOCK_CHARS]
     except Exception:

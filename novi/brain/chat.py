@@ -1968,6 +1968,17 @@ class ChatMixin:
         # failed repair call) keeps the original draft — repair advises, it
         # never vetoes a usable reply.
         llm_repair: dict[str, Any] = {"attempted": False}
+        # Repetition reference: the caller-supplied prior text, else the
+        # conversation state's recorded prior reply. respond() does not pass
+        # last_novi_text, so without this the critic compares against "" and
+        # a near-verbatim repetition of the previous turn never triggers a
+        # repair (C-150/C-161).
+        _repair_ref = last_novi_text or ""
+        if not _repair_ref and isinstance(conv, dict):
+            _prior_state = conv.get("state")
+            if _prior_state is not None:
+                with contextlib.suppress(Exception):
+                    _repair_ref = str(getattr(_prior_state, "last_novi_claim", "") or "")
         if conv and out.get("text"):
             try:
                 from .conversation.response_critic import critique_draft
@@ -1975,7 +1986,7 @@ class ChatMixin:
                 _repair_verdict = critique_draft(
                     draft=str(out.get("text") or ""),
                     packet=conv["packet"], plan=conv["plan"],
-                    last_novi=last_novi_text,
+                    last_novi=_repair_ref,
                 )
                 _repairable = {"naturalness", "grounding", "capability_honesty",
                                "contradiction_safety", "non_repetition"}
@@ -1985,7 +1996,7 @@ class ChatMixin:
                     _retry = self.dialogue.reply(
                         system=system + " " + _repair_verdict.repair_instruction
                         + " Answer in 1-2 sentences, no meta-commentary.",
-                        user=user_json, last_novi_text=last_novi_text,
+                        user=user_json, last_novi_text=_repair_ref,
                         addressee_name=addressee, recent_novi=recent_novi,
                         llm_chat=llm_chat)
                     if _retry.get("text"):

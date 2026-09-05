@@ -177,5 +177,38 @@ class CorrectionDetectionTests(unittest.TestCase):
         self.assertEqual(result.intent, "CORRECTION")
 
 
+class OpenQuestionRivalTests(unittest.TestCase):
+    """A specific request is not demoted by Novi's own open question.
+
+    After Novi asks "what else is on your mind?", a follow-up like
+    "Recommend an interior for my car." is a recommendation request, not a
+    short answer to that open question (C-120). The same holds for an explicit
+    "tell me about X" (C-161). The open-question-answer cue must not act as a
+    rival interpretation that drags confidence below the clarification bar.
+    """
+
+    def test_recommendation_not_treated_as_slot_answer(self) -> None:
+        state = ConversationState()
+        state.open_questions.append("what else is on your mind?")
+        result = classify_intent("Recommend an interior for my car.", state)
+        self.assertEqual(result.intent, "RECOMMENDATION")
+        self.assertFalse(result.needs_clarification)
+
+    def test_tell_me_about_not_treated_as_slot_answer(self) -> None:
+        state = ConversationState()
+        state.open_questions.append("are you comparing or just curious?")
+        result = classify_intent("Tell me about the Model Y.", state)
+        self.assertEqual(result.intent, "INFORMATION_REQUEST")
+        self.assertFalse(result.needs_clarification)
+
+    def test_genuine_slot_answer_still_clarification(self) -> None:
+        # "The Tesla." answering an open question is still a slot answer —
+        # the exclusion only silences the *rival* role, not the top cue.
+        state = ConversationState()
+        state.open_questions.append("which one do you mean?")
+        result = classify_intent("The Tesla.", state)
+        self.assertEqual(result.intent, "CLARIFICATION")
+
+
 if __name__ == "__main__":
     unittest.main()

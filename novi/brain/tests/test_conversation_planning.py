@@ -104,6 +104,26 @@ class CriticTests(unittest.TestCase):
         self.assertIn("non_repetition", verdict.failed)
         self.assertTrue(verdict.needs_repair)
 
+    def test_near_verbatim_repeat_fails(self) -> None:
+        # C-150/C-161: the model re-issues its own previous reply with light
+        # rephrasing ("tech side" -> "tech and sustainability angle"). Word-set
+        # overlap alone misses it; near-verbatim similarity must flag it.
+        packet = _packet()
+        plan = plan_response(packet)
+        prior = ("I've been thinking about that comparison myself lately. "
+                 "A friend just got a BMW and keeps talking about the driving "
+                 "feel, while I've been eyeing a Tesla for the tech side. "
+                 "What's drawing you toward one over the other?")
+        draft = ("I've been thinking about that comparison myself lately. "
+                 "A friend just got a BMW and keeps talking about the driving "
+                 "feel, while I've been eyeing a Tesla for the tech and "
+                 "sustainability angle. What's your take on which one fits "
+                 "your style better?")
+        verdict = critique_draft(draft=draft, packet=packet, plan=plan,
+                                 last_novi=prior)
+        self.assertIn("non_repetition", verdict.failed)
+        self.assertTrue(verdict.needs_repair)
+
     def test_filler_only_fails_naturalness(self) -> None:
         packet = _packet()
         plan = plan_response(packet)

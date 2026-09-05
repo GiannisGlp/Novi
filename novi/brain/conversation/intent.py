@@ -334,10 +334,15 @@ def classify_intent(text: str, state: ConversationState) -> IntentResult:
     top = rules[0]
     # Material ambiguity: a rival cue set fires at near-equal strength.
     # Generic fallbacks (question shape, bare wh-words) are not rival
-    # interpretations — specific frames win over them outright.
+    # interpretations — specific frames win over them outright. The
+    # open-question-answer cue is the same kind of weak fallback: after Novi
+    # asks "what else is on your mind?", a follow-up like "Recommend an
+    # interior" or "Tell me about the Model Y" is its own request, not a slot
+    # answer, and must not be demoted below the clarification bar (C-120/C-161).
     rival = next((r for r in rules[1:]
                   if r.reason not in ("generic question shape",
-                                       "generic wh-word question")
+                                       "generic wh-word question",
+                                       "short reply to Novi's open question")
                   and abs(r.confidence - top.confidence) <= 0.10
                   and r.intent != top.intent), None)
     if rival is not None:
