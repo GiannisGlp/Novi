@@ -54,6 +54,11 @@ def __getattr__(name: str):
         from novi.brain.conversation import response_critic as _critic
 
         return getattr(_critic, name)
+    if name in ("render_conversation_block", "conversation_state_payload",
+                "route_for_turn"):
+        from novi.brain.conversation import llm_binding as _binding
+
+        return getattr(_binding, name)
     if name in ("observe_routine", "matched_routine", "routine_signature",
                 "save_thread", "load_thread", "ROUTINE_PREFIX"):
         from novi.brain.conversation import thread_store as _threads

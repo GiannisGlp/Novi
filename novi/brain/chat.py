@@ -802,7 +802,8 @@ class ChatMixin:
 
     def compose_reply(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
                      llm_chat: Any = None, last_novi_text: str = "", addressee_name: str = "",
-                     recent_novi: list[str] | None = None, topic_hint: str = "") -> dict[str, Any]:
+                     recent_novi: list[str] | None = None, topic_hint: str = "",
+                     conv: dict[str, Any] | None = None) -> dict[str, Any]:
         """Compose a natural conversational reply (Brain speech-runtime layer).
 
         Wraps _compose_reply_impl with CommunicationDecision: records each
@@ -812,6 +813,10 @@ class ChatMixin:
 
         ``topic_hint`` carries the discourse-resolved topic for anaphoric
         follow-ups ("is it still there?") so grounding can find referents.
+        ``conv`` is the plan-03 turn bundle (state/intent/referents/packet/
+        plan) from respond(); when present its compact cognitive state is
+        handed to the model layer instead of making the LLM reconstruct the
+        brain from raw chat text (plan §16).
         """
         affect = dict(self.soul.affect.dimensions)
         directive = affect_expression(affect, serious=self._affect_serious_context(text))
@@ -819,7 +824,7 @@ class ChatMixin:
             text, person=person, history=history, llm_chat=llm_chat,
             last_novi_text=last_novi_text, addressee_name=addressee_name,
             recent_novi=recent_novi,
-            topic_hint=topic_hint,
+            topic_hint=topic_hint, conv=conv,
         )
         # Record the interaction if a reply was produced (not silent).
         if result.get("text") is not None and not result.get("silent"):
@@ -957,7 +962,7 @@ class ChatMixin:
             reply_obj = self.compose_reply(
                 text, person=addressee, history=history, llm_chat=llm_chat,
                 last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
-                topic_hint=discourse_hint,
+                topic_hint=discourse_hint, conv=conv,
             )
             # Non-isolated dialogue reasoning: record this turn's outcome so
             # the next turn's input carries prior-turn conclusions (bounded).
@@ -1165,12 +1170,22 @@ class ChatMixin:
             self._supplement_routine_memories(packet, routine)
             plan = plan_response(packet)
             rendered = render_deterministic(plan, packet)
-            return {"state": state, "speaker": key, "intent": intent,
-                    "referents": referents, "packet": packet,
-                    "plan": plan, "rendered": rendered,
-                    "routine": routine,
-                    "closed_slot": closed, "mentions": mentions,
-                    "anchor_entity": anchor_entity}
+            turn_bundle = {"state": state, "speaker": key, "intent": intent,
+                           "referents": referents, "packet": packet,
+                           "plan": plan, "rendered": rendered,
+                           "routine": routine,
+                           "closed_slot": closed, "mentions": mentions,
+                           "anchor_entity": anchor_entity}
+            # Plan 03 Phase 8: the recommended model tier rides with the
+            # turn so every consumer (LLM prompt, trace, replay evidence)
+            # sees the same routing decision. Advisory; never raises.
+            try:
+                from .conversation.llm_binding import route_for_turn
+
+                turn_bundle["model_route"] = route_for_turn(turn_bundle)
+            except Exception:  # noqa: BLE001 - routing never breaks chat
+                turn_bundle["model_route"] = {"tier": "UNKNOWN", "model": "", "signals": {}}
+            return turn_bundle
         except Exception:
             return {}
 
@@ -1434,6 +1449,7 @@ class ChatMixin:
                     "referents": conv["referents"].to_dict(),
                     "response_goal": plan.to_dict(),
                     "critic": verdict.to_dict(),
+                    "model_route": conv.get("model_route") or {},
                     "turn": state.turn_count,
                 }
             grounding = result.get("grounding")
@@ -1485,7 +1501,8 @@ class ChatMixin:
 
     def _compose_reply_impl(self, text: str, *, person: str = "", history: list[dict[str, Any]] | None = None,
                      llm_chat: Any = None, last_novi_text: str = "", addressee_name: str = "",
-                     recent_novi: list[str] | None = None, topic_hint: str = "") -> dict[str, Any]:
+                     recent_novi: list[str] | None = None, topic_hint: str = "",
+                     conv: dict[str, Any] | None = None) -> dict[str, Any]:
         """Compose a natural conversational reply (Brain speech-runtime layer).
 
         Per docs/06-soul/07 §2: the brain renders the approved communicative act
@@ -1779,6 +1796,29 @@ class ChatMixin:
                 "stay scoped to them — do not use private nicknames or shared "
                 "jokes from another relationship with this person."
             )
+        # Plan 03 §16: hand the model the compact cognitive state built for
+        # this turn (intent, referents, response goal) instead of making it
+        # reconstruct the brain from raw chat text. Advisory only — the rest
+        # of the prompt still grounds the reply. Fail-closed: an empty or
+        # soft-failed conv adds nothing.
+        conv_block = ""
+        conv_state: dict[str, Any] = {}
+        model_route: dict[str, Any] = {"tier": "UNKNOWN", "model": "", "signals": {}}
+        if conv:
+            try:
+                from .conversation.llm_binding import (
+                    conversation_state_payload,
+                    render_conversation_block,
+                    route_for_turn,
+                )
+
+                conv_block = render_conversation_block(conv)
+                conv_state = conversation_state_payload(conv)
+                model_route = route_for_turn(conv)
+            except Exception:  # noqa: BLE001 - binding must never break chat
+                conv_block, conv_state = "", {}
+        if conv_block:
+            system += "\n\n" + conv_block
         user_payload = {
             "user_says": text,
             "facts_i_know": facts,
@@ -1792,10 +1832,53 @@ class ChatMixin:
             "world_context": world_context,
             "vocabulary_scope": self._vocabulary_scope_for(person or addressee_name),
             "dialogue_context": dialogue_ctx,
+            "conversation_state": conv_state,
+            "model_route": model_route,
         }
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")
         out = self.dialogue.reply(system=system, user=user_json, last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi, llm_chat=llm_chat)
+        # Plan 03 Phase 9 on the LLM path: score the draft with the same
+        # deterministic critic used post-hoc in respond(). When it fails on
+        # re-promptable dimensions, ONE bounded repair call regenerates under
+        # the critic's instruction; the replacement wins only if its own
+        # critique has strictly fewer failures. Anything else (including a
+        # failed repair call) keeps the original draft — repair advises, it
+        # never vetoes a usable reply.
+        llm_repair: dict[str, Any] = {"attempted": False}
+        if conv and out.get("text"):
+            try:
+                from .conversation.response_critic import critique_draft
+
+                _repair_verdict = critique_draft(
+                    draft=str(out.get("text") or ""),
+                    packet=conv["packet"], plan=conv["plan"],
+                    last_novi=last_novi_text,
+                )
+                _repairable = {"naturalness", "grounding", "capability_honesty",
+                               "contradiction_safety", "non_repetition"}
+                if _repair_verdict.needs_repair and set(_repair_verdict.failed) & _repairable:
+                    llm_repair = {"attempted": True,
+                                  "failed": list(_repair_verdict.failed)}
+                    _retry = self.dialogue.reply(
+                        system=system + " " + _repair_verdict.repair_instruction
+                        + " Answer in 1-2 sentences, no meta-commentary.",
+                        user=user_json, last_novi_text=last_novi_text,
+                        addressee_name=addressee, recent_novi=recent_novi,
+                        llm_chat=llm_chat)
+                    if _retry.get("text"):
+                        _recheck = critique_draft(
+                            draft=str(_retry.get("text") or ""),
+                            packet=conv["packet"], plan=conv["plan"],
+                            last_novi=last_novi_text)
+                        llm_repair["failed_after"] = list(_recheck.failed)
+                        if len(_recheck.failed) < len(_repair_verdict.failed):
+                            out = _retry
+                            llm_repair["accepted"] = True
+                        else:
+                            llm_repair["accepted"] = False
+            except Exception:  # noqa: BLE001 - critic repair never breaks chat
+                pass
         # @skill convention (plan 16 P2): the model may request one exact
         # computation. Parse strictly against the known runnable catalog,
         # execute through governed invocation, then compose the final natural
@@ -1843,6 +1926,9 @@ class ChatMixin:
                 "context_memory_items": len(memory_items),
                 "discourse_topic_hint": topic_hint,
                 "skills_applied": skills_applied,
+                "model_route": model_route,
+                "llm_repair": llm_repair,
+                "conv_block_chars": len(conv_block),
                 **out,
             }
             return {"text": out["text"], "fallback": False, "reason": reason, "grounding": grounding}
