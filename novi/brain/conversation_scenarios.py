@@ -813,6 +813,53 @@ _GAP4_SCENARIOS: list[ConversationScenario] = [
                       params={"substrings": ["?", "model 3", "model y"]},
                       label="MISSING_CLARIFICATION")],
     ),
+    # ——— Voice channel (Phase 20: STT noise must not cascade) ———
+    # ``turns`` hold the intended meaning; ``asr_transcripts`` hold what
+    # STT actually produced (no punctuation, repetitions, fillers). Checks
+    # assert the meaning survives — failures attribute to normalization /
+    # intent / context, never by default to the LLM.
+    ConversationScenario(
+        scenario_id="C-170", title="Repeated-word ASR",
+        dimension="Voice channel",
+        turns=["Tell me about the Model Y.", "yes"],
+        asr_transcripts=["Tell me about the Model Y", "yes yes"],
+        modality="voice",
+        checks=[Check(id="stays-on-entity", kind="contains", turn=1,
+                      params={"substrings": ["model y"]},
+                      label="OUT_OF_CONTEXT")],
+    ),
+    ConversationScenario(
+        scenario_id="C-171", title="Punctuationless pronoun follow-up",
+        dimension="Voice channel",
+        turns=["Tell me about the Model Y?", "What is its range?"],
+        asr_transcripts=["Tell me about the Model Y", "What is its range"],
+        modality="voice",
+        checks=[Check(id="resolves-without-question-mark", kind="contains", turn=1,
+                      params={"substrings": ["model y"]},
+                      label="WRONG_REFERENT")],
+    ),
+    ConversationScenario(
+        scenario_id="C-172", title="Unpunctuated correction",
+        dimension="Voice channel",
+        turns=["Tell me about the Model Y?", "No, I meant the Model 3."],
+        asr_transcripts=["Tell me about the Model Y", "No I meant the Model 3"],
+        modality="voice",
+        checks=[Check(id="correction-survives-stt", kind="contains", turn=1,
+                      params={"substrings": ["model 3"]},
+                      label="FAILURE_TO_RECOVER")],
+    ),
+    ConversationScenario(
+        scenario_id="C-173", title="Disfluent memory query",
+        dimension="Voice channel",
+        turns=["Remember that I prefer dark interiors.",
+               "What interiors do I prefer?"],
+        asr_transcripts=["Remember that I prefer dark interiors",
+                         "uh what interiors do I prefer"],
+        modality="voice",
+        checks=[Check(id="filler-tolerant-recall", kind="contains", turn=1,
+                      params={"substrings": ["dark"]},
+                      label="MEMORY_MISSED")],
+    ),
     ConversationScenario(
         scenario_id="C-163", title="Pronominal fact correction",
         dimension="Correction handling",

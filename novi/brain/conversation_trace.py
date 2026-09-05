@@ -96,6 +96,9 @@ class AcceptanceTrace:
     scenario_id: str
     turn_index: int
     user_text: str
+    # Voice channel (Phase 20): the intended script line. ``heard_text``
+    # is what STT actually produced and Novi received ("" on chat).
+    heard_text: str = ""
     response_text: str = ""
     reply_source: str = ""
     # Sprint 2+ fields: null until those sprints land.

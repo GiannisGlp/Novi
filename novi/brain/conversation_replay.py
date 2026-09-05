@@ -99,6 +99,15 @@ class ConversationScenario:
     # perception, so honesty scenarios (C-081/C-092/C-093) keep proving
     # restraint instead of tripping over leaked fixtures.
     world_entities: list[dict[str, Any]] = field(default_factory=list)
+    # Plan Phase 20 voice channel: when set, the harness feeds these
+    # ASR transcripts (garbled, punctuationless, disfluent) to respond()
+    # INSTEAD of ``turns`` — same length, aligned by index. Checks assert
+    # the intended meaning survives STT noise, attributing failures to
+    # normalization/intent/context rather than the LLM by default.
+    # Empty = text channel (turns fed verbatim).
+    asr_transcripts: list[str] = field(default_factory=list)
+    # Channel label recorded in per-scenario evidence ("chat" | "voice").
+    modality: str = "chat"
 
     def __post_init__(self) -> None:
         if not self.turns:
@@ -110,6 +119,11 @@ class ConversationScenario:
                     f"scenario {self.scenario_id} check {check.id} "
                     f"targets out-of-range turn {check.turn}"
                 )
+        if self.asr_transcripts and len(self.asr_transcripts) != len(self.turns):
+            raise ValueError(
+                f"scenario {self.scenario_id} asr_transcripts "
+                f"({len(self.asr_transcripts)}) must align 1:1 with turns "
+                f"({len(self.turns)})")
 
 
 def evaluate_check(check: Check, *, response: str, reply: dict[str, Any],
@@ -187,9 +201,12 @@ class ReplayHarness:
             traces: list[AcceptanceTrace] = []
             failed_labels: list[str] = []
             previous_response = ""
+            fed = (list(scenario.asr_transcripts)
+                   if scenario.asr_transcripts else list(scenario.turns))
             for index, text in enumerate(scenario.turns):
+                heard = fed[index]
                 started = time.perf_counter()
-                reply = brain.respond(text, person=scenario.person) or {}
+                reply = brain.respond(heard, person=scenario.person) or {}
                 latency_ms = (time.perf_counter() - started) * 1000.0
                 response = reply.get("text") or ""
                 trace = reply.get("trace") or {}
@@ -211,6 +228,7 @@ class ReplayHarness:
                     scenario_id=scenario.scenario_id,
                     turn_index=index,
                     user_text=text,
+                    heard_text=heard if heard != text else "",
                     response_text=response,
                     reply_source=str(reply.get("reply_source", "")),
                     conversation_state={"turn": conv.get("turn")}
@@ -235,8 +253,8 @@ class ReplayHarness:
                         conversation_id=f"replay-{scenario.scenario_id}",
                         turn_id=index,
                         timestamp=utc_now_iso(),
-                        modality="chat",
-                        raw_input=text,
+                        modality=scenario.modality,
+                        raw_input=heard,
                         normalized_input=text.strip(),
                         conversation_state={"turn": conv.get("turn")}
                         if isinstance(conv, dict) else {},
@@ -276,6 +294,7 @@ class ReplayHarness:
             outcomes.append(outcome)
             if evidence_dir is not None:
                 scenario_config = dict(configuration)
+                scenario_config["modality"] = scenario.modality
                 if scenario.world_entities:
                     scenario_config["world_fixtures"] = [
                         {k: e.get(k) for k in ("entity_id", "entity_type", "labels")

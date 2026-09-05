@@ -165,6 +165,53 @@ class WiringTests(unittest.TestCase):
         self.assertIn("rex", text)
         self.assertIn("max", text)
 
+    def test_punctuationless_follow_up_resolves(self) -> None:
+        # Voice-channel: STT drops punctuation. "What is its range" must
+        # still resolve to the anchor, not be swallowed as a slot answer.
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("Tell me about the Model Y.")
+                resp = brain.respond("What is its range")
+            finally:
+                brain.stop()
+        self.assertIn("model y", (resp["text"] or "").lower())
+
+    def test_leading_filler_does_not_break_memory_query(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("Remember that I prefer dark interiors.")
+                resp = brain.respond("uh what interiors do I prefer")
+            finally:
+                brain.stop()
+        self.assertIn("dark", (resp["text"] or "").lower())
+
+    def test_unpunctuated_correction_still_corrects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("Tell me about the Model Y.")
+                resp = brain.respond("No I meant the Model 3")
+            finally:
+                brain.stop()
+        self.assertIn("model 3", (resp["text"] or "").lower())
+
     def test_novi_echo_does_not_contaminate_recency(self) -> None:
         # Explicit switch ("forget that, what about BMW?") + "its" must
         # resolve to BMW even though Novi's own echo re-mentions Tesla:

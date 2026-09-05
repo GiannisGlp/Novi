@@ -62,6 +62,11 @@ def _candidate_rules(text: str, state: ConversationState) -> list[_Rule]:
     """All rules whose cues fire, in priority order (first = highest)."""
     stripped = text.strip()
     flat = stripped.lower()
+    # Voice-channel/disfluency normalization (plan pipeline stage 1):
+    # leading ASR fillers ("uh", "um") carry no intent and otherwise
+    # depress cue confidence into spurious clarification ("uh what
+    # interiors do I prefer" must read as the memory question it is).
+    flat = re.sub(r"^(?:(?:uh|um|er|ah|hmm)[,\s]+)+", "", flat).strip()
     lowered = f" {flat} "
     words = lowered.split()
     is_question = stripped.endswith("?") or bool(
@@ -223,8 +228,11 @@ def _candidate_rules(text: str, state: ConversationState) -> list[_Rule]:
                            ("clarification cue",),
                            "asks for clarification"))
     # Short reply to Novi's open question closes the slot (Step 1.5).
+    # Interrogative-shaped turns are questions, not answers — without this,
+    # a punctuationless voice follow-up ("What is its range") after Novi's
+    # own question gets swallowed as a slot answer and goes unanswered.
     if (state.open_questions or state.last_novi_question) and len(words) <= 12 \
-            and not stripped.endswith("?"):
+            and not stripped.endswith("?") and not is_question:
         rules.append(_Rule("CLARIFICATION", CLARIFICATION_ANSWER, 0.75,
                            ("open-question answer",),
                            "short reply to Novi's open question"))
