@@ -121,6 +121,14 @@ def critique_draft(*, draft: str, packet: ContextPacket, plan: ResponsePlan,
     scores["context_relevance"] = 1.0
     scores["intent_match"] = 1.0
 
+    # C-150: a closed slot must not be re-opened. A slot-answer turn is a
+    # direct-answer goal; a trailing "?" re-asks what the user already
+    # answered, so the critic flags it for the one bounded repair pass.
+    scores["clarification_safety"] = 1.0
+    if plan.goal == "SLOT_ANSWER" and text.rstrip().endswith("?"):
+        scores["clarification_safety"] = 0.0
+        failed.append("clarification_safety")
+
     needs_repair = bool(failed)
     instruction = ""
     if needs_repair:

@@ -311,6 +311,15 @@ def build_packet(text: str, state: Any, intent: Any, referents: Any,
     for resolved in resolutions.values():
         if resolved and resolved not in query_entities:
             query_entities = query_entities + (resolved,)
+    # The entity the reply must stay grounded on is what THIS turn refers to,
+    # not the recency-ordered workspace head: a freshly-taught place ("Porto")
+    # must not become "stay grounded on Porto" for a car-interior question.
+    focus_entities = [str(v) for v in resolutions.values() if str(v)]
+    if not focus_entities:
+        anchor_entity = (getattr(getattr(state, "anchor", None),
+                                  "active_entity", "") or "").strip()
+        if anchor_entity:
+            focus_entities = [anchor_entity]
     query_topic = (getattr(state, "topic", "") or "").strip()
     intent_label = (getattr(intent, "intent", "") or "").strip()
 
@@ -356,8 +365,8 @@ def build_packet(text: str, state: Any, intent: Any, referents: Any,
     requirements: list[str] = []
     if intent_label:
         requirements.append(f"address intent {intent_label}")
-    if query_entities:
-        requirements.append(f"stay grounded on {query_entities[0][:80]}")
+    if focus_entities:
+        requirements.append(f"stay grounded on {focus_entities[0][:80]}")
     with contextlib.suppress(Exception):
         corrections = getattr(brain, "corrections", None)
         records = corrections.snapshot() if corrections is not None else []

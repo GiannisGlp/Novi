@@ -1146,7 +1146,10 @@ class ChatMixin:
                 preferred_correction_entity,
             )
             from .conversation.intent import classify_intent
-            from .conversation.referent_resolution import resolve_referents
+            from .conversation.referent_resolution import (
+                resolve_referents,
+                turn_mismatches_anchor_kind,
+            )
             from .conversation.response_planner import plan_response, render_deterministic
 
             # Plan 03 Phase 37: per-stage latency observability. Developer
@@ -1200,6 +1203,15 @@ class ChatMixin:
                 anchor_entity = mentions[-1] if mentions else ""
                 if mentions:
                     state.anchor.active_entity = mentions[-1]
+                elif (not referents.resolutions and not referents.ambiguous
+                      and turn_mismatches_anchor_kind(text, state)):
+                    # The turn's class-noun reference denotes a kind the prior
+                    # anchor cannot be (e.g. "the car" after "my sister lives
+                    # in Porto"): the anchor is stale. Clearing it stops the
+                    # packet/planner from grounding the reply on an off-topic
+                    # entity (C-032 MEMORY_IRRELEVANT).
+                    state.anchor.active_entity = ""
+                    anchor_entity = ""
             _mark("referents")
             packet = build_packet(text, state, intent, referents, self)
             packet.ambiguous_referents = list(referents.ambiguous)
@@ -1745,14 +1757,29 @@ class ChatMixin:
         dialogue_ctx = self._dialogue_prior_context()
         if topic_hint:
             facts.append(f"(Continuing the conversation about: {topic_hint})")
+        # C-032: compose-path fallback context (prior conclusions, episodic
+        # narrative) must be relevance-gated — a freshly taught off-topic fact
+        # ("My sister lives in Porto") must not leak into a car-interior answer.
+        focus_entities: list[str] = []
+        if isinstance(conv, dict):
+            _fpacket = conv.get("packet")
+            if _fpacket is not None:
+                focus_entities = [str(v) for v in (getattr(
+                    _fpacket, "resolved_entities", {}) or {}).values() if str(v)]
+        from .conversation.llm_binding import context_relevant_to_turn
         for prior in dialogue_ctx["prior_conclusions"]:
-            facts.append(f"(Earlier we concluded: {prior})")
+            if context_relevant_to_turn(str(prior), text, focus_entities):
+                facts.append(f"(Earlier we concluded: {prior})")
         pkg_summaries = [str((m.get("data") or {}).get("content") or "")[:400] for m in memory_items]
         pkg_summaries = [s for s in pkg_summaries if s]
         facts.extend(pkg_summaries[:3] if pkg_summaries else self._chat_memory_summaries())
         narrative = self._episodic_narrative()
         if narrative:
-            facts.append("Recent events: " + " ".join(narrative))
+            kept_narrative = [str(n) for n in narrative
+                              if context_relevant_to_turn(str(n), text,
+                                                          focus_entities)]
+            if kept_narrative:
+                facts.append("Recent events: " + " ".join(kept_narrative))
         known = self._chat_known_persons()
         facts.extend(f"I know the person named {p}" for p in known)
         experience = self._chat_experience(person or addressee_name)
@@ -1989,7 +2016,8 @@ class ChatMixin:
                     last_novi=_repair_ref,
                 )
                 _repairable = {"naturalness", "grounding", "capability_honesty",
-                               "contradiction_safety", "non_repetition"}
+                               "contradiction_safety", "non_repetition",
+                               "clarification_safety"}
                 if _repair_verdict.needs_repair and set(_repair_verdict.failed) & _repairable:
                     llm_repair = {"attempted": True,
                                   "failed": list(_repair_verdict.failed)}

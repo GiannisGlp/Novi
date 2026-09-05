@@ -40,6 +40,57 @@ def _conv_parts(conv: Any) -> tuple[Any, Any, Any, Any]:
             conv.get("packet"), conv.get("plan"))
 
 
+def _last_novi_reply(conv: Any) -> str:
+    """The previous Novi reply, when the turn bundle carries its state."""
+    if not isinstance(conv, dict):
+        return ""
+    state = conv.get("state")
+    return str(getattr(state, "last_novi_claim", "") or "").strip()
+
+
+# Pronouns/locatives that make a turn anaphoric: the turn refers back to prior
+# context, so prior items are its referent and must not be filtered away.
+_ANAPHORA_CUES = frozenset({
+    "it", "its", "that", "this", "these", "those", "they", "them", "their",
+    "there", "here", "one", "he", "she", "him", "her", "his", "hers",
+})
+
+
+def context_relevant_to_turn(text: str, turn_text: str,
+                             entities: Any = ()) -> bool:
+    """Cheap deterministic relevance gate for compose-path context facts.
+
+    A context item (episodic narrative line, prior-conclusion gist) is
+    injected only when its content words overlap the current turn's words or
+    the entities the user is actually referring to this turn. Negative-result
+    default: an item with no shared content word is dropped, so a freshly
+    taught but off-topic fact ("My sister lives in Porto") never leaks into a
+    car-interior answer. Two keep-cases preserve legitimately carried context:
+    a turn with no content words to match, and an anaphoric follow-up
+    ("is it still there?") whose referent IS the prior context.
+    """
+    import re
+
+    def _stems(words: set[str]) -> set[str]:
+        out = set(words)
+        for word in words:
+            if len(word) > 5 and word.endswith("s"):
+                out.add(word[:-1])
+        return out
+
+    def _words(s: str) -> set[str]:
+        return {w for w in re.findall(r"[a-z0-9]+", (s or "").lower())
+                if len(w) > 4}
+
+    wanted = _stems(_words(turn_text)) | _stems(_words(" ".join(
+        str(e) for e in (entities or ()) if str(e))))
+    if not wanted:
+        return True
+    if _ANAPHORA_CUES & set(re.findall(r"[a-z0-9]+", (turn_text or "").lower())):
+        return True
+    return bool(_stems(_words(text)) & wanted)
+
+
 def _grounding_lines(packet: Any, plan: Any) -> list[str]:
     """Verified facts the model must prefer over its own general knowledge.
 
@@ -100,6 +151,12 @@ def _goal_directive(intent: Any, plan: Any) -> str:
                     "describe a scene or invent what is in front of you — say "
                     "plainly that you can't reliably see.")
         return "- ADMIT_UNCERTAINTY: do not invent an answer; state the uncertainty plainly."
+    if goal == "SLOT_ANSWER":
+        resolved = ", ".join(str(e) for e in (getattr(plan, "must_include", []) or []) if e)
+        return ("- SLOT_ANSWER: the user just answered your open question"
+                + (f" with {resolved}." if resolved else ".")
+                + " Now answer their earlier question directly — give your "
+                  "answer/opinion and do NOT ask another question.")
     if goal in ("RECOMMEND", "ANSWER_DIRECTLY", "EXPLAIN", "COMPARE"):
         return ("- Ground your answer in the verified facts above; do not "
                 "substitute generic knowledge for them.")
@@ -131,6 +188,13 @@ def render_conversation_block(conv: Any) -> str:
         if topic or entity:
             lines.append(f"- active topic: {topic or '?'}; active entity: {entity or '?'}")
         lines.append(f"- response goal: {getattr(plan, 'goal', '?')}")
+        # C-072: the no-repeat directive is only actionable when the model can
+        # SEE what it already said. Surface the prior reply early so it is not
+        # lost to the block-size cap (verified facts below can be long).
+        last_novi = _last_novi_reply(conv)
+        if last_novi:
+            lines.append(f"- your previous reply (do NOT repeat it; say something "
+                         f"new): {last_novi[:200]}")
         must = [str(m)[:80] for m in (getattr(plan, "must_include", []) or [])[:3] if m]
         must_not = [str(m)[:80] for m in (getattr(plan, "must_not_include", []) or [])[:3] if m]
         if must:
@@ -237,6 +301,7 @@ def route_for_turn(conv: Any) -> dict[str, Any]:
 
 __all__ = [
     "MAX_CONVERSATION_BLOCK_CHARS",
+    "context_relevant_to_turn",
     "conversation_state_payload",
     "render_conversation_block",
     "route_for_turn",

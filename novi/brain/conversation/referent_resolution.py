@@ -39,7 +39,12 @@ from typing import Any
 from novi.brain.conversation.conversation_state import ReferentResult
 from novi.brain.discourse import PRONOUN_RE
 
-__all__ = ["resolve_referents"]
+__all__ = [
+    "class_noun_mismatches",
+    "entity_kind",
+    "resolve_referents",
+    "turn_mismatches_anchor_kind",
+]
 
 # Phase 3 pronouns beyond discourse.PRONOUN_RE (it/that/this/they/them/
 # those/these). "then" is temporal, not an entity referent: ignored.
@@ -69,6 +74,81 @@ _CLASS_NOUNS = frozenset({
     "one", "car", "vehicle", "model", "restaurant", "place", "thing",
     "person", "man", "woman", "wife", "husband", "guy", "driver",
 })
+
+# Class-noun semantic kinds. A class noun only binds an entity of a compatible
+# kind: "the car" must not resolve to a city, "the place" must not resolve to a
+# person (C-032: "the car" after "my sister lives in Porto" is a vehicle, not
+# Porto). "one"/"thing" are unrestricted generic stand-ins.
+_VEHICLE_NOUNS = frozenset({"car", "vehicle", "model"})
+_PLACE_NOUNS = frozenset({"restaurant", "place"})
+_PERSON_NOUNS = frozenset({"person", "man", "woman", "wife", "husband",
+                           "guy", "driver"})
+
+def entity_kind(entity: str, state: Any) -> str:
+    """Infer a coarse kind for an entity from how it was introduced recently.
+
+    Returns "place" when the entity is named as a location in a recent user
+    turn ("My sister lives in Porto."), else "" (unknown). Deterministic and
+    read-only; never mutates state.
+    """
+    name = (entity or "").strip()
+    if not name:
+        return ""
+    pattern = re.compile(
+        r"\b(?:lives?|live|lived|moves?|moved|visits?|visited|travels?|"
+        r"travel(?:l)?ed|flies|flew|goes|went|stays?|stayed|arrives?|arrived|"
+        r"comes?|came)\s+(?:in|to|at|from)\s+" + re.escape(name) + r"\b",
+        re.IGNORECASE)
+    for turn in (getattr(state, "recent_turns", []) or []):
+        text = str(turn.get("user", "") if isinstance(turn, dict) else turn)
+        if pattern.search(text):
+            return "place"
+    return ""
+
+
+def _class_noun_kind(head: str) -> str:
+    head = (head or "").lower()
+    if head in _VEHICLE_NOUNS:
+        return "vehicle"
+    if head in _PLACE_NOUNS:
+        return "place"
+    if head in _PERSON_NOUNS:
+        return "person"
+    return "any"
+
+
+def class_noun_mismatches(head: str, entity: str, state: Any) -> bool:
+    """True when a class noun cannot denote the candidate entity's kind."""
+    kind = _class_noun_kind(head)
+    ekind = entity_kind(entity, state)
+    if kind == "vehicle" and ekind == "place":
+        return True
+    if kind == "place" and ekind == "person":
+        return True
+    if kind == "person" and ekind == "place":
+        return True
+    return False
+
+
+def turn_mismatches_anchor_kind(text: str, state: Any) -> bool:
+    """True when the turn's class-noun reference denotes a kind the current
+    anchor cannot be — e.g. "the car" while the anchor is a place (Porto).
+
+    Used by the turn pipeline to clear a stale anchor when the user moved to a
+    different kind of subject, without touching anchors that a short reply
+    ("yes") or a bare question legitimately continues.
+    """
+    anchor = (getattr(getattr(state, "anchor", None), "active_entity", "")
+              or "").strip()
+    if not anchor:
+        return False
+    for match in _NP_RE.finditer(text or ""):
+        words = match.group(2).split()
+        for width in range(len(words), 0, -1):
+            head = words[width - 1].lower()
+            if head in _CLASS_NOUNS:
+                return class_noun_mismatches(head, anchor, state)
+    return False
 
 _STOPWORDS = frozenset(
     "a an the and or but of at by for with about into through during before after "
@@ -207,6 +287,11 @@ def resolve_referents(text: str, state: Any) -> ReferentResult:
             if key not in ambiguous:
                 ambiguous.append(key)
 
+    # A class noun that could not bind any entity of a compatible kind
+    # ("the car" vs a place like Porto) must not fall through to the implicit
+    # subject, which would otherwise bind the stale anchor.
+    mismatched_class_noun = False
+
     # Longest multi-word phrases first so generic patterns cannot claim a
     # sub-span ("the other one" beats the "the ..." noun-phrase matcher).
     claimed: list[tuple[int, int]] = []
@@ -278,6 +363,13 @@ def resolve_referents(text: str, state: Any) -> ReferentResult:
                 target, confidence, contested = _cue_target(
                     explicit=explicit, recent_hit=recent_hit, anchor=anchor,
                     candidates=candidates)
+                if target is not None and class_noun_mismatches(head, target, state):
+                    # The only live entity is a kind this class noun cannot
+                    # denote (e.g. "the car" when the active entity is a
+                    # city): leave the reference generic rather than bind a
+                    # place as a vehicle (C-032).
+                    mismatched_class_noun = True
+                    target = None
                 if target is not None or contested:
                     claimed.append((start, end))
                     _record(phrase, target, confidence, contested)
@@ -320,7 +412,7 @@ def resolve_referents(text: str, state: Any) -> ReferentResult:
             target, confidence, contested = candidates[0], _CONF_SOLE, False
         _record(key, target, confidence, contested)
 
-    if not resolutions and not ambiguous and not explicit:
+    if not resolutions and not ambiguous and not explicit and not mismatched_class_noun:
         subject = _implicit_subject(cleaned, anchor)
         if subject is not None:
             resolutions["(implicit subject)"] = subject

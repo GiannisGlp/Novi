@@ -92,6 +92,16 @@ def plan_response(packet: ContextPacket) -> ResponsePlan:
             must_include=["confirmation of what was stored"],
             reason="memory update: confirm storage briefly",
         )
+    if name == "CLARIFICATION" and getattr(intent, "dialogue_act", "") == "CLARIFICATION_ANSWER":
+        # The user answered Novi's open question with a short slot answer
+        # ("The Tesla."). Close the loop by answering their earlier question
+        # directly — never re-ask (C-150 UNNECESSARY_CLARIFICATION).
+        return ResponsePlan(
+            goal="SLOT_ANSWER", desired_length="short",
+            must_include=entities[:2],
+            question_allowed=False,
+            reason="user answered the open question; answer directly, no re-ask",
+        )
     if needs_clar and conf < 0.60:
         candidates = sorted(set(packet_entities(packet)))
         return ResponsePlan(
@@ -377,6 +387,14 @@ def render_deterministic(plan: ResponsePlan, packet: ContextPacket) -> str:
         # is senseless — answer from packet evidence instead (plan
         # Step 7.4: answer when meaning is clear).
         return _render_direct_answer(packet, plan, entity)
+
+    if plan.goal == "SLOT_ANSWER":
+        # A closed slot is acknowledged without re-asking: name the entity,
+        # never a trailing question (C-150 no-reask).
+        entity = entities[0] if entities else ""
+        if entity:
+            return f"Got it — {entity}."
+        return "Got it."
 
     if plan.goal == "ADMIT_UNCERTAINTY":
         return plan.uncertainty_statement or "I don't have a reliable memory of that."
