@@ -1,0 +1,464 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-120",
+  "title": "Explicit preference learning",
+  "dimension": "Correction handling",
+  "git_sha": "f3756bbfefa122ebe0a3f3e1e1c5b919a366227b",
+  "timestamp": "2026-09-05T11:14:46.105986+00:00",
+  "runtime": "mac-brain",
+  "model": "deterministic",
+  "configuration": {
+    "brain_llm": false,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133"
+    ]
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-120",
+      "turn_index": 0,
+      "user_text": "Recommend an interior for my car.",
+      "response_text": "You prefer dark interiors.",
+      "reply_source": "fallback",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "RECOMMENDATION",
+        "dialogue_act": "REQUEST",
+        "confidence": 0.85,
+        "reason": "asks for a recommendation",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "packet_render",
+          "conversation": {
+            "intent": {
+              "intent": "RECOMMENDATION",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.85,
+              "reason": "asks for a recommendation",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "RECOMMEND",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "You prefer dark interiors.",
+                "I prefer dark interiors."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "recommendation grounded in recalled preferences"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 1.0,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "NORMAL",
+              "model": "qwen3:8b",
+              "signals": {
+                "task_complexity": 0.6,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.7
+              }
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Recommend an interior for my car.",
+            "intent": {
+              "intent": "RECOMMENDATION",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.85,
+              "reason": "asks for a recommendation",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I prefer dark interiors. / novi: Noted \u2014 I'll remember that."
+            ],
+            "relevant_memories": [
+              {
+                "content": "You prefer dark interiors.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "I prefer dark interiors.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Recommend an interior for my car.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (prefers): dark interiors"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent RECOMMENDATION"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "RECOMMEND",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "You prefer dark interiors.",
+          "I prefer dark interiors."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "recommendation grounded in recalled preferences"
+      },
+      "model_route": "deterministic",
+      "critic": {
+        "scores": {
+          "grounding": 1.0,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "latency_ms": 0.6,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 1
+  },
+  "intent": {
+    "intent": "RECOMMENDATION",
+    "dialogue_act": "REQUEST",
+    "confidence": 0.85,
+    "reason": "asks for a recommendation",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": null,
+      "route": "deterministic",
+      "route_reason": "packet_render",
+      "conversation": {
+        "intent": {
+          "intent": "RECOMMENDATION",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.85,
+          "reason": "asks for a recommendation",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [],
+          "confidence": 0.0
+        },
+        "response_goal": {
+          "goal": "RECOMMEND",
+          "must_include": [],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [
+            "You prefer dark interiors.",
+            "I prefer dark interiors."
+          ],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "recommendation grounded in recalled preferences"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 1.0,
+            "non_repetition": 1.0,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "NORMAL",
+          "model": "qwen3:8b",
+          "signals": {
+            "task_complexity": 0.6,
+            "uncertainty": 0.15,
+            "reasoning_depth": 0.7
+          }
+        },
+        "turn": 1
+      }
+    },
+    "grounding": {
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "Recommend an interior for my car.",
+        "intent": {
+          "intent": "RECOMMENDATION",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.85,
+          "reason": "asks for a recommendation",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [],
+        "anchor": {
+          "topic": "",
+          "active_entity": "",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: I prefer dark interiors. / novi: Noted \u2014 I'll remember that."
+        ],
+        "relevant_memories": [
+          {
+            "content": "You prefer dark interiors.",
+            "fact_class": "PREFERENCE",
+            "memory_type": "preference",
+            "source": "preferences",
+            "confidence": 0.3,
+            "why_selected": "learned preference matching turn"
+          },
+          {
+            "content": "I prefer dark interiors.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'Recommend an interior for my car.', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories",
+          "preference (prefers): dark interiors"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent RECOMMENDATION"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "RECOMMEND",
+    "must_include": [],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [
+      "You prefer dark interiors.",
+      "I prefer dark interiors."
+    ],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "recommendation grounded in recalled preferences"
+  },
+  "response": "You prefer dark interiors.",
+  "critic": {
+    "scores": {
+      "grounding": 1.0,
+      "non_repetition": 1.0,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 0.6,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}

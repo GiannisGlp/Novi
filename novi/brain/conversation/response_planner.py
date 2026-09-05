@@ -14,6 +14,8 @@ prompt); this module owns the plan, not the model.
 
 from __future__ import annotations
 
+from typing import Any
+
 from novi.brain.conversation.conversation_state import (
     ContextPacket,
     ResponsePlan,
@@ -103,20 +105,21 @@ def plan_response(packet: ContextPacket) -> ResponsePlan:
         # Only substantive perception answers: the packet may carry the
         # user's own utterance echoed as world context (source stt) —
         # that is not an observation and must not license scene claims.
+        # _gather_world entries carry serialized payloads under "text",
+        # so text counts as content here (echo sources already excluded).
         substantive = [w for w in packet.world_context
                        if isinstance(w, dict)
                        and str(w.get("source", "")).lower() not in (
                            "stt", "chat", "transcript", "user", "dialogue")
                        and (w.get("detections") or w.get("objects")
                             or w.get("people") or w.get("observation")
-                            or w.get("content"))]
+                            or w.get("content") or w.get("labels")
+                            or w.get("text"))]
         if substantive:
             return ResponsePlan(
                 goal="ANSWER_DIRECTLY", desired_length="short",
                 must_include=list(packet.resolved_entities.values())[:2],
-                required_evidence=[str(w.get("content") or w.get("text")
-                                       or w.get("observation") or w)[:200]
-                                   for w in substantive[:2]],
+                required_evidence=[_world_phrase(w) for w in substantive[:2]],
                 question_allowed=False,
                 reason="fresh perception available: answer from it",
             )
@@ -222,6 +225,32 @@ def plan_response(packet: ContextPacket) -> ResponsePlan:
     )
 
 
+def _world_phrase(fact: dict[str, Any]) -> str:
+    """Name what a world-context fact observes, for evidence and voicing.
+
+    Entity labels win ("cup"); otherwise fall back to the observation /
+    content text. Never returns the raw serialized payload.
+    """
+    labels = [str(label).strip() for label in (fact.get("labels") or [])
+              if str(label).strip()]
+    if labels:
+        return ", ".join(labels[:3])[:120]
+    for key in ("observation", "content"):
+        value = str(fact.get(key) or "").strip()
+        if value:
+            return value[:200]
+    text = str(fact.get("text") or "").strip()
+    return text[:200]
+
+
+def _with_article(phrase: str) -> str:
+    """Add an indefinite article to a bare single-word observation label."""
+    word = phrase.strip()
+    if " " in word or not word or not word[0].isalpha() or not word[0].islower():
+        return word
+    return ("an " if word[0] in "aeiou" else "a ") + word
+
+
 def _memory_answer(packet: ContextPacket) -> str:
     for mem in packet.relevant_memories:
         content = str(mem.get("content", "")).strip()
@@ -299,6 +328,19 @@ def render_deterministic(plan: ResponsePlan, packet: ContextPacket) -> str:
 
     if plan.goal in ("ANSWER_DIRECTLY", "EXPLAIN", "COMPARE", "RECOMMEND"):
         memory, kind = _select_memory(packet)
+        if not memory:
+            # Perception answers (plan §6.3): voice observed world facts
+            # directly. The evidence must re-derive from the packet's world
+            # context — never from memory content (a routine annotation or
+            # preference must never be voiced as something seen).
+            phrases = {_world_phrase(w) for w in packet.world_context
+                       if isinstance(w, dict)}
+            perception = [str(e).strip() for e in plan.required_evidence
+                          if str(e).strip() and str(e).strip() in phrases]
+            if perception:
+                return f"I can see {_with_article(perception[0])}" + (
+                    f" and {_with_article(perception[1])}"
+                    if len(perception) > 1 else "") + "."
         if memory:
             if kind == "conflict":
                 return memory

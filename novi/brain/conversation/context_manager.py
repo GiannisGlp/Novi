@@ -188,12 +188,19 @@ def _gather_world(text: str, entities: tuple[str, ...], brain: Any) -> list[dict
             kind = "observation"
         else:
             kind = "world_state"
-        facts.append({
+        entry = {
             "text": str(data)[:300],
             "source": item.source or item.layer,
             "confidence": round(item.confidence, 4),
             "fact_class": label_fact(kind, item.confidence).value,
-        })
+        }
+        # Keep entity labels on the fact so the response planner can name
+        # what was observed without parsing the serialized payload.
+        labels = data.get("labels") if isinstance(data, dict) else None
+        if labels:
+            entry["labels"] = [str(label)[:60] for label in list(labels)[:4]]
+            entry["entity_id"] = str(data.get("entity_id", ""))[:80]
+        facts.append(entry)
         if len(facts) >= MAX_WORLD_FACTS * 2:
             break
     return facts[:MAX_WORLD_FACTS]

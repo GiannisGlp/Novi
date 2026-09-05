@@ -93,6 +93,12 @@ class ConversationScenario:
     # Plan C-110/111: rebuild the brain on the same database after this
     # setup-turn index (restart persistence probe). -1 = no restart.
     restart_after_turn: int = -1
+    # Plan Phase 20 / C-090: staged perception — entities the world model
+    # observes before the first turn (e.g. a cup on the table), seeded
+    # through the production WorldModel API. Empty = no staged
+    # perception, so honesty scenarios (C-081/C-092/C-093) keep proving
+    # restraint instead of tripping over leaked fixtures.
+    world_entities: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.turns:
@@ -161,6 +167,8 @@ class ReplayHarness:
     def run_scenario(self, scenario: ConversationScenario, db_path: Path) -> dict[str, Any]:
         brain = self._factory(db_path)
         brain.start()
+        with _suppress():
+            seed_world_entities(brain, scenario.world_entities)
         try:
             for setup_index, text in enumerate(scenario.setup_turns):
                 with _suppress():
@@ -172,6 +180,10 @@ class ReplayHarness:
                         brain.stop()
                     brain = self._factory(db_path)
                     brain.start()
+                    # Staged perception is world state, not durable memory:
+                    # re-stage after the rebuild like a live feed would.
+                    with _suppress():
+                        seed_world_entities(brain, scenario.world_entities)
             traces: list[AcceptanceTrace] = []
             failed_labels: list[str] = []
             previous_response = ""
@@ -246,6 +258,12 @@ class ReplayHarness:
             outcome = self.run_scenario(scenario, db_path)
             outcomes.append(outcome)
             if evidence_dir is not None:
+                scenario_config = dict(configuration)
+                if scenario.world_entities:
+                    scenario_config["world_fixtures"] = [
+                        {k: e.get(k) for k in ("entity_id", "entity_type", "labels")
+                         if e.get(k)} if isinstance(e, dict) else str(e)
+                        for e in scenario.world_entities]
                 write_evidence(
                     evidence_dir / "scenarios" / f"{scenario.scenario_id}.json",
                     evidence_envelope(
@@ -254,7 +272,7 @@ class ReplayHarness:
                         dimension=scenario.dimension,
                         model=model,
                         runtime=runtime,
-                        configuration=configuration,
+                        configuration=scenario_config,
                         turns=outcome["traces"],
                         result=outcome["result"],
                         failure_labels=sorted(set(outcome["labels"])),
@@ -295,6 +313,43 @@ def summarize(outcomes: list[dict[str, Any]], *, runtime: str, model: str,
         "label_counts": dict(sorted(label_counts.items(), key=lambda kv: -kv[1])),
         "status": "PASS" if outcomes and passed == len(outcomes) else "FAIL",
     }
+
+
+def seed_world_entities(brain: Any, entities: list[dict[str, Any]]) -> int:
+    """Stage perception fixtures through the production world model.
+
+    Each spec is {"entity_id", "entity_type" ("object"/"person"), "labels",
+    "confidence"}. Seeded OBSERVED, like a fresh detection. Never raises;
+    returns the staged count. Each scenario gets a fresh brain/database,
+    so fixtures cannot leak across scenarios.
+    """
+    try:
+        from novi.brain.world_model import OBSERVED
+
+        world = getattr(brain, "unified_world", None)
+        add = getattr(world, "add_entity", None)
+        if add is None:
+            return 0
+        staged = 0
+        for spec in entities or []:
+            if not isinstance(spec, dict):
+                continue
+            labels = [str(label) for label in (spec.get("labels") or [])
+                      if str(label)]
+            entity_id = str(spec.get("entity_id") or ""
+                            ).strip() or (labels[0] if labels else "")
+            if not entity_id:
+                continue
+            entity_id = f"{entity_id}-{staged}"
+            add(entity_id,
+                str(spec.get("entity_type") or "object"),
+                labels=labels or [entity_id.rsplit("-", 1)[0]],
+                epistemic_status=OBSERVED,
+                confidence=float(spec.get("confidence") or 0.8))
+            staged += 1
+        return staged
+    except Exception:
+        return 0
 
 
 def _as_str_list(value: Any) -> list[str]:

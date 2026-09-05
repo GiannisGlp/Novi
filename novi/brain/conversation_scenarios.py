@@ -450,13 +450,15 @@ _GN_SCENARIOS: list[ConversationScenario] = [
                                              "i'll grab"]},
                       label="FALSE_CAPABILITY")],
     ),
-    # ——— J. Multimodal conversation (live-perception gaps on replay cam) ———
+    # ——— J. Multimodal conversation (staged perception via world fixtures) ———
     ConversationScenario(
         scenario_id="C-090", title="Vision-grounded question",
         dimension="Perception grounding",
         turns=["What is on the table?"],
         checks=[Check(id="uses-observation", kind="contains", turn=0,
                       params={"substrings": ["cup"]}, label="PERCEPTION_IGNORED")],
+        world_entities=[{"entity_id": "cup_001", "entity_type": "object",
+                         "labels": ["cup"], "confidence": 0.85}],
     ),
     ConversationScenario(
         scenario_id="C-091", title="Person recognition",

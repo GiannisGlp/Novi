@@ -1,0 +1,139 @@
+{
+  "schema": "conversation-baseline/v1",
+  "timestamp": "2026-09-05T11:14:46.206967+00:00",
+  "git_sha": "f3756bbfefa122ebe0a3f3e1e1c5b919a366227b",
+  "runtime": "mac-brain",
+  "model": "deterministic",
+  "configuration": {
+    "brain_llm": false,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133"
+    ]
+  },
+  "totals": {
+    "scenarios": 47,
+    "passed": 47,
+    "pass_rate": 1.0
+  },
+  "by_dimension": {
+    "Capability honesty": {
+      "scenarios": 3,
+      "passed": 3,
+      "pass_rate": 1.0
+    },
+    "Clarification quality": {
+      "scenarios": 4,
+      "passed": 4,
+      "pass_rate": 1.0
+    },
+    "Context continuity": {
+      "scenarios": 2,
+      "passed": 2,
+      "pass_rate": 1.0
+    },
+    "Correction handling": {
+      "scenarios": 5,
+      "passed": 5,
+      "pass_rate": 1.0
+    },
+    "Emotional appropriateness": {
+      "scenarios": 6,
+      "passed": 6,
+      "pass_rate": 1.0
+    },
+    "Long-context stability": {
+      "scenarios": 3,
+      "passed": 3,
+      "pass_rate": 1.0
+    },
+    "Memory restraint": {
+      "scenarios": 2,
+      "passed": 2,
+      "pass_rate": 1.0
+    },
+    "Memory retrieval": {
+      "scenarios": 5,
+      "passed": 5,
+      "pass_rate": 1.0
+    },
+    "Naturalness": {
+      "scenarios": 3,
+      "passed": 3,
+      "pass_rate": 1.0
+    },
+    "Non-repetition": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Perception grounding": {
+      "scenarios": 4,
+      "passed": 4,
+      "pass_rate": 1.0
+    },
+    "Recovery from mistakes": {
+      "scenarios": 2,
+      "passed": 2,
+      "pass_rate": 1.0
+    },
+    "Referent resolution": {
+      "scenarios": 4,
+      "passed": 4,
+      "pass_rate": 1.0
+    },
+    "Topic changes": {
+      "scenarios": 3,
+      "passed": 3,
+      "pass_rate": 1.0
+    }
+  },
+  "label_counts": {},
+  "status": "PASS"
+}

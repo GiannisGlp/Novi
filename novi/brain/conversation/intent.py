@@ -121,7 +121,13 @@ def _candidate_rules(text: str, state: ConversationState) -> list[_Rule]:
     if _has(lowered, "what do you see", "describe what you see",
             "what's in front", "what is in front", "do you see",
             "can you see", "what does it look like right now",
-            "who is in front", "what am i holding"):
+            "who is in front", "what am i holding",
+            "on the table", "on the counter", "on the desk",
+            "in the room", "in front of you", "around you",
+            "walked in", "just arrived",
+            "is there anyone", "is anyone here", "is anyone there",
+            "who is here", "who's here",
+            "what is on the table", "what's on the table"):
         rules.append(_Rule("OBSERVATION_QUERY", QUESTION, 0.90,
                            ("observation cue",), "asks about live observation"))
     if _has(lowered, "did you hear", "do you hear", "what was that sound",
