@@ -2063,6 +2063,23 @@ class ChatMixin:
                             llm_repair["accepted"] = False
             except Exception:  # noqa: BLE001 - critic repair never breaks chat
                 pass
+        # C-133: a recall that turns up conflicting claims is answered from
+        # verified packet facts, deterministically ("You mentioned both ... —
+        # going by the latest ..."). The LLM has repeatedly answered the stale
+        # value despite both-claims/latest-wins directives, and this seam is
+        # already the critic's gold standard (plan 9.4: answer directly from
+        # verified facts when generation is unreliable).
+        if conv and out.get("text"):
+            try:
+                from .conversation.response_planner import _select_memory
+                plan_goal = str(getattr(conv.get("plan"), "goal", "") or "")
+                if plan_goal == "ANSWER_DIRECTLY":
+                    _fact, _kind = _select_memory(conv["packet"])
+                    if _kind == "conflict" and _fact:
+                        out = {"text": _fact, "fallback": True,
+                               "grounding": out.get("grounding") or {}}
+            except Exception:  # noqa: BLE001 - conflict routing never breaks chat
+                pass
         # C-150 guardrail: a closed slot must never be re-opened. The LLM can
         # ignore the repair instruction, so enforce deterministically — drop a
         # trailing question sentence on SLOT_ANSWER turns (re-asking what the
