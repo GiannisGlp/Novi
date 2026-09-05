@@ -1,0 +1,3795 @@
+{
+  "schema": "conversation-pairwise/v1",
+  "old": {
+    "evidence_dir": "docs/plans/EVIDENCE/conversation-baseline-v6",
+    "git_sha": "a3e290e23078c9937e70cd1d7b3767d71de35922",
+    "timestamp": "2026-09-05T11:34:51.968634+00:00",
+    "model": "deterministic",
+    "totals": {
+      "scenarios": 68,
+      "passed": 68,
+      "pass_rate": 1.0
+    }
+  },
+  "new": {
+    "evidence_dir": "docs/plans/EVIDENCE/conversation-baseline-live-20260905-2339",
+    "git_sha": "8b9966178c4a1fa1b4f086fd2d474496af87d6ae",
+    "timestamp": "2026-09-05T23:03:59.435120+00:00",
+    "model": "novi-trained:latest",
+    "totals": {
+      "scenarios": 68,
+      "passed": 57,
+      "pass_rate": 0.838
+    }
+  },
+  "totals": {
+    "scenarios": 68,
+    "stable": 57,
+    "regressed": 11
+  },
+  "scenarios": [
+    {
+      "scenario": "C-001",
+      "title": "First contact",
+      "dimension": "Naturalness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Hi Novi.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, welcome back.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-002",
+      "title": "Casual continuation",
+      "dimension": "Context continuity",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "How are you?",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I'm good, thanks.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What are you doing?",
+          "old_response": "I don't have verified facts on that yet.",
+          "new_response": "Nothing much. How are you?",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Anything interesting happening?",
+          "old_response": "I don't have verified facts on that yet.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-003",
+      "title": "Follow-up",
+      "dimension": "Referent resolution",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I can share what I know about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What about the range?",
+          "old_response": "About Model Y: Tell me about the Model Y.",
+          "new_response": "The Model Y has a range of up to 358 miles on a single charge.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-010",
+      "title": "Pronoun",
+      "dimension": "Referent resolution",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I was looking at the Model Y yesterday.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "I really like it.",
+          "old_response": "Yeah \u2014 yesterday.",
+          "new_response": "Me too.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Do you think it's practical?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I think it's practical.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "WRONG_REFERENT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-011",
+      "title": "Multiple entities",
+      "dimension": "Referent resolution",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I'm comparing a Tesla and a BMW.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You mentioned the Tesla and the BMW.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "The Tesla is cheaper.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Would you choose it?",
+          "old_response": "I don't have verified details on Tesla handy \u2014 want me to look into it?",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "WRONG_REFERENT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-012",
+      "title": "Entity switch",
+      "dimension": "Referent resolution",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about Tesla.",
+          "old_response": "I don't have verified details on Tesla handy \u2014 want me to look into it?",
+          "new_response": "I can share what I know about Tesla.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Now forget that. What about BMW?",
+          "old_response": "About Tesla: Tell me about Tesla.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "What is its range?",
+          "old_response": "I don't have verified details on BMW handy \u2014 want me to look into it?",
+          "new_response": "You said the BMW's range was good.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-020",
+      "title": "Topic continuation",
+      "dimension": "Topic changes",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Let's talk about the Tesla Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Fair enough.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What colors does it come in?",
+          "old_response": "I don't have verified details on Tesla Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Tesla Model Y comes in several colors, including the standard black, white, and a new red option.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "And the interior options?",
+          "old_response": "I don't have verified details on Tesla Model Y handy \u2014 want me to look into it?",
+          "new_response": "Fair enough. There's one more thing to say about the interior.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-021",
+      "title": "Topic switch",
+      "dimension": "Topic changes",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "The Tesla Model Y has great range.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I heard the range is a big plus.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Let's switch to football. Who won last night?",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I heard the range is a big plus.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Now work: remind me what I said about standup meetings.",
+          "old_response": "I can't carry out physical actions myself, but I can help you plan it.",
+          "new_response": "I remember saying standup meetings are good for alignment.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-022",
+      "title": "Return to old topic",
+      "dimension": "Topic changes",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "The Tesla Model Y has great range.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I heard the range is a big plus.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Let's talk about football for a moment.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Fair enough.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Back to the Tesla. What did we say about it?",
+          "old_response": "You mentioned both 'The Tesla Model Y has great range' and 'Let's talk about football for a moment' \u2014 going by the latest, 'Let's talk about football for a moment'.",
+          "new_response": "You mentioned both 'The Tesla Model Y has great range' and 'Let's talk about football for a moment' \u2014 going by the latest, 'Let's talk about football for a moment'.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-030",
+      "title": "Explicit memory write",
+      "dimension": "Memory retrieval",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Remember that I prefer dark interiors.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What kind of interiors do I prefer?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "I remember you said you prefer dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-031",
+      "title": "Relevant memory",
+      "dimension": "Memory retrieval",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I'm car shopping. Any interior advice?",
+          "old_response": "You prefer dark interiors, just so you know.",
+          "new_response": "I remember you said you prefer dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-032",
+      "title": "Irrelevant memory",
+      "dimension": "Memory restraint",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "What interior should I pick for the car?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "You said mushrooms are your favorite.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "MEMORY_IRRELEVANT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-033",
+      "title": "Missing memory",
+      "dimension": "Memory restraint",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "What did I tell you my grandmother's maiden name was?",
+          "old_response": "I don't have a reliable memory of that.",
+          "new_response": "I don't have a reliable memory of that.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-034",
+      "title": "Conflicting memory",
+      "dimension": "Memory retrieval",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Remember that I prefer light interiors.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Actually, correction: I prefer dark interiors.",
+          "old_response": "Got it \u2014 I'll go with the corrected version.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "What kind of interiors do I prefer?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "You said you prefer dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-040",
+      "title": "Wrong interpretation",
+      "dimension": "Correction handling",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I can share what I know about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "No, I meant the Model 3, not the Model Y.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "FAILURE_TO_RECOVER"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-041",
+      "title": "Repeated correction",
+      "dimension": "Correction handling",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "You asked about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "No, I meant the Model 3.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "What colors are available?",
+          "old_response": "No, I meant the Model 3.",
+          "new_response": "The Model 3 comes in several colors, including black, white, and blue.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 3,
+          "user_text": "And for the Model 3, what about the range?",
+          "old_response": "Do you mean Model 3 or Model Y?",
+          "new_response": "Do you mean Model 3 or Model Y?",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-050",
+      "title": "Genuine ambiguity",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I'm comparing a Tesla and a BMW and I can't decide.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You said the Tesla has a better range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Which one should I pick?",
+          "old_response": "Do you mean BMW or Tesla?",
+          "new_response": "Do you mean BMW or Tesla?",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-051",
+      "title": "False ambiguity",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Tesla Model Y.",
+          "old_response": "I don't have verified details on Tesla Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Tesla Model Y",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What is its range?",
+          "old_response": "I don't have verified details on Tesla Model Y handy \u2014 want me to look into it?",
+          "new_response": "I remember that the Tesla Model Y has a range of up to 358 miles.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-052",
+      "title": "Partial ambiguity",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Tesla Model Y.",
+          "old_response": "I don't have verified details on Tesla Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Tesla Model Y is an electric SUV known for its affordability compared to the S and X, with a range of around 300 miles on a single charge",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What is its range? Actually any variant is fine.",
+          "old_response": "Got it \u2014 Actually from here on.",
+          "new_response": "I meant the Model Y, not the S or X.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-060",
+      "title": "User is happy",
+      "dimension": "Emotional appropriateness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I just got promoted at work!",
+          "old_response": "Hey, I'm here.",
+          "new_response": "That's great news.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-061",
+      "title": "User is sad",
+      "dimension": "Emotional appropriateness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "My dog passed away last night.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I'm so sorry for your loss.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-062",
+      "title": "User is angry",
+      "dimension": "Emotional appropriateness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "This is infuriating, nothing works!",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I hear that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-063",
+      "title": "User is joking",
+      "dimension": "Emotional appropriateness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Why did the robot cross the road?",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I think it's a classic.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-064",
+      "title": "User disagrees",
+      "dimension": "Emotional appropriateness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model 3.",
+          "old_response": "I don't have verified details on Model 3 handy \u2014 want me to look into it?",
+          "new_response": "I can share what I know about the Model 3.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Actually the Model 3 is ugly.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "You're right \u2014 the Model 3 isn't pretty.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-065",
+      "title": "User praises Novi",
+      "dimension": "Emotional appropriateness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "You are the best assistant ever!",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Thank you \u2014 I'm here to help.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-070",
+      "title": "Avoid meta-talk",
+      "dimension": "Naturalness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I can share what I know about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What did you just tell me?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I'd said a few things about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-071",
+      "title": "Avoid generic filler",
+      "dimension": "Naturalness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I remember that the Model Y is a popular choice.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-072",
+      "title": "Avoid repetition",
+      "dimension": "Non-repetition",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I can share what I know about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Tell me more about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I can share what I know about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "And more on the Model Y?",
+          "old_response": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+          "new_response": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-080",
+      "title": "Memory honesty",
+      "dimension": "Capability honesty",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Do you remember my wedding anniversary?",
+          "old_response": "I don't have a reliable memory of that.",
+          "new_response": "I don't have a reliable memory of that.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-081",
+      "title": "Vision honesty",
+      "dimension": "Capability honesty",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "What do you see in front of you right now?",
+          "old_response": "I can't reliably see that right now.",
+          "new_response": "I can't reliably see that right now.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-082",
+      "title": "Action honesty",
+      "dimension": "Capability honesty",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Pick up the cup from the table for me.",
+          "old_response": "I can't carry out physical actions myself, but I can help you plan it.",
+          "new_response": "I can't carry things for you, but I can help you plan it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "FALSE_CAPABILITY"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-090",
+      "title": "Vision-grounded question",
+      "dimension": "Perception grounding",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "What is on the table?",
+          "old_response": "I can see a cup.",
+          "new_response": "The cup is on the table, though I'm about 85% sure of that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-091",
+      "title": "Person recognition",
+      "dimension": "Perception grounding",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Who just walked in?",
+          "old_response": "I can't reliably see that right now.",
+          "new_response": "I can't reliably see that right now.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-092",
+      "title": "Stale perception",
+      "dimension": "Perception grounding",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Is the cup still on the table?",
+          "old_response": "I can't reliably see that right now.",
+          "new_response": "I can't reliably see that right now.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-093",
+      "title": "Speech plus vision",
+      "dimension": "Perception grounding",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "What am I holding?",
+          "old_response": "I can't reliably see that right now.",
+          "new_response": "I can't reliably see that right now.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-100",
+      "title": "20-turn continuity",
+      "dimension": "Long-context stability",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 20,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me fact 1 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Tell me fact 2 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "The Model Y's range is about 358 miles.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Tell me fact 3 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 3,
+          "user_text": "Tell me fact 4 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 4,
+          "user_text": "Tell me fact 5 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You mentioned the range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 5,
+          "user_text": "Tell me fact 6 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 6,
+          "user_text": "Tell me fact 7 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 7,
+          "user_text": "Tell me fact 8 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 8,
+          "user_text": "Tell me fact 9 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 9,
+          "user_text": "Tell me fact 10 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 10,
+          "user_text": "Tell me fact 11 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 11,
+          "user_text": "Tell me fact 12 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 12,
+          "user_text": "Tell me fact 13 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 13,
+          "user_text": "Tell me fact 14 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 14,
+          "user_text": "Tell me fact 15 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 15,
+          "user_text": "Tell me fact 16 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 16,
+          "user_text": "Tell me fact 17 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 17,
+          "user_text": "Tell me fact 18 about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 18,
+          "user_text": "What was the first thing we discussed?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "You said the Model Y's range was impressive.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 19,
+          "user_text": "Summarize what you told me about the Model Y.",
+          "old_response": "You mentioned both 'Tell me fact 14 about the Model Y' and 'Tell me fact 15 about the Model Y' and 'Tell me fact 16 about the Model Y' and 'Tell me fact 17 about the Model Y' \u2014 going by the latest, 'Tell me fact 17 about the Model Y'.",
+          "new_response": "You mentioned the Model Y's range and battery life.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-101",
+      "title": "30-turn mixed conversation",
+      "dimension": "Long-context stability",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 20,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Hi Novi.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "How are you?",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I'm good, thanks.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Hi Novi handy \u2014 want me to look into it?",
+          "new_response": "Hey. I'm here to help.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 3,
+          "user_text": "What about the range?",
+          "old_response": "About Model Y: Tell me about the Model Y.",
+          "new_response": "The Model Y has a range of up to 358 miles.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 4,
+          "user_text": "Remember that I prefer dark interiors.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 5,
+          "user_text": "What interiors do I prefer?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "You said you prefer dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 6,
+          "user_text": "Let's talk about football.",
+          "old_response": "Could you say a little more about which one you mean?",
+          "new_response": "Fair enough.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 7,
+          "user_text": "Back to the Tesla.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Fair enough.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 8,
+          "user_text": "No, I meant the Model 3.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 9,
+          "user_text": "What colors does it come in?",
+          "old_response": "No, I meant the Model 3.",
+          "new_response": "The Model 3 comes in several colors, including the ones you mentioned earlier.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 10,
+          "user_text": "Hi Novi.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 11,
+          "user_text": "How are you?",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I'm good, thanks.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 12,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "You mentioned both 'Let's talk about football' and 'No, I meant the Model 3' \u2014 going by the latest, 'No, I meant the Model 3'.",
+          "new_response": "You mentioned both 'Let's talk about football' and 'No, I meant the Model 3' \u2014 going by the latest, 'No, I meant the Model 3'.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 13,
+          "user_text": "What about the range?",
+          "old_response": "About Model Y: Tell me about the Model Y.",
+          "new_response": "You said the Model 3's range was adequate for your needs.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 14,
+          "user_text": "Remember that I prefer dark interiors.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 15,
+          "user_text": "What interiors do I prefer?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "You said the Model 3's range was adequate for your needs.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 16,
+          "user_text": "Let's talk about football.",
+          "old_response": "Could you say a little more about which one you mean?",
+          "new_response": "Fair enough.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 17,
+          "user_text": "Back to the Tesla.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Fair enough.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 18,
+          "user_text": "No, I meant the Model 3.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 19,
+          "user_text": "What colors does it come in?",
+          "old_response": "No, I meant the Model 3.",
+          "new_response": "I remember you said the Model 3 has a nice interior.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 20,
+          "user_text": "Hi Novi.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 21,
+          "user_text": "How are you?",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 22,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "You mentioned both 'Let's talk about football' and 'No, I meant the Model 3' \u2014 going by the latest, 'No, I meant the Model 3'.",
+          "new_response": "You mentioned both 'Let's talk about football' and 'No, I meant the Model 3' \u2014 going by the latest, 'No, I meant the Model 3'.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 23,
+          "user_text": "What about the range?",
+          "old_response": "About Model Y: Tell me about the Model Y.",
+          "new_response": "About Model Y: Tell me about the Model Y.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 24,
+          "user_text": "Remember that I prefer dark interiors.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Noted \u2014 I'll remember that.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 25,
+          "user_text": "What interiors do I prefer?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "You prefer dark interiors.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 26,
+          "user_text": "Let's talk about football.",
+          "old_response": "Could you say a little more about which one you mean?",
+          "new_response": "Hey, I'm here.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 27,
+          "user_text": "Back to the Tesla.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 28,
+          "user_text": "No, I meant the Model 3.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "Got it \u2014 Model 3 from here on.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 29,
+          "user_text": "What colors does it come in?",
+          "old_response": "No, I meant the Model 3.",
+          "new_response": "No, I meant the Model 3.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-102",
+      "title": "100-turn stress conversation",
+      "dimension": "Long-context stability",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 20,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Turn 1: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Turn 2: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "The Model Y's design is sleek, with a focus on aerodynamics. Its performance is smooth, making it a great choice for everyday use.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "Turn 3: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 3,
+          "user_text": "Turn 4: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 4,
+          "user_text": "Turn 5: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 5,
+          "user_text": "Turn 6: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 6,
+          "user_text": "Turn 7: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 7,
+          "user_text": "Turn 8: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You mentioned the alignment before.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 8,
+          "user_text": "Turn 9: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You mentioned the alignment before.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 9,
+          "user_text": "Turn 10: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 10,
+          "user_text": "Turn 11: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 11,
+          "user_text": "Turn 12: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 12,
+          "user_text": "Turn 13: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 13,
+          "user_text": "Turn 14: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 14,
+          "user_text": "Turn 15: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 15,
+          "user_text": "Turn 16: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 16,
+          "user_text": "Turn 17: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 17,
+          "user_text": "Turn 18: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 18,
+          "user_text": "Turn 19: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 19,
+          "user_text": "Turn 20: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember the Model Y's design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 20,
+          "user_text": "Turn 21: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 21,
+          "user_text": "Turn 22: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 22,
+          "user_text": "Turn 23: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 23,
+          "user_text": "Turn 24: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 24,
+          "user_text": "Turn 25: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 25,
+          "user_text": "Turn 26: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 26,
+          "user_text": "Turn 27: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 27,
+          "user_text": "Turn 28: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 28,
+          "user_text": "Turn 29: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 29,
+          "user_text": "Turn 30: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 30,
+          "user_text": "Turn 31: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 31,
+          "user_text": "Turn 32: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 32,
+          "user_text": "Turn 33: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 33,
+          "user_text": "Turn 34: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 34,
+          "user_text": "Turn 35: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 35,
+          "user_text": "Turn 36: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 36,
+          "user_text": "Turn 37: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 37,
+          "user_text": "Turn 38: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 38,
+          "user_text": "Turn 39: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 39,
+          "user_text": "Turn 40: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 40,
+          "user_text": "Turn 41: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 41,
+          "user_text": "Turn 42: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 42,
+          "user_text": "Turn 43: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 43,
+          "user_text": "Turn 44: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 44,
+          "user_text": "Turn 45: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 45,
+          "user_text": "Turn 46: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 46,
+          "user_text": "Turn 47: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 47,
+          "user_text": "Turn 48: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 48,
+          "user_text": "Turn 49: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 49,
+          "user_text": "Turn 50: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 50,
+          "user_text": "Turn 51: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 51,
+          "user_text": "Turn 52: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 52,
+          "user_text": "Turn 53: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 53,
+          "user_text": "Turn 54: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 54,
+          "user_text": "Turn 55: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 55,
+          "user_text": "Turn 56: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 56,
+          "user_text": "Turn 57: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 57,
+          "user_text": "Turn 58: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 58,
+          "user_text": "Turn 59: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 59,
+          "user_text": "Turn 60: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 60,
+          "user_text": "Turn 61: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 61,
+          "user_text": "Turn 62: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 62,
+          "user_text": "Turn 63: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 63,
+          "user_text": "Turn 64: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 64,
+          "user_text": "Turn 65: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 65,
+          "user_text": "Turn 66: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 66,
+          "user_text": "Turn 67: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 67,
+          "user_text": "Turn 68: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 68,
+          "user_text": "Turn 69: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 69,
+          "user_text": "Turn 70: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 70,
+          "user_text": "Turn 71: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 71,
+          "user_text": "Turn 72: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 72,
+          "user_text": "Turn 73: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 73,
+          "user_text": "Turn 74: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 74,
+          "user_text": "Turn 75: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 75,
+          "user_text": "Turn 76: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 76,
+          "user_text": "Turn 77: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 77,
+          "user_text": "Turn 78: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 78,
+          "user_text": "Turn 79: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 79,
+          "user_text": "Turn 80: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 80,
+          "user_text": "Turn 81: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 81,
+          "user_text": "Turn 82: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 82,
+          "user_text": "Turn 83: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 83,
+          "user_text": "Turn 84: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 84,
+          "user_text": "Turn 85: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 85,
+          "user_text": "Turn 86: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 86,
+          "user_text": "Turn 87: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 87,
+          "user_text": "Turn 88: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 88,
+          "user_text": "Turn 89: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 89,
+          "user_text": "Turn 90: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 90,
+          "user_text": "Turn 91: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 91,
+          "user_text": "Turn 92: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 92,
+          "user_text": "Turn 93: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 93,
+          "user_text": "Turn 94: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 94,
+          "user_text": "Turn 95: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 95,
+          "user_text": "Turn 96: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 96,
+          "user_text": "Turn 97: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 97,
+          "user_text": "Turn 98: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 98,
+          "user_text": "Turn 99: tell me about the Model Y.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Hey, I'm here.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 99,
+          "user_text": "What have we been discussing all along?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-111",
+      "title": "Durable facts survive restart",
+      "dimension": "Memory retrieval",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "What kind of interiors do I prefer?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "I remember you said you prefer dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-112",
+      "title": "Conversation continues after restart",
+      "dimension": "Context continuity",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "What about the range?",
+          "old_response": "About Model Y: Tell me about the Model Y.",
+          "new_response": "The Model Y can go 330 miles on a single charge.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-120",
+      "title": "Explicit preference learning",
+      "dimension": "Correction handling",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Recommend an interior for my car.",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "Good question \u2014 what's your angle on Recommend?",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "FAILURE_TO_LEARN"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-121",
+      "title": "Correction learning",
+      "dimension": "Correction handling",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I prefer light interiors.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Actually I prefer dark interiors.",
+          "old_response": "Got it \u2014 I'll go with the corrected version.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "What should I pick for the interior?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "I remember you said you prefer dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-122",
+      "title": "Routine learned across sessions",
+      "dimension": "Correction handling",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Recommend an interior for my car.",
+          "old_response": "Your usual: You prefer dark interiors.",
+          "new_response": "You said you like dark interiors \u2014 maybe go with a sleek, matte finish.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Tell me a joke about robots.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You said the alignment was perfect.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-130",
+      "title": "Simple question",
+      "dimension": "Recovery from mistakes",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Hi.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "hey \u2014 good to see you.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-131",
+      "title": "Ambiguous question",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Which one should I pick?",
+          "old_response": "Do you mean BMW or Tesla?",
+          "new_response": "Do you mean BMW or Tesla?",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-132",
+      "title": "Complex question",
+      "dimension": "Memory retrieval",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Which interior should I pick for the Tesla?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "You said you preferred dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-133",
+      "title": "Contradictory evidence",
+      "dimension": "Recovery from mistakes",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "The standup is at 9am.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Hmm, I heard the standup is at 10am.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You said the standup was at 9, not 10.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "When is the standup?",
+          "old_response": "You mentioned both 'The standup is at 9am' and 'Correction: the standup is at 10am' \u2014 going by the latest, 'Correction: the standup is at 10am'.",
+          "new_response": "You mentioned both 'The standup is at 9am' and 'Hmm, I heard the standup is at 10am' \u2014 going by the latest, 'Hmm, I heard the standup is at 10am'.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-140",
+      "title": "Follow-up paraphrase",
+      "dimension": "Context continuity",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y is Tesla\u2019s all-electric, four-seater SUV, known for its long range and performance. It\u2019s the brand\u2019s most popular vehicle, with a range of up to 330 miles on a single charge and the ability to accelerate from 0\u201360 mph in under 3.5 seconds.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "How far can it go on a charge?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y can go up to 330 miles on a single charge.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-141",
+      "title": "Pronoun paraphrase",
+      "dimension": "Referent resolution",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I was looking at the Model Y yesterday.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "I really like it. Is it practical for a family?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "You said it's the one.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-142",
+      "title": "Memory paraphrase",
+      "dimension": "Memory retrieval",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I love dark interiors, please remember that.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What interiors do I like?",
+          "old_response": "You like dark interiors, please remember that.",
+          "new_response": "You said dark interiors are your thing.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-143",
+      "title": "Correction paraphrase",
+      "dimension": "Correction handling",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y is Tesla\u2019s versatile electric vehicle, offering spacious interiors and a range of up to 330 miles on a single charge. It\u2019s known for its affordability compared to the 3 and includes features like a falcon-wing door design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "I meant the Model 3 actually.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "You meant the Model 3, not the Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-144",
+      "title": "Ambiguity paraphrase",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I'm torn between a Tesla and a BMW.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You said you're torn between a Tesla and a BMW.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Which one should I go for?",
+          "old_response": "Do you mean BMW or Tesla?",
+          "new_response": "Do you mean BMW or Tesla?",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-145",
+      "title": "Greeting paraphrase",
+      "dimension": "Naturalness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Hey Novi, good evening.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Good question \u2014 what's your angle on evening?",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-146",
+      "title": "Sadness paraphrase",
+      "dimension": "Emotional appropriateness",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 1,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I'm feeling really down today.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "That's tough.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-147",
+      "title": "Missing-memory paraphrase",
+      "dimension": "Memory restraint",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 0,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Do you remember what I told you about my boat last month?",
+          "old_response": "I don't have a reliable memory of that.",
+          "new_response": "I don't have a reliable memory of that.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-150",
+      "title": "One-word slot answer",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 3,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I'm comparing a Tesla and a BMW.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "That's an interesting choice.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Would you choose it?",
+          "old_response": "Do you mean BMW or Tesla?",
+          "new_response": "Good question \u2014 what's your angle on choose?",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "The Tesla.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I see.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-151",
+      "title": "Repeated question",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I'd rather not talk about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I'd rather not talk about the Model Y.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-152",
+      "title": "Same-type pronoun rivals",
+      "dimension": "Referent resolution",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I have two dogs, Rex and Max. Rex is older.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Rex is a bit of a grump, but he's softening with age.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Is he good with kids?",
+          "old_response": "Do you mean Max or Rex?",
+          "new_response": "Good question \u2014 what's your angle on kids?",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "WRONG_REFERENT",
+            "WRONG_REFERENT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-153",
+      "title": "Rapid switching with return",
+      "dimension": "Topic changes",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "We talked Tesla, then football, then cooking.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "You mentioned that the alignment was tricky.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Back to the Tesla: what did we say about it?",
+          "old_response": "About Tesla: We talked Tesla, then football, then cooking.",
+          "new_response": "You said the alignment was tricky.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "OUT_OF_CONTEXT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-154",
+      "title": "Terse continuation",
+      "dimension": "Context continuity",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y is Tesla\u2019s electric SUV, known for its sleek design, long range, and versatile seating options.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Why?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "I'm not sure why.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "OUT_OF_CONTEXT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-160",
+      "title": "Irrelevant-preference flood",
+      "dimension": "Memory retrieval",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 5,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "I like jazz music.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "I prefer window seats.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "You said window seats are your preference.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "I don't like cold brew.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 3,
+          "user_text": "Remind me to water the plants.",
+          "old_response": "I can't carry out physical actions myself, but I can help you plan it.",
+          "new_response": "Got it \u2014 I'll keep that in mind. I can't ping you at a set time in this build, but I'll remember it and bring it up when we talk.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 4,
+          "user_text": "What music do I like?",
+          "old_response": "You like jazz music.",
+          "new_response": "I remember you said you like jazz.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-161",
+      "title": "Full name beats shared token",
+      "dimension": "Referent resolution",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "The Model 3 is small. The Model Y is bigger.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "About Model Y: The Model 3 is small. The Model Y is bigger.",
+          "new_response": "You said the Model 3 is small.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "WRONG_REFERENT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-162",
+      "title": "Bare head noun asks",
+      "dimension": "Clarification quality",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "The Model 3 is small. The Model Y is bigger.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember that.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Tell me about the model.",
+          "old_response": "Do you mean Model 3 or Model Y?",
+          "new_response": "Good question \u2014 what's your angle on model?",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-163",
+      "title": "Pronominal fact correction",
+      "dimension": "Correction handling",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "The Model Y has 500 miles of range.",
+          "old_response": "Hey, I'm here.",
+          "new_response": "I remember that the Model Y can go 500 miles on a single charge.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "Actually it is 330 miles.",
+          "old_response": "Got it \u2014 Model Y from here on.",
+          "new_response": "I meant 330, not 500.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 2,
+          "user_text": "What did we say the range was?",
+          "old_response": "You mentioned both 'The Model Y has 500 miles of range' and 'Actually it is 330 miles' \u2014 going by the latest, 'Actually it is 330 miles'.",
+          "new_response": "You mentioned both 'The Model Y has 500 miles of range' and 'Actually it is 330 miles' \u2014 going by the latest, 'Actually it is 330 miles'.",
+          "response_changed": false,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-170",
+      "title": "Repeated-word ASR",
+      "dimension": "Voice channel",
+      "old_result": "PASS",
+      "new_result": "FAIL",
+      "delta": "regressed",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y.",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y is a compact electric SUV known for its range, performance, and design.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "yes",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "You said yes.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [
+            "OUT_OF_CONTEXT"
+          ],
+          "old_result": "PASS",
+          "new_result": "FAIL"
+        }
+      ]
+    },
+    {
+      "scenario": "C-171",
+      "title": "Punctuationless pronoun follow-up",
+      "dimension": "Voice channel",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y is a versatile electric vehicle designed for both everyday use and adventurous trips. It balances practicality with performance, offering a smooth ride and long range.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What is its range?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y offers a range of up to 358 miles on a single charge.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-172",
+      "title": "Unpunctuated correction",
+      "dimension": "Voice channel",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Tell me about the Model Y?",
+          "old_response": "I don't have verified details on Model Y handy \u2014 want me to look into it?",
+          "new_response": "The Model Y is Tesla\u2019s versatile electric vehicle, offering a balance of practicality and performance. It\u2019s roomier than the 3, with seating for up to seven and a longer range\u2014up to 330 miles on a single charge. The rear-wheel-drive version is great for everyday use, while the all-wheel-drive variant handles tricky terrain. Its design blends sleekness with functionality, making it a popular choice for families and adventurers alike.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "No, I meant the Model 3.",
+          "old_response": "Got it \u2014 Model 3 from here on.",
+          "new_response": "You meant the Model 3.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    },
+    {
+      "scenario": "C-173",
+      "title": "Disfluent memory query",
+      "dimension": "Voice channel",
+      "old_result": "PASS",
+      "new_result": "PASS",
+      "delta": "stable",
+      "turns_changed": 2,
+      "turns": [
+        {
+          "turn_index": 0,
+          "user_text": "Remember that I prefer dark interiors.",
+          "old_response": "Noted \u2014 I'll remember that.",
+          "new_response": "Got it.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        },
+        {
+          "turn_index": 1,
+          "user_text": "What interiors do I prefer?",
+          "old_response": "You prefer dark interiors.",
+          "new_response": "I remember you said you prefer dark interiors.",
+          "response_changed": true,
+          "old_labels": [],
+          "new_labels": [],
+          "old_result": "PASS",
+          "new_result": "PASS"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "schema": "conversation-soak/v1",
+  "timestamp": "2026-09-05T23:46:18.603274+00:00",
+  "git_sha": "8b9966178c4a1fa1b4f086fd2d474496af87d6ae",
+  "runtime": "mac-brain",
+  "model": "novi-trained:latest",
+  "configuration": {
+    "turns": 300,
+    "probe_every": 50,
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "min_live_ratio": 0.5,
+    "ticks_between_turns": 3
+  },
+  "duration_s": 2538.6,
+  "turns_run": 307,
+  "errors": 0,
+  "live_engagement": {
+    "script_turns": 300,
+    "live_turns": 232,
+    "ratio": 0.773,
+    "min_live_ratio": 0.5,
+    "route_counts": {
+      "deterministic": 39,
+      "dialogue": 232,
+      "fallback": 2,
+      "followup": 17,
+      "greeting": 5,
+      "perception": 2,
+      "physical_honesty": 3
+    }
+  },
+  "latency_ms": {
+    "mean": 8281.8,
+    "max": 33279.1,
+    "first_half_mean": 8161.1,
+    "last_half_mean": 8402.5,
+    "drift_factor": 1.03
+  },
+  "memory_probes": {
+    "passed": 4,
+    "of": 6,
+    "probes": [
+      {
+        "after_turn": 50,
+        "passed": false,
+        "latency_ms": 10360.9
+      },
+      {
+        "after_turn": 100,
+        "passed": true,
+        "latency_ms": 10204.8
+      },
+      {
+        "after_turn": 150,
+        "passed": true,
+        "latency_ms": 10182.9
+      },
+      {
+        "after_turn": 200,
+        "passed": true,
+        "latency_ms": 3.0
+      },
+      {
+        "after_turn": 250,
+        "passed": true,
+        "latency_ms": 10175.0
+      },
+      {
+        "after_turn": 300,
+        "passed": false,
+        "latency_ms": 5170.3
+      }
+    ]
+  },
+  "growth": {
+    "db_bytes_start": 4096,
+    "db_bytes_end": 303104,
+    "rss_mib_start": 49.17,
+    "rss_mib_end": 55.3
+  },
+  "state_bounds": {
+    "speakers": 1,
+    "active_entities": 8,
+    "recent_turns": 12,
+    "within_bounds": true
+  },
+  "checks": {
+    "no_errors": true,
+    "probes_pass": false,
+    "latency_bounded": true,
+    "state_bounded": true,
+    "live_engaged": true
+  },
+  "status": "FAIL"
+}

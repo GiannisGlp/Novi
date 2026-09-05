@@ -1,0 +1,1143 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-072",
+  "title": "Avoid repetition",
+  "dimension": "Non-repetition",
+  "git_sha": "8b9966178c4a1fa1b4f086fd2d474496af87d6ae",
+  "timestamp": "2026-09-05T22:46:33.030779+00:00",
+  "runtime": "mac-brain",
+  "model": "novi-trained:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133",
+      "C-140",
+      "C-141",
+      "C-142",
+      "C-143",
+      "C-144",
+      "C-145",
+      "C-146",
+      "C-147",
+      "C-150",
+      "C-151",
+      "C-152",
+      "C-153",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-162",
+      "C-170",
+      "C-171",
+      "C-172",
+      "C-173",
+      "C-163"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-072",
+      "turn_index": 0,
+      "user_text": "Tell me about the Model Y.",
+      "heard_text": "",
+      "response_text": "I can share what I know about the Model Y.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "explicit tell-me-about request",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I can share what I know about the Model Y.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.06,
+              "referents": 0.05,
+              "packet": 0.24,
+              "supplements": 0.14,
+              "plan_render": 0.01,
+              "route": 0.01,
+              "compose": 602.08,
+              "critic": 0.01
+            },
+            "context_tokens": 310,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 568,
+          "text": "I can share what I know about the Model Y.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me about the Model Y.",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me about the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.06,
+        "referents": 0.05,
+        "packet": 0.24,
+        "supplements": 0.14,
+        "plan_render": 0.01,
+        "route": 0.01,
+        "compose": 602.08,
+        "critic": 0.01
+      },
+      "context_tokens": 310,
+      "latency_ms": 603.7,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-072",
+      "turn_index": 1,
+      "user_text": "Tell me more about the Model Y.",
+      "heard_text": "",
+      "response_text": "I can share what I know about the Model Y.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "SOCIAL_CHAT",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.55,
+        "reason": "statement with no discriminating cues",
+        "needs_clarification": false
+      },
+      "referents": {
+        "the model y": "Model Y"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I can share what I know about the Model Y.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "the model y": "Model Y"
+              },
+              "ambiguous": [],
+              "confidence": 0.9
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "non_repetition"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.45,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.11,
+              "referents": 0.13,
+              "packet": 0.49,
+              "supplements": 0.43,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 15865.06,
+              "critic": 0.03
+            },
+            "context_tokens": 401,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.45,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "non_repetition"
+            ]
+          },
+          "conv_block_chars": 775,
+          "text": "I can share what I know about the Model Y.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me more about the Model Y.",
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "the model y": "Model Y"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: I can share what I know about the Model Y."
+            ],
+            "relevant_memories": [
+              {
+                "content": "Tell me about the Model Y.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me more about the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "low intent confidence (0.55) for SOCIAL_CHAT"
+            ],
+            "response_requirements": [
+              "address intent SOCIAL_CHAT",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "non_repetition"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.11,
+        "referents": 0.13,
+        "packet": 0.49,
+        "supplements": 0.43,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 15865.06,
+        "critic": 0.03
+      },
+      "context_tokens": 401,
+      "latency_ms": 15867.7,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-072",
+      "turn_index": 2,
+      "user_text": "And more on the Model Y?",
+      "heard_text": "",
+      "response_text": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 2
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {
+        "the model y": "Model Y"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "the model y": "Model Y"
+              },
+              "ambiguous": [],
+              "confidence": 0.9
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "Tell me about the Model Y.",
+                "Tell me more about the Model Y."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.0,
+                "non_repetition": 0.812,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "grounding"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.01,
+              "intent": 0.1,
+              "referents": 0.1,
+              "packet": 0.61,
+              "supplements": 0.51,
+              "plan_render": 0.03,
+              "route": 0.02,
+              "compose": 9958.94,
+              "critic": 0.04
+            },
+            "context_tokens": 462,
+            "context_counts": {
+              "memories": 2,
+              "world_facts": 1,
+              "history": 2
+            },
+            "turn": 2
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "grounding",
+              "non_repetition"
+            ],
+            "failed_after": [
+              "grounding"
+            ],
+            "accepted": true
+          },
+          "conv_block_chars": 900,
+          "text": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+          "fallback": true,
+          "grounding": {},
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "And more on the Model Y?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "the model y": "Model Y"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: I can share what I know about the Model Y.",
+              "user: Tell me more about the Model Y. / novi: I can share what I know about the Model Y."
+            ],
+            "relevant_memories": [
+              {
+                "content": "Tell me about the Model Y.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              },
+              {
+                "content": "Tell me more about the Model Y.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'And more on the Model Y?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "Tell me about the Model Y.",
+          "Tell me more about the Model Y."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.0,
+          "non_repetition": 0.812,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "grounding"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.01,
+        "intent": 0.1,
+        "referents": 0.1,
+        "packet": 0.61,
+        "supplements": 0.51,
+        "plan_render": 0.03,
+        "route": 0.02,
+        "compose": 9958.94,
+        "critic": 0.04
+      },
+      "context_tokens": 462,
+      "latency_ms": 9961.4,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "INFORMATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "generic question shape",
+    "needs_clarification": false
+  },
+  "referents": {
+    "the model y": "Model Y"
+  },
+  "context": {
+    "trace": {
+      "conclusion": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {
+            "the model y": "Model Y"
+          },
+          "ambiguous": [],
+          "confidence": 0.9
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [
+            "Model Y"
+          ],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [
+            "Tell me about the Model Y.",
+            "Tell me more about the Model Y."
+          ],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.0,
+            "non_repetition": 0.812,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [
+            "grounding"
+          ],
+          "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+          "needs_repair": true
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.01,
+          "intent": 0.1,
+          "referents": 0.1,
+          "packet": 0.61,
+          "supplements": 0.51,
+          "plan_render": 0.03,
+          "route": 0.02,
+          "compose": 9958.94,
+          "critic": 0.04
+        },
+        "context_tokens": 462,
+        "context_counts": {
+          "memories": 2,
+          "world_facts": 1,
+          "history": 2
+        },
+        "turn": 2
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": true,
+        "failed": [
+          "grounding",
+          "non_repetition"
+        ],
+        "failed_after": [
+          "grounding"
+        ],
+        "accepted": true
+      },
+      "conv_block_chars": 900,
+      "text": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+      "fallback": true,
+      "grounding": {},
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "And more on the Model Y?",
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "resolved_entities": {
+          "the model y": "Model Y"
+        },
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Model Y"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "Model Y",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: Tell me about the Model Y. / novi: I can share what I know about the Model Y.",
+          "user: Tell me more about the Model Y. / novi: I can share what I know about the Model Y."
+        ],
+        "relevant_memories": [
+          {
+            "content": "Tell me about the Model Y.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          },
+          {
+            "content": "Tell me more about the Model Y.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'And more on the Model Y?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent INFORMATION_REQUEST",
+          "stay grounded on Model Y"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [
+      "Model Y"
+    ],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [
+      "Tell me about the Model Y.",
+      "Tell me more about the Model Y."
+    ],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "You mentioned both 'Tell me about the Model Y' and 'Tell me more about the Model Y' \u2014 going by the latest, 'Tell me more about the Model Y'.",
+  "critic": {
+    "scores": {
+      "grounding": 0.0,
+      "non_repetition": 0.812,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [
+      "grounding"
+    ],
+    "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+    "needs_repair": true
+  },
+  "latency_ms": 9961.4,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
