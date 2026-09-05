@@ -1,0 +1,95 @@
+{
+  "schema": "conversation-soak/v1",
+  "timestamp": "2026-09-05T19:20:10.276950+00:00",
+  "git_sha": "45ab3786eca355d0953a29ecf8a9632a6a2ae48b",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "turns": 300,
+    "probe_every": 50,
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "min_live_ratio": 0.5,
+    "ticks_between_turns": 3
+  },
+  "duration_s": 3237.9,
+  "turns_run": 307,
+  "errors": 0,
+  "live_engagement": {
+    "script_turns": 300,
+    "live_turns": 251,
+    "ratio": 0.837,
+    "min_live_ratio": 0.5,
+    "route_counts": {
+      "deterministic": 39,
+      "dialogue": 251,
+      "emotion": 1,
+      "greeting": 5,
+      "identity_honesty": 3,
+      "perception": 1
+    }
+  },
+  "latency_ms": {
+    "mean": 10557.7,
+    "max": 20651.6,
+    "first_half_mean": 10632.2,
+    "last_half_mean": 10483.1,
+    "drift_factor": 0.99
+  },
+  "memory_probes": {
+    "passed": 6,
+    "of": 6,
+    "probes": [
+      {
+        "after_turn": 50,
+        "passed": true,
+        "latency_ms": 7358.0
+      },
+      {
+        "after_turn": 100,
+        "passed": true,
+        "latency_ms": 7248.0
+      },
+      {
+        "after_turn": 150,
+        "passed": true,
+        "latency_ms": 7265.0
+      },
+      {
+        "after_turn": 200,
+        "passed": true,
+        "latency_ms": 4.4
+      },
+      {
+        "after_turn": 250,
+        "passed": true,
+        "latency_ms": 7357.0
+      },
+      {
+        "after_turn": 300,
+        "passed": true,
+        "latency_ms": 7080.6
+      }
+    ]
+  },
+  "growth": {
+    "db_bytes_start": 4096,
+    "db_bytes_end": 303104,
+    "rss_mib_start": 49.14,
+    "rss_mib_end": 53.83
+  },
+  "state_bounds": {
+    "speakers": 1,
+    "active_entities": 8,
+    "recent_turns": 12,
+    "within_bounds": true
+  },
+  "checks": {
+    "no_errors": true,
+    "probes_pass": true,
+    "latency_bounded": true,
+    "state_bounded": true,
+    "live_engaged": true
+  },
+  "status": "PASS"
+}
