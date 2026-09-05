@@ -3000,13 +3000,26 @@ class MacBrain(ChatMixin):
         import json
         import urllib.request
 
+        from novi.brain.models.ollama_reasoning import can_disable_thinking, num_predict_for
+
         model = self.config.brain_llm_model or "brain-default"
         payload = {
             "model": model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "stream": False,
-            "options": {"temperature": temperature},
+            "options": {
+                "temperature": temperature,
+                "num_predict": num_predict_for(model, 320),
+            },
         }
+        if can_disable_thinking(model):
+            # Same model thinking policy as dialogue._chat: nemotron honors
+            # `think:false` (direct answers, no hidden chain-of-thought that
+            # would turn every turn into a 20-50s wait); qwen3 must instead be
+            # given budget (num_predict_for) so its CoT finishes and the real
+            # answer lands in `content`. Without this, the injected brain
+            # transport bypassed the policy and burned full CoT per turn.
+            payload["think"] = False
         try:
             req = urllib.request.Request(
                 f"{self.config.brain_llm_url}/api/chat",

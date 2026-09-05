@@ -262,5 +262,65 @@ class BrainLLMServerDialectTests(unittest.TestCase):
         self.assertTrue(opened.call_args.args[0].full_url.endswith("/v1/models"))
 
 
+class BrainLLMThinkingPolicyTests(unittest.TestCase):
+    """The brain-owned transport must apply the model-specific thinking
+    policy (plan 03 acceptance): ``think:false`` for models that honor it
+    (nemotron) so replies stay direct, and a completion-token budget for
+    models whose chain-of-thought cannot be disabled (qwen3) so the real
+    answer finishes inside ``content`` instead of being cut off. Mirrors
+    the policy dialogue._chat already applies (ollama_reasoning helpers).
+    """
+
+    def _capture(self, model: str) -> tuple[MacBrain, list[dict]]:
+        import json as _json
+        from unittest import mock as _mock
+
+        def _resp(payload: object):
+            resp = _mock.MagicMock()
+            resp.read.return_value = _json.dumps(payload).encode("utf-8")
+            resp.__enter__.return_value = resp
+            return resp
+
+        captured: list[dict] = []
+
+        def _fake_urlopen(req, timeout=None):
+            captured.append(_json.loads(req.data.decode("utf-8")))
+            return _resp({"message": {"content": "ok"}})
+
+        brain = _brain(config=MacBrainConfig(
+            curiosity_enabled=False,
+            brain_llm_enabled=True,
+            brain_llm_url="http://fake-ollama",
+            brain_llm_model=model,
+        ))
+        patcher = _mock.patch("urllib.request.urlopen", side_effect=_fake_urlopen)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return brain, captured
+
+    def test_nemotron_disables_thinking_and_sets_budget(self):
+        brain, captured = self._capture("nemotron-3.5-lightning:latest")
+        brain._brain_llm_call(system="s", user="hi")
+        self.assertEqual(len(captured), 1)
+        body = captured[0]
+        self.assertIs(body.get("think"), False, "nemotron must answer directly (think:false)")
+        self.assertEqual(body["options"]["num_predict"], 320)
+
+    def test_qwen3_gets_thinking_budget_without_think_flag(self):
+        brain, captured = self._capture("qwen3:8b")
+        brain._brain_llm_call(system="s", user="hi")
+        self.assertEqual(len(captured), 1)
+        body = captured[0]
+        self.assertNotIn("think", body, "qwen3 CoT cannot be disabled on this Ollama build")
+        self.assertEqual(body["options"]["num_predict"], 640)
+
+    def test_heavy_thinking_tier_keeps_reasoning(self):
+        brain, captured = self._capture("qwen3.8:27b")
+        brain._brain_llm_call(system="s", user="hi")
+        body = captured[0]
+        self.assertNotIn("think", body, "heavy-thinking tier must keep its reasoning")
+        self.assertEqual(body["options"]["num_predict"], 640)
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
