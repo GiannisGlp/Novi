@@ -365,8 +365,30 @@ def build_packet(text: str, state: Any, intent: Any, referents: Any,
     requirements: list[str] = []
     if intent_label:
         requirements.append(f"address intent {intent_label}")
-    if focus_entities:
+    ambiguous_refs = list(getattr(referents, "ambiguous", []) or [])
+    if ambiguous_refs:
+        # C-152: when the turn's referring expression is contested, do NOT
+        # force "stay grounded on <anchor>" — that biases the model toward the
+        # anchor and contradicts the ASK_CLARIFICATION plan. Name the rivals so
+        # the packet and the plan agree ("ask which one", never assume).
+        rivals = sorted({str(e) for e in query_entities if str(e)})
+        if rivals:
+            requirements.append(
+                f"ambiguous referent ({', '.join(ambiguous_refs[:2])}) among "
+                f"{', '.join(rivals)} — ask which one, do not assume")
+        else:
+            requirements.append(
+                f"ambiguous referent ({', '.join(ambiguous_refs[:2])}) — "
+                "clarify, do not assume")
+    elif focus_entities:
         requirements.append(f"stay grounded on {focus_entities[0][:80]}")
+    # C-154: a subject-less follow-up ("Why?") continues the active subject.
+    # Tell the planner/model to answer on that subject rather than deflect.
+    implicit_subject = str(resolutions.get("(implicit subject)", "") or "").strip()
+    if implicit_subject:
+        requirements.append(
+            f"continuing about {implicit_subject} — answer on this subject, "
+            "do not deflect")
     with contextlib.suppress(Exception):
         corrections = getattr(brain, "corrections", None)
         records = corrections.snapshot() if corrections is not None else []

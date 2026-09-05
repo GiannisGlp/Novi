@@ -187,6 +187,14 @@ def render_conversation_block(conv: Any) -> str:
         entity = (getattr(anchor, "active_entity", "") or "").strip()
         if topic or entity:
             lines.append(f"- active topic: {topic or '?'}; active entity: {entity or '?'}")
+        # C-154: a bare wh-follow-up ("Why?") has no explicit referent; its
+        # subject is the active entity. Ground it so the model answers on the
+        # subject instead of deflecting with a counter-question.
+        implicit = resolutions.get("(implicit subject)", "").strip()
+        if implicit:
+            lines.append(
+                f"- (continuing about {implicit}) answer on this subject — "
+                "do not deflect or ask a counter-question")
         lines.append(f"- response goal: {getattr(plan, 'goal', '?')}")
         # C-072: the no-repeat directive is only actionable when the model can
         # SEE what it already said. Surface the prior reply early so it is not

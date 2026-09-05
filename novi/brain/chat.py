@@ -1424,10 +1424,26 @@ class ChatMixin:
             turn_words = _stems(
                 {w for w in _re.findall(r"[a-z0-9]+", packet.current_turn.lower())
                  if len(w) > 4})
-            if not turn_words:
-                return
             current_norm = _re.sub(r"\s+", " ",
                                    packet.current_turn.lower().strip(" .!?"))
+            # The subject the conversation is currently anchored on. A fact
+            # assertion about it ("Actually it is 330 miles", "it's at 10am")
+            # registers even when a later recall question does not repeat the
+            # subject noun — a pronoun must not drop a competing claim (C-133).
+            anchor = getattr(state, "anchor", None)
+            active_subject = " ".join(
+                x for x in (
+                    (getattr(anchor, "active_entity", "") or "").strip(),
+                    (getattr(anchor, "topic", "") or "").strip(),
+                ) if x).strip()
+            subject_words = _stems(
+                {w for w in _re.findall(r"[a-z0-9]+", active_subject.lower())
+                 if len(w) > 4})
+            from novi.brain.conversation.claim_registration import (
+                has_anaphoric_subject,
+                is_fact_assertion,
+            )
+
             recent = list(getattr(state, "recent_turns", None) or [])[-6:]
             added = 0
             for turn in recent:
@@ -1443,7 +1459,14 @@ class ChatMixin:
                 claim_words = _stems(
                     {w for w in _re.findall(r"[a-z0-9]+", claim.lower())
                      if len(w) > 4})
-                if not (claim_words & turn_words):
+                overlaps_query = bool(turn_words and (claim_words & turn_words))
+                # A factual time/value/measurement assertion about the active
+                # subject is a live claim regardless of the recall wording.
+                about_subject = bool(
+                    active_subject and is_fact_assertion(claim)
+                    and (bool(subject_words & claim_words)
+                         or has_anaphoric_subject(claim)))
+                if not (overlaps_query or about_subject):
                     continue
                 packet.relevant_memories.append({
                     "content": claim,

@@ -290,6 +290,23 @@ def _candidate_rules(text: str, state: ConversationState) -> list[_Rule]:
         rules.append(_Rule("FOLLOW_UP", QUESTION, 0.70,
                            ("follow-up cue",),
                            "implicit continuation of current topic"))
+    # Bare wh-word follow-up ("Why?", "How?", "Which?") continues the active
+    # subject (C-154): with a live entity/topic, a lone wh-word is not generic
+    # small-talk — it asks about the thing just discussed. Classify it as an
+    # explanation/information request so the planner answers on the subject
+    # instead of deflecting. Without an active subject it stays a generic
+    # question (the fallback below).
+    active_entity = (getattr(state.anchor, "active_entity", "") or "").strip()
+    if state.topic or active_entity:
+        bare_wh = re.match(r"^(why|how|what|which|when|where|who)\s*\??$",
+                           flat, re.IGNORECASE)
+        if bare_wh:
+            word = bare_wh.group(1).lower()
+            label = ("EXPLANATION_REQUEST" if word in ("why", "how")
+                     else "INFORMATION_REQUEST")
+            rules.append(_Rule(label, QUESTION, 0.80,
+                               ("bare wh-continuation",),
+                               "bare wh-follow-up continues the active topic"))
     # Generic question shape -> information request (cautious band).
     # This is a fallback, never a rival interpretation (see classify).
     if is_question:
