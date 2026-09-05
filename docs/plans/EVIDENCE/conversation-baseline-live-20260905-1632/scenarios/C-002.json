@@ -1,0 +1,1005 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-002",
+  "title": "Casual continuation",
+  "dimension": "Context continuity",
+  "git_sha": "f57610c77352994c042da43ad3b6c77dd3407f78",
+  "timestamp": "2026-09-05T15:33:16.600511+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133",
+      "C-140",
+      "C-141",
+      "C-142",
+      "C-143",
+      "C-144",
+      "C-145",
+      "C-146",
+      "C-147",
+      "C-150",
+      "C-151",
+      "C-152",
+      "C-153",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-162",
+      "C-170",
+      "C-171",
+      "C-172",
+      "C-173",
+      "C-163"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-002",
+      "turn_index": 0,
+      "user_text": "How are you?",
+      "heard_text": "",
+      "response_text": "I'm doing well, thanks for asking! I've been having some interesting conversations lately and I'm always up for a good chat. What about you \u2014 anything exciting happening in your world?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "SOCIAL_CHAT",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "social small talk",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I'm doing well, thanks for asking! I've been having some interesting conversations lately and I'm always up for a good chat. What about you \u2014 anything exciting happening in your world?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "social small talk",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.16,
+              "referents": 0.03,
+              "packet": 0.25,
+              "supplements": 0.02,
+              "plan_render": 0.01,
+              "route": 0.01,
+              "compose": 7045.8,
+              "critic": 0.01
+            },
+            "context_tokens": 285,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 401,
+          "text": "I'm doing well, thanks for asking! I've been having some interesting conversations lately and I'm always up for a good chat. What about you \u2014 anything exciting happening in your world?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "How are you?",
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "social small talk",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'How are you?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent SOCIAL_CHAT"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.16,
+        "referents": 0.03,
+        "packet": 0.25,
+        "supplements": 0.02,
+        "plan_render": 0.01,
+        "route": 0.01,
+        "compose": 7045.8,
+        "critic": 0.01
+      },
+      "context_tokens": 285,
+      "latency_ms": 7047.7,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-002",
+      "turn_index": 1,
+      "user_text": "What are you doing?",
+      "heard_text": "",
+      "response_text": "I'm just here, listening and ready to chat. Nothing much happening on my end \u2014 how about you? Anything exciting going on?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "IDENTITY_QUERY",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.9,
+        "reason": "asks about Novi's identity",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I'm just here, listening and ready to chat. Nothing much happening on my end \u2014 how about you? Anything exciting going on?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "IDENTITY_QUERY",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.9,
+              "reason": "asks about Novi's identity",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.724,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.1,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.04,
+              "intent": 0.34,
+              "referents": 0.18,
+              "packet": 0.79,
+              "supplements": 0.33,
+              "plan_render": 0.03,
+              "route": 0.02,
+              "compose": 7218.45,
+              "critic": 0.03
+            },
+            "context_tokens": 394,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.1,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 466,
+          "text": "I'm just here, listening and ready to chat. Nothing much happening on my end \u2014 how about you? Anything exciting going on?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "What are you doing?",
+            "intent": {
+              "intent": "IDENTITY_QUERY",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.9,
+              "reason": "asks about Novi's identity",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I'm doing well, thanks for asking! I've been having some interesting conversations lately and I'm always up for a good chat. What about you \u2014 anything exciting happening in your world?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: How are you? / novi: I'm doing well, thanks for asking! I've been having some interesting conversations lately and I'm always up for a good chat. What about you \u2014 anything exciting happening in your world?"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'What are you doing?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent IDENTITY_QUERY"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.724,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.04,
+        "intent": 0.34,
+        "referents": 0.18,
+        "packet": 0.79,
+        "supplements": 0.33,
+        "plan_render": 0.03,
+        "route": 0.02,
+        "compose": 7218.45,
+        "critic": 0.03
+      },
+      "context_tokens": 394,
+      "latency_ms": 7221.5,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-002",
+      "turn_index": 2,
+      "user_text": "Anything interesting happening?",
+      "heard_text": "",
+      "response_text": "How about you? Anything exciting going on in your world?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 2
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "How about you? Anything exciting going on in your world?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.682,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.1,
+              "referents": 0.06,
+              "packet": 0.49,
+              "supplements": 0.27,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 7132.34,
+              "critic": 0.02
+            },
+            "context_tokens": 427,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 2
+            },
+            "turn": 2
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 476,
+          "text": "How about you? Anything exciting going on in your world?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Anything interesting happening?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I'm just here, listening and ready to chat. Nothing much happening on my end \u2014 how about you? Anything exciting going on?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: How are you? / novi: I'm doing well, thanks for asking! I've been having some interesting conversations lately and I'm always up for a good chat. What about you \u2014 anything exciting happening in your world?",
+              "user: What are you doing? / novi: I'm just here, listening and ready to chat. Nothing much happening on my end \u2014 how about you? Anything exciting going on?"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Anything interesting happening?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.682,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.1,
+        "referents": 0.06,
+        "packet": 0.49,
+        "supplements": 0.27,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 7132.34,
+        "critic": 0.02
+      },
+      "context_tokens": 427,
+      "latency_ms": 7135.2,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "INFORMATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "generic question shape",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "How about you? Anything exciting going on in your world?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [],
+          "confidence": 0.0
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.682,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 0.1,
+          "referents": 0.06,
+          "packet": 0.49,
+          "supplements": 0.27,
+          "plan_render": 0.02,
+          "route": 0.02,
+          "compose": 7132.34,
+          "critic": 0.02
+        },
+        "context_tokens": 427,
+        "context_counts": {
+          "memories": 0,
+          "world_facts": 1,
+          "history": 2
+        },
+        "turn": 2
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 476,
+      "text": "How about you? Anything exciting going on in your world?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "Anything interesting happening?",
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [],
+        "active_entities": [],
+        "anchor": {
+          "topic": "",
+          "active_entity": "",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "I'm just here, listening and ready to chat. Nothing much happening on my end \u2014 how about you? Anything exciting going on?",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: How are you? / novi: I'm doing well, thanks for asking! I've been having some interesting conversations lately and I'm always up for a good chat. What about you \u2014 anything exciting happening in your world?",
+          "user: What are you doing? / novi: I'm just here, listening and ready to chat. Nothing much happening on my end \u2014 how about you? Anything exciting going on?"
+        ],
+        "relevant_memories": [],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'Anything interesting happening?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent INFORMATION_REQUEST"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "How about you? Anything exciting going on in your world?",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.682,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 7135.2,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
