@@ -2080,6 +2080,32 @@ class ChatMixin:
                                "grounding": out.get("grounding") or {}}
             except Exception:  # noqa: BLE001 - conflict routing never breaks chat
                 pass
+        # C-152: when a pronoun is genuinely contested among same-type rivals
+        # (Rex/Max) the plan asks for clarification; the LLM has repeatedly
+        # answered for one rival instead. Route through the deterministic short
+        # ask ("Do you mean Rex or Max?") — the plan's prescribed style (C-011:
+        # short and specific). Only referent-ambiguous asks qualify; attribute
+        # clarifications and confident re-asks stay on the LLM path.
+        if conv and out.get("text"):
+            try:
+                plan = conv.get("plan")
+                plan_goal = str(getattr(plan, "goal", "") or "")
+                _refs = conv.get("referents")
+                _ambiguous: list[str] = []
+                if plan_goal == "ASK_CLARIFICATION" and _refs is not None:
+                    _a = getattr(_refs, "ambiguous", None)
+                    if _a is None and isinstance(_refs, dict):
+                        _a = _refs.get("ambiguous")
+                    _ambiguous = [str(x) for x in (_a or []) if str(x)]
+                if _ambiguous:
+                    options = [str(o) for o in getattr(plan, "must_include", [])
+                               if str(o) != "the specific options"]
+                    if len(options) >= 2:
+                        out = {"text": f"Do you mean {options[0]} or {options[1]}?",
+                               "fallback": True,
+                               "grounding": out.get("grounding") or {}}
+            except Exception:  # noqa: BLE001 - clarification routing never breaks chat
+                pass
         # C-150 guardrail: a closed slot must never be re-opened. The LLM can
         # ignore the repair instruction, so enforce deterministically — drop a
         # trailing question sentence on SLOT_ANSWER turns (re-asking what the
