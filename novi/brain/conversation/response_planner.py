@@ -141,7 +141,16 @@ def plan_response(packet: ContextPacket) -> ResponsePlan:
     # unanswerable — ask before guessing (C-011/C-131 semantics).
     if packet.ambiguous_referents and name in (
             "RECOMMENDATION", "COMPARISON", "INFORMATION_REQUEST"):
-        candidates = sorted(set(packet_entities(packet)))
+        # Every live rival, not just the anchor: "Do you mean Rex or
+        # Max?" instead of "Which Max do you mean?". Sorted for a
+        # stable question.
+        seen: list[str] = []
+        for rival in (list(packet.resolved_entities.values())
+                      + list(packet.active_entities or [])):
+            text = str(rival or "").strip()
+            if text and text.lower() not in {s.lower() for s in seen}:
+                seen.append(text)
+        candidates = sorted(seen) or sorted(set(packet_entities(packet)))
         return ResponsePlan(
             goal="ASK_CLARIFICATION", desired_length="short",
             question_allowed=True,
@@ -251,6 +260,46 @@ def _with_article(phrase: str) -> str:
     return ("an " if word[0] in "aeiou" else "a ") + word
 
 
+def _render_direct_answer(packet: ContextPacket, plan: ResponsePlan,
+                          entity: str) -> str:
+    """Realize an answer from packet evidence (shared direct path).
+
+    Used by ANSWER_DIRECTLY/EXPLAIN/COMPARE/RECOMMEND and by the
+    single-established-entity clarification fallback (plan Step 7.4).
+    """
+    memory, kind = _select_memory(packet)
+    if not memory:
+        # Perception answers (plan §6.3): voice observed world facts
+        # directly. The evidence must re-derive from the packet's world
+        # context — never from memory content (a routine annotation or
+        # preference must never be voiced as something seen).
+        phrases = {_world_phrase(w) for w in packet.world_context
+                   if isinstance(w, dict)}
+        perception = [str(e).strip() for e in plan.required_evidence
+                      if str(e).strip() and str(e).strip() in phrases]
+        if perception:
+            return f"I can see {_with_article(perception[0])}" + (
+                f" and {_with_article(perception[1])}"
+                if len(perception) > 1 else "") + "."
+    if memory:
+        if kind == "conflict":
+            return memory
+        # Situate the memory under the entity only when they relate;
+        # prefixing an unrelated anchor is MEMORY_IRRELEVANT ("About
+        # Porto: you prefer dark interiors").
+        entity_words = {w for w in entity.lower().split() if len(w) > 3}
+        related = entity and (
+            entity.lower() in memory.lower()
+            or any(w in memory.lower() for w in entity_words))
+        if related:
+            return f"About {entity}: {memory}"
+        return memory[0].upper() + memory[1:] if memory else memory
+    if entity:
+        return (f"I don't have verified details on {entity} handy — "
+                f"want me to look into it?")
+    return "I don't have verified facts on that yet."
+
+
 def _memory_answer(packet: ContextPacket) -> str:
     for mem in packet.relevant_memories:
         content = str(mem.get("content", "")).strip()
@@ -319,45 +368,21 @@ def render_deterministic(plan: ResponsePlan, packet: ContextPacket) -> str:
         options = [o for o in plan.must_include if o != "the specific options"]
         if len(options) >= 2:
             return f"Do you mean {options[0]} or {options[1]}?"
-        if entity:
+        if entity and packet.ambiguous_referents:
             return f"Which {entity} do you mean?"
-        return "Could you say a little more about which one you mean?"
+        if not entity and not options:
+            return "Could you say a little more about which one you mean?"
+        # Otherwise a single already-established entity with no live
+        # rival (an exact repeat, a confident re-ask): asking "which"
+        # is senseless — answer from packet evidence instead (plan
+        # Step 7.4: answer when meaning is clear).
+        return _render_direct_answer(packet, plan, entity)
 
     if plan.goal == "ADMIT_UNCERTAINTY":
         return plan.uncertainty_statement or "I don't have a reliable memory of that."
 
     if plan.goal in ("ANSWER_DIRECTLY", "EXPLAIN", "COMPARE", "RECOMMEND"):
-        memory, kind = _select_memory(packet)
-        if not memory:
-            # Perception answers (plan §6.3): voice observed world facts
-            # directly. The evidence must re-derive from the packet's world
-            # context — never from memory content (a routine annotation or
-            # preference must never be voiced as something seen).
-            phrases = {_world_phrase(w) for w in packet.world_context
-                       if isinstance(w, dict)}
-            perception = [str(e).strip() for e in plan.required_evidence
-                          if str(e).strip() and str(e).strip() in phrases]
-            if perception:
-                return f"I can see {_with_article(perception[0])}" + (
-                    f" and {_with_article(perception[1])}"
-                    if len(perception) > 1 else "") + "."
-        if memory:
-            if kind == "conflict":
-                return memory
-            # Situate the memory under the entity only when they relate;
-            # prefixing an unrelated anchor is MEMORY_IRRELEVANT ("About
-            # Porto: you prefer dark interiors").
-            entity_words = {w for w in entity.lower().split() if len(w) > 3}
-            related = entity and (
-                entity.lower() in memory.lower()
-                or any(w in memory.lower() for w in entity_words))
-            if related:
-                return f"About {entity}: {memory}"
-            return memory[0].upper() + memory[1:] if memory else memory
-        if entity:
-            return (f"I don't have verified details on {entity} handy — "
-                    f"want me to look into it?")
-        return "I don't have verified facts on that yet."
+        return _render_direct_answer(packet, plan, entity)
 
     if plan.goal == "CORRECT":
         from novi.brain.conversation.conversation_state import (

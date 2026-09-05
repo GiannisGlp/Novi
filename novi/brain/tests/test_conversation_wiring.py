@@ -132,5 +132,123 @@ class WiringTests(unittest.TestCase):
         self.assertNotIn("?", text)
 
 
+    def test_rementioned_entity_anchors_recency(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("I have two dogs, Rex and Max. Rex is older.")
+                state = brain.__dict__.get("_conversations", {}).get("user")
+            finally:
+                brain.stop()
+        self.assertIsNotNone(state)
+        self.assertEqual(state.anchor.active_entity, "Rex")
+
+    def test_ambiguous_pronoun_names_both_rivals(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("I have two dogs, Rex and Max. Rex is older.")
+                resp = brain.respond("Is he good with kids?")
+            finally:
+                brain.stop()
+        text = (resp["text"] or "").lower()
+        self.assertIn("rex", text)
+        self.assertIn("max", text)
+
+    def test_novi_echo_does_not_contaminate_recency(self) -> None:
+        # Explicit switch ("forget that, what about BMW?") + "its" must
+        # resolve to BMW even though Novi's own echo re-mentions Tesla:
+        # the recency cue reads user turns only.
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("Tell me about Tesla.")
+                brain.respond("Now forget that. What about BMW?")
+                resp = brain.respond("What is its range?")
+            finally:
+                brain.stop()
+        text = (resp["text"] or "").lower()
+        self.assertIn("bmw", text)
+        self.assertNotIn("tesla", text)
+        self.assertNotIn("do you mean", text)
+
+    def test_full_name_beats_shared_head_token(self) -> None:
+        # "the Model Y" names Model Y even though "model" also overlaps
+        # Model 3; only the bare "the model" is genuinely ambiguous.
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("The Model 3 is small. The Model Y is bigger.")
+                named = brain.respond("Tell me about the Model Y.")
+                brain2_setup = brain.respond("Tell me about the model.")
+            finally:
+                brain.stop()
+        self.assertIn("model y", (named["text"] or "").lower())
+        self.assertNotIn("?", (named["text"] or ""))
+        self.assertIn("model 3", (brain2_setup["text"] or "").lower())
+        self.assertIn("model y", (brain2_setup["text"] or "").lower())
+
+    def test_anaphoric_preference_value_not_learned(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("The Model 3 is small. The Model Y is bigger.")
+                brain.respond("I like the bigger one.")
+                prefs = [(p.get("kind"), p.get("value"))
+                         for p in brain.preferences.snapshot()]
+                brain.respond("I like dark interiors.")
+                prefs_after = [(p.get("kind"), p.get("value"))
+                               for p in brain.preferences.snapshot()]
+            finally:
+                brain.stop()
+        self.assertFalse(any("bigger one" in (v or "") for _, v in prefs))
+        self.assertTrue(any("dark interiors" in (v or "") for _, v in prefs_after))
+
+    def test_pronominal_correction_supersedes_stale_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            brain = MacBrain(
+                camera=_Cam(), perception=SpecialistPerception(),
+                store_path=str(Path(tmp) / "m.db"),
+                config=MacBrainConfig(curiosity_enabled=False,
+                                      initiative_enabled=False))
+            brain.start()
+            try:
+                brain.respond("The Model Y has 500 miles of range.")
+                brain.respond("Actually it is 330 miles.")
+                resp = brain.respond("What did we say the range was?")
+            finally:
+                brain.stop()
+        text = (resp["text"] or "")
+        self.assertIn("330", text)
+        # History stays auditable: both values named, latest wins.
+        self.assertIn("500", text)
+        self.assertLess(text.index("500"), text.index("330"))
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

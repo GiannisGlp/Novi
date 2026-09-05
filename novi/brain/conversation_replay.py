@@ -230,6 +230,7 @@ class ReplayHarness:
                     result="PASS" if not turn_labels else "FAIL",
                 ))
                 if self._interaction_log:
+                    goal = conv.get("response_goal") if isinstance(conv, dict) else None
                     append_interaction_record(self._interaction_log, InteractionRecord(
                         conversation_id=f"replay-{scenario.scenario_id}",
                         turn_id=index,
@@ -237,8 +238,24 @@ class ReplayHarness:
                         modality="chat",
                         raw_input=text,
                         normalized_input=text.strip(),
+                        conversation_state={"turn": conv.get("turn")}
+                        if isinstance(conv, dict) else {},
+                        retrieved_memories=_as_str_list(grounding.get("recalled")),
+                        retrieved_world=dict(grounding.get("packet", {}).get("anchor", {}))
+                        if isinstance(grounding.get("packet"), dict) else {},
+                        intent=dict(conv.get("intent") or {})
+                        if isinstance(conv, dict) else {},
+                        referents=list(((conv.get("referents") or {}).get("resolutions") or {}).values())
+                        if isinstance(conv, dict) else [],
+                        response_strategy=str((goal or {}).get("goal", ""))
+                        if isinstance(goal, dict) else "",
+                        model=str(trace.get("route", "")),
+                        model_config=dict(conv.get("model_route") or {})
+                        if isinstance(conv, dict) else {},
                         response=response,
                         reply_source=str(reply.get("reply_source", "")),
+                        response_verification=dict(conv.get("critic") or {})
+                        if isinstance(conv, dict) else {},
                         latency_ms=round(latency_ms, 1),
                     ))
             result = "PASS" if not failed_labels else "FAIL"

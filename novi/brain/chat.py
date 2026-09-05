@@ -114,6 +114,26 @@ def _mention_candidates(text: str) -> list[str]:
     return mention_candidates(text)
 
 
+_ANAPHORIC_VALUE_RE = re.compile(
+    r"^(?:the|that|this|these|those)\s+(?:ones?\b.*|[\w\s\-]*\s*ones?)$",
+    re.IGNORECASE)
+_BARE_PRONOUN_RE = re.compile(
+    r"^(?:it|this|that|they|them|he|she|him|her|one|ones|you|me)$", re.IGNORECASE)
+
+
+def _is_anaphoric_preference_value(value: str) -> bool:
+    """True when a learned preference value is an unresolved reference.
+
+    "I like the bigger one" / "I like it" carry no storable taste until
+    the referent is resolved — learning them pollutes preferences with
+    pronouns that later get voiced as facts ("You like it").
+    """
+    text = (value or "").strip().strip("\"'").strip()
+    if not text:
+        return True
+    return bool(_ANAPHORIC_VALUE_RE.match(text) or _BARE_PRONOUN_RE.match(text))
+
+
 class ChatMixin:
     """Chat and dialogue orchestration methods for MacBrain.
 
@@ -488,18 +508,21 @@ class ChatMixin:
         m = re.search(r"\bi (?:really )?(?:like|love|enjoy|am into|am a fan of) (.+?)(?:[.!?]|$)", text, re.I)
         if m and m.group(1).strip():
             value = m.group(1).strip()
-            self.preferences.learn(person or "", "likes", value, explicit=explicit)
-            learned.append(("likes", value))
+            if not _is_anaphoric_preference_value(value):
+                self.preferences.learn(person or "", "likes", value, explicit=explicit)
+                learned.append(("likes", value))
         m = re.search(r"\bi(?:'d| would)? prefer (.+?)(?:[.!?]|$)", text, re.I)
         if m and m.group(1).strip():
             value = m.group(1).strip()
-            self.preferences.learn(person or "", "prefers", value, explicit=explicit)
-            learned.append(("prefers", value))
+            if not _is_anaphoric_preference_value(value):
+                self.preferences.learn(person or "", "prefers", value, explicit=explicit)
+                learned.append(("prefers", value))
         m = re.search(r"\bi (?:don'?t|do not) (?:like|care for|enjoy) (.+?)(?:[.!?]|$)", text, re.I)
         if m and m.group(1).strip():
             value = m.group(1).strip()
-            self.preferences.learn(person or "", "dislikes", value, explicit=explicit)
-            learned.append(("dislikes", value))
+            if not _is_anaphoric_preference_value(value):
+                self.preferences.learn(person or "", "dislikes", value, explicit=explicit)
+                learned.append(("dislikes", value))
         # Reminder/to-do requests ("remind me to X", "don't forget to X") are
         # persisted so Novi can bring them up later in conversation.
         m = re.search(r"\b(?:remind me to|don'?t forget to|remember to remind me to) (.+?)(?:[.!?]|$)", text, re.I)
@@ -1358,6 +1381,8 @@ class ChatMixin:
                  if len(w) > 4})
             if not turn_words:
                 return
+            current_norm = _re.sub(r"\s+", " ",
+                                   packet.current_turn.lower().strip(" .!?"))
             recent = list(getattr(state, "recent_turns", None) or [])[-6:]
             added = 0
             for turn in recent:
@@ -1365,6 +1390,10 @@ class ChatMixin:
                     continue
                 claim = str(turn.get("user", "") or "").strip()
                 if len(claim) < 12:
+                    continue
+                # Never voice the user's current words back as a "memory":
+                # an exact repeat would otherwise parrot the question.
+                if _re.sub(r"\s+", " ", claim.lower().strip(" .!?")) == current_norm:
                     continue
                 claim_words = _stems(
                     {w for w in _re.findall(r"[a-z0-9]+", claim.lower())
@@ -1382,6 +1411,32 @@ class ChatMixin:
                 added += 1
                 if added >= 4:
                     break
+            # A pronominal correction ("Actually it is 330 miles.") rarely
+            # shares query words, so overlap alone drops it and the stale
+            # claim wins. When the anchor's recorded correction is one of
+            # the last few user turns, it is a live claim about this
+            # thread: include it so the conflict path can name both and go
+            # by the latest instead of answering from stale state.
+            correction = str(getattr(
+                getattr(state, "anchor", None), "recent_correction", ""
+            ) or "").strip()
+            if correction and len(correction) >= 12 and added < 4:
+                last_users = [str(t.get("user", "") or "").strip()
+                              for t in recent[-3:] if isinstance(t, dict)]
+                if any((correction[:80] in user) or (user[:80] in correction)
+                       for user in last_users if user):
+                    known = {str(m.get("content", ""))[:80]
+                             for m in packet.relevant_memories
+                             if isinstance(m, dict)}
+                    if correction[:80] not in known:
+                        packet.relevant_memories.append({
+                            "content": correction,
+                            "fact_class": "USER_STATED_FACT",
+                            "memory_type": "recent_claim",
+                            "source": "recent_correction",
+                            "confidence": 0.65,
+                            "why_selected": "explicit correction supersedes older claims",
+                        })
         except Exception:
             pass
 

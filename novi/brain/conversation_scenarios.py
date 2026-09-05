@@ -629,3 +629,201 @@ _GN_SCENARIOS: list[ConversationScenario] = [
 ]
 
 SCENARIOS.extend(_GN_SCENARIOS)
+
+# Gap-4 expansion: paraphrase variants (plan Phase 11.5 — every behavior
+# must survive rewording) plus adversarial/degradation probes (Phases 18,
+# 19) whose checks were verified against real brain behavior before being
+# frozen here. C-15x pathological inputs with no assertable good response
+# (sarcasm, indirect requests) stay out: the benchmark must never bless a
+# shrug as intelligence.
+_GAP4_SCENARIOS: list[ConversationScenario] = [
+    # ——— Paraphrase variants (Phase 11.5) ———
+    ConversationScenario(
+        scenario_id="C-140", title="Follow-up paraphrase",
+        dimension="Context continuity",
+        turns=["Tell me about the Model Y.",
+               "How far can it go on a charge?"],
+        checks=[Check(id="range-stays-model-y", kind="contains", turn=1,
+                      params={"substrings": ["model y", "tesla"]},
+                      label="WRONG_REFERENT")],
+    ),
+    ConversationScenario(
+        scenario_id="C-141", title="Pronoun paraphrase",
+        dimension="Referent resolution",
+        turns=["I was looking at the Model Y yesterday.",
+               "I really like it. Is it practical for a family?"],
+        checks=[Check(id="it-stays-model-y", kind="contains", turn=1,
+                      params={"substrings": ["model y", "tesla"]},
+                      label="WRONG_REFERENT")],
+    ),
+    ConversationScenario(
+        scenario_id="C-142", title="Memory paraphrase",
+        dimension="Memory retrieval",
+        turns=["I love dark interiors, please remember that.",
+               "What interiors do I like?"],
+        checks=[Check(id="preference-recalled", kind="contains", turn=1,
+                      params={"substrings": ["dark"]},
+                      label="MEMORY_MISSED")],
+    ),
+    ConversationScenario(
+        scenario_id="C-143", title="Correction paraphrase",
+        dimension="Correction handling",
+        turns=["Tell me about the Model Y.",
+               "I meant the Model 3 actually."],
+        checks=[Check(id="updates-context", kind="contains", turn=1,
+                      params={"substrings": ["model 3"]},
+                      label="FAILURE_TO_RECOVER"),
+                Check(id="no-defense", kind="not_contains", turn=1,
+                      params={"substrings": ["but you said", "you asked for", "as i said"]},
+                      label="SOCIAL_MISMATCH")],
+    ),
+    ConversationScenario(
+        scenario_id="C-144", title="Ambiguity paraphrase",
+        dimension="Clarification quality",
+        turns=["I'm torn between a Tesla and a BMW.",
+               "Which one should I go for?"],
+        checks=[Check(id="asks-clarification", kind="contains", turn=1,
+                      params={"substrings": ["?"]},
+                      label="MISSING_CLARIFICATION")],
+    ),
+    ConversationScenario(
+        scenario_id="C-145", title="Greeting paraphrase",
+        dimension="Naturalness",
+        turns=["Hey Novi, good evening."],
+        checks=[
+            Check(id="natural", kind="not_contains", turn=0,
+                  params={"substrings": ["traceback", "error:", "Traceback", "None"]},
+                  label="HALLUCINATION"),
+            Check(id="no-meta", kind="no_generic_filler", turn=0, label="TOO_GENERIC"),
+        ],
+    ),
+    ConversationScenario(
+        scenario_id="C-146", title="Sadness paraphrase",
+        dimension="Emotional appropriateness",
+        turns=["I'm feeling really down today."],
+        checks=[Check(id="no-canned", kind="not_contains", turn=0,
+                      params={"substrings": _CANNED_THERAPY + _FORMAL_SAFETY},
+                      label="EMOTION_MISMATCH")],
+    ),
+    ConversationScenario(
+        scenario_id="C-147", title="Missing-memory paraphrase",
+        dimension="Memory restraint",
+        turns=["Do you remember what I told you about my boat last month?"],
+        checks=[Check(id="admits-gap", kind="contains", turn=0,
+                      params={"substrings": ["don't remember", "do not remember", "don't recall",
+                                             "no record", "not sure", "don't know",
+                                             "don't have a reliable memory",
+                                             "no reliable memory"]},
+                      label="MEMORY_HALLUCINATED")],
+    ),
+    # ——— Adversarial probes (Phase 19) ———
+    ConversationScenario(
+        scenario_id="C-150", title="One-word slot answer",
+        dimension="Clarification quality",
+        turns=["I'm comparing a Tesla and a BMW.",
+               "Would you choose it?",
+               "The Tesla."],
+        # The open slot closes on the answer: Novi must not ask again.
+        checks=[Check(id="no-reask", kind="not_contains", turn=2,
+                      params={"substrings": ["?"]},
+                      label="UNNECESSARY_CLARIFICATION")],
+    ),
+    ConversationScenario(
+        scenario_id="C-151", title="Repeated question",
+        dimension="Clarification quality",
+        turns=["Tell me about the Model Y.",
+               "Tell me about the Model Y."],
+        # A repeat re-answers from evidence; it must never ask "which"
+        # about a single established entity.
+        checks=[Check(id="reanswers", kind="contains", turn=1,
+                      params={"substrings": ["model y"]},
+                      label="OUT_OF_CONTEXT"),
+                Check(id="no-senseless-which", kind="not_contains", turn=1,
+                      params={"substrings": ["which model y"]},
+                      label="UNNECESSARY_CLARIFICATION")],
+    ),
+    ConversationScenario(
+        scenario_id="C-152", title="Same-type pronoun rivals",
+        dimension="Referent resolution",
+        turns=["I have two dogs, Rex and Max. Rex is older.",
+               "Is he good with kids?"],
+        # Both rivals are plausible: ask naming both, never guess one.
+        checks=[Check(id="names-both-rivals", kind="contains", turn=1,
+                      params={"substrings": ["rex"]},
+                      label="WRONG_REFERENT"),
+                Check(id="names-both-rivals-max", kind="contains", turn=1,
+                      params={"substrings": ["max"]},
+                      label="WRONG_REFERENT")],
+    ),
+    ConversationScenario(
+        scenario_id="C-153", title="Rapid switching with return",
+        dimension="Topic changes",
+        turns=["We talked Tesla, then football, then cooking.",
+               "Back to the Tesla: what did we say about it?"],
+        checks=[Check(id="topic-restored", kind="contains", turn=1,
+                      params={"substrings": ["tesla"]},
+                      label="OUT_OF_CONTEXT")],
+    ),
+    ConversationScenario(
+        scenario_id="C-154", title="Terse continuation",
+        dimension="Context continuity",
+        turns=["Tell me about the Model Y.",
+               "Why?"],
+        checks=[Check(id="stays-on-entity", kind="contains", turn=1,
+                      params={"substrings": ["model y"]},
+                      label="OUT_OF_CONTEXT")],
+    ),
+    # ——— Degradation probes (Phase 18, scaled) ———
+    ConversationScenario(
+        scenario_id="C-160", title="Irrelevant-preference flood",
+        dimension="Memory retrieval",
+        turns=["I like jazz music.",
+               "I prefer window seats.",
+               "I don't like cold brew.",
+               "Remind me to water the plants.",
+               "What music do I like?"],
+        checks=[Check(id="relevant-wins", kind="contains", turn=4,
+                      params={"substrings": ["jazz"]},
+                      label="MEMORY_MISSED"),
+                Check(id="no-dump", kind="not_contains", turn=4,
+                      params={"substrings": ["window seats", "cold brew",
+                                             "water the plants"]},
+                      label="MEMORY_IRRELEVANT"),
+                Check(id="concise", kind="max_words", turn=4,
+                      params={"n": 60}, label="TOO_VERBOSE")],
+    ),
+    ConversationScenario(
+        scenario_id="C-161", title="Full name beats shared token",
+        dimension="Referent resolution",
+        turns=["The Model 3 is small. The Model Y is bigger.",
+               "Tell me about the Model Y."],
+        checks=[Check(id="names-entity", kind="contains", turn=1,
+                      params={"substrings": ["model y"]},
+                      label="WRONG_REFERENT"),
+                Check(id="no-false-ask", kind="not_contains", turn=1,
+                      params={"substrings": ["?"]},
+                      label="UNNECESSARY_CLARIFICATION")],
+    ),
+    ConversationScenario(
+        scenario_id="C-162", title="Bare head noun asks",
+        dimension="Clarification quality",
+        turns=["The Model 3 is small. The Model Y is bigger.",
+               "Tell me about the model."],
+        checks=[Check(id="asks-which", kind="contains", turn=1,
+                      params={"substrings": ["?", "model 3", "model y"]},
+                      label="MISSING_CLARIFICATION")],
+    ),
+    ConversationScenario(
+        scenario_id="C-163", title="Pronominal fact correction",
+        dimension="Correction handling",
+        turns=["The Model Y has 500 miles of range.",
+               "Actually it is 330 miles.",
+               "What did we say the range was?"],
+        # Newer correction wins; history stays auditable (both named).
+        checks=[Check(id="correction-wins", kind="contains", turn=2,
+                      params={"substrings": ["330"]},
+                      label="FAILURE_TO_RECOVER")],
+    ),
+]
+
+SCENARIOS.extend(_GAP4_SCENARIOS)

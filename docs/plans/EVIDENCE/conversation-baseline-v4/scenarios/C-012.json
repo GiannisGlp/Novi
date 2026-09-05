@@ -1,0 +1,861 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-012",
+  "title": "Entity switch",
+  "dimension": "Referent resolution",
+  "git_sha": "545395c8e633166fe10ce63c1e6d9f96ef51bd25",
+  "timestamp": "2026-09-05T11:24:03.987266+00:00",
+  "runtime": "mac-brain",
+  "model": "deterministic",
+  "configuration": {
+    "brain_llm": false,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133",
+      "C-140",
+      "C-141",
+      "C-142",
+      "C-143",
+      "C-144",
+      "C-145",
+      "C-146",
+      "C-147",
+      "C-150",
+      "C-151",
+      "C-152",
+      "C-153",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-162",
+      "C-163"
+    ]
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-012",
+      "turn_index": 0,
+      "user_text": "Tell me about Tesla.",
+      "response_text": "I don't have verified details on Tesla handy \u2014 want me to look into it?",
+      "reply_source": "fallback",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "explicit tell-me-about request",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "packet_render",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Tesla"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me about Tesla.",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Tesla",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me about Tesla.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Tesla"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Tesla"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "deterministic",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "latency_ms": 2.1,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-012",
+      "turn_index": 1,
+      "user_text": "Now forget that. What about BMW?",
+      "response_text": "About Tesla: Tell me about Tesla.",
+      "reply_source": "fallback",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {
+        "that": "Tesla"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "packet_render",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "that": "Tesla"
+              },
+              "ambiguous": [],
+              "confidence": 0.7
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Tesla",
+                "BMW"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "Tell me about Tesla."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 1.0,
+                "non_repetition": 0.933,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Now forget that. What about BMW?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "that": "Tesla"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla",
+              "BMW"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "BMW",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I don't have verified details on Tesla handy \u2014 want me to look into it?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about Tesla. / novi: I don't have verified details on Tesla handy \u2014 want me to look into it?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "Tell me about Tesla.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Now forget that. What about BMW?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Tesla"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Tesla",
+          "BMW"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "Tell me about Tesla."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "deterministic",
+      "critic": {
+        "scores": {
+          "grounding": 1.0,
+          "non_repetition": 0.933,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "latency_ms": 0.6,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-012",
+      "turn_index": 2,
+      "user_text": "What is its range?",
+      "response_text": "I don't have verified details on BMW handy \u2014 want me to look into it?",
+      "reply_source": "fallback",
+      "conversation_state": {
+        "turn": 2
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {
+        "its": "BMW"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": null,
+          "route": "deterministic",
+          "route_reason": "packet_render",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "its": "BMW"
+              },
+              "ambiguous": [],
+              "confidence": 0.7
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "BMW"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.933,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "turn": 2
+          }
+        },
+        "grounding": {
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "What is its range?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "its": "BMW"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla",
+              "BMW"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "BMW",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I don't have verified details on Tesla handy \u2014 want me to look into it?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about Tesla. / novi: I don't have verified details on Tesla handy \u2014 want me to look into it?",
+              "user: Now forget that. What about BMW? / novi: About Tesla: Tell me about Tesla."
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'What is its range?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Tesla"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "BMW"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "deterministic",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.933,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "latency_ms": 0.6,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "INFORMATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "generic question shape",
+    "needs_clarification": false
+  },
+  "referents": {
+    "its": "BMW"
+  },
+  "context": {
+    "trace": {
+      "conclusion": null,
+      "route": "deterministic",
+      "route_reason": "packet_render",
+      "conversation": {
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {
+            "its": "BMW"
+          },
+          "ambiguous": [],
+          "confidence": 0.7
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [
+            "BMW"
+          ],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.933,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "turn": 2
+      }
+    },
+    "grounding": {
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "What is its range?",
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "resolved_entities": {
+          "its": "BMW"
+        },
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Tesla",
+          "BMW"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "BMW",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "I don't have verified details on Tesla handy \u2014 want me to look into it?",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: Tell me about Tesla. / novi: I don't have verified details on Tesla handy \u2014 want me to look into it?",
+          "user: Now forget that. What about BMW? / novi: About Tesla: Tell me about Tesla."
+        ],
+        "relevant_memories": [],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'What is its range?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent INFORMATION_REQUEST",
+          "stay grounded on Tesla"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [
+      "BMW"
+    ],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "I don't have verified details on BMW handy \u2014 want me to look into it?",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.933,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 0.6,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}

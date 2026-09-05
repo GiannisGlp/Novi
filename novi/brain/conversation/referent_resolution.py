@@ -126,11 +126,16 @@ def _candidates(state: Any) -> list[str]:
 
 
 def _recent_turn_texts(state: Any) -> list[str]:
+    # User turns only: Novi's own echoes ("About Tesla: ...", "Do you mean
+    # BMW or Tesla?") must not contaminate the recency cue — the user's
+    # mentions drive discourse focus. Without this, an explicit switch
+    # ("forget that, what about BMW?") followed by "its" stays ambiguous
+    # because Novi's echo re-mentions the abandoned entity.
     turns = getattr(state, "recent_turns", []) or []
     texts: list[str] = []
     for turn in turns:
         if isinstance(turn, dict):
-            texts.append(f"{turn.get('user', '')} {turn.get('novi', '')}")
+            texts.append(str(turn.get("user", "")))
         else:
             texts.append(str(turn))
     return texts
@@ -250,6 +255,15 @@ def resolve_referents(text: str, state: Any) -> ReferentResult:
                 continue
             head = words[width - 1].lower()
             phrase_tokens = _content_tokens(phrase)
+            # A full-name mention ("the Model Y") names its entity even
+            # when a head token is shared ("model" also matches Model 3):
+            # exact beats overlap, per cue-order rule 1.
+            bare = " ".join(words[:width]).lower()
+            exact = next((c for c in candidates if c.lower() == bare), None)
+            if exact is not None:
+                claimed.append((start, end))
+                _record(phrase, exact, _CONF_EXPLICIT, False)
+                break
             overlapping = [c for c in candidates
                            if phrase_tokens & _entity_tokens(c)]
             if len(overlapping) == 1:

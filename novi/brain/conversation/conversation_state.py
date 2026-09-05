@@ -101,6 +101,10 @@ class ContextPacket:
     intent: IntentResult | None = None
     resolved_entities: dict[str, str] = field(default_factory=dict)
     ambiguous_referents: list[str] = field(default_factory=list)
+    # Recency-ordered entity workspace (state.active_entities snapshot):
+    # lets clarification candidates name every live rival ("Do you mean
+    # Rex or Max?") instead of only the anchor ("Which Max do you mean?").
+    active_entities: list[str] = field(default_factory=list)
     anchor: ConversationAnchor = field(default_factory=ConversationAnchor)
     relevant_history: list[str] = field(default_factory=list)
     relevant_memories: list[dict[str, Any]] = field(default_factory=list)
@@ -309,8 +313,10 @@ def mention_candidates(text: str) -> list[str]:
 
     Captures multi-word capitalized phrases ("Model Y") and mid-sentence
     single capitalized words ("Tesla", "BMW"). Sentence-initial single
-    words ("Tell", "What") are skipped. Bounded, oldest-first,
-    de-duplicated.
+    words ("Tell", "What") are skipped. Bounded, de-duplicated,
+    recency-ordered: a re-mentioned entity moves to the end, so the
+    anchor trails discourse focus ("Rex and Max. Rex is older" anchors
+    Rex, not Max).
     """
     import re
 
@@ -329,6 +335,9 @@ def mention_candidates(text: str) -> list[str]:
                 continue
             candidate = words[0]
         if candidate.lower() not in {f.lower() for f in found}:
+            found.append(candidate)
+        else:
+            found = [f for f in found if f.lower() != candidate.lower()]
             found.append(candidate)
         if len(found) >= 6:
             break
