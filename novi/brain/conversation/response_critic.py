@@ -91,12 +91,22 @@ def critique_draft(*, draft: str, packet: ContextPacket, plan: ResponsePlan,
     if scores["naturalness"] < 0.5:
         failed.append("naturalness")
 
-    # Contradiction safety: never restate a just-corrected error.
+    # Contradiction safety: never restate a just-corrected error. Naming
+    # the error alongside its superseding value is the designed conflict
+    # path ("You mentioned both ... going by the latest ..."), not a
+    # restatement — only a lone endorsement fails.
     correction = (packet.anchor.recent_correction or "").lower()
     scores["contradiction_safety"] = 1.0
     if correction and correction in text.lower() and plan.goal != "CORRECT":
-        scores["contradiction_safety"] = 0.0
-        failed.append("contradiction_safety")
+        claims = [str(m.get("content", "")).strip().lower()
+                  for m in packet.relevant_memories
+                  if isinstance(m, dict) and m.get("memory_type") == "recent_claim"
+                  and str(m.get("content", "")).strip()]
+        names_multiple = sum(1 for claim in dict.fromkeys(claims)
+                             if claim and claim in text.lower()) >= 2
+        if not names_multiple:
+            scores["contradiction_safety"] = 0.0
+            failed.append("contradiction_safety")
 
     # Capability honesty: no claimed perception/action without evidence.
     claim = _contains_any(text, _CAPABILITY_CLAIMS)
@@ -143,7 +153,17 @@ def repair(*, draft: str, packet: ContextPacket, plan: ResponsePlan,
 
 
 def safety_fallback(*, packet: ContextPacket, reason: str) -> str:
-    """Step 9.4: verified facts → clarification → admitted uncertainty."""
+    """Step 9.4: verified facts → clarification → admitted uncertainty.
+
+    Selection reuses the planner's memory arbitration, so conflicting
+    claims fall back to the conflict voicing (both named, latest wins)
+    instead of resurrecting the stale value.
+    """
+    from novi.brain.conversation.response_planner import _select_memory
+
+    memory, _kind = _select_memory(packet)
+    if memory:
+        return memory
     memory = next((str(m.get("content", "")).strip()
                    for m in packet.relevant_memories
                    if str(m.get("content", "")).strip()), "")

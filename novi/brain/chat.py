@@ -982,11 +982,16 @@ class ChatMixin:
                 text, addressee=addressee, cycle=cycle,
                 discourse_topic=discourse_hint, speaker=person,
             )
+            _compose_start = time.perf_counter()
             reply_obj = self.compose_reply(
                 text, person=addressee, history=history, llm_chat=llm_chat,
                 last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi,
                 topic_hint=discourse_hint, conv=conv,
             )
+            if isinstance(conv, dict):
+                with contextlib.suppress(Exception):
+                    conv.setdefault("stage_ms", {})["compose"] = round(
+                        (time.perf_counter() - _compose_start) * 1000.0, 2)
             # Non-isolated dialogue reasoning: record this turn's outcome so
             # the next turn's input carries prior-turn conclusions (bounded).
             with contextlib.suppress(Exception):
@@ -1132,6 +1137,8 @@ class ChatMixin:
         instead of re-tracking: the discourse topic seeds analytic state.
         """
         try:
+            import time as _time
+
             from .conversation.context_manager import build_packet
             from .conversation.conversation_state import (
                 ConversationState,
@@ -1141,6 +1148,17 @@ class ChatMixin:
             from .conversation.intent import classify_intent
             from .conversation.referent_resolution import resolve_referents
             from .conversation.response_planner import plan_response, render_deterministic
+
+            # Plan 03 Phase 37: per-stage latency observability. Developer
+            # trace only — never user-facing technical language.
+            stage_ms: dict[str, float] = {}
+            _tick = _time.perf_counter()
+
+            def _mark(name: str) -> None:
+                nonlocal _tick
+                now = _time.perf_counter()
+                stage_ms[name] = round((now - _tick) * 1000.0, 2)
+                _tick = now
 
             convos = self.__dict__.setdefault("_conversations", {})
             key = (speaker or "").strip() or "user"
@@ -1160,8 +1178,10 @@ class ChatMixin:
                 # A clean topic break expires the old anchor: answering the
                 # new topic with stale entities is WRONG_TOPIC contamination.
                 state.anchor.active_entity = ""
+            _mark("state")
             intent = classify_intent(text, state)
             closed = state.answer_open_question(text)
+            _mark("intent")
             referents = resolve_referents(text, state)
             mentions = _mention_candidates(text)
             for mention in mentions:
@@ -1180,8 +1200,10 @@ class ChatMixin:
                 anchor_entity = mentions[-1] if mentions else ""
                 if mentions:
                     state.anchor.active_entity = mentions[-1]
+            _mark("referents")
             packet = build_packet(text, state, intent, referents, self)
             packet.ambiguous_referents = list(referents.ambiguous)
+            _mark("packet")
             # Plan 03 C-122: the current turn counts as routine evidence
             # (observe-then-apply), so a pattern completing support now is
             # voiced now.
@@ -1191,8 +1213,10 @@ class ChatMixin:
                 packet, speaker=key, addressee=addressee, intent=intent)
             self._supplement_recent_claims(packet, state)
             self._supplement_routine_memories(packet, routine)
+            _mark("supplements")
             plan = plan_response(packet)
             rendered = render_deterministic(plan, packet)
+            _mark("plan_render")
             turn_bundle = {"state": state, "speaker": key, "intent": intent,
                            "referents": referents, "packet": packet,
                            "plan": plan, "rendered": rendered,
@@ -1208,6 +1232,15 @@ class ChatMixin:
                 turn_bundle["model_route"] = route_for_turn(turn_bundle)
             except Exception:  # noqa: BLE001 - routing never breaks chat
                 turn_bundle["model_route"] = {"tier": "UNKNOWN", "model": "", "signals": {}}
+            _mark("route")
+            turn_bundle["stage_ms"] = dict(stage_ms)
+            try:
+                import json as _json
+
+                turn_bundle["context_tokens"] = (
+                    len(_json.dumps(packet.to_dict(), sort_keys=True)) // 4)
+            except Exception:  # noqa: BLE001 - token estimate is advisory
+                turn_bundle["context_tokens"] = 0
             return turn_bundle
         except Exception:
             return {}
@@ -1484,19 +1517,46 @@ class ChatMixin:
         try:
             if not conv:
                 return
-            from .conversation.response_critic import critique_draft, repair
+            import time as _time
+
+            from .conversation.response_critic import (
+                critique_draft,
+                repair,
+                safety_fallback,
+            )
 
             packet, plan = conv["packet"], conv["plan"]
             state = conv["state"]
             draft = str(result.get("text") or "")
+            _critic_start = _time.perf_counter()
             verdict = critique_draft(draft=draft, packet=packet, plan=plan,
                                      last_novi=state.last_novi_claim)
+            conv.setdefault("stage_ms", {})["critic"] = round(
+                (_time.perf_counter() - _critic_start) * 1000.0, 2)
             if verdict.needs_repair and deterministic and draft:
-                fixed = repair(draft=draft, packet=packet, plan=plan,
-                               verdict=verdict, last_novi=state.last_novi_claim)
-                if fixed.strip():
-                    result["text"] = fixed
-                    result["trace"]["route_reason"] = "packet_render+repair"
+                failed = set(verdict.failed)
+                if failed <= {"non_repetition"}:
+                    # Fixed point: re-rendering the same plan over the same
+                    # packet yields the identical bank text, so a repair
+                    # pass cannot help. The verdict stays recorded (variety
+                    # is a realization concern, not a repair loop).
+                    pass
+                elif failed & {"grounding", "capability_honesty",
+                               "contradiction_safety"}:
+                    # Step 9.4: answer from verified facts, clarify, or
+                    # admit — never re-render the failed draft.
+                    safety = safety_fallback(
+                        packet=packet, reason=",".join(sorted(failed)))
+                    if safety.strip():
+                        result["text"] = safety
+                        result["trace"]["route_reason"] = (
+                            "packet_render+safety_fallback")
+                else:
+                    fixed = repair(draft=draft, packet=packet, plan=plan,
+                                   verdict=verdict, last_novi=state.last_novi_claim)
+                    if fixed.strip():
+                        result["text"] = fixed
+                        result["trace"]["route_reason"] = "packet_render+repair"
             trace = result.get("trace")
             if isinstance(trace, dict):
                 trace["conversation"] = {
@@ -1505,6 +1565,13 @@ class ChatMixin:
                     "response_goal": plan.to_dict(),
                     "critic": verdict.to_dict(),
                     "model_route": conv.get("model_route") or {},
+                    "stage_ms": dict(conv.get("stage_ms") or {}),
+                    "context_tokens": int(conv.get("context_tokens") or 0),
+                    "context_counts": {
+                        "memories": len(packet.relevant_memories or []),
+                        "world_facts": len(packet.world_context or []),
+                        "history": len(packet.relevant_history or []),
+                    },
                     "turn": state.turn_count,
                 }
             grounding = result.get("grounding")

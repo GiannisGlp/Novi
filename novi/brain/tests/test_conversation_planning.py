@@ -149,6 +149,51 @@ class CriticTests(unittest.TestCase):
         self.assertTrue(fallback.strip())
         self.assertNotIn("330", fallback)
 
+    def test_conflict_voicing_is_not_contradiction(self) -> None:
+        # Naming the corrected error alongside its superseding value is
+        # the designed conflict path — the critic must not punish it.
+        packet = _packet(
+            relevant_memories=[
+                {"content": "The standup is at 9am.", "memory_type": "recent_claim"},
+                {"content": "Correction: the standup is at 10am.",
+                 "memory_type": "recent_claim"},
+            ])
+        packet.anchor.recent_correction = "Correction: the standup is at 10am."
+        plan = plan_response(packet)
+        draft = ("You mentioned both 'The standup is at 9am' and 'Correction: "
+                 "the standup is at 10am' — going by the latest, "
+                 "'Correction: the standup is at 10am'.")
+        verdict = critique_draft(draft=draft, packet=packet, plan=plan)
+        self.assertNotIn("contradiction_safety", verdict.failed)
+
+    def test_lone_error_restatement_still_fails(self) -> None:
+        # Parroting the correction utterance without comparative voicing
+        # is still a contradiction failure.
+        packet = _packet(
+            relevant_memories=[
+                {"content": "The standup is at 9am.", "memory_type": "recent_claim"},
+                {"content": "Correction: the standup is at 10am.",
+                 "memory_type": "recent_claim"},
+            ])
+        packet.anchor.recent_correction = "Correction: the standup is at 10am."
+        plan = plan_response(packet)
+        verdict = critique_draft(
+            draft="Correction: the standup is at 10am. Noted.",
+            packet=packet, plan=plan)
+        self.assertIn("contradiction_safety", verdict.failed)
+
+    def test_fallback_prefers_latest_over_stale(self) -> None:
+        # safety_fallback must never resurrect the superseded value.
+        packet = _packet(
+            relevant_memories=[
+                {"content": "The Model Y has 500 miles of range.",
+                 "memory_type": "recent_claim"},
+                {"content": "Actually it is 330 miles.",
+                 "memory_type": "recent_claim"},
+            ])
+        fallback = safety_fallback(packet=packet, reason="grounding")
+        self.assertIn("330", fallback)
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

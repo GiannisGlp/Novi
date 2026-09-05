@@ -229,6 +229,8 @@ class ReplayHarness:
                     turn_index=index,
                     user_text=text,
                     heard_text=heard if heard != text else "",
+                    stage_ms=dict(conv.get("stage_ms") or {}),
+                    context_tokens=int(conv.get("context_tokens") or 0),
                     response_text=response,
                     reply_source=str(reply.get("reply_source", "")),
                     conversation_state={"turn": conv.get("turn")}
@@ -347,7 +349,72 @@ def summarize(outcomes: list[dict[str, Any]], *, runtime: str, model: str,
             for dim, cell in sorted(by_dimension.items())
         },
         "label_counts": dict(sorted(label_counts.items(), key=lambda kv: -kv[1])),
+        "metrics": summarize_metrics(outcomes),
         "status": "PASS" if outcomes and passed == len(outcomes) else "FAIL",
+    }
+
+
+def summarize_metrics(outcomes: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate Phase 37 observability metrics across all turns.
+
+    Per-stage latency means, context-token means, clarification rate,
+    critic rejection rate, repair rate, and model-tier distribution —
+    the bottleneck/drift signals acceptance runs are for.
+    """
+    stage_sums: dict[str, float] = {}
+    stage_counts: dict[str, int] = {}
+    tokens: list[float] = []
+    mem_counts: list[float] = []
+    world_counts: list[float] = []
+    tiers: dict[str, int] = {}
+    clarifications = rejects = repairs = 0
+    total = 0
+    for outcome in outcomes:
+        for trace in outcome["traces"]:
+            total += 1
+            context = trace.retrieved_context or {}
+            outer = context.get("trace", {}) or {}
+            conv = outer.get("conversation", {}) or {}
+            grounding = context.get("grounding", {}) or {}
+            for stage, value in (conv.get("stage_ms") or {}).items():
+                try:
+                    stage_sums[stage] = stage_sums.get(stage, 0.0) + float(value)
+                    stage_counts[stage] = stage_counts.get(stage, 0) + 1
+                except (TypeError, ValueError):
+                    continue
+            tokens.append(float(trace.context_tokens or 0))
+            counts = conv.get("context_counts") or {}
+            mem_counts.append(float(counts.get("memories", 0) or 0))
+            world_counts.append(float(counts.get("world_facts", 0) or 0))
+            goal = conv.get("response_goal") or {}
+            if isinstance(goal, dict) and goal.get("goal") == "ASK_CLARIFICATION":
+                clarifications += 1
+            critic = conv.get("critic") or {}
+            if isinstance(critic, dict) and critic.get("needs_repair"):
+                rejects += 1
+            route_reason = str(outer.get("route_reason", "") or "")
+            llm_repair = grounding.get("llm_repair") or {}
+            if ("repair" in route_reason or "fallback" in route_reason or (
+                    isinstance(llm_repair, dict) and llm_repair.get("accepted"))):
+                repairs += 1
+            tier = (conv.get("model_route") or {}).get("tier", "")
+            if tier:
+                tiers[str(tier)] = tiers.get(str(tier), 0) + 1
+
+    def _mean(values: list[float]) -> float:
+        return round(sum(values) / len(values), 2) if values else 0.0
+
+    return {
+        "turns": total,
+        "mean_stage_ms": {stage: round(stage_sums[stage] / stage_counts[stage], 2)
+                          for stage in sorted(stage_sums)},
+        "mean_context_tokens": _mean(tokens),
+        "mean_memories_per_turn": _mean(mem_counts),
+        "mean_world_facts_per_turn": _mean(world_counts),
+        "clarification_rate": round(clarifications / total, 3) if total else 0.0,
+        "critic_reject_rate": round(rejects / total, 3) if total else 0.0,
+        "repair_rate": round(repairs / total, 3) if total else 0.0,
+        "tier_distribution": dict(sorted(tiers.items())),
     }
 
 

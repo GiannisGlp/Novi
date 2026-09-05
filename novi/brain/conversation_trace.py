@@ -113,6 +113,9 @@ class AcceptanceTrace:
     model_route: str = ""
     critic: dict[str, Any] | None = None
     repair_count: int = 0
+    # Phase 37 observability: per-stage latencies + context size.
+    stage_ms: dict[str, float] = field(default_factory=dict)
+    context_tokens: int = 0
     latency_ms: float = 0.0
     failure_labels: list[str] = field(default_factory=list)
     human_rating: float | None = None

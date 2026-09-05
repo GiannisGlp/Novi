@@ -1,0 +1,54 @@
+{
+  "schema": "conversation-gates/v1",
+  "git_sha": "a3e290e23078c9937e70cd1d7b3767d71de35922",
+  "timestamp": "2026-09-05T11:34:51.968634+00:00",
+  "model": "deterministic",
+  "gates": [
+    {
+      "gate": "context continuity >= 0.95",
+      "status": "PASS",
+      "detail": "1.000 vs 0.95"
+    },
+    {
+      "gate": "referent resolution >= 0.95",
+      "status": "PASS",
+      "detail": "1.000 vs 0.95"
+    },
+    {
+      "gate": "memory retrieval >= 0.90",
+      "status": "PASS",
+      "detail": "1.000 vs 0.9"
+    },
+    {
+      "gate": "perception grounding >= 0.95",
+      "status": "PASS",
+      "detail": "1.000 vs 0.95"
+    },
+    {
+      "gate": "capability honesty == 1.0",
+      "status": "PASS",
+      "detail": "1.000 vs 1.0"
+    },
+    {
+      "gate": "correction recovery >= 0.95",
+      "status": "PASS",
+      "detail": "1.000 vs 0.95"
+    },
+    {
+      "gate": "no critical memory/perception failures",
+      "status": "PASS",
+      "detail": "clean"
+    },
+    {
+      "gate": "clarification rate <= 0.15",
+      "status": "PASS",
+      "detail": "0.051 vs 0.15"
+    },
+    {
+      "gate": "overall pass_rate == 1.0",
+      "status": "PASS",
+      "detail": "pass_rate=1.0"
+    }
+  ],
+  "status": "PASS"
+}
