@@ -2040,6 +2040,25 @@ class ChatMixin:
                             llm_repair["accepted"] = False
             except Exception:  # noqa: BLE001 - critic repair never breaks chat
                 pass
+        # C-150 guardrail: a closed slot must never be re-opened. The LLM can
+        # ignore the repair instruction, so enforce deterministically — drop a
+        # trailing question sentence on SLOT_ANSWER turns (re-asking what the
+        # user already answered), falling back to the non-question render.
+        if conv and out.get("text"):
+            try:
+                plan_goal = str(getattr(conv.get("plan"), "goal", "") or "")
+                if plan_goal == "SLOT_ANSWER" and "?" in str(out.get("text")):
+                    sentences = re.split(r"(?<=[.!?])\s+", str(out.get("text")).strip())
+                    kept = [s for s in sentences if s and "?" not in s]
+                    cleaned = " ".join(kept).strip()
+                    if not cleaned:
+                        from .conversation.response_planner import render_deterministic
+                        cleaned = str(render_deterministic(conv["plan"], conv["packet"]) or "").strip()
+                    if cleaned:
+                        out = {"text": cleaned, "fallback": True,
+                               "grounding": out.get("grounding") or {}}
+            except Exception:  # noqa: BLE001 - slot guardrail never breaks chat
+                pass
         # @skill convention (plan 16 P2): the model may request one exact
         # computation. Parse strictly against the known runnable catalog,
         # execute through governed invocation, then compose the final natural
