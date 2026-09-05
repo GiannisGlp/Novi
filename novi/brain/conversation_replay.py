@@ -49,6 +49,9 @@ CHECK_KINDS = frozenset({
     "max_latency_ms",
     "min_words",
     "max_words",
+    # Plan 03 §2.3 (threshold calibration from real conversations):
+    "not_affirms",  # not_contains, but only in affirmative (non-negated) scope
+    "referent_resolves_to",  # assert a pronoun resolved to the expected entity
 })
 
 # Plan C-071: replies carrying nothing but these are TOO_GENERIC.
@@ -59,6 +62,25 @@ GENERIC_FILLER = [
     "interesting!",
     "noted.",
 ]
+
+# Negation cues that put a banned phrase in "mention, not affirmation" scope
+# (C-092 stale-perception honesty: "I can't see if the cup is still there" is
+# an honest denial, not a stale claim).
+_NEGATION_CUES = (
+    "can't", "cannot", "cant", "couldn't", "could not",
+    "don't", "do not", "doesn't", "does not", "didn't", "did not",
+    "isn't", "is not", "aren't", "are not", "wasn't", "was not",
+    "weren't", "were not", "won't", "will not", "wouldn't", "would not",
+    "shouldn't", "should not", "haven't", "have not", "hasn't", "has not",
+    "never", "without", "unable to",
+)
+
+# An adversative after a negation re-opens the affirmation scope: "I can't see
+# it, but it's still there" IS a stale claim.
+_ADVERSATIVES = (
+    "but", "yet", "however", "though", "although",
+    "even so", "nonetheless", "nevertheless",
+)
 
 
 @dataclass
@@ -126,6 +148,76 @@ class ConversationScenario:
                 f"({len(self.turns)})")
 
 
+def _has_negation(scope: str) -> bool:
+    """True when a negation cue appears in the (lowercased) clause text."""
+    return any(cue in scope for cue in _NEGATION_CUES)
+
+
+def _affirms_occurrence(text: str, idx: int) -> bool:
+    """Whether a banned phrase at ``idx`` is affirmed rather than negated.
+
+    Scope is the current sentence's text before the phrase; an adversative
+    after the last negation re-opens affirmation, so only the text after the
+    last adversative is checked for negation cues.
+    """
+    sent_start = max(
+        (text.rfind(sep, 0, idx) for sep in (".", "!", "?", ";", "\n")),
+        default=-1,
+    ) + 1
+    prefix = text[sent_start:idx]
+    last_adv = -1
+    for adv in _ADVERSATIVES:
+        pos = prefix.rfind(adv)
+        if pos > last_adv:
+            last_adv = pos
+    scope = prefix[last_adv + 1:] if last_adv >= 0 else prefix
+    return not _has_negation(scope)
+
+
+def _affirmed_substring(text: str, needles: list[str]) -> str | None:
+    """First needle the text affirms (vs merely mentions under a negation)."""
+    for needle in needles:
+        start = 0
+        while True:
+            idx = text.find(needle, start)
+            if idx == -1:
+                break
+            if _affirms_occurrence(text, idx):
+                return needle
+            start = idx + 1
+    return None
+
+
+def _referents_resolutions(reply: dict[str, Any]) -> dict[str, Any]:
+    """The recorded per-turn pronoun/mention resolutions from a respond() result.
+
+    Path: reply["trace"]["conversation"]["referents"]["resolutions"], e.g.
+    {"it": "Model Y"} — the data the harness already serializes into evidence.
+    """
+    trace = reply.get("trace") or {}
+    if not isinstance(trace, dict):
+        return {}
+    conv = trace.get("conversation") or {}
+    if not isinstance(conv, dict):
+        return {}
+    refs = conv.get("referents") or {}
+    if not isinstance(refs, dict):
+        return {}
+    resolutions = refs.get("resolutions") or {}
+    return resolutions if isinstance(resolutions, dict) else {}
+
+
+def _resolved_entity(resolutions: dict[str, Any], pronoun: str) -> str:
+    """Case-insensitive lookup of a pronoun's recorded resolution ("" if absent)."""
+    key = str(pronoun).lower()
+    if key in resolutions:
+        return str(resolutions[key])
+    for k, value in resolutions.items():
+        if str(k).lower() == key:
+            return str(value)
+    return ""
+
+
 def evaluate_check(check: Check, *, response: str, reply: dict[str, Any],
                    latency_ms: float, previous: str = "") -> tuple[bool, str]:
     """Evaluate one check. Returns (passed, detail)."""
@@ -149,6 +241,10 @@ def evaluate_check(check: Check, *, response: str, reply: dict[str, Any],
         needles = [s.lower() for s in params.get("substrings", [])]
         hit = next((n for n in needles if n in text), None)
         return (hit is None, "clean" if hit is None else f"forbidden {hit!r} present")
+    if kind == "not_affirms":
+        needles = [s.lower() for s in params.get("substrings", [])]
+        hit = _affirmed_substring(text, needles)
+        return (hit is None, "clean" if hit is None else f"affirmed {hit!r}")
     if kind == "no_generic_filler":
         hit = next((f for f in GENERIC_FILLER if f in text), None)
         substantive = len(words) > 12
@@ -158,6 +254,32 @@ def evaluate_check(check: Check, *, response: str, reply: dict[str, Any],
         allowed = set(params.get("sources", []))
         actual = str(reply.get("reply_source", ""))
         return (actual in allowed, f"reply_source={actual!r}")
+    if kind == "referent_resolves_to":
+        resolutions = _referents_resolutions(reply)
+        entities = params.get("entities") or (
+            [params["entity"]] if params.get("entity") else [])
+        entities = [str(e).lower() for e in entities if str(e)]
+        pronouns = params.get("pronouns") or (
+            [params["pronoun"]] if params.get("pronoun") else [])
+        if not entities:
+            return (False, "referent_resolves_to needs entity/entities")
+        if not resolutions:
+            return (False, "no referent resolutions recorded")
+        if pronouns:
+            for pronoun in pronouns:
+                resolved = _resolved_entity(resolutions, pronoun).lower()
+                if not resolved:
+                    return (False,
+                            f"pronoun {pronoun!r} unresolved; resolutions={resolutions}")
+                if not any(entity in resolved for entity in entities):
+                    return (False,
+                            f"pronoun {pronoun!r} -> {resolved!r}, "
+                            f"expected one of {entities}")
+            return (True, f"pronouns {pronouns!r} -> {entities!r}")
+        values = [str(value).lower() for value in resolutions.values()]
+        if not any(any(entity in value for entity in entities) for value in values):
+            return (False, f"no resolution contains {entities!r}; resolutions={resolutions}")
+        return (True, f"some resolution -> {entities!r}")
     if kind == "max_latency_ms":
         budget = float(params.get("ms", 0))
         return (latency_ms <= budget, f"{latency_ms:.0f}ms vs {budget:.0f}ms")

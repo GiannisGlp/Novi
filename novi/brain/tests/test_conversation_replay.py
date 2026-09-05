@@ -54,6 +54,58 @@ class CheckEvaluationTests(unittest.TestCase):
         passed, _ = evaluate_check(check, response="nice car", reply=self._reply(), latency_ms=1)
         self.assertTrue(passed)
 
+    def _reply_with_referents(self, resolutions: dict) -> dict:
+        return {
+            "text": "x",
+            "reply_source": "fallback",
+            "trace": {"conversation": {"referents": {"resolutions": resolutions}}},
+        }
+
+    def test_not_affirms_rejects_affirmative_claim(self) -> None:
+        check = Check(id="c", kind="not_affirms", params={"substrings": ["still there"]})
+        passed, detail = evaluate_check(
+            check, response="Yes, the cup is still there.", reply=self._reply(), latency_ms=1)
+        self.assertFalse(passed)
+        self.assertIn("still there", detail)
+
+    def test_not_affirms_allows_honest_denial(self) -> None:
+        check = Check(id="c", kind="not_affirms", params={"substrings": ["still there"]})
+        passed, _ = evaluate_check(
+            check,
+            response="I don't have vision right now, so I can't see if the cup is still there.",
+            reply=self._reply(), latency_ms=1)
+        self.assertTrue(passed)
+
+    def test_not_affirms_rejects_claim_after_adversative(self) -> None:
+        check = Check(id="c", kind="not_affirms", params={"substrings": ["still there"]})
+        passed, _ = evaluate_check(
+            check, response="I can't see it, but it's still there.",
+            reply=self._reply(), latency_ms=1)
+        self.assertFalse(passed)
+
+    def test_referent_resolves_to_passes_when_pronoun_matches(self) -> None:
+        check = Check(id="c", kind="referent_resolves_to",
+                      params={"pronoun": "it", "entity": "model y"})
+        passed, _ = evaluate_check(
+            check, response="It is practical for a family.",
+            reply=self._reply_with_referents({"it": "Model Y"}), latency_ms=1)
+        self.assertTrue(passed)
+
+    def test_referent_resolves_to_fails_without_resolutions(self) -> None:
+        check = Check(id="c", kind="referent_resolves_to",
+                      params={"pronoun": "it", "entity": "model y"})
+        passed, _ = evaluate_check(
+            check, response="It is practical.", reply=self._reply(), latency_ms=1)
+        self.assertFalse(passed)
+
+    def test_referent_resolves_to_fails_on_wrong_entity(self) -> None:
+        check = Check(id="c", kind="referent_resolves_to",
+                      params={"pronoun": "it", "entity": "model y"})
+        passed, _ = evaluate_check(
+            check, response="It is practical.",
+            reply=self._reply_with_referents({"it": "Model 3"}), latency_ms=1)
+        self.assertFalse(passed)
+
     def test_no_generic_filler_rejects_filler_only(self) -> None:
         check = Check(id="c", kind="no_generic_filler", label="TOO_GENERIC")
         passed, _ = evaluate_check(check, response="That sounds interesting", reply=self._reply(), latency_ms=1)
