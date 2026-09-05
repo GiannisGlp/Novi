@@ -1,0 +1,78 @@
+{
+  "schema": "conversation-soak/v1",
+  "timestamp": "2026-09-05T12:48:39.058443+00:00",
+  "git_sha": "0dca39501d88c20da95a6bb8f988435f1d135588",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "turns": 300,
+    "probe_every": 50,
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434"
+  },
+  "duration_s": 160.7,
+  "turns_run": 307,
+  "errors": 0,
+  "latency_ms": {
+    "mean": 502.9,
+    "max": 14804.5,
+    "first_half_mean": 1004.9,
+    "last_half_mean": 0.8,
+    "drift_factor": 0.0
+  },
+  "memory_probes": {
+    "passed": 6,
+    "of": 6,
+    "probes": [
+      {
+        "after_turn": 50,
+        "passed": true,
+        "latency_ms": 0.7
+      },
+      {
+        "after_turn": 100,
+        "passed": true,
+        "latency_ms": 0.7
+      },
+      {
+        "after_turn": 150,
+        "passed": true,
+        "latency_ms": 0.7
+      },
+      {
+        "after_turn": 200,
+        "passed": true,
+        "latency_ms": 0.7
+      },
+      {
+        "after_turn": 250,
+        "passed": true,
+        "latency_ms": 0.7
+      },
+      {
+        "after_turn": 300,
+        "passed": true,
+        "latency_ms": 0.7
+      }
+    ]
+  },
+  "growth": {
+    "db_bytes_start": 4096,
+    "db_bytes_end": 290816,
+    "rss_mib_start": 49.27,
+    "rss_mib_end": 53.7
+  },
+  "state_bounds": {
+    "speakers": 1,
+    "active_entities": 8,
+    "recent_turns": 12,
+    "within_bounds": true
+  },
+  "checks": {
+    "no_errors": true,
+    "probes_pass": true,
+    "latency_bounded": true,
+    "state_bounded": true
+  },
+  "status": "PASS"
+}

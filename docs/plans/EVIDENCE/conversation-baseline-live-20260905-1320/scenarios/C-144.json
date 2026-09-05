@@ -1,0 +1,808 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-144",
+  "title": "Ambiguity paraphrase",
+  "dimension": "Clarification quality",
+  "git_sha": "0dca39501d88c20da95a6bb8f988435f1d135588",
+  "timestamp": "2026-09-05T12:40:56.789570+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133",
+      "C-140",
+      "C-141",
+      "C-142",
+      "C-143",
+      "C-144",
+      "C-145",
+      "C-146",
+      "C-147",
+      "C-150",
+      "C-151",
+      "C-152",
+      "C-153",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-162",
+      "C-170",
+      "C-171",
+      "C-172",
+      "C-173",
+      "C-163"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-144",
+      "turn_index": 0,
+      "user_text": "I'm torn between a Tesla and a BMW.",
+      "heard_text": "",
+      "response_text": "I get that pull. I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore these days. What's pulling you toward one over the other?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "SOCIAL_CHAT",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.55,
+        "reason": "statement with no discriminating cues",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I get that pull. I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore these days. What's pulling you toward one over the other?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.45,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.05,
+              "referents": 0.04,
+              "packet": 0.22,
+              "supplements": 0.11,
+              "plan_render": 0.01,
+              "route": 0.01,
+              "compose": 7345.36,
+              "critic": 0.02
+            },
+            "context_tokens": 325,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.45,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 376,
+          "text": "I get that pull. I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore these days. What's pulling you toward one over the other?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "I'm torn between a Tesla and a BMW.",
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla",
+              "BMW"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "BMW",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': \"I'm torn between a Tesla and a BMW.\", 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "low intent confidence (0.55) for SOCIAL_CHAT"
+            ],
+            "response_requirements": [
+              "address intent SOCIAL_CHAT",
+              "stay grounded on Tesla"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.05,
+        "referents": 0.04,
+        "packet": 0.22,
+        "supplements": 0.11,
+        "plan_render": 0.01,
+        "route": 0.01,
+        "compose": 7345.36,
+        "critic": 0.02
+      },
+      "context_tokens": 325,
+      "latency_ms": 7347.2,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-144",
+      "turn_index": 1,
+      "user_text": "Which one should I go for?",
+      "heard_text": "",
+      "response_text": "I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore. Between the two, which matters more to you: the driving experience or the tech convenience?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "RECOMMENDATION",
+        "dialogue_act": "REQUEST",
+        "confidence": 0.85,
+        "reason": "asks for a recommendation",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore. Between the two, which matters more to you: the driving experience or the tech convenience?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "RECOMMENDATION",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.85,
+              "reason": "asks for a recommendation",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [
+                "one"
+              ],
+              "confidence": 0.35
+            },
+            "response_goal": {
+              "goal": "ASK_CLARIFICATION",
+              "must_include": [
+                "BMW",
+                "Tesla"
+              ],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": true,
+              "reason": "ambiguous referents: short specific question"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.378,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0
+              },
+              "failed": [
+                "non_repetition"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.25,
+              "referents": 0.24,
+              "packet": 1.17,
+              "supplements": 0.13,
+              "plan_render": 0.04,
+              "route": 0.04,
+              "compose": 7201.77,
+              "critic": 0.14
+            },
+            "context_tokens": 455,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 311,
+          "text": "I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore. Between the two, which matters more to you: the driving experience or the tech convenience?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Which one should I go for?",
+            "intent": {
+              "intent": "RECOMMENDATION",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.85,
+              "reason": "asks for a recommendation",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [
+              "one"
+            ],
+            "active_entities": [
+              "Tesla",
+              "BMW"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "BMW",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I get that pull. I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore these days. What's pulling you",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I'm torn between a Tesla and a BMW. / novi: I get that pull. I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore these days. What's pulling you toward one over the other?"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Which one should I go for?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "ambiguous referent: one"
+            ],
+            "response_requirements": [
+              "address intent RECOMMENDATION",
+              "stay grounded on Tesla",
+              "ask a short specific clarification only if ambiguity changes the answer"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ASK_CLARIFICATION",
+        "must_include": [
+          "BMW",
+          "Tesla"
+        ],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": true,
+        "reason": "ambiguous referents: short specific question"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.378,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0
+        },
+        "failed": [
+          "non_repetition"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.25,
+        "referents": 0.24,
+        "packet": 1.17,
+        "supplements": 0.13,
+        "plan_render": 0.04,
+        "route": 0.04,
+        "compose": 7201.77,
+        "critic": 0.14
+      },
+      "context_tokens": 455,
+      "latency_ms": 7206.4,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "RECOMMENDATION",
+    "dialogue_act": "REQUEST",
+    "confidence": 0.85,
+    "reason": "asks for a recommendation",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore. Between the two, which matters more to you: the driving experience or the tech convenience?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "RECOMMENDATION",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.85,
+          "reason": "asks for a recommendation",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [
+            "one"
+          ],
+          "confidence": 0.35
+        },
+        "response_goal": {
+          "goal": "ASK_CLARIFICATION",
+          "must_include": [
+            "BMW",
+            "Tesla"
+          ],
+          "may_include": [],
+          "must_not_include": [],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": true,
+          "reason": "ambiguous referents: short specific question"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.378,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0
+          },
+          "failed": [
+            "non_repetition"
+          ],
+          "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+          "needs_repair": true
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.15,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.03,
+          "intent": 0.25,
+          "referents": 0.24,
+          "packet": 1.17,
+          "supplements": 0.13,
+          "plan_render": 0.04,
+          "route": 0.04,
+          "compose": 7201.77,
+          "critic": 0.14
+        },
+        "context_tokens": 455,
+        "context_counts": {
+          "memories": 0,
+          "world_facts": 1,
+          "history": 1
+        },
+        "turn": 1
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.15,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 311,
+      "text": "I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore. Between the two, which matters more to you: the driving experience or the tech convenience?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "Which one should I go for?",
+        "intent": {
+          "intent": "RECOMMENDATION",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.85,
+          "reason": "asks for a recommendation",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [
+          "one"
+        ],
+        "active_entities": [
+          "Tesla",
+          "BMW"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "BMW",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "I get that pull. I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore these days. What's pulling you",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: I'm torn between a Tesla and a BMW. / novi: I get that pull. I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore these days. What's pulling you toward one over the other?"
+        ],
+        "relevant_memories": [],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'Which one should I go for?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [
+          "ambiguous referent: one"
+        ],
+        "response_requirements": [
+          "address intent RECOMMENDATION",
+          "stay grounded on Tesla",
+          "ask a short specific clarification only if ambiguity changes the answer"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ASK_CLARIFICATION",
+    "must_include": [
+      "BMW",
+      "Tesla"
+    ],
+    "may_include": [],
+    "must_not_include": [],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": true,
+    "reason": "ambiguous referents: short specific question"
+  },
+  "response": "I've always admired BMW's driving feel \u2014 the way they balance comfort and engagement. But Tesla's instant torque and software updates are hard to ignore. Between the two, which matters more to you: the driving experience or the tech convenience?",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.378,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0
+    },
+    "failed": [
+      "non_repetition"
+    ],
+    "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+    "needs_repair": true
+  },
+  "latency_ms": 7206.4,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
