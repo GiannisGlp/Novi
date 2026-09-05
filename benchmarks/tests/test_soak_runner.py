@@ -82,9 +82,10 @@ class TestSoakRunner(unittest.TestCase):
 
     def test_consecutive_errors_recorded_as_silent_failures(self):
         up, days = _run_soak(self.tmp, seconds=0.12, fail_steps=3)
-        combined = json.dumps([up] + days)
-        # injected failures must be visible somewhere in the evidence
-        self.assertTrue(up.get("errors_total", 0) >= 1 or "silent_failures\": 0" not in combined)
+        # The injected 3-step burst must actually be recorded as one silent
+        # failure (closed by the first success), not merely visible as errors.
+        self.assertGreaterEqual(up.get("silent_failures", 0), 1,
+                                "injected error burst must be a silent failure")
 
     def test_state_survives_restart(self):
         from benchmarks.soak_runner import SoakState
