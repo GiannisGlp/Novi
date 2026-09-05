@@ -669,8 +669,8 @@ _GAP4_SCENARIOS: list[ConversationScenario] = [
         dimension="Context continuity",
         turns=["Tell me about the Model Y.",
                "How far can it go on a charge?"],
-        checks=[Check(id="range-stays-model-y", kind="contains", turn=1,
-                      params={"substrings": ["model y", "tesla"]},
+        checks=[Check(id="range-stays-model-y", kind="referent_resolves_to", turn=1,
+                      params={"pronoun": "it", "entity": "model y"},
                       label="WRONG_REFERENT")],
     ),
     ConversationScenario(
