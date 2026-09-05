@@ -1,0 +1,744 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-154",
+  "title": "Terse continuation",
+  "dimension": "Context continuity",
+  "git_sha": "0152c21692a03d9c9bcc71b80fd28edbdf577264",
+  "timestamp": "2026-09-05T22:31:33.945432+00:00",
+  "runtime": "mac-brain",
+  "model": "qwen3:8b",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-133",
+      "C-152",
+      "C-154"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-154",
+      "turn_index": 0,
+      "user_text": "Tell me about the Model Y.",
+      "heard_text": "",
+      "response_text": "The Model Y is Tesla\u2019s all-electric SUV, known for its sleek design, powerful electric powertrain, and advanced Autopilot features. It offers a range of up to 330 miles on a single charge and comes with a suite of safety tech and over-the-air updates. A versatile family vehicle with a focus on performance and sustainability.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "explicit tell-me-about request",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "The Model Y is Tesla\u2019s all-electric SUV, known for its sleek design, powerful electric powertrain, and advanced Autopilot features. It offers a range of up to 330 miles on a single charge and comes with a suite of safety tech and over-the-air updates. A versatile family vehicle with a focus on performance and sustainability.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.05,
+              "referents": 0.05,
+              "packet": 0.21,
+              "supplements": 0.11,
+              "plan_render": 0.01,
+              "route": 0.01,
+              "compose": 14696.7,
+              "critic": 0.03
+            },
+            "context_tokens": 310,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 568,
+          "text": "The Model Y is Tesla\u2019s all-electric SUV, known for its sleek design, powerful electric powertrain, and advanced Autopilot features. It offers a range of up to 330 miles on a single charge and comes with a suite of safety tech and over-the-air updates. A versatile family vehicle with a focus on performance and sustainability.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me about the Model Y.",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me about the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.05,
+        "referents": 0.05,
+        "packet": 0.21,
+        "supplements": 0.11,
+        "plan_render": 0.01,
+        "route": 0.01,
+        "compose": 14696.7,
+        "critic": 0.03
+      },
+      "context_tokens": 310,
+      "latency_ms": 14698.4,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-154",
+      "turn_index": 1,
+      "user_text": "Why?",
+      "heard_text": "",
+      "response_text": "The Model Y\u2019s range of up to 330 miles makes it ideal for long trips, and its Autopilot system keeps pace with tech trends. Want to know more about its charging speed or cargo space?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "EXPLANATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "bare wh-follow-up continues the active topic",
+        "needs_clarification": false
+      },
+      "referents": {
+        "(implicit subject)": "Model Y"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "The Model Y\u2019s range of up to 330 miles makes it ideal for long trips, and its Autopilot system keeps pace with tech trends. Want to know more about its charging speed or cargo space?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "EXPLANATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "bare wh-follow-up continues the active topic",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "(implicit subject)": "Model Y"
+              },
+              "ambiguous": [],
+              "confidence": 0.55
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.651,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.11,
+              "referents": 0.16,
+              "packet": 0.69,
+              "supplements": 0.1,
+              "plan_render": 0.05,
+              "route": 0.03,
+              "compose": 13950.54,
+              "critic": 0.04
+            },
+            "context_tokens": 416,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 900,
+          "text": "The Model Y\u2019s range of up to 330 miles makes it ideal for long trips, and its Autopilot system keeps pace with tech trends. Want to know more about its charging speed or cargo space?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Why?",
+            "intent": {
+              "intent": "EXPLANATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "bare wh-follow-up continues the active topic",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "(implicit subject)": "Model Y"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: The Model Y is Tesla\u2019s all-electric SUV, known for its sleek design, powerful electric powertrain, and advanced Autopilot features. It offers a range of up to 330 miles on a single charge and comes with a suite of safety tech and over-the-air updates. A versatile family vehicle with a focus on perfo"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Why?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent EXPLANATION_REQUEST",
+              "stay grounded on Model Y",
+              "continuing about Model Y \u2014 answer on this subject, do not deflect"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.651,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.11,
+        "referents": 0.16,
+        "packet": 0.69,
+        "supplements": 0.1,
+        "plan_render": 0.05,
+        "route": 0.03,
+        "compose": 13950.54,
+        "critic": 0.04
+      },
+      "context_tokens": 416,
+      "latency_ms": 13953.2,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "EXPLANATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "bare wh-follow-up continues the active topic",
+    "needs_clarification": false
+  },
+  "referents": {
+    "(implicit subject)": "Model Y"
+  },
+  "context": {
+    "trace": {
+      "conclusion": "The Model Y\u2019s range of up to 330 miles makes it ideal for long trips, and its Autopilot system keeps pace with tech trends. Want to know more about its charging speed or cargo space?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "EXPLANATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "bare wh-follow-up continues the active topic",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {
+            "(implicit subject)": "Model Y"
+          },
+          "ambiguous": [],
+          "confidence": 0.55
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [
+            "Model Y"
+          ],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.651,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 0.11,
+          "referents": 0.16,
+          "packet": 0.69,
+          "supplements": 0.1,
+          "plan_render": 0.05,
+          "route": 0.03,
+          "compose": 13950.54,
+          "critic": 0.04
+        },
+        "context_tokens": 416,
+        "context_counts": {
+          "memories": 0,
+          "world_facts": 1,
+          "history": 1
+        },
+        "turn": 1
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 900,
+      "text": "The Model Y\u2019s range of up to 330 miles makes it ideal for long trips, and its Autopilot system keeps pace with tech trends. Want to know more about its charging speed or cargo space?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "Why?",
+        "intent": {
+          "intent": "EXPLANATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "bare wh-follow-up continues the active topic",
+          "needs_clarification": false
+        },
+        "resolved_entities": {
+          "(implicit subject)": "Model Y"
+        },
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Model Y"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "Model Y",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: Tell me about the Model Y. / novi: The Model Y is Tesla\u2019s all-electric SUV, known for its sleek design, powerful electric powertrain, and advanced Autopilot features. It offers a range of up to 330 miles on a single charge and comes with a suite of safety tech and over-the-air updates. A versatile family vehicle with a focus on perfo"
+        ],
+        "relevant_memories": [],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'Why?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent EXPLANATION_REQUEST",
+          "stay grounded on Model Y",
+          "continuing about Model Y \u2014 answer on this subject, do not deflect"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [
+      "Model Y"
+    ],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "The Model Y\u2019s range of up to 330 miles makes it ideal for long trips, and its Autopilot system keeps pace with tech trends. Want to know more about its charging speed or cargo space?",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.651,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 13953.2,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
