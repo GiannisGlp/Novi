@@ -2177,6 +2177,28 @@ class ChatMixin:
                                "grounding": out.get("grounding") or {}}
             except Exception:  # noqa: BLE001 - slot guardrail never breaks chat
                 pass
+        # C-161: a direct answer that tacks on a trailing follow-up-ask
+        # ("Does that align with what you've heard?", "Want me to go deeper?")
+        # turns a complete answer into an unnecessary question. When the reply
+        # to a direct-answer goal has >=2 sentences and its LAST sentence is a
+        # follow-up ask, drop that sentence (keep the substantive answer).
+        if conv and out.get("text"):
+            try:
+                plan_goal = str(getattr(conv.get("plan"), "goal", "") or "")
+                if plan_goal in ("ANSWER_DIRECTLY", "EXPLAIN", "COMPARE",
+                                 "CONTINUE_SOCIAL_CONVERSATION"):
+                    _txt = str(out.get("text") or "").strip()
+                    if _txt.endswith("?"):
+                        _sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", _txt) if s.strip()]
+                        if len(_sentences) >= 2:
+                            _last = _sentences[-1].lstrip().lower()
+                            if re.match(r"^(and |does |do |is |would |are |have |want |what about|how about|which |did |can |should )", _last):
+                                cleaned = " ".join(_sentences[:-1]).strip()
+                                if cleaned:
+                                    out = {"text": cleaned, "fallback": True,
+                                           "grounding": out.get("grounding") or {}}
+            except Exception:  # noqa: BLE001 - follow-up-ask guardrail never breaks chat
+                pass
         # @skill convention (plan 16 P2): the model may request one exact
         # computation. Parse strictly against the known runnable catalog,
         # execute through governed invocation, then compose the final natural

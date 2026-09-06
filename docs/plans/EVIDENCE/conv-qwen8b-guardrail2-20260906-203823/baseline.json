@@ -1,0 +1,74 @@
+{
+  "schema": "conversation-baseline/v1",
+  "timestamp": "2026-09-06T19:41:31.030450+00:00",
+  "git_sha": "3bc4a130611f3298e0a7eded1390a9395553e850",
+  "runtime": "mac-brain",
+  "model": "qwen3:8b",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "llm_server": "ollama",
+    "scenarios": [
+      "C-002",
+      "C-120",
+      "C-150",
+      "C-154",
+      "C-161"
+    ]
+  },
+  "totals": {
+    "scenarios": 5,
+    "passed": 4,
+    "pass_rate": 0.8
+  },
+  "by_dimension": {
+    "Clarification quality": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Context continuity": {
+      "scenarios": 2,
+      "passed": 2,
+      "pass_rate": 1.0
+    },
+    "Correction handling": {
+      "scenarios": 1,
+      "passed": 1,
+      "pass_rate": 1.0
+    },
+    "Referent resolution": {
+      "scenarios": 1,
+      "passed": 0,
+      "pass_rate": 0.0
+    }
+  },
+  "label_counts": {
+    "UNNECESSARY_CLARIFICATION": 1
+  },
+  "metrics": {
+    "turns": 11,
+    "mean_stage_ms": {
+      "compose": 15744.01,
+      "critic": 0.04,
+      "intent": 0.15,
+      "packet": 0.57,
+      "plan_render": 0.04,
+      "referents": 0.12,
+      "route": 0.07,
+      "state": 0.04,
+      "supplements": 0.53
+    },
+    "mean_context_tokens": 370.18,
+    "mean_memories_per_turn": 0.36,
+    "mean_world_facts_per_turn": 1.0,
+    "clarification_rate": 0.091,
+    "critic_reject_rate": 0.273,
+    "repair_rate": 0.091,
+    "tier_distribution": {
+      "FAST": 10,
+      "NORMAL": 1
+    }
+  },
+  "status": "FAIL"
+}
