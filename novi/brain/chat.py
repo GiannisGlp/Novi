@@ -768,8 +768,6 @@ class ChatMixin:
             "Adopt that register. "
             "Show a real, consistent character in how you react — react to what the person says (a bit of warmth, curiosity, dry humour, or concern as fits), "
             "not like a neutral narrator, therapist, coach, or customer-service agent. "
-            "Show a real, consistent character in how you react — react to what the person says (a bit of warmth, curiosity, dry humour, or concern as fits), "
-            "not like a neutral narrator, therapist, coach, or customer-service agent. "
             "Let your character show through concrete reactions rather than describing it. "
             "Don't over-explain what you are, your 'system', or your embodiment unless directly asked — just answer what the person said naturally. "
             "You have no body: you can't go places, run errands, eat, drink, or have physical life events. "
@@ -1846,7 +1844,16 @@ class ChatMixin:
             system += "\n\n" + skill_guidance
             self._emit("skill.applied", {"cycle": self._cycle, "skills": [s for s in skills_applied if s != "humanizer"], "source": "instruction_match"})
         if humanizer_block:
-            system += "\n\n" + humanizer_block
+            # Prompt budget: the full humanizer style guide is ~3.7KB (~1.1K
+            # tokens) per turn. Only its essential opening paragraphs are kept
+            # as a compact directive; the persona already carries the core
+            # style contract. Cuts the largest single block of the prompt.
+            _compact = "\n\n".join(
+                str(p) for p in str(humanizer_block).split("\n\n")[:3]
+            )
+            if len(_compact) > 700:
+                _compact = _compact[:700].rsplit(" ", 1)[0]
+            system += "\n\n" + _compact
         # Skill awareness (plan 16 P2): the model is told which runnable
         # skills exist so it can request one with a strict '@skill' directive
         # line, which the engine parses and executes deterministically.
