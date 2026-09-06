@@ -2025,17 +2025,14 @@ class ChatMixin:
             "user_says": text,
             "facts_i_know": facts,
             "conversation_so_far": history or [],
-            "my_tone": self_state.get("tone"),
             "self_state": self_state,
             "surroundings": surroundings,
             "relationship": relationship,
-            "self_model": self_model,
             "experience": experience,
             "world_context": world_context,
             "vocabulary_scope": self._vocabulary_scope_for(person or addressee_name),
             "dialogue_context": dialogue_ctx,
             "conversation_state": conv_state,
-            "model_route": model_route,
         }
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")
