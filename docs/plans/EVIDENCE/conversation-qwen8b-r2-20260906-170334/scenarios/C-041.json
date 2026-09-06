@@ -1,0 +1,1383 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-041",
+  "title": "Repeated correction",
+  "dimension": "Correction handling",
+  "git_sha": "832f230fb5d85e8ecfb8bb4540e696a91c8354aa",
+  "timestamp": "2026-09-06T16:13:26.877176+00:00",
+  "runtime": "mac-brain",
+  "model": "qwen3:8b",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "llm_server": "ollama",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133",
+      "C-140",
+      "C-141",
+      "C-142",
+      "C-143",
+      "C-144",
+      "C-145",
+      "C-146",
+      "C-147",
+      "C-150",
+      "C-151",
+      "C-152",
+      "C-153",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-162",
+      "C-170",
+      "C-171",
+      "C-172",
+      "C-173",
+      "C-163"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-041",
+      "turn_index": 0,
+      "user_text": "Tell me about the Model Y.",
+      "heard_text": "",
+      "response_text": "The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "explicit tell-me-about request",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.06,
+              "intent": 0.09,
+              "referents": 0.07,
+              "packet": 0.29,
+              "supplements": 0.15,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 7152.6,
+              "critic": 0.03
+            },
+            "context_tokens": 310,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 568,
+          "text": "The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me about the Model Y.",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me about the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.06,
+        "intent": 0.09,
+        "referents": 0.07,
+        "packet": 0.29,
+        "supplements": 0.15,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 7152.6,
+        "critic": 0.03
+      },
+      "context_tokens": 310,
+      "latency_ms": 7155.5,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-041",
+      "turn_index": 1,
+      "user_text": "No, I meant the Model 3.",
+      "heard_text": "",
+      "response_text": "It\u2019s Tesla\u2019s more affordable electric sedan, right? Sleek, practical, and great for daily drives. Want to know more about its specs or features?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "CORRECTION",
+        "dialogue_act": "CORRECTION",
+        "confidence": 0.9,
+        "reason": "explicit correction cue",
+        "needs_clarification": false
+      },
+      "referents": {
+        "the model": "Model Y"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "It\u2019s Tesla\u2019s more affordable electric sedan, right? Sleek, practical, and great for daily drives. Want to know more about its specs or features?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "CORRECTION",
+              "dialogue_act": "CORRECTION",
+              "confidence": 0.9,
+              "reason": "explicit correction cue",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "the model": "Model Y"
+              },
+              "ambiguous": [],
+              "confidence": 0.7
+            },
+            "response_goal": {
+              "goal": "CORRECT",
+              "must_include": [
+                "acknowledgement of the correction"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "defense of the prior interpretation"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "correction: update context, never defend the error"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.875,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "NORMAL",
+              "model": "qwen3:8b",
+              "signals": {
+                "task_complexity": 0.6,
+                "uncertainty": 0.1,
+                "reasoning_depth": 0.7
+              }
+            },
+            "stage_ms": {
+              "state": 0.01,
+              "intent": 0.08,
+              "referents": 0.09,
+              "packet": 0.38,
+              "supplements": 0.05,
+              "plan_render": 0.03,
+              "route": 0.02,
+              "compose": 8950.78,
+              "critic": 0.06
+            },
+            "context_tokens": 479,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "NORMAL",
+            "model": "qwen3:8b",
+            "signals": {
+              "task_complexity": 0.6,
+              "uncertainty": 0.1,
+              "reasoning_depth": 0.7
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 900,
+          "text": "It\u2019s Tesla\u2019s more affordable electric sedan, right? Sleek, practical, and great for daily drives. Want to know more about its specs or features?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "No, I meant the Model 3.",
+            "intent": {
+              "intent": "CORRECTION",
+              "dialogue_act": "CORRECTION",
+              "confidence": 0.9,
+              "reason": "explicit correction cue",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "the model": "Model Y"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y",
+              "Model 3"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model 3",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "No, I meant the Model 3.",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "Tell me about the Model Y.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'No, I meant the Model 3.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent CORRECTION",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CORRECT",
+        "must_include": [
+          "acknowledgement of the correction"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "defense of the prior interpretation"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "correction: update context, never defend the error"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.875,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.01,
+        "intent": 0.08,
+        "referents": 0.09,
+        "packet": 0.38,
+        "supplements": 0.05,
+        "plan_render": 0.03,
+        "route": 0.02,
+        "compose": 8950.78,
+        "critic": 0.06
+      },
+      "context_tokens": 479,
+      "latency_ms": 8953.3,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-041",
+      "turn_index": 2,
+      "user_text": "What colors are available?",
+      "heard_text": "",
+      "response_text": "The Model 3 typically comes in a range of colors, though I don\u2019t have real-time details. Common options include Midnight Blue, Silver, Black, and White \u2014 but I\u2019ll double-check if you\u2019d like! What else about the Model 3 are you curious about?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 2
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {
+        "(implicit subject)": "Model 3"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "The Model 3 typically comes in a range of colors, though I don\u2019t have real-time details. Common options include Midnight Blue, Silver, Black, and White \u2014 but I\u2019ll double-check if you\u2019d like! What else about the Model 3 are you curious about?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "(implicit subject)": "Model 3"
+              },
+              "ambiguous": [],
+              "confidence": 0.55
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model 3"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "No, I meant the Model 3."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.0,
+                "non_repetition": 0.949,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "grounding"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.2,
+              "referents": 0.36,
+              "packet": 1.14,
+              "supplements": 0.56,
+              "plan_render": 0.03,
+              "route": 0.03,
+              "compose": 27461.18,
+              "critic": 0.13
+            },
+            "context_tokens": 546,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 2
+            },
+            "turn": 2
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "grounding"
+            ],
+            "failed_after": [
+              "grounding"
+            ],
+            "accepted": false
+          },
+          "conv_block_chars": 900,
+          "text": "The Model 3 typically comes in a range of colors, though I don\u2019t have real-time details. Common options include Midnight Blue, Silver, Black, and White \u2014 but I\u2019ll double-check if you\u2019d like! What else about the Model 3 are you curious about?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "What colors are available?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "(implicit subject)": "Model 3"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y",
+              "Model 3"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model 3",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "It\u2019s Tesla\u2019s more affordable electric sedan, right? Sleek, practical, and great for daily drives. Want to know more about its specs or features?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "No, I meant the Model 3.",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?",
+              "user: No, I meant the Model 3. / novi: It\u2019s Tesla\u2019s more affordable electric sedan, right? Sleek, practical, and great for daily drives. Want to know more about its specs or features?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "No, I meant the Model 3.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_correction",
+                "confidence": 0.65,
+                "why_selected": "explicit correction supersedes older claims"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'What colors are available?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model 3",
+              "continuing about Model 3 \u2014 answer on this subject, do not deflect"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model 3"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "No, I meant the Model 3."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.0,
+          "non_repetition": 0.949,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "grounding"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.2,
+        "referents": 0.36,
+        "packet": 1.14,
+        "supplements": 0.56,
+        "plan_render": 0.03,
+        "route": 0.03,
+        "compose": 27461.18,
+        "critic": 0.13
+      },
+      "context_tokens": 546,
+      "latency_ms": 27466.4,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-041",
+      "turn_index": 3,
+      "user_text": "And for the Model 3, what about the range?",
+      "heard_text": "",
+      "response_text": "Do you mean Model 3 or Model Y?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 3
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Do you mean Model 3 or Model Y?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [
+                "the model"
+              ],
+              "confidence": 0.35
+            },
+            "response_goal": {
+              "goal": "ASK_CLARIFICATION",
+              "must_include": [
+                "Model 3",
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": true,
+              "reason": "ambiguous referents: short specific question"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.923,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.22,
+              "referents": 0.25,
+              "packet": 1.27,
+              "supplements": 0.73,
+              "plan_render": 0.05,
+              "route": 0.05,
+              "compose": 21667.09,
+              "critic": 0.06
+            },
+            "context_tokens": 715,
+            "context_counts": {
+              "memories": 2,
+              "world_facts": 1,
+              "history": 3
+            },
+            "turn": 3
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 900,
+          "text": "Do you mean Model 3 or Model Y?",
+          "fallback": true,
+          "grounding": {},
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "And for the Model 3, what about the range?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [
+              "the model"
+            ],
+            "active_entities": [
+              "Model Y",
+              "Model 3"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model 3",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "The Model 3 typically comes in a range of colors, though I don\u2019t have real-time details. Common options include Midnight Blue, Silver, Black, and White \u2014 but I\u2019ll double-check if you\u2019d like! What else",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "No, I meant the Model 3.",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?",
+              "user: No, I meant the Model 3. / novi: It\u2019s Tesla\u2019s more affordable electric sedan, right? Sleek, practical, and great for daily drives. Want to know more about its specs or features?",
+              "user: What colors are available? / novi: The Model 3 typically comes in a range of colors, though I don\u2019t have real-time details. Common options include Midnight Blue, Silver, Black, and White \u2014 but I\u2019ll double-check if you\u2019d like! What else about the Model 3 are you curious about?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "Tell me about the Model Y.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              },
+              {
+                "content": "No, I meant the Model 3.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'And for the Model 3, what about the range?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "ambiguous referent: the model"
+            ],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "ambiguous referent (the model) among Model 3, Model Y \u2014 ask which one, do not assume",
+              "ask a short specific clarification only if ambiguity changes the answer"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ASK_CLARIFICATION",
+        "must_include": [
+          "Model 3",
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": true,
+        "reason": "ambiguous referents: short specific question"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.923,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.22,
+        "referents": 0.25,
+        "packet": 1.27,
+        "supplements": 0.73,
+        "plan_render": 0.05,
+        "route": 0.05,
+        "compose": 21667.09,
+        "critic": 0.06
+      },
+      "context_tokens": 715,
+      "latency_ms": 21672.3,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "INFORMATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "generic question shape",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "Do you mean Model 3 or Model Y?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [
+            "the model"
+          ],
+          "confidence": 0.35
+        },
+        "response_goal": {
+          "goal": "ASK_CLARIFICATION",
+          "must_include": [
+            "Model 3",
+            "Model Y"
+          ],
+          "may_include": [],
+          "must_not_include": [],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": true,
+          "reason": "ambiguous referents: short specific question"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.923,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.03,
+          "intent": 0.22,
+          "referents": 0.25,
+          "packet": 1.27,
+          "supplements": 0.73,
+          "plan_render": 0.05,
+          "route": 0.05,
+          "compose": 21667.09,
+          "critic": 0.06
+        },
+        "context_tokens": 715,
+        "context_counts": {
+          "memories": 2,
+          "world_facts": 1,
+          "history": 3
+        },
+        "turn": 3
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 900,
+      "text": "Do you mean Model 3 or Model Y?",
+      "fallback": true,
+      "grounding": {},
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "And for the Model 3, what about the range?",
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [
+          "the model"
+        ],
+        "active_entities": [
+          "Model Y",
+          "Model 3"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "Model 3",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "The Model 3 typically comes in a range of colors, though I don\u2019t have real-time details. Common options include Midnight Blue, Silver, Black, and White \u2014 but I\u2019ll double-check if you\u2019d like! What else",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "No, I meant the Model 3.",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. I can\u2019t access real-time data, but I can share general info if you\u2019d like. What specifically are you curious about?",
+          "user: No, I meant the Model 3. / novi: It\u2019s Tesla\u2019s more affordable electric sedan, right? Sleek, practical, and great for daily drives. Want to know more about its specs or features?",
+          "user: What colors are available? / novi: The Model 3 typically comes in a range of colors, though I don\u2019t have real-time details. Common options include Midnight Blue, Silver, Black, and White \u2014 but I\u2019ll double-check if you\u2019d like! What else about the Model 3 are you curious about?"
+        ],
+        "relevant_memories": [
+          {
+            "content": "Tell me about the Model Y.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          },
+          {
+            "content": "No, I meant the Model 3.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'And for the Model 3, what about the range?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [
+          "ambiguous referent: the model"
+        ],
+        "response_requirements": [
+          "address intent INFORMATION_REQUEST",
+          "ambiguous referent (the model) among Model 3, Model Y \u2014 ask which one, do not assume",
+          "ask a short specific clarification only if ambiguity changes the answer"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ASK_CLARIFICATION",
+    "must_include": [
+      "Model 3",
+      "Model Y"
+    ],
+    "may_include": [],
+    "must_not_include": [],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": true,
+    "reason": "ambiguous referents: short specific question"
+  },
+  "response": "Do you mean Model 3 or Model Y?",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.923,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 21672.3,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
