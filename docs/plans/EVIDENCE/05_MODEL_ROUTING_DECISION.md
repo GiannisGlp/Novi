@@ -42,3 +42,13 @@ variance**, not systematic class failures. See the pairwise ratings draft
 - Quantify residual variance with N-run repeats before treating any single
   run's 4 fails as regression.
 - Optional: reduce context further to make 8B LoRA training feasible.
+
+## Variance follow-up (2026-09-06 evening)
+Three full runs on current HEAD each landed at 64/68 with ROTATING failure
+sets (nemotron: C-040/C-154/C-161/C-172; qwen8b r1: C-003/C-082/C-160/C-172;
+qwen8b r2: C-032/C-040/C-143/C-172). Conclusion: individual run fails are
+mostly LLM noise; C-172 (correction without naming the subject) recurred in
+3/3 runs and is now fixed by a deterministic CORRECT-goal guardrail
+(verified C-040/C-143/C-172 PASS on qwen3:8b). C-032 (memory restraint)
+flip-flops across runs — a borderline relevance case, not a systematic
+regression.
