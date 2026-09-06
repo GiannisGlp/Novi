@@ -1,0 +1,797 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-161",
+  "title": "Full name beats shared token",
+  "dimension": "Referent resolution",
+  "git_sha": "cc85ba322b4f1bd6c3e422723c9079e98eb37b68",
+  "timestamp": "2026-09-06T08:55:27.464085+00:00",
+  "runtime": "mac-brain",
+  "model": "novi-trained:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "scenarios": [
+      "C-032",
+      "C-120",
+      "C-133",
+      "C-152",
+      "C-161"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-161",
+      "turn_index": 0,
+      "user_text": "The Model 3 is small. The Model Y is bigger.",
+      "heard_text": "",
+      "response_text": "I remember that.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "SOCIAL_CHAT",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.55,
+        "reason": "statement with no discriminating cues",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I remember that.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.45,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.04,
+              "intent": 0.07,
+              "referents": 0.08,
+              "packet": 0.4,
+              "supplements": 0.25,
+              "plan_render": 0.01,
+              "route": 0.02,
+              "compose": 4386.8,
+              "critic": 0.01
+            },
+            "context_tokens": 332,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.45,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 530,
+          "text": "I remember that.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "The Model 3 is small. The Model Y is bigger.",
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model 3",
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'The Model 3 is small. The Model Y is bigger.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "low intent confidence (0.55) for SOCIAL_CHAT"
+            ],
+            "response_requirements": [
+              "address intent SOCIAL_CHAT",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.04,
+        "intent": 0.07,
+        "referents": 0.08,
+        "packet": 0.4,
+        "supplements": 0.25,
+        "plan_render": 0.01,
+        "route": 0.02,
+        "compose": 4386.8,
+        "critic": 0.01
+      },
+      "context_tokens": 332,
+      "latency_ms": 4389.3,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-161",
+      "turn_index": 1,
+      "user_text": "Tell me about the Model Y.",
+      "heard_text": "",
+      "response_text": "You said the Model 3 is small.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "explicit tell-me-about request",
+        "needs_clarification": false
+      },
+      "referents": {
+        "the model y": "Model Y"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "You said the Model 3 is small.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "the model y": "Model Y"
+              },
+              "ambiguous": [],
+              "confidence": 0.9
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "The Model 3 is small. The Model Y is bigger."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.0,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "grounding"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.11,
+              "referents": 0.27,
+              "packet": 0.54,
+              "supplements": 0.39,
+              "plan_render": 0.03,
+              "route": 0.02,
+              "compose": 15192.62,
+              "critic": 0.02
+            },
+            "context_tokens": 394,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "grounding"
+            ],
+            "failed_after": [
+              "grounding"
+            ],
+            "accepted": false
+          },
+          "conv_block_chars": 805,
+          "text": "You said the Model 3 is small.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me about the Model Y.",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "the model y": "Model Y"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model 3",
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: The Model 3 is small. The Model Y is bigger. / novi: I remember that."
+            ],
+            "relevant_memories": [
+              {
+                "content": "The Model 3 is small. The Model Y is bigger.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me about the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "The Model 3 is small. The Model Y is bigger."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.0,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "grounding"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.11,
+        "referents": 0.27,
+        "packet": 0.54,
+        "supplements": 0.39,
+        "plan_render": 0.03,
+        "route": 0.02,
+        "compose": 15192.62,
+        "critic": 0.02
+      },
+      "context_tokens": 394,
+      "latency_ms": 15195.8,
+      "failure_labels": [
+        "WRONG_REFERENT"
+      ],
+      "human_rating": null,
+      "result": "FAIL"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "INFORMATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "explicit tell-me-about request",
+    "needs_clarification": false
+  },
+  "referents": {
+    "the model y": "Model Y"
+  },
+  "context": {
+    "trace": {
+      "conclusion": "You said the Model 3 is small.",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "explicit tell-me-about request",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {
+            "the model y": "Model Y"
+          },
+          "ambiguous": [],
+          "confidence": 0.9
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [
+            "Model Y"
+          ],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [
+            "The Model 3 is small. The Model Y is bigger."
+          ],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.0,
+            "non_repetition": 1.0,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [
+            "grounding"
+          ],
+          "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+          "needs_repair": true
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 0.11,
+          "referents": 0.27,
+          "packet": 0.54,
+          "supplements": 0.39,
+          "plan_render": 0.03,
+          "route": 0.02,
+          "compose": 15192.62,
+          "critic": 0.02
+        },
+        "context_tokens": 394,
+        "context_counts": {
+          "memories": 1,
+          "world_facts": 1,
+          "history": 1
+        },
+        "turn": 1
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": true,
+        "failed": [
+          "grounding"
+        ],
+        "failed_after": [
+          "grounding"
+        ],
+        "accepted": false
+      },
+      "conv_block_chars": 805,
+      "text": "You said the Model 3 is small.",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "Tell me about the Model Y.",
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "explicit tell-me-about request",
+          "needs_clarification": false
+        },
+        "resolved_entities": {
+          "the model y": "Model Y"
+        },
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Model 3",
+          "Model Y"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "Model Y",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: The Model 3 is small. The Model Y is bigger. / novi: I remember that."
+        ],
+        "relevant_memories": [
+          {
+            "content": "The Model 3 is small. The Model Y is bigger.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'Tell me about the Model Y.', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent INFORMATION_REQUEST",
+          "stay grounded on Model Y"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [
+      "Model Y"
+    ],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [
+      "The Model 3 is small. The Model Y is bigger."
+    ],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "You said the Model 3 is small.",
+  "critic": {
+    "scores": {
+      "grounding": 0.0,
+      "non_repetition": 1.0,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [
+      "grounding"
+    ],
+    "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+    "needs_repair": true
+  },
+  "latency_ms": 15195.8,
+  "result": "FAIL",
+  "failure_labels": [
+    "WRONG_REFERENT"
+  ],
+  "human_rating": null
+}
