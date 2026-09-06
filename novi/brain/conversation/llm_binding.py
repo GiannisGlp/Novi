@@ -157,6 +157,10 @@ def _goal_directive(intent: Any, plan: Any) -> str:
                 + (f" with {resolved}." if resolved else ".")
                 + " Now answer their earlier question directly — give your "
                   "answer/opinion and do NOT ask another question.")
+    if goal == "CORRECT":
+        return ("- CORRECT: the user corrected the subject — acknowledge it and "
+                "answer about the CORRECTED subject, explicitly naming it "
+                "(e.g. 'the Model 3'). Do not keep describing the old one.")
     if goal in ("RECOMMEND", "ANSWER_DIRECTLY", "EXPLAIN", "COMPARE"):
         return ("- Ground your answer in the verified facts above; do not "
                 "substitute generic knowledge for them.")
@@ -195,6 +199,19 @@ def render_conversation_block(conv: Any) -> str:
             lines.append(
                 f"- (continuing about {implicit}) answer on this subject — "
                 "do not deflect or ask a counter-question")
+        # C-003: a terse attribute follow-up ("What about the range?", "And the
+        # price?") names no entity; its subject is the active entity. Bind it so
+        # the model answers about the active subject instead of echoing the
+        # question or asking "your angle on range?".
+        turn_text = str(getattr(packet, "current_turn", "") or "").strip()
+        intent_label = str(getattr(intent, "intent", "") or "").upper()
+        named = entity.lower() in turn_text.lower()
+        if (entity and not resolutions and not named and len(turn_text.split()) <= 8
+                and intent_label in ("INFORMATION_REQUEST", "FOLLOW_UP",
+                                     "EXPLANATION_REQUEST")):
+            lines.append(
+                f"- (implicit subject: {entity}) answer about {entity}'s "
+                "asked attribute directly — do not ask what the user means.")
         lines.append(f"- response goal: {getattr(plan, 'goal', '?')}")
         # C-072: the no-repeat directive is only actionable when the model can
         # SEE what it already said. Surface the prior reply early so it is not

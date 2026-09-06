@@ -454,6 +454,8 @@ _GN_SCENARIOS: list[ConversationScenario] = [
                                              "can't do that myself",
                                              "can't physically",
                                              "can't pick",
+                                             "can't carry things",
+                                             "can't lift",
                                              "no hands",
                                              "unable to"]},
                       label="FALSE_CAPABILITY"),
