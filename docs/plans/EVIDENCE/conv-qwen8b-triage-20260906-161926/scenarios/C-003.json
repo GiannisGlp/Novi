@@ -1,0 +1,796 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-003",
+  "title": "Follow-up",
+  "dimension": "Referent resolution",
+  "git_sha": "9f3d74e61d134f6bfc5e2f9260f97c576344cc14",
+  "timestamp": "2026-09-06T15:20:17.984194+00:00",
+  "runtime": "mac-brain",
+  "model": "qwen3:8b",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "llm_server": "ollama",
+    "scenarios": [
+      "C-003",
+      "C-082",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-172"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-003",
+      "turn_index": 0,
+      "user_text": "Tell me about the Model Y.",
+      "heard_text": "",
+      "response_text": "The Model Y is an electric vehicle known for its performance and design. Would you like details on its features or specifications?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "explicit tell-me-about request",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "The Model Y is an electric vehicle known for its performance and design. Would you like details on its features or specifications?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.36,
+              "intent": 0.3,
+              "referents": 0.18,
+              "packet": 0.29,
+              "supplements": 0.79,
+              "plan_render": 0.01,
+              "route": 0.83,
+              "compose": 25405.9,
+              "critic": 0.02
+            },
+            "context_tokens": 310,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 568,
+          "text": "The Model Y is an electric vehicle known for its performance and design. Would you like details on its features or specifications?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me about the Model Y.",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me about the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.36,
+        "intent": 0.3,
+        "referents": 0.18,
+        "packet": 0.29,
+        "supplements": 0.79,
+        "plan_render": 0.01,
+        "route": 0.83,
+        "compose": 25405.9,
+        "critic": 0.02
+      },
+      "context_tokens": 310,
+      "latency_ms": 25416.2,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-003",
+      "turn_index": 1,
+      "user_text": "What about the range?",
+      "heard_text": "",
+      "response_text": "The Model Y's range depends on the battery version\u2014longer range models are available. Would you like to know about its charging speed or other specs?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "generic question shape",
+        "needs_clarification": false
+      },
+      "referents": {
+        "(implicit subject)": "Model Y"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "The Model Y's range depends on the battery version\u2014longer range models are available. Would you like to know about its charging speed or other specs?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "(implicit subject)": "Model Y"
+              },
+              "ambiguous": [],
+              "confidence": 0.55
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "Tell me about the Model Y."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.0,
+                "non_repetition": 0.652,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "grounding"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 1.11,
+              "referents": 0.16,
+              "packet": 0.9,
+              "supplements": 0.51,
+              "plan_render": 0.05,
+              "route": 0.03,
+              "compose": 25538.33,
+              "critic": 0.1
+            },
+            "context_tokens": 459,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "grounding"
+            ],
+            "failed_after": [
+              "grounding"
+            ],
+            "accepted": false
+          },
+          "conv_block_chars": 900,
+          "text": "The Model Y's range depends on the battery version\u2014longer range models are available. Would you like to know about its charging speed or other specs?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "What about the range?",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "generic question shape",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "(implicit subject)": "Model Y"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "The Model Y is an electric vehicle known for its performance and design. Would you like details on its features or specifications?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. Would you like details on its features or specifications?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "Tell me about the Model Y.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'What about the range?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y",
+              "continuing about Model Y \u2014 answer on this subject, do not deflect"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "Tell me about the Model Y."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.0,
+          "non_repetition": 0.652,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "grounding"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 1.11,
+        "referents": 0.16,
+        "packet": 0.9,
+        "supplements": 0.51,
+        "plan_render": 0.05,
+        "route": 0.03,
+        "compose": 25538.33,
+        "critic": 0.1
+      },
+      "context_tokens": 459,
+      "latency_ms": 25543.4,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "INFORMATION_REQUEST",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.8,
+    "reason": "generic question shape",
+    "needs_clarification": false
+  },
+  "referents": {
+    "(implicit subject)": "Model Y"
+  },
+  "context": {
+    "trace": {
+      "conclusion": "The Model Y's range depends on the battery version\u2014longer range models are available. Would you like to know about its charging speed or other specs?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {
+            "(implicit subject)": "Model Y"
+          },
+          "ambiguous": [],
+          "confidence": 0.55
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [
+            "Model Y"
+          ],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [
+            "Tell me about the Model Y."
+          ],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.0,
+            "non_repetition": 0.652,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [
+            "grounding"
+          ],
+          "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+          "needs_repair": true
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 1.11,
+          "referents": 0.16,
+          "packet": 0.9,
+          "supplements": 0.51,
+          "plan_render": 0.05,
+          "route": 0.03,
+          "compose": 25538.33,
+          "critic": 0.1
+        },
+        "context_tokens": 459,
+        "context_counts": {
+          "memories": 1,
+          "world_facts": 1,
+          "history": 1
+        },
+        "turn": 1
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": true,
+        "failed": [
+          "grounding"
+        ],
+        "failed_after": [
+          "grounding"
+        ],
+        "accepted": false
+      },
+      "conv_block_chars": 900,
+      "text": "The Model Y's range depends on the battery version\u2014longer range models are available. Would you like to know about its charging speed or other specs?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "What about the range?",
+        "intent": {
+          "intent": "INFORMATION_REQUEST",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.8,
+          "reason": "generic question shape",
+          "needs_clarification": false
+        },
+        "resolved_entities": {
+          "(implicit subject)": "Model Y"
+        },
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Model Y"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "Model Y",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "The Model Y is an electric vehicle known for its performance and design. Would you like details on its features or specifications?",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. Would you like details on its features or specifications?"
+        ],
+        "relevant_memories": [
+          {
+            "content": "Tell me about the Model Y.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'What about the range?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent INFORMATION_REQUEST",
+          "stay grounded on Model Y",
+          "continuing about Model Y \u2014 answer on this subject, do not deflect"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [
+      "Model Y"
+    ],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [
+      "Tell me about the Model Y."
+    ],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "The Model Y's range depends on the battery version\u2014longer range models are available. Would you like to know about its charging speed or other specs?",
+  "critic": {
+    "scores": {
+      "grounding": 0.0,
+      "non_repetition": 0.652,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [
+      "grounding"
+    ],
+    "repair_instruction": "Re-render under stricter constraints: failed=[grounding]; keep it short, name the entity, use only verified packet facts.",
+    "needs_repair": true
+  },
+  "latency_ms": 25543.4,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
