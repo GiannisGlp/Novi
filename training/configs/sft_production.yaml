@@ -12,12 +12,14 @@ output_dir: training/models/adapters
 adapter_name: novi-qwen3-8b-dialogue-v2
 seed: 20260906
 min_examples: 200            # we have 263
-max_seq_len: 2048
+max_seq_len: 1024          # rows are short (persona+packet+utterance+reply);
+                           # 2048 on MPS/8B cost ~5.5h for 3 epochs (verified) —
+                           # 1024 keeps the same coverage at tractable time
 eval_after: true
 hyperparams:
   batch_size: 2
   learning_rate: 2.0e-4
-  epochs: 3
+  epochs: 2
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05

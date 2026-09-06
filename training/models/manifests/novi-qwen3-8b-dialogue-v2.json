@@ -1,0 +1,17 @@
+{
+  "model_id": "novi-qwen3-8b-dialogue-v2",
+  "base_model": "qwen3:8b",
+  "adapter_type": "lora",
+  "adapter_path": "training/models/adapters/novi-qwen3-8b-dialogue-v2-mlx",
+  "framework": "mlx",
+  "training_dataset": "sft_production_v1 (263 rows: PASS-envelope, reply_source=dialogue turns from live acceptance evidence)",
+  "training_commit": "cfabe77",
+  "training_config": "training/configs/sft_production.yaml",
+  "template": "production-parity ChatML: system(persona + packet-style context) + user(utterance) -> assistant",
+  "created_at": "2026-09-06T10:41:00+00:00",
+  "train_loss": 0.278,
+  "val_loss": 0.393,
+  "iters": 300,
+  "status": "candidate",
+  "notes": "Trained to remove the v1 echo/canned-template behavior ('Good question - what's your angle on X?') by matching the runtime prompt shape. Qualitative samples on previously-failing requests are grounded and natural. Publish-as-ollama-tag (GGUF LoRA conversion) and full live acceptance are pending follow-ups."
+}
