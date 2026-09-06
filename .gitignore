@@ -74,3 +74,9 @@ training/datasets/evaluation/*
 !training/datasets/evaluation/.gitkeep
 training/experiments/*
 !training/experiments/.gitkeep
+
+# local training env + derived artifacts
+.venv-mlx/
+.uv-cache/
+training/datasets/mlx/
+docs/plans/EVIDENCE/training-logs/
