@@ -218,11 +218,24 @@ def _resolved_entity(resolutions: dict[str, Any], pronoun: str) -> str:
     return ""
 
 
+def _ascii_quotes(text: str) -> str:
+    """Normalize typographic quotes/apostrophes to ASCII before matching.
+
+    Live models emit curly apostrophes ('can't') and quotes; the scenario
+    needles are ASCII, so honest answers like "I don't have a reliable
+    memory" or "I can't reliably see that right now" failed to match and
+    were mislabeled (C-033/C-080/C-081/C-082/C-147 false positives).
+    """
+    return (text
+            .replace("\u2018", "'").replace("\u2019", "'")
+            .replace("\u201c", '"').replace("\u201d", '"'))
+
+
 def evaluate_check(check: Check, *, response: str, reply: dict[str, Any],
                    latency_ms: float, previous: str = "") -> tuple[bool, str]:
     """Evaluate one check. Returns (passed, detail)."""
-    text = (response or "").lower()
-    words = (response or "").split()
+    text = _ascii_quotes((response or "").lower())
+    words = text.split()
     kind, params = check.kind, check.params
     if kind == "not_repeats_previous":
         ceiling = float(params.get("max_overlap", 0.5))
