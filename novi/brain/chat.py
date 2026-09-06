@@ -2134,6 +2134,30 @@ class ChatMixin:
                                "grounding": out.get("grounding") or {}}
             except Exception:  # noqa: BLE001 - clarification routing never breaks chat
                 pass
+        # C-040/C-143/C-172: a CORRECT-goal reply that never names the
+        # corrected subject (models describe it without the name, especially
+        # on voice/unpunctuated corrections) fails the correction checks and
+        # is confusing. Enforce the name deterministically by prefixing when
+        # the reply omits it.
+        if conv and out.get("text"):
+            try:
+                plan_goal = str(getattr(conv.get("plan"), "goal", "") or "")
+                if plan_goal == "CORRECT":
+                    from novi.brain.conversation.conversation_state import (
+                        mention_candidates,
+                        preferred_correction_entity,
+                    )
+                    from novi.brain.conversation.response_planner import packet_entities
+                    _txt = str(out.get("text") or "")
+                    _cur = str(getattr(conv.get("packet"), "current_turn", "") or "")
+                    _names = [str(p) for p in packet_entities(conv.get("packet"))]
+                    _target = preferred_correction_entity(mention_candidates(_cur), _cur) or (_names[0] if _names else "")
+                    if _target and _target.lower() not in _txt.lower():
+                        out = {"text": f"Got it — {_target}. {_txt}",
+                               "fallback": True,
+                               "grounding": out.get("grounding") or {}}
+            except Exception:  # noqa: BLE001 - correction guardrail never breaks chat
+                pass
         # C-150 guardrail: a closed slot must never be re-opened. The LLM can
         # ignore the repair instruction, so enforce deterministically — drop a
         # trailing question sentence on SLOT_ANSWER turns (re-asking what the

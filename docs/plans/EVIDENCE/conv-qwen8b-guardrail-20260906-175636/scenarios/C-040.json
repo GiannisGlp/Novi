@@ -1,0 +1,781 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-040",
+  "title": "Wrong interpretation",
+  "dimension": "Correction handling",
+  "git_sha": "832f230fb5d85e8ecfb8bb4540e696a91c8354aa",
+  "timestamp": "2026-09-06T16:58:07.694802+00:00",
+  "runtime": "mac-brain",
+  "model": "qwen3:8b",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "llm_server": "ollama",
+    "scenarios": [
+      "C-032",
+      "C-040",
+      "C-143",
+      "C-160",
+      "C-172"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-040",
+      "turn_index": 0,
+      "user_text": "Tell me about the Model Y.",
+      "heard_text": "",
+      "response_text": "The Model Y is an electric vehicle known for its performance and design. However, I don\u2019t have specific details about it. Would you like general information or something else?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "INFORMATION_REQUEST",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.8,
+        "reason": "explicit tell-me-about request",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "The Model Y is an electric vehicle known for its performance and design. However, I don\u2019t have specific details about it. Would you like general information or something else?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [
+                "Model Y"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.04,
+              "intent": 0.07,
+              "referents": 0.07,
+              "packet": 0.29,
+              "supplements": 0.15,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 28081.97,
+              "critic": 0.02
+            },
+            "context_tokens": 310,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 568,
+          "text": "The Model Y is an electric vehicle known for its performance and design. However, I don\u2019t have specific details about it. Would you like general information or something else?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Tell me about the Model Y.",
+            "intent": {
+              "intent": "INFORMATION_REQUEST",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.8,
+              "reason": "explicit tell-me-about request",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Tell me about the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent INFORMATION_REQUEST",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [
+          "Model Y"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.04,
+        "intent": 0.07,
+        "referents": 0.07,
+        "packet": 0.29,
+        "supplements": 0.15,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 28081.97,
+        "critic": 0.02
+      },
+      "context_tokens": 310,
+      "latency_ms": 28084.8,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-040",
+      "turn_index": 1,
+      "user_text": "No, I meant the Model 3, not the Model Y.",
+      "heard_text": "",
+      "response_text": "Apologies for the confusion \u2014 you meant the Model 3. I\u2019ll adjust and share what I can about it. Would you like general details or something specific?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "CORRECTION",
+        "dialogue_act": "CORRECTION",
+        "confidence": 0.9,
+        "reason": "explicit correction cue",
+        "needs_clarification": false
+      },
+      "referents": {
+        "the model": "Model Y",
+        "the model y": "Model Y"
+      },
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Apologies for the confusion \u2014 you meant the Model 3. I\u2019ll adjust and share what I can about it. Would you like general details or something specific?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "CORRECTION",
+              "dialogue_act": "CORRECTION",
+              "confidence": 0.9,
+              "reason": "explicit correction cue",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {
+                "the model": "Model Y",
+                "the model y": "Model Y"
+              },
+              "ambiguous": [],
+              "confidence": 0.9
+            },
+            "response_goal": {
+              "goal": "CORRECT",
+              "must_include": [
+                "acknowledgement of the correction"
+              ],
+              "may_include": [],
+              "must_not_include": [
+                "defense of the prior interpretation"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "correction: update context, never defend the error"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.517,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "NORMAL",
+              "model": "qwen3:8b",
+              "signals": {
+                "task_complexity": 0.6,
+                "uncertainty": 0.1,
+                "reasoning_depth": 0.7
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.15,
+              "referents": 0.32,
+              "packet": 0.81,
+              "supplements": 0.12,
+              "plan_render": 0.08,
+              "route": 0.03,
+              "compose": 22000.7,
+              "critic": 0.07
+            },
+            "context_tokens": 489,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "NORMAL",
+            "model": "qwen3:8b",
+            "signals": {
+              "task_complexity": 0.6,
+              "uncertainty": 0.1,
+              "reasoning_depth": 0.7
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "non_repetition"
+            ],
+            "failed_after": [],
+            "accepted": true
+          },
+          "conv_block_chars": 900,
+          "text": "Apologies for the confusion \u2014 you meant the Model 3. I\u2019ll adjust and share what I can about it. Would you like general details or something specific?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "No, I meant the Model 3, not the Model Y.",
+            "intent": {
+              "intent": "CORRECTION",
+              "dialogue_act": "CORRECTION",
+              "confidence": 0.9,
+              "reason": "explicit correction cue",
+              "needs_clarification": false
+            },
+            "resolved_entities": {
+              "the model": "Model Y",
+              "the model y": "Model Y"
+            },
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Model Y",
+              "Model 3"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Model 3",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "The Model Y is an electric vehicle known for its performance and design. However, I don\u2019t have specific details about it. Would you like general information or something else?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "No, I meant the Model 3, not the Model Y.",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. However, I don\u2019t have specific details about it. Would you like general information or something else?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "Tell me about the Model Y.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'No, I meant the Model 3, not the Model Y.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent CORRECTION",
+              "stay grounded on Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CORRECT",
+        "must_include": [
+          "acknowledgement of the correction"
+        ],
+        "may_include": [],
+        "must_not_include": [
+          "defense of the prior interpretation"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "correction: update context, never defend the error"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.517,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.15,
+        "referents": 0.32,
+        "packet": 0.81,
+        "supplements": 0.12,
+        "plan_render": 0.08,
+        "route": 0.03,
+        "compose": 22000.7,
+        "critic": 0.07
+      },
+      "context_tokens": 489,
+      "latency_ms": 22004.1,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "CORRECTION",
+    "dialogue_act": "CORRECTION",
+    "confidence": 0.9,
+    "reason": "explicit correction cue",
+    "needs_clarification": false
+  },
+  "referents": {
+    "the model": "Model Y",
+    "the model y": "Model Y"
+  },
+  "context": {
+    "trace": {
+      "conclusion": "Apologies for the confusion \u2014 you meant the Model 3. I\u2019ll adjust and share what I can about it. Would you like general details or something specific?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "CORRECTION",
+          "dialogue_act": "CORRECTION",
+          "confidence": 0.9,
+          "reason": "explicit correction cue",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {
+            "the model": "Model Y",
+            "the model y": "Model Y"
+          },
+          "ambiguous": [],
+          "confidence": 0.9
+        },
+        "response_goal": {
+          "goal": "CORRECT",
+          "must_include": [
+            "acknowledgement of the correction"
+          ],
+          "may_include": [],
+          "must_not_include": [
+            "defense of the prior interpretation"
+          ],
+          "required_evidence": [],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "correction: update context, never defend the error"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.517,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "NORMAL",
+          "model": "qwen3:8b",
+          "signals": {
+            "task_complexity": 0.6,
+            "uncertainty": 0.1,
+            "reasoning_depth": 0.7
+          }
+        },
+        "stage_ms": {
+          "state": 0.02,
+          "intent": 0.15,
+          "referents": 0.32,
+          "packet": 0.81,
+          "supplements": 0.12,
+          "plan_render": 0.08,
+          "route": 0.03,
+          "compose": 22000.7,
+          "critic": 0.07
+        },
+        "context_tokens": 489,
+        "context_counts": {
+          "memories": 1,
+          "world_facts": 1,
+          "history": 1
+        },
+        "turn": 1
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "NORMAL",
+        "model": "qwen3:8b",
+        "signals": {
+          "task_complexity": 0.6,
+          "uncertainty": 0.1,
+          "reasoning_depth": 0.7
+        }
+      },
+      "llm_repair": {
+        "attempted": true,
+        "failed": [
+          "non_repetition"
+        ],
+        "failed_after": [],
+        "accepted": true
+      },
+      "conv_block_chars": 900,
+      "text": "Apologies for the confusion \u2014 you meant the Model 3. I\u2019ll adjust and share what I can about it. Would you like general details or something specific?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "No, I meant the Model 3, not the Model Y.",
+        "intent": {
+          "intent": "CORRECTION",
+          "dialogue_act": "CORRECTION",
+          "confidence": 0.9,
+          "reason": "explicit correction cue",
+          "needs_clarification": false
+        },
+        "resolved_entities": {
+          "the model": "Model Y",
+          "the model y": "Model Y"
+        },
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Model Y",
+          "Model 3"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "Model 3",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "The Model Y is an electric vehicle known for its performance and design. However, I don\u2019t have specific details about it. Would you like general information or something else?",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "No, I meant the Model 3, not the Model Y.",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: Tell me about the Model Y. / novi: The Model Y is an electric vehicle known for its performance and design. However, I don\u2019t have specific details about it. Would you like general information or something else?"
+        ],
+        "relevant_memories": [
+          {
+            "content": "Tell me about the Model Y.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'No, I meant the Model 3, not the Model Y.', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent CORRECTION",
+          "stay grounded on Model Y"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "CORRECT",
+    "must_include": [
+      "acknowledgement of the correction"
+    ],
+    "may_include": [],
+    "must_not_include": [
+      "defense of the prior interpretation"
+    ],
+    "required_evidence": [],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "correction: update context, never defend the error"
+  },
+  "response": "Apologies for the confusion \u2014 you meant the Model 3. I\u2019ll adjust and share what I can about it. Would you like general details or something specific?",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.517,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 22004.1,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
