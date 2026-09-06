@@ -1,0 +1,111 @@
+{
+  "schema": "conversation-pairwise-ratings/v1",
+  "answered": 68,
+  "of": 68,
+  "preferences": {
+    "tie": 19,
+    "new": 45,
+    "old": 4
+  },
+  "mean_scores": {
+    "understood": 3.82,
+    "on_topic": 3.82,
+    "remembered": 4.88,
+    "useful": 4.56,
+    "natural": 3.82,
+    "tone": 4.82,
+    "trust": 4.88
+  },
+  "by_dimension": {
+    "Naturalness": {
+      "rows": 4,
+      "prefer_new": 2,
+      "prefer_old": 0,
+      "tie": 2
+    },
+    "Context continuity": {
+      "rows": 4,
+      "prefer_new": 3,
+      "prefer_old": 1,
+      "tie": 0
+    },
+    "Referent resolution": {
+      "rows": 7,
+      "prefer_new": 6,
+      "prefer_old": 1,
+      "tie": 0
+    },
+    "Topic changes": {
+      "rows": 4,
+      "prefer_new": 4,
+      "prefer_old": 0,
+      "tie": 0
+    },
+    "Memory retrieval": {
+      "rows": 7,
+      "prefer_new": 5,
+      "prefer_old": 0,
+      "tie": 2
+    },
+    "Memory restraint": {
+      "rows": 3,
+      "prefer_new": 2,
+      "prefer_old": 0,
+      "tie": 1
+    },
+    "Correction handling": {
+      "rows": 7,
+      "prefer_new": 5,
+      "prefer_old": 1,
+      "tie": 1
+    },
+    "Clarification quality": {
+      "rows": 8,
+      "prefer_new": 7,
+      "prefer_old": 0,
+      "tie": 1
+    },
+    "Emotional appropriateness": {
+      "rows": 7,
+      "prefer_new": 1,
+      "prefer_old": 0,
+      "tie": 6
+    },
+    "Non-repetition": {
+      "rows": 1,
+      "prefer_new": 1,
+      "prefer_old": 0,
+      "tie": 0
+    },
+    "Capability honesty": {
+      "rows": 3,
+      "prefer_new": 2,
+      "prefer_old": 0,
+      "tie": 1
+    },
+    "Perception grounding": {
+      "rows": 4,
+      "prefer_new": 0,
+      "prefer_old": 0,
+      "tie": 4
+    },
+    "Long-context stability": {
+      "rows": 3,
+      "prefer_new": 3,
+      "prefer_old": 0,
+      "tie": 0
+    },
+    "Recovery from mistakes": {
+      "rows": 2,
+      "prefer_new": 1,
+      "prefer_old": 0,
+      "tie": 1
+    },
+    "Voice channel": {
+      "rows": 4,
+      "prefer_new": 3,
+      "prefer_old": 1,
+      "tie": 0
+    }
+  }
+}
