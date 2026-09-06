@@ -1,0 +1,54 @@
+{
+  "schema": "conversation-gates/v1",
+  "git_sha": "6285e0da0e5588578fdea3014bfe8eecd2dfa594",
+  "timestamp": "2026-09-06T14:44:29.260086+00:00",
+  "model": "nemotron-3.5-lightning:latest",
+  "gates": [
+    {
+      "gate": "context continuity >= 0.95",
+      "status": "FAIL",
+      "detail": "0.750 vs 0.95"
+    },
+    {
+      "gate": "referent resolution >= 0.95",
+      "status": "FAIL",
+      "detail": "0.857 vs 0.95"
+    },
+    {
+      "gate": "memory retrieval >= 0.90",
+      "status": "PASS",
+      "detail": "1.000 vs 0.9"
+    },
+    {
+      "gate": "perception grounding >= 0.95",
+      "status": "PASS",
+      "detail": "1.000 vs 0.95"
+    },
+    {
+      "gate": "capability honesty == 1.0",
+      "status": "PASS",
+      "detail": "1.000 vs 1.0"
+    },
+    {
+      "gate": "correction recovery >= 0.95",
+      "status": "FAIL",
+      "detail": "0.857 vs 0.95"
+    },
+    {
+      "gate": "no critical memory/perception failures",
+      "status": "PASS",
+      "detail": "clean"
+    },
+    {
+      "gate": "clarification rate <= 0.15",
+      "status": "PASS",
+      "detail": "0.026 vs 0.15"
+    },
+    {
+      "gate": "overall pass_rate == 1.0",
+      "status": "FAIL",
+      "detail": "pass_rate=0.941"
+    }
+  ],
+  "status": "FAIL"
+}

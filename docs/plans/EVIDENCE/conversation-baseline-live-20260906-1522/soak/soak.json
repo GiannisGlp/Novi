@@ -1,0 +1,92 @@
+{
+  "schema": "conversation-soak/v1",
+  "timestamp": "2026-09-06T15:19:07.813719+00:00",
+  "git_sha": "6285e0da0e5588578fdea3014bfe8eecd2dfa594",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "turns": 300,
+    "probe_every": 50,
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "min_live_ratio": 0.5,
+    "ticks_between_turns": 3
+  },
+  "duration_s": 2077.9,
+  "turns_run": 307,
+  "errors": 0,
+  "live_engagement": {
+    "script_turns": 300,
+    "live_turns": 256,
+    "ratio": 0.853,
+    "min_live_ratio": 0.5,
+    "route_counts": {
+      "deterministic": 39,
+      "dialogue": 256,
+      "greeting": 5
+    }
+  },
+  "latency_ms": {
+    "mean": 6776.8,
+    "max": 14837.2,
+    "first_half_mean": 6808.6,
+    "last_half_mean": 6745.0,
+    "drift_factor": 0.99
+  },
+  "memory_probes": {
+    "passed": 6,
+    "of": 6,
+    "probes": [
+      {
+        "after_turn": 50,
+        "passed": true,
+        "latency_ms": 9526.1
+      },
+      {
+        "after_turn": 100,
+        "passed": true,
+        "latency_ms": 4725.1
+      },
+      {
+        "after_turn": 150,
+        "passed": true,
+        "latency_ms": 8942.6
+      },
+      {
+        "after_turn": 200,
+        "passed": true,
+        "latency_ms": 6.2
+      },
+      {
+        "after_turn": 250,
+        "passed": true,
+        "latency_ms": 9465.2
+      },
+      {
+        "after_turn": 300,
+        "passed": true,
+        "latency_ms": 4402.2
+      }
+    ]
+  },
+  "growth": {
+    "db_bytes_start": 4096,
+    "db_bytes_end": 303104,
+    "rss_mib_start": 49.45,
+    "rss_mib_end": 54.02
+  },
+  "state_bounds": {
+    "speakers": 1,
+    "active_entities": 8,
+    "recent_turns": 12,
+    "within_bounds": true
+  },
+  "checks": {
+    "no_errors": true,
+    "probes_pass": true,
+    "latency_bounded": true,
+    "state_bounded": true,
+    "live_engaged": true
+  },
+  "status": "PASS"
+}

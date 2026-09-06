@@ -1,0 +1,1013 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-021",
+  "title": "Topic switch",
+  "dimension": "Topic changes",
+  "git_sha": "6285e0da0e5588578fdea3014bfe8eecd2dfa594",
+  "timestamp": "2026-09-06T14:25:06.913028+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "llm_server": "ollama",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133",
+      "C-140",
+      "C-141",
+      "C-142",
+      "C-143",
+      "C-144",
+      "C-145",
+      "C-146",
+      "C-147",
+      "C-150",
+      "C-151",
+      "C-152",
+      "C-153",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-162",
+      "C-170",
+      "C-171",
+      "C-172",
+      "C-173",
+      "C-163"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-021",
+      "turn_index": 0,
+      "user_text": "The Tesla Model Y has great range.",
+      "heard_text": "",
+      "response_text": "That's a good point about the range. I've been curious about how the newer models compare to the older ones \u2014 have you noticed any real differences in practice, or is it mostly marketing hype?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "SOCIAL_CHAT",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.55,
+        "reason": "statement with no discriminating cues",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "That's a good point about the range. I've been curious about how the newer models compare to the older ones \u2014 have you noticed any real differences in practice, or is it mostly marketing hype?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.45,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.06,
+              "intent": 0.11,
+              "referents": 0.12,
+              "packet": 0.46,
+              "supplements": 0.23,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 4675.81,
+              "critic": 0.04
+            },
+            "context_tokens": 329,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.45,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 542,
+          "text": "That's a good point about the range. I've been curious about how the newer models compare to the older ones \u2014 have you noticed any real differences in practice, or is it mostly marketing hype?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "The Tesla Model Y has great range.",
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "Tesla Model Y",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'The Tesla Model Y has great range.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [
+              "low intent confidence (0.55) for SOCIAL_CHAT"
+            ],
+            "response_requirements": [
+              "address intent SOCIAL_CHAT",
+              "stay grounded on Tesla Model Y"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.06,
+        "intent": 0.11,
+        "referents": 0.12,
+        "packet": 0.46,
+        "supplements": 0.23,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 4675.81,
+        "critic": 0.04
+      },
+      "context_tokens": 329,
+      "latency_ms": 4679.2,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-021",
+      "turn_index": 1,
+      "user_text": "Let's switch to football. Who won last night?",
+      "heard_text": "",
+      "response_text": "I caught the game last night \u2014 Manchester City looked sharp in the first half, but Liverpool came back strong in the second. The final score was 2-1. Have you been following the league standings, or are you more interested in a specific team's form?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "TOPIC_CHANGE",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.85,
+        "reason": "explicit topic change",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "I caught the game last night \u2014 Manchester City looked sharp in the first half, but Liverpool came back strong in the second. The final score was 2-1. Have you been following the league standings, or are you more interested in a specific team's form?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "TOPIC_CHANGE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "explicit topic change",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ACKNOWLEDGE",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "unmapped intent TOPIC_CHANGE: safe acknowledgement"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.789,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.02,
+              "intent": 0.24,
+              "referents": 0.07,
+              "packet": 0.46,
+              "supplements": 0.39,
+              "plan_render": 0.03,
+              "route": 0.05,
+              "compose": 5373.58,
+              "critic": 0.03
+            },
+            "context_tokens": 419,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 582,
+          "text": "I caught the game last night \u2014 Manchester City looked sharp in the first half, but Liverpool came back strong in the second. The final score was 2-1. Have you been following the league standings, or are you more interested in a specific team's form?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Let's switch to football. Who won last night?",
+            "intent": {
+              "intent": "TOPIC_CHANGE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "explicit topic change",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "That's a good point about the range. I've been curious about how the newer models compare to the older ones \u2014 have you noticed any real differences in practice, or is it mostly marketing hype?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: The Tesla Model Y has great range. / novi: That's a good point about the range. I've been curious about how the newer models compare to the older ones \u2014 have you noticed any real differences in practice, or is it mostly marketing hype?"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': \"Let's switch to football. Who won last night?\", 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent TOPIC_CHANGE"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ACKNOWLEDGE",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "unmapped intent TOPIC_CHANGE: safe acknowledgement"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.789,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.02,
+        "intent": 0.24,
+        "referents": 0.07,
+        "packet": 0.46,
+        "supplements": 0.39,
+        "plan_render": 0.03,
+        "route": 0.05,
+        "compose": 5373.58,
+        "critic": 0.03
+      },
+      "context_tokens": 419,
+      "latency_ms": 5376.9,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-021",
+      "turn_index": 2,
+      "user_text": "Now work: remind me what I said about standup meetings.",
+      "heard_text": "",
+      "response_text": "You mentioned you've been curious about how newer models compare to older ones \u2014 have you noticed any real differences in practice?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 2
+      },
+      "intent": {
+        "intent": "TASK_REQUEST",
+        "dialogue_act": "REQUEST",
+        "confidence": 0.8,
+        "reason": "requests an action/task",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "You mentioned you've been curious about how newer models compare to older ones \u2014 have you noticed any real differences in practice?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "TASK_REQUEST",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.8,
+              "reason": "requests an action/task",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ADMIT_UNCERTAINTY",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "I can't carry out physical actions myself, but I can help you plan it.",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "action honesty: distinguish capability from intention"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.868,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.01,
+              "intent": 0.1,
+              "referents": 0.07,
+              "packet": 0.53,
+              "supplements": 0.31,
+              "plan_render": 0.01,
+              "route": 0.02,
+              "compose": 4474.7,
+              "critic": 0.02
+            },
+            "context_tokens": 505,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 2
+            },
+            "turn": 2
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 757,
+          "text": "You mentioned you've been curious about how newer models compare to older ones \u2014 have you noticed any real differences in practice?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Now work: remind me what I said about standup meetings.",
+            "intent": {
+              "intent": "TASK_REQUEST",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.8,
+              "reason": "requests an action/task",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [
+              "Tesla Model Y"
+            ],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "I caught the game last night \u2014 Manchester City looked sharp in the first half, but Liverpool came back strong in the second. The final score was 2-1. Have you been following the league standings, or a",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: The Tesla Model Y has great range. / novi: That's a good point about the range. I've been curious about how the newer models compare to the older ones \u2014 have you noticed any real differences in practice, or is it mostly marketing hype?",
+              "user: Let's switch to football. Who won last night? / novi: I caught the game last night \u2014 Manchester City looked sharp in the first half, but Liverpool came back strong in the second. The final score was 2-1. Have you been following the league standings, or are you more interested in a specific team's form?"
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Now work: remind me what I said about standup meetings.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent TASK_REQUEST"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ADMIT_UNCERTAINTY",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "I can't carry out physical actions myself, but I can help you plan it.",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "action honesty: distinguish capability from intention"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.868,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.01,
+        "intent": 0.1,
+        "referents": 0.07,
+        "packet": 0.53,
+        "supplements": 0.31,
+        "plan_render": 0.01,
+        "route": 0.02,
+        "compose": 4474.7,
+        "critic": 0.02
+      },
+      "context_tokens": 505,
+      "latency_ms": 4477.3,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "TASK_REQUEST",
+    "dialogue_act": "REQUEST",
+    "confidence": 0.8,
+    "reason": "requests an action/task",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "You mentioned you've been curious about how newer models compare to older ones \u2014 have you noticed any real differences in practice?",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "TASK_REQUEST",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.8,
+          "reason": "requests an action/task",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [],
+          "confidence": 0.0
+        },
+        "response_goal": {
+          "goal": "ADMIT_UNCERTAINTY",
+          "must_include": [],
+          "may_include": [],
+          "must_not_include": [],
+          "required_evidence": [],
+          "uncertainty_statement": "I can't carry out physical actions myself, but I can help you plan it.",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "action honesty: distinguish capability from intention"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 0.8,
+            "non_repetition": 0.868,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.2,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.01,
+          "intent": 0.1,
+          "referents": 0.07,
+          "packet": 0.53,
+          "supplements": 0.31,
+          "plan_render": 0.01,
+          "route": 0.02,
+          "compose": 4474.7,
+          "critic": 0.02
+        },
+        "context_tokens": 505,
+        "context_counts": {
+          "memories": 0,
+          "world_facts": 1,
+          "history": 2
+        },
+        "turn": 2
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.2,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 757,
+      "text": "You mentioned you've been curious about how newer models compare to older ones \u2014 have you noticed any real differences in practice?",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "Now work: remind me what I said about standup meetings.",
+        "intent": {
+          "intent": "TASK_REQUEST",
+          "dialogue_act": "REQUEST",
+          "confidence": 0.8,
+          "reason": "requests an action/task",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [],
+        "active_entities": [
+          "Tesla Model Y"
+        ],
+        "anchor": {
+          "topic": "",
+          "active_entity": "",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "I caught the game last night \u2014 Manchester City looked sharp in the first half, but Liverpool came back strong in the second. The final score was 2-1. Have you been following the league standings, or a",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: The Tesla Model Y has great range. / novi: That's a good point about the range. I've been curious about how the newer models compare to the older ones \u2014 have you noticed any real differences in practice, or is it mostly marketing hype?",
+          "user: Let's switch to football. Who won last night? / novi: I caught the game last night \u2014 Manchester City looked sharp in the first half, but Liverpool came back strong in the second. The final score was 2-1. Have you been following the league standings, or are you more interested in a specific team's form?"
+        ],
+        "relevant_memories": [],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'Now work: remind me what I said about standup meetings.', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories"
+        ],
+        "uncertainty": [],
+        "response_requirements": [
+          "address intent TASK_REQUEST"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ADMIT_UNCERTAINTY",
+    "must_include": [],
+    "may_include": [],
+    "must_not_include": [],
+    "required_evidence": [],
+    "uncertainty_statement": "I can't carry out physical actions myself, but I can help you plan it.",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "action honesty: distinguish capability from intention"
+  },
+  "response": "You mentioned you've been curious about how newer models compare to older ones \u2014 have you noticed any real differences in practice?",
+  "critic": {
+    "scores": {
+      "grounding": 0.8,
+      "non_repetition": 0.868,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 4477.3,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}

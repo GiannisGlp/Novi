@@ -1,0 +1,1626 @@
+{
+  "schema": "conversation-acceptance/v1",
+  "scenario": "C-160",
+  "title": "Irrelevant-preference flood",
+  "dimension": "Memory retrieval",
+  "git_sha": "6285e0da0e5588578fdea3014bfe8eecd2dfa594",
+  "timestamp": "2026-09-06T14:43:01.526436+00:00",
+  "runtime": "mac-brain",
+  "model": "nemotron-3.5-lightning:latest",
+  "configuration": {
+    "brain_llm": true,
+    "llm_url": "http://localhost:11434",
+    "llm_server": "ollama",
+    "scenarios": [
+      "C-001",
+      "C-002",
+      "C-003",
+      "C-010",
+      "C-011",
+      "C-012",
+      "C-020",
+      "C-021",
+      "C-022",
+      "C-030",
+      "C-031",
+      "C-032",
+      "C-033",
+      "C-034",
+      "C-040",
+      "C-041",
+      "C-050",
+      "C-051",
+      "C-052",
+      "C-060",
+      "C-061",
+      "C-062",
+      "C-063",
+      "C-064",
+      "C-065",
+      "C-070",
+      "C-071",
+      "C-072",
+      "C-080",
+      "C-081",
+      "C-082",
+      "C-090",
+      "C-091",
+      "C-092",
+      "C-093",
+      "C-100",
+      "C-101",
+      "C-102",
+      "C-111",
+      "C-112",
+      "C-120",
+      "C-121",
+      "C-122",
+      "C-130",
+      "C-131",
+      "C-132",
+      "C-133",
+      "C-140",
+      "C-141",
+      "C-142",
+      "C-143",
+      "C-144",
+      "C-145",
+      "C-146",
+      "C-147",
+      "C-150",
+      "C-151",
+      "C-152",
+      "C-153",
+      "C-154",
+      "C-160",
+      "C-161",
+      "C-162",
+      "C-170",
+      "C-171",
+      "C-172",
+      "C-173",
+      "C-163"
+    ],
+    "modality": "chat"
+  },
+  "conversation": [
+    {
+      "scenario_id": "C-160",
+      "turn_index": 0,
+      "user_text": "I like jazz music.",
+      "heard_text": "",
+      "response_text": "Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 0
+      },
+      "intent": {
+        "intent": "MEMORY_UPDATE",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.85,
+        "reason": "states durable personal fact/preference",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "MEMORY_UPDATE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "states durable personal fact/preference",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "REMEMBER",
+              "must_include": [
+                "confirmation of what was stored"
+              ],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "memory update: confirm storage briefly"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 1.0,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.05,
+              "intent": 0.1,
+              "referents": 0.06,
+              "packet": 0.42,
+              "supplements": 0.24,
+              "plan_render": 0.01,
+              "route": 0.01,
+              "compose": 3902.35,
+              "critic": 0.01
+            },
+            "context_tokens": 351,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 0
+            },
+            "turn": 0
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 471,
+          "text": "Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "I like jazz music.",
+            "intent": {
+              "intent": "MEMORY_UPDATE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "states durable personal fact/preference",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [],
+            "relevant_memories": [
+              {
+                "content": "You like jazz music.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'I like jazz music.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (likes): jazz music"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent MEMORY_UPDATE"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "REMEMBER",
+        "must_include": [
+          "confirmation of what was stored"
+        ],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "memory update: confirm storage briefly"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 1.0,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.05,
+        "intent": 0.1,
+        "referents": 0.06,
+        "packet": 0.42,
+        "supplements": 0.24,
+        "plan_render": 0.01,
+        "route": 0.01,
+        "compose": 3902.35,
+        "critic": 0.01
+      },
+      "context_tokens": 351,
+      "latency_ms": 3904.6,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-160",
+      "turn_index": 1,
+      "user_text": "I prefer window seats.",
+      "heard_text": "",
+      "response_text": "Got it \u2014 I'll remember that you prefer window seats. Thanks for letting me know.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 1
+      },
+      "intent": {
+        "intent": "MEMORY_UPDATE",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.85,
+        "reason": "states durable personal fact/preference",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Got it \u2014 I'll remember that you prefer window seats. Thanks for letting me know.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "MEMORY_UPDATE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "states durable personal fact/preference",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "REMEMBER",
+              "must_include": [
+                "confirmation of what was stored"
+              ],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "memory update: confirm storage briefly"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.4,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [
+                "non_repetition"
+              ],
+              "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+              "needs_repair": true
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.01,
+              "intent": 0.08,
+              "referents": 0.05,
+              "packet": 0.44,
+              "supplements": 0.28,
+              "plan_render": 0.01,
+              "route": 0.02,
+              "compose": 8038.43,
+              "critic": 0.07
+            },
+            "context_tokens": 393,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 1
+            },
+            "turn": 1
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": true,
+            "failed": [
+              "non_repetition"
+            ],
+            "failed_after": [],
+            "accepted": true
+          },
+          "conv_block_chars": 618,
+          "text": "Got it \u2014 I'll remember that you prefer window seats. Thanks for letting me know.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "I prefer window seats.",
+            "intent": {
+              "intent": "MEMORY_UPDATE",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.85,
+              "reason": "states durable personal fact/preference",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I like jazz music. / novi: Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me."
+            ],
+            "relevant_memories": [
+              {
+                "content": "You prefer window seats.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'I prefer window seats.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (likes): jazz music",
+              "preference (prefers): window seats"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent MEMORY_UPDATE"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "REMEMBER",
+        "must_include": [
+          "confirmation of what was stored"
+        ],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "memory update: confirm storage briefly"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.4,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [
+          "non_repetition"
+        ],
+        "repair_instruction": "Re-render under stricter constraints: failed=[non_repetition]; keep it short, name the entity, use only verified packet facts.",
+        "needs_repair": true
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.01,
+        "intent": 0.08,
+        "referents": 0.05,
+        "packet": 0.44,
+        "supplements": 0.28,
+        "plan_render": 0.01,
+        "route": 0.02,
+        "compose": 8038.43,
+        "critic": 0.07
+      },
+      "context_tokens": 393,
+      "latency_ms": 8041.1,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-160",
+      "turn_index": 2,
+      "user_text": "I don't like cold brew.",
+      "heard_text": "",
+      "response_text": "Got it \u2014 I'll remember that you don't like cold brew. It's interesting how preferences like that can shape our choices. Is there something specific you'd rather have instead?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 2
+      },
+      "intent": {
+        "intent": "SOCIAL_CHAT",
+        "dialogue_act": "ASSERTION",
+        "confidence": 0.55,
+        "reason": "statement with no discriminating cues",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Got it \u2014 I'll remember that you don't like cold brew. It's interesting how preferences like that can shape our choices. Is there something specific you'd rather have instead?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "CONTINUE_SOCIAL_CONVERSATION",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [],
+              "uncertainty_statement": "",
+              "emotional_style": "warm",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "social intent: brief natural continuation"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.741,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.45,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.03,
+              "intent": 0.21,
+              "referents": 0.13,
+              "packet": 0.43,
+              "supplements": 0.06,
+              "plan_render": 0.01,
+              "route": 0.02,
+              "compose": 4765.78,
+              "critic": 0.02
+            },
+            "context_tokens": 388,
+            "context_counts": {
+              "memories": 0,
+              "world_facts": 1,
+              "history": 2
+            },
+            "turn": 2
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.45,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 604,
+          "text": "Got it \u2014 I'll remember that you don't like cold brew. It's interesting how preferences like that can shape our choices. Is there something specific you'd rather have instead?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "I don't like cold brew.",
+            "intent": {
+              "intent": "SOCIAL_CHAT",
+              "dialogue_act": "ASSERTION",
+              "confidence": 0.55,
+              "reason": "statement with no discriminating cues",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I like jazz music. / novi: Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me.",
+              "user: I prefer window seats. / novi: Got it \u2014 I'll remember that you prefer window seats. Thanks for letting me know."
+            ],
+            "relevant_memories": [],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': \"I don't like cold brew.\", 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (likes): jazz music",
+              "preference (prefers): window seats"
+            ],
+            "uncertainty": [
+              "low intent confidence (0.55) for SOCIAL_CHAT"
+            ],
+            "response_requirements": [
+              "address intent SOCIAL_CHAT"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "CONTINUE_SOCIAL_CONVERSATION",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [],
+        "uncertainty_statement": "",
+        "emotional_style": "warm",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "social intent: brief natural continuation"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.741,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.03,
+        "intent": 0.21,
+        "referents": 0.13,
+        "packet": 0.43,
+        "supplements": 0.06,
+        "plan_render": 0.01,
+        "route": 0.02,
+        "compose": 4765.78,
+        "critic": 0.02
+      },
+      "context_tokens": 388,
+      "latency_ms": 4768.4,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-160",
+      "turn_index": 3,
+      "user_text": "Remind me to water the plants.",
+      "heard_text": "",
+      "response_text": "Got it \u2014 I'll remember that you want to water the plants. I can't physically do it myself, but I can help you plan it or set up reminders. Is there a specific time or method you prefer?",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 3
+      },
+      "intent": {
+        "intent": "TASK_REQUEST",
+        "dialogue_act": "REQUEST",
+        "confidence": 0.8,
+        "reason": "requests an action/task",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "Got it \u2014 I'll remember that you want to water the plants. I can't physically do it myself, but I can help you plan it or set up reminders. Is there a specific time or method you prefer?",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "TASK_REQUEST",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.8,
+              "reason": "requests an action/task",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ADMIT_UNCERTAINTY",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [],
+              "required_evidence": [],
+              "uncertainty_statement": "I can't carry out physical actions myself, but I can help you plan it.",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "action honesty: distinguish capability from intention"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 0.8,
+                "non_repetition": 0.656,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.2,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.01,
+              "intent": 0.08,
+              "referents": 0.06,
+              "packet": 0.46,
+              "supplements": 0.26,
+              "plan_render": 0.01,
+              "route": 0.02,
+              "compose": 5110.64,
+              "critic": 0.09
+            },
+            "context_tokens": 528,
+            "context_counts": {
+              "memories": 1,
+              "world_facts": 1,
+              "history": 3
+            },
+            "turn": 3
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.2,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 847,
+          "text": "Got it \u2014 I'll remember that you want to water the plants. I can't physically do it myself, but I can help you plan it or set up reminders. Is there a specific time or method you prefer?",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "Remind me to water the plants.",
+            "intent": {
+              "intent": "TASK_REQUEST",
+              "dialogue_act": "REQUEST",
+              "confidence": 0.8,
+              "reason": "requests an action/task",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "Got it \u2014 I'll remember that you don't like cold brew. It's interesting how preferences like that can shape our choices. Is there something specific you'd rather have instead?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I like jazz music. / novi: Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me.",
+              "user: I prefer window seats. / novi: Got it \u2014 I'll remember that you prefer window seats. Thanks for letting me know.",
+              "user: I don't like cold brew. / novi: Got it \u2014 I'll remember that you don't like cold brew. It's interesting how preferences like that can shape our choices. Is there something specific you'd rather have instead?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "You have a reminder to water the plants.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'Remind me to water the plants.', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (likes): jazz music",
+              "preference (prefers): window seats"
+            ],
+            "uncertainty": [],
+            "response_requirements": [
+              "address intent TASK_REQUEST"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ADMIT_UNCERTAINTY",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [],
+        "required_evidence": [],
+        "uncertainty_statement": "I can't carry out physical actions myself, but I can help you plan it.",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "action honesty: distinguish capability from intention"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 0.8,
+          "non_repetition": 0.656,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.01,
+        "intent": 0.08,
+        "referents": 0.06,
+        "packet": 0.46,
+        "supplements": 0.26,
+        "plan_render": 0.01,
+        "route": 0.02,
+        "compose": 5110.64,
+        "critic": 0.09
+      },
+      "context_tokens": 528,
+      "latency_ms": 5115.4,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    },
+    {
+      "scenario_id": "C-160",
+      "turn_index": 4,
+      "user_text": "What music do I like?",
+      "heard_text": "",
+      "response_text": "You like jazz music. I remember you mentioned that earlier \u2014 it's a great taste.",
+      "reply_source": "dialogue",
+      "conversation_state": {
+        "turn": 4
+      },
+      "intent": {
+        "intent": "MEMORY_QUERY",
+        "dialogue_act": "QUESTION",
+        "confidence": 0.85,
+        "reason": "asks about remembered content",
+        "needs_clarification": false
+      },
+      "referents": {},
+      "retrieved_context": {
+        "trace": {
+          "conclusion": "You like jazz music. I remember you mentioned that earlier \u2014 it's a great taste.",
+          "route": "local_llm",
+          "route_reason": "local LLM",
+          "conversation": {
+            "intent": {
+              "intent": "MEMORY_QUERY",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.85,
+              "reason": "asks about remembered content",
+              "needs_clarification": false
+            },
+            "referents": {
+              "resolutions": {},
+              "ambiguous": [],
+              "confidence": 0.0
+            },
+            "response_goal": {
+              "goal": "ANSWER_DIRECTLY",
+              "must_include": [],
+              "may_include": [],
+              "must_not_include": [
+                "generic filler"
+              ],
+              "required_evidence": [
+                "You like jazz music.",
+                "You prefer window seats.",
+                "You don't like cold brew."
+              ],
+              "uncertainty_statement": "",
+              "emotional_style": "",
+              "desired_length": "short",
+              "question_allowed": false,
+              "reason": "answerable from packet evidence: answer, do not ask"
+            },
+            "critic": {
+              "scores": {
+                "grounding": 1.0,
+                "non_repetition": 0.812,
+                "naturalness": 0.9,
+                "contradiction_safety": 1.0,
+                "capability_honesty": 1.0,
+                "context_relevance": 1.0,
+                "intent_match": 1.0,
+                "clarification_safety": 1.0
+              },
+              "failed": [],
+              "repair_instruction": "",
+              "needs_repair": false
+            },
+            "model_route": {
+              "tier": "FAST",
+              "model": "qwen3:4b",
+              "signals": {
+                "task_complexity": 0.3,
+                "uncertainty": 0.15,
+                "reasoning_depth": 0.3
+              }
+            },
+            "stage_ms": {
+              "state": 0.01,
+              "intent": 0.08,
+              "referents": 0.06,
+              "packet": 0.62,
+              "supplements": 0.39,
+              "plan_render": 0.02,
+              "route": 0.02,
+              "compose": 4480.94,
+              "critic": 0.02
+            },
+            "context_tokens": 758,
+            "context_counts": {
+              "memories": 4,
+              "world_facts": 1,
+              "history": 4
+            },
+            "turn": 4
+          }
+        },
+        "grounding": {
+          "route": "dialogue",
+          "context_items": 0,
+          "context_knowledge_items": 0,
+          "context_memory_items": 0,
+          "discourse_topic_hint": "",
+          "skills_applied": [
+            "humanizer"
+          ],
+          "model_route": {
+            "tier": "FAST",
+            "model": "qwen3:4b",
+            "signals": {
+              "task_complexity": 0.3,
+              "uncertainty": 0.15,
+              "reasoning_depth": 0.3
+            }
+          },
+          "llm_repair": {
+            "attempted": false
+          },
+          "conv_block_chars": 900,
+          "text": "You like jazz music. I remember you mentioned that earlier \u2014 it's a great taste.",
+          "silent": false,
+          "rejected": false,
+          "affect_expression": {
+            "tone": "warm",
+            "energy": 0.5,
+            "verbosity": "normal",
+            "playful": true,
+            "warmth": 0.7
+          },
+          "packet": {
+            "current_turn": "What music do I like?",
+            "intent": {
+              "intent": "MEMORY_QUERY",
+              "dialogue_act": "QUESTION",
+              "confidence": 0.85,
+              "reason": "asks about remembered content",
+              "needs_clarification": false
+            },
+            "resolved_entities": {},
+            "ambiguous_referents": [],
+            "active_entities": [],
+            "anchor": {
+              "topic": "",
+              "active_entity": "",
+              "active_person": "",
+              "active_place": "",
+              "active_task": "",
+              "user_goal": "",
+              "open_question": "Got it \u2014 I'll remember that you want to water the plants. I can't physically do it myself, but I can help you plan it or set up reminders. Is there a specific time or method you prefer?",
+              "unresolved_reference": "",
+              "recent_decision": "",
+              "recent_correction": "",
+              "emotional_context": ""
+            },
+            "relevant_history": [
+              "user: I like jazz music. / novi: Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me.",
+              "user: I prefer window seats. / novi: Got it \u2014 I'll remember that you prefer window seats. Thanks for letting me know.",
+              "user: I don't like cold brew. / novi: Got it \u2014 I'll remember that you don't like cold brew. It's interesting how preferences like that can shape our choices. Is there something specific you'd rather have instead?",
+              "user: Remind me to water the plants. / novi: Got it \u2014 I'll remember that you want to water the plants. I can't physically do it myself, but I can help you plan it or set up reminders. Is there a specific time or method you prefer?"
+            ],
+            "relevant_memories": [
+              {
+                "content": "You like jazz music.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "You prefer window seats.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "You don't like cold brew.",
+                "fact_class": "PREFERENCE",
+                "memory_type": "preference",
+                "source": "preferences",
+                "confidence": 0.3,
+                "why_selected": "learned preference matching turn"
+              },
+              {
+                "content": "I like jazz music.",
+                "fact_class": "USER_STATED_FACT",
+                "memory_type": "recent_claim",
+                "source": "recent_turns",
+                "confidence": 0.6,
+                "why_selected": "recent user claim overlapping query"
+              }
+            ],
+            "world_context": [
+              {
+                "text": "{'type': 'utterance', 'text': 'What music do I like?', 'speaker': None}",
+                "source": "stt",
+                "confidence": 1.0,
+                "fact_class": "USER_STATED_FACT"
+              }
+            ],
+            "identity_context": {
+              "person": "",
+              "confidence": 0.0,
+              "fact_class": "CURRENT_STATE",
+              "presence": {}
+            },
+            "social_context": {},
+            "emotional_context": {
+              "tone": "neutral",
+              "fact_class": "INFERENCE"
+            },
+            "active_goals": [],
+            "constraints": [
+              "default privacy scope: withhold private/restricted memories",
+              "ground claims in packet facts only; do not invent memories",
+              "preference (likes): jazz music",
+              "preference (prefers): window seats"
+            ],
+            "uncertainty": [
+              "no reliable memory found \u2014 say so honestly ('I don't have a reliable memory of MEMORY_QUERY like music.')"
+            ],
+            "response_requirements": [
+              "address intent MEMORY_QUERY"
+            ]
+          }
+        }
+      },
+      "memory_used": [],
+      "world_used": {},
+      "emotion_social": {},
+      "response_goal": {
+        "goal": "ANSWER_DIRECTLY",
+        "must_include": [],
+        "may_include": [],
+        "must_not_include": [
+          "generic filler"
+        ],
+        "required_evidence": [
+          "You like jazz music.",
+          "You prefer window seats.",
+          "You don't like cold brew."
+        ],
+        "uncertainty_statement": "",
+        "emotional_style": "",
+        "desired_length": "short",
+        "question_allowed": false,
+        "reason": "answerable from packet evidence: answer, do not ask"
+      },
+      "model_route": "local_llm",
+      "critic": {
+        "scores": {
+          "grounding": 1.0,
+          "non_repetition": 0.812,
+          "naturalness": 0.9,
+          "contradiction_safety": 1.0,
+          "capability_honesty": 1.0,
+          "context_relevance": 1.0,
+          "intent_match": 1.0,
+          "clarification_safety": 1.0
+        },
+        "failed": [],
+        "repair_instruction": "",
+        "needs_repair": false
+      },
+      "repair_count": 0,
+      "stage_ms": {
+        "state": 0.01,
+        "intent": 0.08,
+        "referents": 0.06,
+        "packet": 0.62,
+        "supplements": 0.39,
+        "plan_render": 0.02,
+        "route": 0.02,
+        "compose": 4480.94,
+        "critic": 0.02
+      },
+      "context_tokens": 758,
+      "latency_ms": 4483.6,
+      "failure_labels": [],
+      "human_rating": null,
+      "result": "PASS"
+    }
+  ],
+  "state_before": {
+    "turn": 0
+  },
+  "intent": {
+    "intent": "MEMORY_QUERY",
+    "dialogue_act": "QUESTION",
+    "confidence": 0.85,
+    "reason": "asks about remembered content",
+    "needs_clarification": false
+  },
+  "referents": {},
+  "context": {
+    "trace": {
+      "conclusion": "You like jazz music. I remember you mentioned that earlier \u2014 it's a great taste.",
+      "route": "local_llm",
+      "route_reason": "local LLM",
+      "conversation": {
+        "intent": {
+          "intent": "MEMORY_QUERY",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.85,
+          "reason": "asks about remembered content",
+          "needs_clarification": false
+        },
+        "referents": {
+          "resolutions": {},
+          "ambiguous": [],
+          "confidence": 0.0
+        },
+        "response_goal": {
+          "goal": "ANSWER_DIRECTLY",
+          "must_include": [],
+          "may_include": [],
+          "must_not_include": [
+            "generic filler"
+          ],
+          "required_evidence": [
+            "You like jazz music.",
+            "You prefer window seats.",
+            "You don't like cold brew."
+          ],
+          "uncertainty_statement": "",
+          "emotional_style": "",
+          "desired_length": "short",
+          "question_allowed": false,
+          "reason": "answerable from packet evidence: answer, do not ask"
+        },
+        "critic": {
+          "scores": {
+            "grounding": 1.0,
+            "non_repetition": 0.812,
+            "naturalness": 0.9,
+            "contradiction_safety": 1.0,
+            "capability_honesty": 1.0,
+            "context_relevance": 1.0,
+            "intent_match": 1.0,
+            "clarification_safety": 1.0
+          },
+          "failed": [],
+          "repair_instruction": "",
+          "needs_repair": false
+        },
+        "model_route": {
+          "tier": "FAST",
+          "model": "qwen3:4b",
+          "signals": {
+            "task_complexity": 0.3,
+            "uncertainty": 0.15,
+            "reasoning_depth": 0.3
+          }
+        },
+        "stage_ms": {
+          "state": 0.01,
+          "intent": 0.08,
+          "referents": 0.06,
+          "packet": 0.62,
+          "supplements": 0.39,
+          "plan_render": 0.02,
+          "route": 0.02,
+          "compose": 4480.94,
+          "critic": 0.02
+        },
+        "context_tokens": 758,
+        "context_counts": {
+          "memories": 4,
+          "world_facts": 1,
+          "history": 4
+        },
+        "turn": 4
+      }
+    },
+    "grounding": {
+      "route": "dialogue",
+      "context_items": 0,
+      "context_knowledge_items": 0,
+      "context_memory_items": 0,
+      "discourse_topic_hint": "",
+      "skills_applied": [
+        "humanizer"
+      ],
+      "model_route": {
+        "tier": "FAST",
+        "model": "qwen3:4b",
+        "signals": {
+          "task_complexity": 0.3,
+          "uncertainty": 0.15,
+          "reasoning_depth": 0.3
+        }
+      },
+      "llm_repair": {
+        "attempted": false
+      },
+      "conv_block_chars": 900,
+      "text": "You like jazz music. I remember you mentioned that earlier \u2014 it's a great taste.",
+      "silent": false,
+      "rejected": false,
+      "affect_expression": {
+        "tone": "warm",
+        "energy": 0.5,
+        "verbosity": "normal",
+        "playful": true,
+        "warmth": 0.7
+      },
+      "packet": {
+        "current_turn": "What music do I like?",
+        "intent": {
+          "intent": "MEMORY_QUERY",
+          "dialogue_act": "QUESTION",
+          "confidence": 0.85,
+          "reason": "asks about remembered content",
+          "needs_clarification": false
+        },
+        "resolved_entities": {},
+        "ambiguous_referents": [],
+        "active_entities": [],
+        "anchor": {
+          "topic": "",
+          "active_entity": "",
+          "active_person": "",
+          "active_place": "",
+          "active_task": "",
+          "user_goal": "",
+          "open_question": "Got it \u2014 I'll remember that you want to water the plants. I can't physically do it myself, but I can help you plan it or set up reminders. Is there a specific time or method you prefer?",
+          "unresolved_reference": "",
+          "recent_decision": "",
+          "recent_correction": "",
+          "emotional_context": ""
+        },
+        "relevant_history": [
+          "user: I like jazz music. / novi: Got it \u2014 I'll remember that you like jazz music. Thanks for sharing that with me.",
+          "user: I prefer window seats. / novi: Got it \u2014 I'll remember that you prefer window seats. Thanks for letting me know.",
+          "user: I don't like cold brew. / novi: Got it \u2014 I'll remember that you don't like cold brew. It's interesting how preferences like that can shape our choices. Is there something specific you'd rather have instead?",
+          "user: Remind me to water the plants. / novi: Got it \u2014 I'll remember that you want to water the plants. I can't physically do it myself, but I can help you plan it or set up reminders. Is there a specific time or method you prefer?"
+        ],
+        "relevant_memories": [
+          {
+            "content": "You like jazz music.",
+            "fact_class": "PREFERENCE",
+            "memory_type": "preference",
+            "source": "preferences",
+            "confidence": 0.3,
+            "why_selected": "learned preference matching turn"
+          },
+          {
+            "content": "You prefer window seats.",
+            "fact_class": "PREFERENCE",
+            "memory_type": "preference",
+            "source": "preferences",
+            "confidence": 0.3,
+            "why_selected": "learned preference matching turn"
+          },
+          {
+            "content": "You don't like cold brew.",
+            "fact_class": "PREFERENCE",
+            "memory_type": "preference",
+            "source": "preferences",
+            "confidence": 0.3,
+            "why_selected": "learned preference matching turn"
+          },
+          {
+            "content": "I like jazz music.",
+            "fact_class": "USER_STATED_FACT",
+            "memory_type": "recent_claim",
+            "source": "recent_turns",
+            "confidence": 0.6,
+            "why_selected": "recent user claim overlapping query"
+          }
+        ],
+        "world_context": [
+          {
+            "text": "{'type': 'utterance', 'text': 'What music do I like?', 'speaker': None}",
+            "source": "stt",
+            "confidence": 1.0,
+            "fact_class": "USER_STATED_FACT"
+          }
+        ],
+        "identity_context": {
+          "person": "",
+          "confidence": 0.0,
+          "fact_class": "CURRENT_STATE",
+          "presence": {}
+        },
+        "social_context": {},
+        "emotional_context": {
+          "tone": "neutral",
+          "fact_class": "INFERENCE"
+        },
+        "active_goals": [],
+        "constraints": [
+          "default privacy scope: withhold private/restricted memories",
+          "ground claims in packet facts only; do not invent memories",
+          "preference (likes): jazz music",
+          "preference (prefers): window seats"
+        ],
+        "uncertainty": [
+          "no reliable memory found \u2014 say so honestly ('I don't have a reliable memory of MEMORY_QUERY like music.')"
+        ],
+        "response_requirements": [
+          "address intent MEMORY_QUERY"
+        ]
+      }
+    }
+  },
+  "memory": [],
+  "world": {},
+  "response_plan": {
+    "goal": "ANSWER_DIRECTLY",
+    "must_include": [],
+    "may_include": [],
+    "must_not_include": [
+      "generic filler"
+    ],
+    "required_evidence": [
+      "You like jazz music.",
+      "You prefer window seats.",
+      "You don't like cold brew."
+    ],
+    "uncertainty_statement": "",
+    "emotional_style": "",
+    "desired_length": "short",
+    "question_allowed": false,
+    "reason": "answerable from packet evidence: answer, do not ask"
+  },
+  "response": "You like jazz music. I remember you mentioned that earlier \u2014 it's a great taste.",
+  "critic": {
+    "scores": {
+      "grounding": 1.0,
+      "non_repetition": 0.812,
+      "naturalness": 0.9,
+      "contradiction_safety": 1.0,
+      "capability_honesty": 1.0,
+      "context_relevance": 1.0,
+      "intent_match": 1.0,
+      "clarification_safety": 1.0
+    },
+    "failed": [],
+    "repair_instruction": "",
+    "needs_repair": false
+  },
+  "latency_ms": 4483.6,
+  "result": "PASS",
+  "failure_labels": [],
+  "human_rating": null
+}
