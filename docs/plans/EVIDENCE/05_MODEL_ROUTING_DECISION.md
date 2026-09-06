@@ -31,6 +31,19 @@ variance**, not systematic class failures. See the pairwise ratings draft
    quality-critical.
 3. **Trained adapters (v4 on qwen3:4B):** low-RAM conversational option
    (~10GB) with the style/grounding classes fixed; not referent-grade.
+
+### v4 real-session feel-check (2026-09-06 evening) — NOT deployable
+Driving v4 through the live brain (serve_adapter.sh + openai-compatible)
+over a 9-turn natural session: memory/preference/correction turns behaved
+(recalled and applied "dark -> light interiors", polite, no hallucination),
+but **open information requests still emit the v1 echo template**
+("Good question — what's your angle on Model/range/interior?") and per-turn
+latency was 10-37s. The PASS-reply LoRA did not robustly cure the echo in
+the real prompt distribution on a 4B base. **Verdict: v4 is an experiment,
+not a runtime model.** Conversational runtime stays qwen3:8b (primary) /
+nemotron (alternate) on the compact prompts; adapter work needs either an
+8B-base fine-tune (bigger machine) or closing the remaining training/
+distribution gap before it is considered again.
 4. **Multi-backend per-turn routing is NOT deployed** on this machine: two
    resident models exceed 36GB. If a future host allows it, route per class
    (referent/correction/recovery-heavy → qwen3:8b; honesty/memory/emotion →
