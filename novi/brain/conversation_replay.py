@@ -597,8 +597,14 @@ class _suppress:
 
 def default_brain_factory(db_path: Path, *, brain_llm: bool = False,
                            llm_url: str = "http://localhost:11434",
-                           llm_model: str = "") -> Any:
-    """Build a real MacBrain on real SQLite (Phase 14.1 + 14.3)."""
+                           llm_model: str = "",
+                           llm_server: str = "") -> Any:
+    """Build a real MacBrain on real SQLite (Phase 14.1 + 14.3).
+
+    ``llm_server`` selects the brain-owned transport dialect: "ollama"
+    (default) or "openai-compatible" (llama.cpp/vLLM/MLX /v1 servers), so a
+    trained adapter served outside Ollama can be acceptance-tested too.
+    """
     from novi.brain.b2_perception import SpecialistPerception
     from novi.brain.engine import MacBrain, MacBrainConfig
     from novi.brain.io import CameraFrame
@@ -629,6 +635,7 @@ def default_brain_factory(db_path: Path, *, brain_llm: bool = False,
             brain_llm_enabled=brain_llm,
             brain_llm_url=llm_url,
             brain_llm_model=llm_model,
+            brain_llm_server=llm_server or "ollama",
         ),
     )
 
@@ -649,6 +656,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Enable the brain-owned live-model transport (on-device acceptance)")
     parser.add_argument("--llm-url", default="http://localhost:11434")
     parser.add_argument("--llm-model", default="")
+    parser.add_argument("--brain-llm-server", default="",
+                        help="Transport dialect: ollama (default) or openai-compatible")
     return parser
 
 
@@ -671,25 +680,29 @@ def main(argv: list[str] | None = None) -> int:
         db_parent.mkdir(parents=True, exist_ok=True)
         harness = ReplayHarness(
             lambda db: default_brain_factory(
-                db, brain_llm=args.brain_llm, llm_url=args.llm_url, llm_model=args.llm_model),
+                db, brain_llm=args.brain_llm, llm_url=args.llm_url, llm_model=args.llm_model,
+                llm_server=args.brain_llm_server),
             interaction_log=args.interaction_log or None,
         )
         summary = harness.run_all(
             scenarios, db_parent=db_parent, evidence_dir=evidence_dir,
             runtime="mac-brain", model=args.llm_model or "deterministic",
             configuration={"brain_llm": args.brain_llm, "llm_url": args.llm_url,
+                           "llm_server": args.brain_llm_server or "ollama",
                            "scenarios": [s.scenario_id for s in scenarios]})
     else:
         with tempfile.TemporaryDirectory(prefix="conv-replay-") as tmp:
             harness = ReplayHarness(
                 lambda db: default_brain_factory(
-                    db, brain_llm=args.brain_llm, llm_url=args.llm_url, llm_model=args.llm_model),
+                    db, brain_llm=args.brain_llm, llm_url=args.llm_url, llm_model=args.llm_model,
+                    llm_server=args.brain_llm_server),
                 interaction_log=args.interaction_log or None,
             )
             summary = harness.run_all(
                 scenarios, db_parent=Path(tmp), evidence_dir=evidence_dir,
                 runtime="mac-brain", model=args.llm_model or "deterministic",
                 configuration={"brain_llm": args.brain_llm, "llm_url": args.llm_url,
+                               "llm_server": args.brain_llm_server or "ollama",
                                "scenarios": [s.scenario_id for s in scenarios]})
     if evidence_dir is not None:
         write_evidence(evidence_dir / "baseline.json", summary)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -132,6 +133,28 @@ def _is_anaphoric_preference_value(value: str) -> bool:
     if not text:
         return True
     return bool(_ANAPHORIC_VALUE_RE.match(text) or _BARE_PRONOUN_RE.match(text))
+
+
+def _capture_draft_prompt(system: str, user_json: str, user_says: str) -> None:
+    """Debug/training capture: append the EXACT (system, user) the brain sends
+    to the model when ``NOVI_CAPTURE_PROMPTS`` points at a writable file.
+
+    Used to rebuild SFT data from the real runtime prompt (training on an
+    approximation of the packet/system produced adapters that ignore the real
+    prompt). No-op when the env var is unset; never raises.
+    """
+    path = os.environ.get("NOVI_CAPTURE_PROMPTS", "")
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps({
+                "system": system,
+                "user": user_json,
+                "user_says": user_says,
+            }, ensure_ascii=False) + "\n")
+    except Exception:  # noqa: BLE001 - capture must never break chat
+        pass
 
 
 class ChatMixin:
@@ -2009,6 +2032,7 @@ class ChatMixin:
         }
         user_json = json.dumps(user_payload, sort_keys=True)
         addressee = addressee_name or (relationship.get("name") or "")
+        _capture_draft_prompt(system, user_json, text)
         out = self.dialogue.reply(system=system, user=user_json, last_novi_text=last_novi_text, addressee_name=addressee, recent_novi=recent_novi, llm_chat=llm_chat)
         # Plan 03 Phase 9 on the LLM path: score the draft with the same
         # deterministic critic used post-hoc in respond(). When it fails on
