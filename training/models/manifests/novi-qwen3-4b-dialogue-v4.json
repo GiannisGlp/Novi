@@ -1,0 +1,18 @@
+{
+  "model_id": "novi-qwen3-4b-dialogue-v4",
+  "base_model": "qwen3:4b",
+  "adapter_type": "lora",
+  "adapter_path": "training/models/adapters/novi-qwen3-4b-dialogue-v4-mlx",
+  "framework": "mlx",
+  "training_dataset": "runtime-compact v4 (161 rows: real captured prompts post-compaction + PASS gold)",
+  "training_commit": "560ede6",
+  "template": "exact runtime ChatML (compacted system + user_json), NOVI_CAPTURE_PROMPTS",
+  "created_at": "2026-09-06T13:05:00+00:00",
+  "train_loss": 0.025,
+  "val_loss": 0.112,
+  "iters": 350,
+  "max_seq_len": 2816,
+  "peak_mem_gb": 21.7,
+  "status": "candidate",
+  "notes": "Memory-safe (36GB machine): trained on qwen3:4B at seq 2816. Fixes the v1 echo-template on preference/memory/repair/style classes (C-032/C-120/C-133/C-150/C-072/C-154 pass live through the brain); 4B base is weaker on referent-naming scenarios (C-152/C-161 fail live vs 8B models)."
+}

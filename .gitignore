@@ -80,3 +80,4 @@ training/experiments/*
 .uv-cache/
 training/datasets/mlx/
 docs/plans/EVIDENCE/training-logs/
+.hf-cache/
