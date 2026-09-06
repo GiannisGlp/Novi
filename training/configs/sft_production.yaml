@@ -1,0 +1,26 @@
+# SFT configuration — production-parity retrain (plan 03 / trained-adapter fix)
+# Template: ChatML system(persona + packet context) + user(utterance) ->
+# assistant response, matching the runtime brain prompt shape. Data: 263 rows
+# of PASS-envelope, reply_source=="dialogue" turns (build_production_sft.py).
+# Deterministic: committed, versioned, recorded in every model manifest.
+kind: sft
+base_model: qwen3:8b
+hf_model_id: Qwen/Qwen3-8B
+dataset: training/datasets/sft/sft_production_v1.jsonl
+dataset_version: sft_production_v1
+output_dir: training/models/adapters
+adapter_name: novi-qwen3-8b-dialogue-v2
+seed: 20260906
+min_examples: 200            # we have 263
+max_seq_len: 2048
+eval_after: true
+hyperparams:
+  batch_size: 2
+  learning_rate: 2.0e-4
+  epochs: 3
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  warmup_steps: 20
+  gradient_checkpointing: false

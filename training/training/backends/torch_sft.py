@@ -13,17 +13,58 @@ from typing import Any
 from training.config import capture_provenance
 
 
-def _build_chat_dataset(examples: list[dict], tokenizer, max_seq_len: int) -> list[dict]:
-    """Canonical examples -> tokenized chat rows (situation as system context).
+_IM_START = "<|im_start|>"
+_IM_END = "<|im_end|>"
 
-    Labels mask the prompt: the model learns to generate the response only
-    (proper SFT target, plan §10.2: situation + act -> response).
+
+def _chatml_prompt(example: dict) -> str:
+    """Production-shaped ChatML prompt (system + user + assistant header).
+
+    The system carries the persona + cognitive-state block; the user carries the
+    real utterance — the same roles the brain sends in production, so the
+    adapter learns to talk like a human against the real prompt shape.
+    """
+    from training.training.common import render_chatml  # noqa: PLC0415
+
+    system, user = render_chatml(example)
+    return (
+        f"{_IM_START}system\n{system}{_IM_END}\n"
+        f"{_IM_START}user\n{user}{_IM_END}\n"
+        f"{_IM_START}assistant\n"
+    )
+
+
+def _has_user_utterance(example: dict) -> bool:
+    from training.training.common import user_utterance  # noqa: PLC0415
+
+    return bool(user_utterance(example))
+
+
+def _training_text(example: dict) -> str:
+    """The complete SFT text (prompt + assistant response + im_end).
+
+    ChatML for rows with a real user utterance; legacy flat-prompt suffix for
+    rows without one.
+    """
+    response = example.get("preferred_response") or example.get("response") or ""
+    prompt = _prompt_text(example)
+    if _has_user_utterance(example):
+        return f"{prompt}{response}{_IM_END}"
+    return f"{prompt}\n{_IM_START}assistant\n{response}{_IM_END}"
+
+
+def _build_chat_dataset(examples: list[dict], tokenizer, max_seq_len: int) -> list[dict]:
+    """Canonical examples -> tokenized chat rows.
+
+    Rows with a real user utterance use explicit ChatML roles (system/user/
+    assistant) matching production; legacy rows with no user text keep the
+    historical flat-prompt shape so ``sft_v1.jsonl`` still trains unchanged.
+    Labels mask everything before the assistant response.
     """
     rows = []
     for ex in examples:
         prompt = _prompt_text(ex)
-        response = ex.get("preferred_response") or ex.get("response") or ""
-        text = f"{prompt}\n<|im_start|>assistant\n{response}<|im_end|>"
+        text = _training_text(ex)
         enc_prompt = tokenizer(prompt, truncation=True, max_length=max_seq_len, return_tensors="pt")
         enc_full = tokenizer(text, truncation=True, max_length=max_seq_len, return_tensors="pt")
         labels = enc_full["input_ids"][0].clone()
@@ -37,6 +78,8 @@ def _build_chat_dataset(examples: list[dict], tokenizer, max_seq_len: int) -> li
 
 
 def _prompt_text(example: dict) -> str:
+    if _has_user_utterance(example):
+        return _chatml_prompt(example)
     from training.training.common import prompt_for  # noqa: PLC0415
 
     return prompt_for(example)

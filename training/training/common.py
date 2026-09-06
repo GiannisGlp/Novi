@@ -11,6 +11,19 @@ from typing import Any
 
 from training.schemas import validate_example
 
+# Short, production-parity persona for ChatML SFT. The deployed adapter was
+# trained on a flat situation dump + "Communicative act: X" prompt (plan 23
+# §10.2) which taught echoing/canned lines; production instead sends the LLM a
+# SYSTEM persona + a structured cognitive-state block, plus the real utterance
+# as USER. This constant is the training-side stand-in for that SYSTEM persona.
+NOVI_PERSONA = (
+    "You are Novi, a warm and grounded conversational companion. "
+    "Speak naturally and plainly, like a thoughtful person in the room — never "
+    "mention being an AI, a model, a system, or any internal or technical detail "
+    "about yourself. Prefer the verified facts you are given about this person "
+    "over your own general knowledge."
+)
+
 
 def load_jsonl(path: str | Path) -> list[dict[str, Any]]:
     p = Path(path)
@@ -47,6 +60,82 @@ def situation_to_prompt(example: dict[str, Any]) -> str:
     decision = example.get("decision") or {}
     act = decision.get("dialogue_act", "")
     return "\n".join(parts + [f"Communicative act: {act}"])
+
+
+def user_utterance(example: dict[str, Any]) -> str:
+    """The real user utterance for a canonical example, or '' when absent.
+
+    Production parity (plan 03 §16): the LLM receives the actual utterance as
+    the USER role, not a JSON dump. Precedence: `situation.conversation.input`
+    first, then a top-level `user` key, else '' (legacy rows with no input).
+    """
+    sit = example.get("situation") or {}
+    conv = sit.get("conversation") or {}
+    inp = conv.get("input")
+    if isinstance(inp, str) and inp.strip():
+        return inp.strip()
+    top = example.get("user")
+    if isinstance(top, str) and top.strip():
+        return top.strip()
+    return ""
+
+
+def _string_list(value: Any) -> list[str]:
+    """Normalize an optional string / list-of-strings into non-empty strings."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value.strip()] if value.strip() else []
+    if isinstance(value, (list, tuple)):
+        return [str(v).strip() for v in value if str(v).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def render_chatml(example: dict[str, Any]) -> tuple[str, str]:
+    """Canonical example -> production-shaped (system, user) ChatML roles.
+
+    system = NOVI_PERSONA + the situation rendered as bullet context lines
+    (mirroring the brain's ``render_conversation_block`` shape: intent,
+    referents, response goal, verified facts). user = the real utterance from
+    ``user_utterance``. Legacy rows with no user text still render a system
+    here, but ``torch_sft`` falls back to the flat prompt for them.
+    """
+    sit = example.get("situation") or {}
+    lines: list[str] = []
+    person = sit.get("person") or {}
+    if person.get("id"):
+        rel = str(person.get("relationship") or "").strip()
+        lines.append(f"- Person: {person['id']}" + (f" ({rel})" if rel else ""))
+    conv = sit.get("conversation") or {}
+    if conv.get("topic"):
+        lines.append(f"- Conversation topic: {conv['topic']}")
+    memory = sit.get("memory") or []
+    summaries = [
+        str(m.get("summary", "")).strip()
+        for m in memory
+        if isinstance(m, dict) and str(m.get("summary", "")).strip()
+    ]
+    if summaries:
+        lines.append(f"- Memory: {'; '.join(summaries)}")
+    if sit.get("intent"):
+        lines.append(f"- Intent: {sit['intent']}")
+    referents = sit.get("referents") or {}
+    if referents:
+        pairs = [f"{k}→{v}" for k, v in list(referents.items())[:4]]
+        lines.append(f"- Referents: {'; '.join(pairs)}")
+    if sit.get("response_goal"):
+        lines.append(f"- Response goal: {sit['response_goal']}")
+    # Optional builder-added directive lines (e.g. must-include / must-avoid).
+    for key in ("packet_lines", "requirements"):
+        for line in _string_list(sit.get(key)):
+            lines.append(f"- requirement: {line}")
+    decision = example.get("decision") or {}
+    act = decision.get("dialogue_act", "")
+    if act:
+        lines.append(f"- Communicative act: {act}")
+    system = f"{NOVI_PERSONA}\n\n" + "\n".join(lines)
+    return system, user_utterance(example)
 
 
 def emotional_situation_to_prompt(example: dict[str, Any]) -> str:
