@@ -42,6 +42,14 @@ class ThinkPolicyTests(unittest.TestCase):
         self.assertEqual(num_predict_for("qwen3.8:27b", 512), 1024)
         self.assertEqual(num_predict_for("qwen3.8:27b", 400), 800)
 
+    def test_trained_adapter_gets_qwen_thinking_budget(self) -> None:
+        # novi-trained is a qwen3:8b merge whose tag omits the family; it must
+        # keep the base's thinking budget or its CoT is cut off at 320 (observed:
+        # empty/fallback content on the trained-model acceptance run).
+        self.assertEqual(num_predict_for("novi-trained:latest", 320), 640)
+        self.assertEqual(num_predict_for("novi-trained", 400), 800)
+        self.assertFalse(can_disable_thinking("novi-trained:latest"))
+
     def test_nemotron_keeps_fast_budget(self) -> None:
         # Nemotron honors think:false -> direct answer, no thinking room needed.
         self.assertEqual(num_predict_for("nemotron-3.5-lightning", 512), 512)

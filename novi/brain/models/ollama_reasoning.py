@@ -44,8 +44,17 @@ def num_predict_for(model: str, fast_budget: int) -> int:
     need the same room — with the old 320-token budget their thinking was cut
     off mid-thought and ``content`` came back empty (deterministic fallback).
     2x/min-600 fits thought + answer.
+
+    Only nemotron-class models answer directly (``think:false`` is honored).
+    EVERYTHING else gets the thinking budget — including trained adapters
+    whose tags omit the base family (e.g. ``novi-trained:latest``, a qwen3:8b
+    merge, was getting the 320 fast budget and its CoT was cut off; a 640 cap
+    is harmless for genuinely fast models because their answers are short).
     """
-    if (model or "").lower().startswith("qwen3"):
+    m = (model or "").lower()
+    if "nemotron" not in m or m.startswith("qwen"):
+        # qwen* names and every unknown/derived model: cannot disable thinking
+        # on this Ollama build -> give thought + answer room.
         return max(int(fast_budget) * 2, 600)
     return int(fast_budget)
 
